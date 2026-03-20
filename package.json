@@ -2,7 +2,7 @@
   "name": "vscode-plugin-speckit",
   "displayName": "SpecKit — Spec Driven Development",
   "description": "Define your story and configure Copilot for spec-driven development",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "icon": "assets/speckit_icon.png",
   "publisher": "local",
   "engines": {
