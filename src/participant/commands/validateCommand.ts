@@ -55,11 +55,16 @@ export async function handleValidateCommand(
   );
 
   stream.markdown(
-    '---\n\n' +
-    '▶ **Próximo passo — iniciar a implementação:**\n\n' +
+    '▶ **Fluxo de implementação — do início ao código pronto:**\n\n' +
+    '**Sessão A — Implementação (portões 0–2):**\n' +
     '1. Abra um novo **Copilot Chat**\n' +
     '2. Selecione o modo **Agente**\n' +
-    '3. Digite `/implement` — o agente carregará o plano completo\n\n' +
-    'O prompt está em `.github/prompts/implement.prompt.md`.\n',
+    '3. Digite `/implement` — o agente conduz: alinhamento → implementação → testes\n\n' +
+    '**Sessão B — Revisão independente (portões 3–4):**\n' +
+    '4. Ao concluir a Sessão A, execute `@speckit /review`\n' +
+    '5. Abra um novo **Copilot Chat**\n' +
+    '6. Selecione o modo **Agente**\n' +
+    '7. Digite `/review` — o agente revisa e valida a entrega\n\n' +
+    'Prompts em `.github/prompts/`.\n',
   );
 }

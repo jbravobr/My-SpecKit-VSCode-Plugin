@@ -76,6 +76,17 @@ describe('handleValidateCommand', () => {
     expect(fs.writeFile).not.toHaveBeenCalled();
   });
 
+  it('shows complete flow including review session for valid story', async () => {
+    const stream = createMockStream();
+    const fs = createMockFs(completeStoryMd);
+    const workspace = createMockWorkspace();
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('/review');
+    expect(stream.getAllMarkdown()).toContain('Sessão B');
+  });
+
   it('generates config and shows agent instruction for valid story', async () => {
     const stream = createMockStream();
     const fs = createMockFs(completeStoryMd);

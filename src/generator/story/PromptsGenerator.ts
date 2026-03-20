@@ -6,13 +6,13 @@ export function generateImplementPrompt(story: Story): string {
   const criteriaList = story.functionalSpec.acceptanceCriteria.map(c => `- ${c}`).join('\n');
   const dodList = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
 
-  return `# Implement Story — Sessão A (Portões 0–2)
+  return `# Implement Story — Sessão A (Gates 0–2)
 
 Story: **${story.metadata.title || storyId}** | ID: ${storyId}
 Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${story.technicalSpec.architecture}
 
 > Esta sessão cobre: alinhamento → implementação → testes.
-> Ao concluir o PORTÃO 2 com 0 falhas e cobertura ≥ 80%, você receberá
+> Ao concluir o Gate 2 com 0 falhas e cobertura ≥ 80%, você receberá
 > instruções para iniciar a revisão independente.
 
 ---
@@ -41,7 +41,7 @@ ${criteria || '   - (não especificado)'}
 6. **DoD:**
 ${dodList || '   - (não especificado)'}
 
-### 0.4 Portão de confirmação
+### 0.4 Gate de confirmação
 
 > **Aguarde confirmação explícita antes de escrever qualquer código.**
 > Aceite: "confirmar", "pode ir", "sim", "s", "ok" ou equivalente.
@@ -49,13 +49,33 @@ ${dodList || '   - (não especificado)'}
 
 ---
 
-## PORTÃO 1 — Implementação
+## Gate 1 — Implementação
 
 ### Setup git
 \`\`\`bash
 git checkout develop && git pull
 git checkout -b feature/${storyId}-<slug>
 \`\`\`
+
+### Planejamento de tarefas (faça ANTES de escrever qualquer código)
+
+Defina a lista de tarefas atômicas a implementar. Cada tarefa deve:
+- Ser completa em si mesma (compila, não quebra os testes existentes)
+- Corresponder a uma camada, módulo ou critério de aceite
+- Resultar em um commit convencional ao ser concluída
+
+Critérios de corte:
+- **Por critério de aceite**: 1 tarefa = 1 critério de aceite
+- **Por camada** (arquitetura layered/hexagonal): domain → application → infrastructure → api
+- **Tamanho**: se uma tarefa prevê mais de 5 arquivos, proponha subdivisão
+
+Formato obrigatório:
+\`\`\`
+[ ] TASK-1: <descrição da tarefa> — <arquivos previstos>
+[ ] TASK-2: ...
+\`\`\`
+
+Aguarde confirmação do usuário antes de iniciar a TASK-1.
 
 ### Regras de implementação
 - Implemente APENAS o que está definido na story — nada além, nada menos
@@ -66,27 +86,40 @@ git checkout -b feature/${storyId}-<slug>
 ### Critérios de aceite a cobrir
 ${criteria || '- (não especificado)'}
 
-### Ao concluir a implementação
-Execute os testes e apresente o resultado antes de avançar:
+### Commit por tarefa implementada
+Ao concluir cada tarefa:
 \`\`\`bash
-npm test -- --coverage     # Node.js
-./mvnw test                # Java/Maven
-dotnet test --collect:"XPlat Code Coverage"  # .NET
-pytest --cov=. --cov-report=term-missing     # Python
+git add <arquivos específicos da tarefa>
+git commit -m "feat(${storyId}): TASK-N — <descrição>"
 \`\`\`
 
-**Não avance para o PORTÃO 2 sem:**
+Só avance para a próxima tarefa após o commit ser concluído sem erros.
+
+**Não avance para o Gate 2 sem:**
 - [ ] Todos os testes passando
 - [ ] Cobertura ≥ 80%
 
 ---
 
-## PORTÃO 2 — Testes
+## Gate 2 — Testes
+
+### Planejamento das tarefas de teste (faça ANTES de escrever qualquer teste)
+
+Defina a lista de tarefas de teste atômicas. Cada tarefa deve:
+- Cobrir um critério de aceite ou cenário isolado (happy path, edge, error)
+- Ser executável independentemente das demais
+- Resultar em um commit ao ser concluída
+
+Formato obrigatório:
+\`\`\`
+[ ] TEST-1: <descrição> — <arquivo(s) de teste>
+[ ] TEST-2: ...
+\`\`\`
 
 ### Cobertura obrigatória
 - **Mínimo: 80%** — condição obrigatória para encerramento da story
 - Meta ideal: ≥ 90% para lógica de domínio e casos de uso
-- Apresente o relatório de cobertura ao final deste portão
+- Apresente o relatório de cobertura ao final deste gate
 
 ### Cenários obrigatórios
 
@@ -126,6 +159,23 @@ Nome descreve o comportamento: \`deve_<resultado>_quando_<condição>\`
 - Mocks apenas para dependências externas reais (banco de dados, HTTP, fila)
 - Nunca mocke lógica de domínio
 
+### Commit por tarefa de teste
+Ao concluir cada tarefa de teste, execute os testes da tarefa:
+\`\`\`bash
+npm test -- --coverage     # Node.js
+./mvnw test                # Java/Maven
+dotnet test --collect:"XPlat Code Coverage"  # .NET
+pytest --cov=. --cov-report=term-missing     # Python
+\`\`\`
+
+Se todos passarem:
+\`\`\`bash
+git add <arquivos de teste da tarefa>
+git commit -m "test(${storyId}): TEST-N — <descrição>"
+\`\`\`
+
+Só avance para a próxima tarefa após 0 falhas e commit concluído.
+
 **Não avance para o handoff sem:**
 - [ ] 0 (zero) falhas
 - [ ] Cobertura ≥ 80% com relatório exibido
@@ -134,7 +184,7 @@ Nome descreve o comportamento: \`deve_<resultado>_quando_<condição>\`
 
 ## Sessão A concluída
 
-Portões 0–2 completos. Para iniciar a revisão independente:
+Gates 0–2 completos. Para iniciar a revisão independente:
 
 > Execute \`@speckit /review\` no Copilot Chat.
 
@@ -230,7 +280,7 @@ export function generateReviewPrompt(story: Story): string {
   const criteria = story.functionalSpec.acceptanceCriteria.map(c => `- [ ] ${c}`).join('\n');
   const dodList = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
 
-  return `# Review Story — Sessão B (Portões 3–4)
+  return `# Review Story — Sessão B (Gates 3–4)
 
 Story: **${story.metadata.title || storyId}** | ID: ${storyId}
 Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${story.technicalSpec.architecture}
@@ -258,7 +308,7 @@ Só inicie o checklist após concluir os 4 passos acima.
 
 ---
 
-## PORTÃO 3 — Revisão
+## Gate 3 — Revisão
 
 ### Funcionalidade
 ${criteria || '- [ ] (critérios não especificados)'}
@@ -300,13 +350,53 @@ ${dodList || '- [ ] (não especificado)'}
 3. **Melhorias**: recomendados mas não bloqueantes
 4. **Sugestões fora de escopo**: registre, não implemente
 
-**Se veredito for ALTERAÇÕES SOLICITADAS:** liste os bloqueantes, aguarde correção pelo usuário e reexecute este portão antes de avançar.
+**Se veredito for APROVADO:** avance diretamente para o Gate 4.
+
+**Se veredito for ALTERAÇÕES SOLICITADAS:**
+
+### Planejamento das tarefas de correção (faça ANTES de escrever qualquer fix)
+
+Liste os bloqueantes e converta cada um em uma tarefa atômica de correção. Cada tarefa deve:
+- Corrigir exatamente um bloqueante identificado no veredito
+- Ser completa em si mesma (compila, testes existentes não quebram)
+- Resultar em um commit convencional ao ser concluída
+
+Formato obrigatório:
+\`\`\`
+[ ] FIX-1: <bloqueante corrigido> — <arquivos previstos>
+[ ] FIX-2: ...
+\`\`\`
+
+### Commit por tarefa de correção
+Ao concluir cada FIX:
+\`\`\`bash
+git add <arquivos específicos do fix>
+git commit -m "fix(${storyId}): FIX-N — <descrição>"
+\`\`\`
+
+Só avance para o próximo FIX após o commit ser concluído sem erros.
+
+### Revalidação após todos os fixes
+Execute os testes e reexecute o checklist do Gate 3 completo:
+\`\`\`bash
+<runner da stack>
+\`\`\`
+Só avance para o Gate 4 após novo veredito: APROVADO.
 
 ---
 
-## PORTÃO 4 — Entrega
+## Gate 4 — Entrega
 
-### Passo 1 — Reexecute os testes (evidência final obrigatória)
+### Passo 1 — Sincronize com develop (rebase)
+\`\`\`bash
+git fetch origin
+git rebase origin/develop
+\`\`\`
+
+Se houver conflitos: resolva-os, execute \`git rebase --continue\`.
+Não use \`git rebase --skip\` sem confirmar que o conflito foi intencionalmente descartado.
+
+### Passo 2 — Reexecute os testes (evidência final obrigatória)
 \`\`\`bash
 npm test -- --coverage
 ./mvnw test
@@ -314,29 +404,40 @@ dotnet test --collect:"XPlat Code Coverage"
 pytest --cov=. --cov-report=term-missing
 \`\`\`
 
-**Critérios:**
+Critérios:
 - [ ] 0 (zero) testes falhando
 - [ ] Cobertura ≥ 80% (apresente o relatório completo)
 
-Se qualquer item falhar: **pare aqui**, corrija e reexecute. Não avance.
+Se qualquer item falhar: corrija, faça commit atômico e reexecute. Não avance.
 
-### Passo 2 — Valide o DoD
+### Passo 3 — Valide o DoD
 ${dodList || '- [ ] (critérios não definidos na story)'}
 
 Todos os itens devem estar marcados antes de prosseguir.
 
-### Passo 3 — Commit local
+### Passo 4 — Commit de fechamento (somente se houver arquivos pendentes)
 \`\`\`bash
 git status
+\`\`\`
+
+Se o veredito foi APROVADO de imediato (sem correções no Gate 3), comite a implementação:
+\`\`\`bash
 git add <arquivos específicos da story>
 git commit -m "feat(${storyId}): <descrição do que foi implementado>"
+\`\`\`
+
+Se correções foram feitas no Gate 3, os commits \`fix(${storyId}): FIX-N\` já foram realizados.
+Só faça um commit adicional se \`git status\` mostrar arquivos ainda não comitados:
+\`\`\`bash
+git add <arquivos pendentes>
+git commit -m "fix(${storyId}): ajustes pós-revisão"
 \`\`\`
 
 ---
 
 ## Declaração de conclusão
 
-Somente após todos os portões concluídos com sucesso, emita:
+Somente após todos os gates concluídos com sucesso, emita:
 
 > **Story ${storyId} CONCLUÍDA.** Testes: 100% passando. Cobertura: X%.
 > Commit local na branch \`feature/${storyId}-<slug>\`.
@@ -457,7 +558,7 @@ export function generateRunPrompt(story: Story): string {
 Story: **${story.metadata.title || storyId}** | ID: ${storyId}
 Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${story.technicalSpec.architecture}
 
-> **MODO MONOLÍTICO** — todos os portões em uma única sessão.
+> **MODO MONOLÍTICO** — todos os gates em uma única sessão.
 > Recomendado para: hotfixes, chores, tasks de escopo pequeno.
 > Para features com lógica de negócio: use \`/validate\` + \`/review\`
 > para obter revisão por agente independente (melhor qualidade).
@@ -488,7 +589,7 @@ ${criteria || '   - (não especificado)'}
 6. **DoD:**
 ${dodList || '   - (não especificado)'}
 
-### 0.4 Portão de confirmação
+### 0.4 Gate de confirmação
 
 > **Aguarde confirmação explícita antes de escrever qualquer código.**
 > Aceite: "confirmar", "pode ir", "sim", "s", "ok" ou equivalente.
@@ -496,13 +597,33 @@ ${dodList || '   - (não especificado)'}
 
 ---
 
-## PORTÃO 1 — Implementação
+## Gate 1 — Implementação
 
 ### Setup git
 \`\`\`bash
 git checkout develop && git pull
 git checkout -b feature/${storyId}-<slug>
 \`\`\`
+
+### Planejamento de tarefas (faça ANTES de escrever qualquer código)
+
+Defina a lista de tarefas atômicas a implementar. Cada tarefa deve:
+- Ser completa em si mesma (compila, não quebra os testes existentes)
+- Corresponder a uma camada, módulo ou critério de aceite
+- Resultar em um commit convencional ao ser concluída
+
+Critérios de corte:
+- **Por critério de aceite**: 1 tarefa = 1 critério de aceite
+- **Por camada** (arquitetura layered/hexagonal): domain → application → infrastructure → api
+- **Tamanho**: se uma tarefa prevê mais de 5 arquivos, proponha subdivisão
+
+Formato obrigatório:
+\`\`\`
+[ ] TASK-1: <descrição da tarefa> — <arquivos previstos>
+[ ] TASK-2: ...
+\`\`\`
+
+Aguarde confirmação do usuário antes de iniciar a TASK-1.
 
 ### Regras de implementação
 - Implemente APENAS o que está definido na story — nada além, nada menos
@@ -513,26 +634,39 @@ git checkout -b feature/${storyId}-<slug>
 ### Critérios de aceite a cobrir
 ${criteria || '- (não especificado)'}
 
-### Ao concluir a implementação
-Execute os testes e apresente o resultado antes de avançar:
+### Commit por tarefa implementada
+Ao concluir cada tarefa:
 \`\`\`bash
-npm test -- --coverage     # Node.js
-./mvnw test                # Java/Maven
-dotnet test --collect:"XPlat Code Coverage"  # .NET
-pytest --cov=. --cov-report=term-missing     # Python
+git add <arquivos específicos da tarefa>
+git commit -m "feat(${storyId}): TASK-N — <descrição>"
 \`\`\`
 
-**Não avance para o PORTÃO 2 sem:**
+Só avance para a próxima tarefa após o commit ser concluído sem erros.
+
+**Não avance para o Gate 2 sem:**
 - [ ] Todos os testes passando
 - [ ] Cobertura ≥ 80%
 
 ---
 
-## PORTÃO 2 — Testes
+## Gate 2 — Testes
+
+### Planejamento das tarefas de teste (faça ANTES de escrever qualquer teste)
+
+Defina a lista de tarefas de teste atômicas. Cada tarefa deve:
+- Cobrir um critério de aceite ou cenário isolado (happy path, edge, error)
+- Ser executável independentemente das demais
+- Resultar em um commit ao ser concluída
+
+Formato obrigatório:
+\`\`\`
+[ ] TEST-1: <descrição> — <arquivo(s) de teste>
+[ ] TEST-2: ...
+\`\`\`
 
 ### Cobertura obrigatória
 - **Mínimo: 80%** — condição obrigatória para encerramento da story
-- Apresente o relatório de cobertura ao final deste portão
+- Apresente o relatório de cobertura ao final deste gate
 
 ### Cenários obrigatórios
 
@@ -566,13 +700,30 @@ ${story.functionalSpec.acceptanceCriteria.map(c => `- ${c}`).join('\n') || '- (n
 - Sem \`skip\` / \`xtest\` / \`@Ignore\` sem justificativa + issue de rastreamento
 - Mocks apenas para dependências externas reais
 
-**Não avance para o PORTÃO 3 sem:**
+### Commit por tarefa de teste
+Ao concluir cada tarefa de teste, execute os testes da tarefa:
+\`\`\`bash
+npm test -- --coverage     # Node.js
+./mvnw test                # Java/Maven
+dotnet test --collect:"XPlat Code Coverage"  # .NET
+pytest --cov=. --cov-report=term-missing     # Python
+\`\`\`
+
+Se todos passarem:
+\`\`\`bash
+git add <arquivos de teste da tarefa>
+git commit -m "test(${storyId}): TEST-N — <descrição>"
+\`\`\`
+
+Só avance para a próxima tarefa após 0 falhas e commit concluído.
+
+**Não avance para o Gate 3 sem:**
 - [ ] 0 (zero) falhas
 - [ ] Cobertura ≥ 80% com relatório exibido
 
 ---
 
-## PORTÃO 3 — Revisão
+## Gate 3 — Revisão
 
 ### Checklist de revisão
 
@@ -598,15 +749,53 @@ ${criteria || '- [ ] (critérios não especificados)'}
 - [ ] Performance: ${story.nonFunctionalSpec.performance || '(não especificado)'}
 - [ ] Segurança: ${story.nonFunctionalSpec.security || '(não especificado)'}
 
-**Não avance para o PORTÃO 4 sem veredito: APROVADO**
+**Não avance para o Gate 4 sem veredito: APROVADO**
 
-Se o veredito for ALTERAÇÕES SOLICITADAS: corrija os bloqueantes e reexecute o PORTÃO 2 antes de voltar aqui.
+**Se veredito for ALTERAÇÕES SOLICITADAS:**
+
+### Planejamento das tarefas de correção (faça ANTES de escrever qualquer fix)
+
+Liste os bloqueantes e converta cada um em uma tarefa atômica de correção. Cada tarefa deve:
+- Corrigir exatamente um bloqueante identificado no veredito
+- Ser completa em si mesma (compila, testes existentes não quebram)
+- Resultar em um commit convencional ao ser concluída
+
+Formato obrigatório:
+\`\`\`
+[ ] FIX-1: <bloqueante corrigido> — <arquivos previstos>
+[ ] FIX-2: ...
+\`\`\`
+
+### Commit por tarefa de correção
+Ao concluir cada FIX:
+\`\`\`bash
+git add <arquivos específicos do fix>
+git commit -m "fix(${storyId}): FIX-N — <descrição>"
+\`\`\`
+
+Só avance para o próximo FIX após o commit ser concluído sem erros.
+
+### Revalidação após todos os fixes
+Execute os testes e reexecute o checklist do Gate 2 + Gate 3 completos:
+\`\`\`bash
+<runner da stack>
+\`\`\`
+Só avance para o Gate 4 após novo veredito: APROVADO.
 
 ---
 
-## PORTÃO 4 — Entrega
+## Gate 4 — Entrega
 
-### Passo 1 — Reexecute os testes (evidência final obrigatória)
+### Passo 1 — Sincronize com develop (rebase)
+\`\`\`bash
+git fetch origin
+git rebase origin/develop
+\`\`\`
+
+Se houver conflitos: resolva-os, execute \`git rebase --continue\`.
+Não use \`git rebase --skip\` sem confirmar que o conflito foi intencionalmente descartado.
+
+### Passo 2 — Reexecute os testes (evidência final obrigatória)
 \`\`\`bash
 npm test -- --coverage
 ./mvnw test
@@ -614,25 +803,40 @@ dotnet test --collect:"XPlat Code Coverage"
 pytest --cov=. --cov-report=term-missing
 \`\`\`
 
-**Critérios:**
+Critérios:
 - [ ] 0 (zero) testes falhando
 - [ ] Cobertura ≥ 80% (apresente o relatório completo)
 
-### Passo 2 — Valide o DoD
+Se qualquer item falhar: corrija, faça commit atômico e reexecute. Não avance.
+
+### Passo 3 — Valide o DoD
 ${dodList || '- [ ] (critérios não definidos na story)'}
 
-### Passo 3 — Commit local
+Todos os itens devem estar marcados antes de prosseguir.
+
+### Passo 4 — Commit de fechamento (somente se houver arquivos pendentes)
 \`\`\`bash
 git status
+\`\`\`
+
+Se o veredito foi APROVADO de imediato (sem correções no Gate 3), comite a implementação:
+\`\`\`bash
 git add <arquivos específicos da story>
 git commit -m "feat(${storyId}): <descrição do que foi implementado>"
+\`\`\`
+
+Se correções foram feitas no Gate 3, os commits \`fix(${storyId}): FIX-N\` já foram realizados.
+Só faça um commit adicional se \`git status\` mostrar arquivos ainda não comitados:
+\`\`\`bash
+git add <arquivos pendentes>
+git commit -m "fix(${storyId}): ajustes pós-revisão"
 \`\`\`
 
 ---
 
 ## Declaração de conclusão
 
-Somente após todos os portões concluídos com sucesso, emita:
+Somente após todos os gates concluídos com sucesso, emita:
 
 > **Story ${storyId} CONCLUÍDA.** Testes: 100% passando. Cobertura: X%.
 > Commit local na branch \`feature/${storyId}-<slug>\`.

@@ -1,81 +1,124 @@
 import { Story, emptyStory, Language, Framework, Architecture, Target } from './Story';
 
+// --- Module-level static regexes (compiled once at load time) ---
+const RE_BULLET       = /^-\s+\S/;
+const RE_DOR_ITEM     = /^-\s+\[/;
+const RE_DOR_CHECKED  = /\[x\]/i;
+const RE_DOR_PREFIX   = /^-\s+\[.\]\s+/;
+const RE_BULLET_PFX   = /^-\s+/;
+const RE_TODO         = /<!--\s*TODO[^>]*-->/g;
+const RE_HTML_COMMENT = /<!--.*?-->/gs;
+const RE_META_BLOCK   = /<!--\s*metadata\s*([\s\S]*?)-->/;
+const RE_SECTION_SPLIT = /^(###?\s+.+)$/m;
+
 export function parseStory(markdown: string): Story {
   const story = emptyStory();
 
-  const metaMatch = markdown.match(/<!--\s*metadata\s*([\s\S]*?)-->/);
+  const metaMatch = markdown.match(RE_META_BLOCK);
   if (metaMatch) {
-    const meta = metaMatch[1];
-    story.metadata.id = extractMetaField(meta, 'id');
-    story.metadata.title = cleanTodo(extractMetaField(meta, 'title'));
-    story.metadata.createdAt = extractMetaField(meta, 'createdAt');
-    story.metadata.version = parseInt(extractMetaField(meta, 'version') || '1', 10);
+    const fields = parseMetaFields(metaMatch[1]);
+    story.metadata.id        = fields['id']        ?? '';
+    story.metadata.title     = cleanTodo(fields['title']     ?? '');
+    story.metadata.createdAt = fields['createdAt'] ?? '';
+    story.metadata.version   = parseInt(fields['version'] ?? '1', 10);
   }
 
-  story.businessRequirement.problem = cleanTodo(extractSection(markdown, 'Problema'));
-  story.businessRequirement.value = cleanTodo(extractSection(markdown, 'Valor'));
-  story.businessRequirement.stakeholders = extractBulletList(extractSection(markdown, 'Stakeholders'));
+  const sectionMap = buildSectionMap(markdown);
+  const get = (heading: string) => sectionMap.get(heading) ?? '';
 
-  story.functionalSpec.userStories = extractBulletList(extractSection(markdown, 'User Stories'));
-  story.functionalSpec.acceptanceCriteria = extractBulletList(extractSection(markdown, 'Critérios de Aceite'));
-  story.functionalSpec.outOfScope = extractBulletList(extractSection(markdown, 'Fora de Escopo'));
+  story.businessRequirement.problem      = cleanTodo(get('Problema'));
+  story.businessRequirement.value        = cleanTodo(get('Valor'));
+  story.businessRequirement.stakeholders = extractBulletList(get('Stakeholders'));
 
-  story.nonFunctionalSpec.performance = cleanTodo(extractSection(markdown, 'Performance'));
-  story.nonFunctionalSpec.security = cleanTodo(extractSection(markdown, 'Segurança'));
-  story.nonFunctionalSpec.scalability = cleanTodo(extractSection(markdown, 'Escalabilidade'));
-  story.nonFunctionalSpec.usability = cleanTodo(extractSection(markdown, 'Usabilidade'));
-  story.nonFunctionalSpec.availability = cleanTodo(extractSection(markdown, 'Disponibilidade'));
+  story.functionalSpec.userStories          = extractBulletList(get('User Stories'));
+  story.functionalSpec.acceptanceCriteria   = extractBulletList(get('Critérios de Aceite'));
+  story.functionalSpec.outOfScope           = extractBulletList(get('Fora de Escopo'));
 
-  story.technicalSpec.language = cleanTodo(extractSection(markdown, 'Linguagem')) as Language | '';
-  story.technicalSpec.framework = cleanTodo(extractSection(markdown, 'Framework')) as Framework | '';
-  story.technicalSpec.architecture = cleanTodo(extractSection(markdown, 'Arquitetura')) as Architecture | '';
-  story.technicalSpec.target = cleanTodo(extractSection(markdown, 'Target')) as Target | '';
-  story.technicalSpec.database = cleanTodo(extractSection(markdown, 'Banco de Dados'));
-  story.technicalSpec.infrastructure = cleanTodo(extractSection(markdown, 'Infraestrutura'));
+  story.nonFunctionalSpec.performance  = cleanTodo(get('Performance'));
+  story.nonFunctionalSpec.security     = cleanTodo(get('Segurança'));
+  story.nonFunctionalSpec.scalability  = cleanTodo(get('Escalabilidade'));
+  story.nonFunctionalSpec.usability    = cleanTodo(get('Usabilidade'));
+  story.nonFunctionalSpec.availability = cleanTodo(get('Disponibilidade'));
 
-  const dorSection = extractSection(markdown, 'DoR — Definition of Ready');
-  const dorItems = parseDorItems(dorSection);
+  story.technicalSpec.language       = cleanTodo(get('Linguagem'))     as Language | '';
+  story.technicalSpec.framework      = cleanTodo(get('Framework'))     as Framework | '';
+  story.technicalSpec.architecture   = cleanTodo(get('Arquitetura'))   as Architecture | '';
+  story.technicalSpec.target         = cleanTodo(get('Target'))        as Target | '';
+  story.technicalSpec.database       = cleanTodo(get('Banco de Dados'));
+  story.technicalSpec.infrastructure = cleanTodo(get('Infraestrutura'));
+
+  const dorItems = parseDorItems(get('DoR — Definition of Ready'));
   story.dor.criteria = dorItems.map(d => d.text);
-  story.dor.checked = dorItems.map(d => d.checked);
+  story.dor.checked  = dorItems.map(d => d.checked);
 
-  story.dod.criteria = extractBulletList(extractSection(markdown, 'DoD — Definition of Done'));
+  story.dod.criteria = extractBulletList(get('DoD — Definition of Done'));
 
   return story;
 }
 
-function extractMetaField(meta: string, field: string): string {
-  const match = meta.match(new RegExp(`${field}:\\s*(.+)`));
-  return match ? match[1].trim() : '';
+/** Single-pass: splits markdown on heading lines, strips HTML comments once per block. */
+function buildSectionMap(markdown: string): Map<string, string> {
+  const map = new Map<string, string>();
+  const lines = markdown.split('\n');
+  let currentHeading: string | null = null;
+  let buffer: string[] = [];
+
+  const flush = () => {
+    if (currentHeading !== null) {
+      map.set(currentHeading, buffer.join('\n').replace(RE_HTML_COMMENT, '').trim());
+    }
+  };
+
+  for (const line of lines) {
+    const headingMatch = /^###?\s+(.+)$/.exec(line);
+    if (headingMatch) {
+      flush();
+      currentHeading = headingMatch[1].trim();
+      buffer = [];
+    } else if (line.trim() === '---') {
+      flush();
+      currentHeading = null;
+      buffer = [];
+    } else {
+      buffer.push(line);
+    }
+  }
+  flush();
+
+  return map;
 }
 
-function extractSection(markdown: string, heading: string): string {
-  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = new RegExp(`###?\\s+${escaped}\\s*\\n([\\s\\S]*?)(?=\\n###?\\s|\\n---\\s*\\n|$)`);
-  const match = markdown.match(pattern);
-  if (!match) return '';
-  return match[1].replace(/<!--.*?-->/gs, '').trim();
+/** Parses all `key: value` pairs from a metadata block in one pass. */
+function parseMetaFields(meta: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const line of meta.split('\n')) {
+    const colon = line.indexOf(':');
+    if (colon !== -1) {
+      result[line.slice(0, colon).trim()] = line.slice(colon + 1).trim();
+    }
+  }
+  return result;
 }
 
 function extractBulletList(section: string): string[] {
   return section
     .split('\n')
-    .filter(line => /^-\s+\S/.test(line))
-    .map(line => line.replace(/^-\s+/, '').trim())
+    .filter(line => RE_BULLET.test(line))
+    .map(line => line.replace(RE_BULLET_PFX, '').trim())
     .filter(line => line.length > 0);
 }
 
 function parseDorItems(section: string): { text: string; checked: boolean }[] {
   return section
     .split('\n')
-    .filter(line => /^-\s+\[/.test(line))
-    .map(line => {
-      const checked = /\[x\]/i.test(line);
-      const text = line.replace(/^-\s+\[.\]\s+/, '').trim();
-      return { text, checked };
-    });
+    .filter(line => RE_DOR_ITEM.test(line))
+    .map(line => ({
+      checked: RE_DOR_CHECKED.test(line),
+      text: line.replace(RE_DOR_PREFIX, '').trim(),
+    }));
 }
 
 function cleanTodo(value: string): string {
   if (!value) return '';
-  return value.replace(/<!--\s*TODO[^>]*-->/g, '').trim();
+  return value.replace(RE_TODO, '').trim();
 }

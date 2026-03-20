@@ -37,6 +37,10 @@
           {
             "name": "status",
             "description": "Ver estado da história atual"
+          },
+          {
+            "name": "review",
+            "description": "Iniciar revisão independente da story"
           }
         ]
       }
