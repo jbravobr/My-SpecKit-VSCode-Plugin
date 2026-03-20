@@ -1,0 +1,640 @@
+import { Story, Gap } from '../../story/Story';
+
+export function generateImplementPrompt(story: Story): string {
+  const storyId = story.metadata.id || '001';
+  const criteria = story.functionalSpec.acceptanceCriteria.map(c => `- [ ] ${c}`).join('\n');
+  const criteriaList = story.functionalSpec.acceptanceCriteria.map(c => `- ${c}`).join('\n');
+  const dodList = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
+
+  return `# Implement Story — Sessão A (Portões 0–2)
+
+Story: **${story.metadata.title || storyId}** | ID: ${storyId}
+Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${story.technicalSpec.architecture}
+
+> Esta sessão cobre: alinhamento → implementação → testes.
+> Ao concluir o PORTÃO 2 com 0 falhas e cobertura ≥ 80%, você receberá
+> instruções para iniciar a revisão independente.
+
+---
+
+## FASE 0 — Alinhamento e confirmação
+
+### 0.1 Leia a story
+Leia \`.speckit/STORY-${storyId}.md\` na íntegra antes de qualquer outra ação.
+
+### 0.2 Verifique lacunas
+Identifique campos obrigatórios não preenchidos:
+- Título, problema, valor de negócio, user stories, critérios de aceite
+- Linguagem, framework, arquitetura
+- DoD definido
+
+Se houver lacunas: faça uma pergunta por vez, aguarde resposta, atualize o arquivo \`.speckit/STORY-${storyId}.md\`, prossiga para a próxima lacuna. Repita até não restar nenhuma.
+
+### 0.3 Apresente o plano completo
+Com a story completa, apresente ao usuário:
+1. **Resumo** — o que será implementado
+2. **Stack** — ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${story.technicalSpec.architecture}
+3. **Critérios de aceite:**
+${criteria || '   - (não especificado)'}
+4. **Arquivos previstos** — lista por camada arquitetural
+5. **Cenários de teste** — happy path, edge cases, error cases previstos
+6. **DoD:**
+${dodList || '   - (não especificado)'}
+
+### 0.4 Portão de confirmação
+
+> **Aguarde confirmação explícita antes de escrever qualquer código.**
+> Aceite: "confirmar", "pode ir", "sim", "s", "ok" ou equivalente.
+> Se o usuário pedir ajustes: incorpore, reapresente o plano e aguarde nova confirmação.
+
+---
+
+## PORTÃO 1 — Implementação
+
+### Setup git
+\`\`\`bash
+git checkout develop && git pull
+git checkout -b feature/${storyId}-<slug>
+\`\`\`
+
+### Regras de implementação
+- Implemente APENAS o que está definido na story — nada além, nada menos
+- Respeite a arquitetura **${story.technicalSpec.architecture}**: não viole a direção de dependências
+- Siga as convenções de **${story.technicalSpec.language}** e **${story.technicalSpec.framework}** (ver \`instructions/\`)
+- Toda função deve satisfazer ao menos um critério de aceite
+
+### Critérios de aceite a cobrir
+${criteria || '- (não especificado)'}
+
+### Ao concluir a implementação
+Execute os testes e apresente o resultado antes de avançar:
+\`\`\`bash
+npm test -- --coverage     # Node.js
+./mvnw test                # Java/Maven
+dotnet test --collect:"XPlat Code Coverage"  # .NET
+pytest --cov=. --cov-report=term-missing     # Python
+\`\`\`
+
+**Não avance para o PORTÃO 2 sem:**
+- [ ] Todos os testes passando
+- [ ] Cobertura ≥ 80%
+
+---
+
+## PORTÃO 2 — Testes
+
+### Cobertura obrigatória
+- **Mínimo: 80%** — condição obrigatória para encerramento da story
+- Meta ideal: ≥ 90% para lógica de domínio e casos de uso
+- Apresente o relatório de cobertura ao final deste portão
+
+### Cenários obrigatórios
+
+**1. Happy path** — um teste por critério de aceite:
+${criteriaList || '- (não especificado)'}
+
+**2. Edge cases** — para toda função/método:
+- Entrada nula ou vazia (null, undefined, "", [], {})
+- Valores no limite (zero, negativo, máximo permitido)
+- Coleções com 0 e 1 elementos
+- Strings com caracteres especiais, espaços, unicode
+
+**3. Error cases** — para toda operação com falha possível:
+- Recurso não encontrado (404 / NotFound / None)
+- Dados de entrada inválidos (validação falha)
+- Conflito de estado (duplicidade, concorrência)
+- Permissão negada (autorização)
+- Falha de dependência externa (mockada)
+
+**4. Cenários da story** — todos os cenários trazidos pelo usuário durante o preenchimento
+
+**5. Cenários derivados** — casos que emergem da implementação; documente com comentário
+
+### Estrutura obrigatória (AAA)
+\`\`\`
+// Arrange — configure o estado inicial
+// Act    — execute a operação
+// Assert — verifique o resultado
+\`\`\`
+
+Cada teste tem exatamente um motivo para falhar.
+Nome descreve o comportamento: \`deve_<resultado>_quando_<condição>\`
+
+### Restrições
+- Sem testes sem assertivas
+- Sem \`skip\` / \`xtest\` / \`@Ignore\` sem justificativa documentada + issue de rastreamento
+- Mocks apenas para dependências externas reais (banco de dados, HTTP, fila)
+- Nunca mocke lógica de domínio
+
+**Não avance para o handoff sem:**
+- [ ] 0 (zero) falhas
+- [ ] Cobertura ≥ 80% com relatório exibido
+
+---
+
+## Sessão A concluída
+
+Portões 0–2 completos. Para iniciar a revisão independente:
+
+> Execute \`@speckit /review\` no Copilot Chat.
+
+Não faça mais alterações de código nesta sessão.
+`;
+}
+
+// @deprecated — conteúdo absorvido por generateImplementPrompt (PORTÃO 2)
+export function generateWriteTestsPrompt(story: Story): string {
+  const criteria = story.functionalSpec.acceptanceCriteria.map(c => `- ${c}`).join('\n');
+  const dod = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
+  return `# Write Tests
+
+Story: **${story.metadata.title || story.metadata.id}**
+Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${story.technicalSpec.architecture}
+
+---
+
+## Requisito de cobertura
+- **Mínimo: 80%** — condição obrigatória para encerramento da story
+- Meta ideal: ≥ 90% para lógica de domínio e casos de uso
+- Apresente o relatório de cobertura ao final
+
+---
+
+## Cenários obrigatórios
+
+### 1. Happy path
+Cada critério de aceite deve ter ao menos um teste que valida o fluxo principal:
+${criteria || '- (não especificado)'}
+
+### 2. Edge cases — obrigatórios para TODA função/método
+- Entrada nula ou vazia (null, undefined, "", [], {})
+- Valores no limite (zero, negativo, máximo permitido)
+- Coleções com 0 e 1 elementos
+- Strings com caracteres especiais, espaços, unicode
+
+### 3. Error cases — obrigatórios para TODA operação com falha possível
+- Recurso não encontrado (404 / NotFound / None)
+- Dados de entrada inválidos (validação falha)
+- Conflito de estado (duplicidade, concorrência)
+- Permissão negada (autorização)
+- Falha de dependência externa (mockada)
+
+### 4. Cenários da story
+Todos os cenários trazidos pelo usuário durante a criação da história devem ter teste explícito.
+
+### 5. Cenários derivados
+Casos que emergem da implementação real e não estavam na spec original — documente com comentário.
+
+---
+
+## Estrutura de cada teste (AAA obrigatório)
+\`\`\`
+// Arrange — configure o estado inicial
+// Act — execute a operação
+// Assert — verifique o resultado
+\`\`\`
+
+Cada teste tem exatamente um motivo para falhar.
+Nome descreve o comportamento: \`deve_<resultado>_quando_<condição>\`
+
+---
+
+## Restrições
+- Sem testes sem assertivas
+- Sem \`skip\` / \`xtest\` / \`@Ignore\` sem justificativa documentada + issue de rastreamento
+- Mocks apenas para dependências externas reais (banco de dados, HTTP, fila)
+- Nunca mocke lógica de domínio
+
+---
+
+## DoD — lembre-se
+${dod || '- (não especificado)'}
+
+---
+
+## Ao final: execute e apresente
+\`\`\`bash
+# Adapte ao runner da stack
+npm test -- --coverage
+./mvnw test
+dotnet test --collect:"XPlat Code Coverage"
+pytest --cov=. --cov-report=term-missing
+\`\`\`
+
+Só declare os testes concluídos quando o relatório mostrar cobertura ≥ 80% com 0 falhas.
+`;
+}
+
+export function generateReviewPrompt(story: Story): string {
+  const storyId = story.metadata.id || '001';
+  const criteria = story.functionalSpec.acceptanceCriteria.map(c => `- [ ] ${c}`).join('\n');
+  const dodList = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
+
+  return `# Review Story — Sessão B (Portões 3–4)
+
+Story: **${story.metadata.title || storyId}** | ID: ${storyId}
+Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${story.technicalSpec.architecture}
+
+> Você é um revisor independente. Não participou da implementação.
+> Não presuma nada sobre as decisões tomadas — avalie apenas o que está no código.
+
+---
+
+## Contexto de entrada — leitura obrigatória
+
+Antes de iniciar qualquer avaliação:
+
+1. Leia \`.speckit/STORY-${storyId}.md\` na íntegra
+2. Liste os arquivos da feature:
+   \`\`\`bash
+   git diff develop...HEAD --name-only
+   \`\`\`
+3. Leia cada arquivo modificado
+4. Solicite ao usuário que cole o relatório de cobertura da Sessão A
+
+Só inicie o checklist após concluir os 4 passos acima.
+
+**Regra do revisor independente:** ao encontrar uma decisão questionável, pergunte a razão ao usuário antes de marcar como bloqueante — não assuma que foi intencional ou que foi erro.
+
+---
+
+## PORTÃO 3 — Revisão
+
+### Funcionalidade
+${criteria || '- [ ] (critérios não especificados)'}
+
+### Arquitetura (${story.technicalSpec.architecture})
+- [ ] Direção de dependências respeitada
+- [ ] Sem imports de infraestrutura no domínio
+- [ ] Responsabilidades bem separadas por camada
+
+### Qualidade de código
+- [ ] Segue convenções de **${story.technicalSpec.language}** (ver \`instructions/lang-*\`)
+- [ ] Segue convenções de **${story.technicalSpec.framework}** (ver \`instructions/fw-*\`)
+- [ ] Sem código morto ou comentado sem justificativa
+
+### Testes
+- [ ] 0 (zero) falhas (evidência: relatório da Sessão A)
+- [ ] Cobertura ≥ 80% (relatório obrigatório)
+- [ ] Happy path coberto para cada critério de aceite
+- [ ] Edge cases cobertos (null, vazio, limites)
+- [ ] Error cases cobertos (not found, inválido, permissão)
+- [ ] Sem testes ignorados sem justificativa
+
+### Requisitos não-funcionais
+- [ ] Performance: ${story.nonFunctionalSpec.performance || '(não especificado)'}
+- [ ] Segurança: ${story.nonFunctionalSpec.security || '(não especificado)'}
+
+### Git
+- [ ] Branch segue padrão \`feature/${storyId}-<slug>\`
+- [ ] Commits seguem Conventional Commits
+- [ ] Sem commits com mensagem genérica ("fix", "wip", "test")
+- [ ] Nenhum commit direto em \`develop\` ou \`main\`
+
+### DoD
+${dodList || '- [ ] (não especificado)'}
+
+### Formato do veredito
+1. **Veredito**: APROVADO / ALTERAÇÕES SOLICITADAS
+2. **Bloqueantes**: itens que impedem a entrega (falha funcional, teste falhando, cobertura < 80%)
+3. **Melhorias**: recomendados mas não bloqueantes
+4. **Sugestões fora de escopo**: registre, não implemente
+
+**Se veredito for ALTERAÇÕES SOLICITADAS:** liste os bloqueantes, aguarde correção pelo usuário e reexecute este portão antes de avançar.
+
+---
+
+## PORTÃO 4 — Entrega
+
+### Passo 1 — Reexecute os testes (evidência final obrigatória)
+\`\`\`bash
+npm test -- --coverage
+./mvnw test
+dotnet test --collect:"XPlat Code Coverage"
+pytest --cov=. --cov-report=term-missing
+\`\`\`
+
+**Critérios:**
+- [ ] 0 (zero) testes falhando
+- [ ] Cobertura ≥ 80% (apresente o relatório completo)
+
+Se qualquer item falhar: **pare aqui**, corrija e reexecute. Não avance.
+
+### Passo 2 — Valide o DoD
+${dodList || '- [ ] (critérios não definidos na story)'}
+
+Todos os itens devem estar marcados antes de prosseguir.
+
+### Passo 3 — Commit local
+\`\`\`bash
+git status
+git add <arquivos específicos da story>
+git commit -m "feat(${storyId}): <descrição do que foi implementado>"
+\`\`\`
+
+---
+
+## Declaração de conclusão
+
+Somente após todos os portões concluídos com sucesso, emita:
+
+> **Story ${storyId} CONCLUÍDA.** Testes: 100% passando. Cobertura: X%.
+> Commit local na branch \`feature/${storyId}-<slug>\`.
+`;
+}
+
+// @deprecated — conteúdo absorvido por generateReviewPrompt (PORTÃO 4)
+export function generateFinalizePrompt(story: Story): string {
+  const dod = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
+  return `# Finalize Story — Portão de Entrega
+
+Story: **${story.metadata.title || story.metadata.id}**
+
+> Este prompt só deve ser executado quando a implementação e os testes estiverem completos.
+> O agente só pode declarar a story como CONCLUÍDA após validar TODOS os itens abaixo.
+
+---
+
+## Passo 1 — Execute os testes e apresente o resultado
+
+\`\`\`bash
+# Adapte ao runner da stack
+npm test -- --coverage
+./mvnw test
+dotnet test --collect:"XPlat Code Coverage"
+pytest --cov=. --cov-report=term-missing
+\`\`\`
+
+**Critérios de aprovação obrigatórios:**
+- [ ] 0 (zero) testes falhando
+- [ ] Cobertura ≥ 80% (apresente o relatório completo)
+
+Se qualquer item acima falhar: **pare aqui**, corrija e reexecute. Não avance.
+
+---
+
+## Passo 2 — Valide o DoD
+
+${dod || '- [ ] (critérios não definidos na story)'}
+
+Todos os itens acima devem estar marcados antes de prosseguir.
+
+---
+
+## Passo 3 — Commit local
+
+\`\`\`bash
+# Garanta que está na branch correta
+git status
+
+# Stage somente os arquivos da story
+git add <arquivos específicos>
+
+# Commit seguindo Conventional Commits
+git commit -m "feat(${story.metadata.id}): <descrição do que foi implementado>"
+\`\`\`
+
+---
+
+## Declaração de conclusão
+
+O agente só pode emitir a frase abaixo após todos os passos acima concluídos com sucesso:
+
+> **Story ${story.metadata.id} CONCLUÍDA.** Testes: 100% passando. Cobertura: X%. Commit local na branch \`feature/${story.metadata.id}-<slug>\`.
+`;
+}
+
+export function generateGapFillingPrompt(story: Story, gaps: Gap[]): string {
+  const storyId = story.metadata.id || '001';
+  const gapList = gaps
+    .map(g => `- **[${g.section}]** \`${g.field}\`: ${g.message}`)
+    .join('\n');
+
+  return `# Story Alignment — Preenchimento de Lacunas
+
+Story: **${story.metadata.title || storyId}** | ID: ${storyId}
+Arquivo: \`.speckit/STORY-${storyId}.md\`
+
+## Lacunas identificadas (${gaps.length})
+
+${gapList}
+
+---
+
+## Instruções para o agente
+
+Conduza uma conversa estruturada para preencher cada lacuna acima:
+
+1. **Apresente a primeira lacuna** como pergunta objetiva e direta ao usuário
+2. **Aguarde a resposta**
+3. **Atualize o arquivo** \`.speckit/STORY-${storyId}.md\` com a resposta recebida
+4. **Prossiga para a próxima lacuna** — uma por vez, sem agrupamentos
+5. **Repita** até que não reste nenhuma lacuna
+
+### Regras
+- Uma pergunta por vez — nunca agrupe múltiplas lacunas numa só mensagem
+- Nunca invente ou assuma uma resposta — pergunte explicitamente
+- Atualize o arquivo imediatamente após cada resposta, antes de perguntar a próxima
+- Se a resposta for ambígua, peça esclarecimento antes de atualizar
+
+---
+
+## Após todas as lacunas resolvidas
+
+Informe o usuário:
+
+> Todas as lacunas foram preenchidas. Execute \`@speckit /validate\` para gerar os arquivos de configuração, revisar o plano completo e iniciar a implementação.
+`;
+}
+
+export function generateRunPrompt(story: Story): string {
+  const storyId = story.metadata.id || '001';
+  const criteria = story.functionalSpec.acceptanceCriteria.map(c => `- [ ] ${c}`).join('\n');
+  const dodList = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
+
+  return `# Run Story — Modo Monolítico
+
+Story: **${story.metadata.title || storyId}** | ID: ${storyId}
+Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${story.technicalSpec.architecture}
+
+> **MODO MONOLÍTICO** — todos os portões em uma única sessão.
+> Recomendado para: hotfixes, chores, tasks de escopo pequeno.
+> Para features com lógica de negócio: use \`/validate\` + \`/review\`
+> para obter revisão por agente independente (melhor qualidade).
+
+---
+
+## FASE 0 — Alinhamento e confirmação
+
+### 0.1 Leia a story
+Leia \`.speckit/STORY-${storyId}.md\` na íntegra antes de qualquer outra ação.
+
+### 0.2 Verifique lacunas
+Identifique campos obrigatórios não preenchidos:
+- Título, problema, valor de negócio, user stories, critérios de aceite
+- Linguagem, framework, arquitetura
+- DoD definido
+
+Se houver lacunas: faça uma pergunta por vez, aguarde resposta, atualize o arquivo \`.speckit/STORY-${storyId}.md\`, prossiga para a próxima lacuna. Repita até não restar nenhuma.
+
+### 0.3 Apresente o plano completo
+Com a story completa, apresente ao usuário:
+1. **Resumo** — o que será implementado
+2. **Stack** — ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${story.technicalSpec.architecture}
+3. **Critérios de aceite:**
+${criteria || '   - (não especificado)'}
+4. **Arquivos previstos** — lista por camada arquitetural
+5. **Cenários de teste** — happy path, edge cases, error cases previstos
+6. **DoD:**
+${dodList || '   - (não especificado)'}
+
+### 0.4 Portão de confirmação
+
+> **Aguarde confirmação explícita antes de escrever qualquer código.**
+> Aceite: "confirmar", "pode ir", "sim", "s", "ok" ou equivalente.
+> Se o usuário pedir ajustes: incorpore, reapresente o plano e aguarde nova confirmação.
+
+---
+
+## PORTÃO 1 — Implementação
+
+### Setup git
+\`\`\`bash
+git checkout develop && git pull
+git checkout -b feature/${storyId}-<slug>
+\`\`\`
+
+### Regras de implementação
+- Implemente APENAS o que está definido na story — nada além, nada menos
+- Respeite a arquitetura **${story.technicalSpec.architecture}**: não viole a direção de dependências
+- Siga as convenções de **${story.technicalSpec.language}** e **${story.technicalSpec.framework}** (ver \`instructions/\`)
+- Toda função deve satisfazer ao menos um critério de aceite
+
+### Critérios de aceite a cobrir
+${criteria || '- (não especificado)'}
+
+### Ao concluir a implementação
+Execute os testes e apresente o resultado antes de avançar:
+\`\`\`bash
+npm test -- --coverage     # Node.js
+./mvnw test                # Java/Maven
+dotnet test --collect:"XPlat Code Coverage"  # .NET
+pytest --cov=. --cov-report=term-missing     # Python
+\`\`\`
+
+**Não avance para o PORTÃO 2 sem:**
+- [ ] Todos os testes passando
+- [ ] Cobertura ≥ 80%
+
+---
+
+## PORTÃO 2 — Testes
+
+### Cobertura obrigatória
+- **Mínimo: 80%** — condição obrigatória para encerramento da story
+- Apresente o relatório de cobertura ao final deste portão
+
+### Cenários obrigatórios
+
+**1. Happy path** — um teste por critério de aceite:
+${story.functionalSpec.acceptanceCriteria.map(c => `- ${c}`).join('\n') || '- (não especificado)'}
+
+**2. Edge cases** — para toda função/método:
+- Entrada nula ou vazia (null, undefined, "", [], {})
+- Valores no limite (zero, negativo, máximo)
+- Coleções com 0 e 1 elementos
+
+**3. Error cases** — para toda operação com falha possível:
+- Recurso não encontrado
+- Dados inválidos
+- Permissão negada
+- Falha de dependência externa (mockada)
+
+**4. Cenários da story** — todos os cenários trazidos pelo usuário durante o preenchimento
+
+**5. Cenários derivados** — casos que emergem da implementação; documente com comentário
+
+### Estrutura obrigatória (AAA)
+\`\`\`
+// Arrange — configure o estado inicial
+// Act    — execute a operação
+// Assert — verifique o resultado
+\`\`\`
+
+### Restrições
+- Sem testes sem assertivas
+- Sem \`skip\` / \`xtest\` / \`@Ignore\` sem justificativa + issue de rastreamento
+- Mocks apenas para dependências externas reais
+
+**Não avance para o PORTÃO 3 sem:**
+- [ ] 0 (zero) falhas
+- [ ] Cobertura ≥ 80% com relatório exibido
+
+---
+
+## PORTÃO 3 — Revisão
+
+### Checklist de revisão
+
+**Funcionalidade:**
+${criteria || '- [ ] (critérios não especificados)'}
+
+**Arquitetura (${story.technicalSpec.architecture}):**
+- [ ] Direção de dependências respeitada
+- [ ] Sem imports de infraestrutura no domínio
+- [ ] Responsabilidades bem separadas por camada
+
+**Qualidade:**
+- [ ] Convenções de **${story.technicalSpec.language}** seguidas
+- [ ] Convenções de **${story.technicalSpec.framework}** seguidas
+- [ ] Sem código morto ou comentado sem justificativa
+
+**Git:**
+- [ ] Branch segue padrão \`feature/${storyId}-<slug>\`
+- [ ] Commits seguem Conventional Commits
+- [ ] Sem commits genéricos ("fix", "wip", "test")
+
+**Não-funcionais:**
+- [ ] Performance: ${story.nonFunctionalSpec.performance || '(não especificado)'}
+- [ ] Segurança: ${story.nonFunctionalSpec.security || '(não especificado)'}
+
+**Não avance para o PORTÃO 4 sem veredito: APROVADO**
+
+Se o veredito for ALTERAÇÕES SOLICITADAS: corrija os bloqueantes e reexecute o PORTÃO 2 antes de voltar aqui.
+
+---
+
+## PORTÃO 4 — Entrega
+
+### Passo 1 — Reexecute os testes (evidência final obrigatória)
+\`\`\`bash
+npm test -- --coverage
+./mvnw test
+dotnet test --collect:"XPlat Code Coverage"
+pytest --cov=. --cov-report=term-missing
+\`\`\`
+
+**Critérios:**
+- [ ] 0 (zero) testes falhando
+- [ ] Cobertura ≥ 80% (apresente o relatório completo)
+
+### Passo 2 — Valide o DoD
+${dodList || '- [ ] (critérios não definidos na story)'}
+
+### Passo 3 — Commit local
+\`\`\`bash
+git status
+git add <arquivos específicos da story>
+git commit -m "feat(${storyId}): <descrição do que foi implementado>"
+\`\`\`
+
+---
+
+## Declaração de conclusão
+
+Somente após todos os portões concluídos com sucesso, emita:
+
+> **Story ${storyId} CONCLUÍDA.** Testes: 100% passando. Cobertura: X%.
+> Commit local na branch \`feature/${storyId}-<slug>\`.
+`;
+}

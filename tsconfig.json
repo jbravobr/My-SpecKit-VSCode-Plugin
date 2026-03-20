@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "module": "Node16",
+    "target": "ES2022",
+    "outDir": "./out",
+    "strict": true,
+    "lib": ["ES2022"],
+    "sourceMap": true,
+    "rootDir": ".",
+    "moduleResolution": "Node16",
+    "types": ["node"]
+  },
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["node_modules", ".vscode-test", "tests/integration/**/*"]
+}

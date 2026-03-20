@@ -1,0 +1,78 @@
+{
+  "name": "vscode-plugin-speckit",
+  "displayName": "SpecKit — Spec Driven Development",
+  "description": "Define your story and configure Copilot for spec-driven development",
+  "version": "0.1.0",
+  "icon": "assets/speckit_icon.png",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.93.0"
+  },
+  "categories": [
+    "AI"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "speckit.assistant",
+        "name": "speckit",
+        "fullName": "SpecKit — Spec Driven Development",
+        "description": "Defina sua história e configure o Copilot para desenvolvimento orientado a spec",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "new",
+            "description": "Iniciar uma nova história SDD"
+          },
+          {
+            "name": "validate",
+            "description": "Validar DoR da história atual — identifica lacunas"
+          },
+          {
+            "name": "apply",
+            "description": "Gerar configuração Copilot a partir da história"
+          },
+          {
+            "name": "status",
+            "description": "Ver estado da história atual"
+          }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "speckit.newStory",
+        "title": "SpecKit: Nova história"
+      },
+      {
+        "command": "speckit.applyStory",
+        "title": "SpecKit: Aplicar história"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "node esbuild.js --production",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
+    "build:integration": "tsc -p tsconfig.integration.json",
+    "test:integration": "npm run build:integration && node ./out/integration/tests/integration/runTests.js",
+    "test": "npm run test:unit && npm run test:integration"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.93.0",
+    "@types/node": "^20.0.0",
+    "@types/mocha": "^10.0.0",
+    "@vscode/test-electron": "^2.4.0",
+    "@vitest/coverage-v8": "^2.0.0",
+    "esbuild": "^0.21.0",
+    "glob": "^10.0.0",
+    "mocha": "^10.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  }
+}
