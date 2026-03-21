@@ -433,6 +433,14 @@ git add <arquivos pendentes>
 git commit -m "fix(${storyId}): ajustes pós-revisão"
 \`\`\`
 
+### Passo 5 — Encerramento da story no SpecKit
+Após o commit de entrega, marque a story como concluída:
+Abra \`.speckit/STORY-${storyId}.md\` e substitua \`status: open\` por \`status: done\` no bloco \`<!-- metadata -->\`.
+\`\`\`bash
+git add .speckit/STORY-${storyId}.md
+git commit -m "chore(${storyId}): encerra story no speckit"
+\`\`\`
+
 ---
 
 ## Declaração de conclusão

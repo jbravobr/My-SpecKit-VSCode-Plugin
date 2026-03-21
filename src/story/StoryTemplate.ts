@@ -7,6 +7,8 @@ id: ${id}
 title: <!-- TODO: Título curto e descritivo. Ex: "Cálculo de comissão a partir de eventos Kafka" -->
 createdAt: ${now}
 version: 1
+type: story
+status: open
 -->
 
 ---

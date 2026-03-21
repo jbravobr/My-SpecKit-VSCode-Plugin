@@ -1,8 +1,8 @@
 {
   "name": "vscode-plugin-speckit",
   "displayName": "SpecKit — Spec Driven Development",
-  "description": "Define your story and configure Copilot for spec-driven development",
-  "version": "0.1.1",
+  "description": "Defina sua história e configure o Copilot para desenvolvimento orientado a spec",
+  "version": "0.1.2",
   "icon": "assets/speckit_icon.png",
   "publisher": "local",
   "engines": {
@@ -27,8 +27,12 @@
             "description": "Iniciar uma nova história SDD"
           },
           {
+            "name": "fix",
+            "description": "Criar um template de Fix para correção de bug"
+          },
+          {
             "name": "validate",
-            "description": "Validar DoR da história atual — identifica lacunas"
+            "description": "Validar a spec ativa (Story ou Fix) e identificar lacunas"
           },
           {
             "name": "apply",
@@ -36,11 +40,11 @@
           },
           {
             "name": "status",
-            "description": "Ver estado da história atual"
+            "description": "Exibir resumo de todas as specs abertas (Stories e Fixes)"
           },
           {
             "name": "review",
-            "description": "Iniciar revisão independente da story"
+            "description": "Iniciar revisão independente e entrega"
           }
         ]
       }
@@ -48,11 +52,27 @@
     "commands": [
       {
         "command": "speckit.newStory",
-        "title": "SpecKit: Nova história"
+        "title": "SpecKit: Nova História"
+      },
+      {
+        "command": "speckit.newFix",
+        "title": "SpecKit: Novo Fix"
+      },
+      {
+        "command": "speckit.validate",
+        "title": "SpecKit: Validar Spec"
       },
       {
         "command": "speckit.applyStory",
-        "title": "SpecKit: Aplicar história"
+        "title": "SpecKit: Aplicar História"
+      },
+      {
+        "command": "speckit.status",
+        "title": "SpecKit: Status"
+      },
+      {
+        "command": "speckit.review",
+        "title": "SpecKit: Revisão Independente"
       }
     ]
   },

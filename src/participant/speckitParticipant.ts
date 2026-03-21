@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { handleNewCommand } from './commands/newCommand';
+import { handleFixCommand } from './commands/fixCommand';
 import { handleValidateCommand } from './commands/validateCommand';
 import { handleApplyCommand } from './commands/applyCommand';
 import { handleReviewCommand } from './commands/reviewCommand';
@@ -20,6 +21,9 @@ export function registerSpeckitParticipant(context: vscode.ExtensionContext): vo
         case 'new':
           await handleNewCommand(request, stream, token);
           break;
+        case 'fix':
+          await handleFixCommand(request, stream, token);
+          break;
         case 'validate':
           await handleValidateCommand(request, stream, token);
           break;
@@ -37,10 +41,11 @@ export function registerSpeckitParticipant(context: vscode.ExtensionContext): vo
             '**SpecKit** — Spec Driven Development\n\n' +
             'Comandos disponíveis:\n' +
             '- `/new` — Iniciar uma nova história SDD\n' +
-            '- `/validate` — Validar DoR e iniciar implementação\n' +
+            '- `/fix` — Iniciar um novo bug fix\n' +
+            '- `/validate` — Validar DoR/completude e gerar configuração Copilot\n' +
             '- `/apply` — Gerar configuração Copilot e iniciar implementação\n' +
             '- `/review` — Iniciar revisão independente (após implementação + testes)\n' +
-            '- `/status` — Ver estado da história atual\n',
+            '- `/status` — Ver todas as specs abertas (Stories e Fixes)\n',
           );
       }
     },

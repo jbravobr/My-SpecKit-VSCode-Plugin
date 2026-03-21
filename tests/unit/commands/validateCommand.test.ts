@@ -26,11 +26,14 @@ function createMockFs(content: string = completeStoryMd): IFileSystem {
   };
 }
 
-function createMockWorkspace(storyPath = 'C:\\workspace\\.speckit\\STORY-001.md'): IWorkspace {
+function createMockWorkspace(specPath = 'C:\\workspace\\.speckit\\STORY-001.md'): IWorkspace {
   return {
     getWorkspaceRoot: vi.fn().mockReturnValue('C:\\workspace'),
     listStoryFiles: vi.fn().mockResolvedValue(['STORY-001.md']),
-    getActiveStoryPath: vi.fn().mockResolvedValue(storyPath),
+    listFixFiles: vi.fn().mockResolvedValue([]),
+    getActiveStoryPath: vi.fn().mockResolvedValue(specPath),
+    getActiveSpecPath: vi.fn().mockResolvedValue(specPath),
+    detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
   };
 }
 
@@ -44,7 +47,10 @@ describe('handleValidateCommand', () => {
     const workspace: IWorkspace = {
       getWorkspaceRoot: vi.fn().mockReturnValue(undefined),
       listStoryFiles: vi.fn().mockResolvedValue([]),
+      listFixFiles: vi.fn().mockResolvedValue([]),
       getActiveStoryPath: vi.fn().mockResolvedValue(undefined),
+      getActiveSpecPath: vi.fn().mockResolvedValue(undefined),
+      detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
     };
 
     await handleValidateCommand({} as any, stream as any, {} as any, createMockFs(), workspace);
@@ -57,12 +63,15 @@ describe('handleValidateCommand', () => {
     const workspace: IWorkspace = {
       getWorkspaceRoot: vi.fn().mockReturnValue('C:\\workspace'),
       listStoryFiles: vi.fn().mockResolvedValue([]),
+      listFixFiles: vi.fn().mockResolvedValue([]),
       getActiveStoryPath: vi.fn().mockResolvedValue(undefined),
+      getActiveSpecPath: vi.fn().mockResolvedValue(undefined),
+      detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
     };
 
     await handleValidateCommand({} as any, stream as any, {} as any, createMockFs(), workspace);
 
-    expect(stream.getAllMarkdown()).toContain('Nenhuma história');
+    expect(stream.getAllMarkdown()).toContain('Nenhuma spec');
   });
 
   it('shows gap-filling prompt for invalid story', async () => {

@@ -1,4 +1,4 @@
-import { Story, emptyStory, Language, Framework, Architecture, Target } from './Story';
+import { Story, emptyStory, Language, Framework, Architecture, Target, SpecStatus } from './Story';
 
 // --- Module-level static regexes (compiled once at load time) ---
 const RE_BULLET       = /^-\s+\S/;
@@ -21,6 +21,8 @@ export function parseStory(markdown: string): Story {
     story.metadata.title     = cleanTodo(fields['title']     ?? '');
     story.metadata.createdAt = fields['createdAt'] ?? '';
     story.metadata.version   = parseInt(fields['version'] ?? '1', 10);
+    story.metadata.type      = 'story';
+    story.metadata.status    = (fields['status'] as SpecStatus) === 'done' ? 'done' : 'open';
   }
 
   const sectionMap = buildSectionMap(markdown);

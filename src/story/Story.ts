@@ -1,8 +1,12 @@
+export type SpecStatus = 'open' | 'done';
+
 export interface StoryMetadata {
   id: string;
   title: string;
   createdAt: string;
   version: number;
+  type: 'story';
+  status: SpecStatus;
 }
 
 export interface BusinessRequirement {
@@ -77,7 +81,7 @@ export interface ValidationResult {
 
 export function emptyStory(): Story {
   return {
-    metadata: { id: '', title: '', createdAt: '', version: 1 },
+    metadata: { id: '', title: '', createdAt: '', version: 1, type: 'story', status: 'open' },
     businessRequirement: { problem: '', value: '', stakeholders: [] },
     functionalSpec: { userStories: [], acceptanceCriteria: [], outOfScope: [] },
     nonFunctionalSpec: { performance: '', security: '', scalability: '', usability: '', availability: '' },

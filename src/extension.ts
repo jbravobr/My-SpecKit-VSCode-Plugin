@@ -15,6 +15,11 @@ export function activate(context: vscode.ExtensionContext): void {
         query: '@speckit /apply',
       });
     }),
+    vscode.commands.registerCommand('speckit.fixStory', async () => {
+      await vscode.commands.executeCommand('workbench.action.chat.open', {
+        query: '@speckit /fix',
+      });
+    }),
   );
 }
 

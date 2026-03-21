@@ -29,7 +29,10 @@ function createMockWorkspace(): IWorkspace {
   return {
     getWorkspaceRoot: vi.fn().mockReturnValue('C:\\workspace'),
     listStoryFiles: vi.fn().mockResolvedValue(['STORY-001.md']),
+    listFixFiles: vi.fn().mockResolvedValue([]),
     getActiveStoryPath: vi.fn().mockResolvedValue('C:\\workspace\\.speckit\\STORY-001.md'),
+    getActiveSpecPath: vi.fn().mockResolvedValue('C:\\workspace\\.speckit\\STORY-001.md'),
+    detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
   };
 }
 
@@ -43,7 +46,10 @@ describe('handleStatusCommand', () => {
     const workspace: IWorkspace = {
       getWorkspaceRoot: vi.fn().mockReturnValue(undefined),
       listStoryFiles: vi.fn().mockResolvedValue([]),
+      listFixFiles: vi.fn().mockResolvedValue([]),
       getActiveStoryPath: vi.fn().mockResolvedValue(undefined),
+      getActiveSpecPath: vi.fn().mockResolvedValue(undefined),
+      detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
     };
 
     await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(), workspace);
@@ -51,7 +57,7 @@ describe('handleStatusCommand', () => {
     expect(stream.getAllMarkdown()).toContain('workspace');
   });
 
-  it('shows story metadata including title', async () => {
+  it('shows story title in output', async () => {
     const stream = createMockStream();
     await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(), createMockWorkspace());
 
@@ -77,5 +83,20 @@ describe('handleStatusCommand', () => {
     await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(), createMockWorkspace());
 
     expect(stream.getAllMarkdown()).toContain('hexagonal');
+  });
+
+  it('shows Stories and Fixes sections', async () => {
+    const stream = createMockStream();
+    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(), createMockWorkspace());
+
+    expect(stream.getAllMarkdown()).toContain('Stories abertas');
+    expect(stream.getAllMarkdown()).toContain('Fixes abertos');
+  });
+
+  it('shows nenhum when no fixes exist', async () => {
+    const stream = createMockStream();
+    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(), createMockWorkspace());
+
+    expect(stream.getAllMarkdown()).toContain('nenhum');
   });
 });

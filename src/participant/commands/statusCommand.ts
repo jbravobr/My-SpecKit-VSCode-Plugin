@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { parseStory } from '../../story/StoryParser';
 import { validateStory } from '../../story/StoryValidator';
+import { parseFix } from '../../fix/FixParser';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
@@ -13,30 +15,79 @@ export async function handleStatusCommand(
   fs: IFileSystem = vscodeFileSystem,
   workspace: IWorkspace = vscodeWorkspace,
 ): Promise<void> {
-  if (!workspace.getWorkspaceRoot()) {
+  const workspaceRoot = workspace.getWorkspaceRoot();
+  if (!workspaceRoot) {
     stream.markdown('❌ Nenhum workspace aberto. Abra uma pasta ou workspace antes de usar o SpecKit.');
     return;
   }
 
-  const storyPath = await workspace.getActiveStoryPath();
-  if (!storyPath) {
-    stream.markdown('ℹ️ Nenhuma história encontrada. Use `/new` para criar uma.');
-    return;
-  }
+  const specDir = path.join(workspaceRoot, '.speckit');
+  const [storyFiles, fixFiles] = await Promise.all([
+    workspace.listStoryFiles(specDir),
+    workspace.listFixFiles(specDir),
+  ]);
 
-  const content = await fs.readFile(storyPath);
-  const story = parseStory(content);
-  const result = validateStory(story);
+  const storyLines = await buildStoryLines(storyFiles, specDir, fs);
+  const fixLines = await buildFixLines(fixFiles, specDir, fs);
 
-  const status = result.valid ? '✅ Válida (DoR atingido)' : `⚠️ Incompleta (${result.gaps.length} lacuna(s))`;
+  const storySection =
+    storyLines.length > 0
+      ? storyLines.join('\n')
+      : '- nenhuma';
+
+  const fixSection =
+    fixLines.length > 0
+      ? fixLines.join('\n')
+      : '- nenhum';
 
   stream.markdown(
-    `**História Ativa:** \`${storyPath.split(/[\\/]/).slice(-2).join('/')}\`\n\n` +
-    `**Status:** ${status}\n\n` +
-    `**ID:** ${story.metadata.id || '—'}\n` +
-    `**Título:** ${story.metadata.title || '—'}\n` +
-    `**Linguagem:** ${story.technicalSpec.language || '—'}\n` +
-    `**Framework:** ${story.technicalSpec.framework || '—'}\n` +
-    `**Arquitetura:** ${story.technicalSpec.architecture || '—'}\n`,
+    `**Stories abertas (${storyLines.length}):**\n${storySection}\n\n` +
+    `**Fixes abertos (${fixLines.length}):**\n${fixSection}\n`,
   );
+}
+
+async function buildStoryLines(
+  files: string[],
+  specDir: string,
+  fs: IFileSystem,
+): Promise<string[]> {
+  const lines: string[] = [];
+  for (const name of files.sort()) {
+    try {
+      const content = await fs.readFile(path.join(specDir, name));
+      const story = parseStory(content);
+      if (story.metadata.status === 'done') continue;
+      const result = validateStory(story);
+      const statusIcon = result.valid ? '✅' : `⚠️ (${result.gaps.length} lacuna(s))`;
+      lines.push(
+        `- ${statusIcon} \`${name}\` — **${story.metadata.title || '(sem título)'}**  ` +
+        `${story.technicalSpec.language || '—'} / ${story.technicalSpec.framework || '—'} / ${story.technicalSpec.architecture || '—'}`,
+      );
+    } catch {
+      lines.push(`- ⚠️ \`${name}\` — erro ao ler arquivo`);
+    }
+  }
+  return lines;
+}
+
+async function buildFixLines(
+  files: string[],
+  specDir: string,
+  fs: IFileSystem,
+): Promise<string[]> {
+  const lines: string[] = [];
+  for (const name of files.sort()) {
+    try {
+      const content = await fs.readFile(path.join(specDir, name));
+      const fix = parseFix(content);
+      if (fix.metadata.status === 'done') continue;
+      const severityTag = fix.impactAssessment.severity ? ` [${fix.impactAssessment.severity}]` : '';
+      lines.push(
+        `- 🐛 \`${name}\` — **${fix.metadata.title || '(sem título)'}**${severityTag}`,
+      );
+    } catch {
+      lines.push(`- ⚠️ \`${name}\` — erro ao ler arquivo`);
+    }
+  }
+  return lines;
 }

@@ -1,6 +1,6 @@
 # SpecKit — Spec Driven Development
 
-Plugin para VS Code que implementa o fluxo de **Spec Driven Development (SDD)**: você define uma História estruturada antes de escrever código, e o plugin gera automaticamente os arquivos de configuração do GitHub Copilot que "primam" a sessão com todo o contexto do projeto.
+Plugin para VS Code que implementa o fluxo de **Spec Driven Development (SDD)**: você define uma História estruturada (nova feature) ou um Fix estruturado (correção de bug) antes de escrever código, e o plugin gera automaticamente os arquivos de configuração do GitHub Copilot que "primam" a sessão com todo o contexto do projeto.
 
 O Copilot passa a conhecer o requisito de negócio, critérios de aceite, restrições não-funcionais, stack técnica, padrão arquitetural, regras de teste e convenções de versionamento — antes de qualquer conversa começar.
 
@@ -12,7 +12,7 @@ O GitHub Copilot responde ao prompt imediato sem entender o contexto estruturado
 
 O SpecKit resolve isso em duas etapas:
 
-1. Você preenche uma História estruturada com tudo o que o Copilot precisa saber
+1. Você preenche uma **História** (nova feature) ou um **Fix** (correção de bug) com tudo o que o Copilot precisa saber
 2. O plugin gera arquivos `.github/instructions/` e `.github/prompts/` que o Copilot carrega automaticamente em toda sessão
 
 Além do contexto da história, o plugin impõe **comportamentos baseline** que governam o agente em qualquer projeto: integridade, performance, arquitetura, anti-alucinação, padrões de teste e fluxo git.
@@ -91,7 +91,7 @@ O arquivo `vscode-plugin-speckit-0.1.0.vsix` será criado na raiz do projeto.
 
 O SpecKit expõe um **Chat Participant** chamado `@speckit`. Todo o fluxo acontece no Copilot Chat.
 
-### Fluxo completo
+### Fluxo — Nova Feature (História)
 
 ```
 @speckit /new          →  Cria o template da História e abre no editor
@@ -136,18 +136,49 @@ O SpecKit expõe um **Chat Participant** chamado `@speckit`. Todo o fluxo aconte
     └──────────────────────────────────────────────────────┘
 ```
 
+### Fluxo — Correção de Bug (Fix)
+
+```
+@speckit /fix          →  Cria o template do Fix e abre no editor
+                       ↓
+               Preencha o Fix (bug, hipótese, impacto, testes)
+               A stack técnica é detectada automaticamente
+                       ↓
+    @speckit /validate
+       ↓ fix com lacunas?
+       Agente pergunta uma lacuna por vez e atualiza o arquivo
+       → @speckit /validate novamente
+       ↓ Fix válido
+       Stack detectada → gera todos os arquivos .github/
+       → "Abra o Copilot Chat em modo Agente
+          e digite /fix-implement"
+                       ↓
+    Copilot Chat — modo Agente
+       /fix-implement
+       SESSÃO A: investigação → root cause confirmada → fix → testes de regressão
+       → Agente diz: "execute @speckit /review"
+                       ↓
+    @speckit /review
+       → "Abra novo Copilot Chat em modo Agente
+          e digite /fix-review"
+                       ↓
+    Copilot Chat — modo Agente (nova sessão)
+       /fix-review
+       SESSÃO B: revisão independente + encerramento do fix
+```
+
 O usuário interage para:
-1. Criar e escrever a história (`/new`)
+1. Criar e escrever a história (`/new`) ou o fix (`/fix`)
 2. Responder perguntas de alinhamento quando há lacunas
-3. Abrir o **Copilot Chat em modo Agente** e digitar `/implement` (Sessão A)
-4. Confirmar o plano antes de o agente começar a codificar
-5. Executar `@speckit /review` e abrir **novo Copilot Chat em modo Agente** com `/review` (Sessão B)
+3. Abrir o **Copilot Chat em modo Agente** e digitar `/implement` ou `/fix-implement` (Sessão A)
+4. Confirmar o plano/root cause antes de o agente começar a codificar
+5. Executar `@speckit /review` e abrir **novo Copilot Chat em modo Agente** com `/review` ou `/fix-review` (Sessão B)
 
 ---
 
 ### `@speckit /new`
 
-Cria o arquivo `.speckit/STORY-001.md` (numeração automática) e abre no editor.
+Cria o arquivo `.speckit/STORY-XXX.md` (numeração automática) e abre no editor.
 
 O template contém todas as seções marcadas com `<!-- TODO -->`:
 
@@ -177,22 +208,48 @@ O template contém todas as seções marcadas com `<!-- TODO -->`:
 
 ---
 
+### `@speckit /fix`
+
+Cria o arquivo `.speckit/FIX-XXX.md` (numeração automática) e abre no editor.
+
+O template contém todas as seções marcadas com `<!-- TODO -->`:
+
+| Seção | O que preencher |
+|---|---|
+| Bug Description | Título, sintomas, passos para reproduzir, ambiente, frequência |
+| Root Cause Hypothesis | Hipótese da causa raiz, arquivos/componentes suspeitos |
+| Impact Assessment | Severidade (`critical` · `high` · `medium` · `low`), usuários/sistemas afetados, risco de regressão |
+| Regression Prevention | Testes a adicionar para prevenir regressão |
+| DoF | Critérios de Definition of Fixed (pré-marcados com `[ ]`) |
+
+> **Stack técnica detectada automaticamente** a partir do workspace — não é necessário especificá-la no arquivo.
+
+---
+
 ### `@speckit /validate`
 
-Lê a História mais recente em `.speckit/`, faz o parse e verifica:
+Detecta automaticamente o tipo da spec ativa em `.speckit/` (Story ou Fix) e valida:
 
+**Para Stories:**
 - Campos obrigatórios preenchidos (título, problema, valor, user stories, critérios de aceite, stack técnica, DoD)
 - Critérios do DoR marcados como `[x]`
 
-**Se houver lacunas:** injeta no chat um prompt de alinhamento que instrui o Copilot a perguntar ao usuário uma lacuna por vez e atualizar o arquivo `.speckit/STORY-XXX.md` a cada resposta. Quando todas as lacunas estiverem fechadas, o agente orienta o usuário a executar `/validate` novamente.
+**Para Fixes:**
+- Campos obrigatórios preenchidos (título, sintomas, passos para reproduzir, root cause, severidade, DoF)
 
-**Se o DoR estiver atingido:** gera todos os arquivos `.github/` (baseline + linguagem + framework + story-specific + prompts) e instrui o usuário a abrir o Copilot Chat em modo **Agente** e digitar `/implement`. O agente apresenta o plano, aguarda confirmação, implementa e testa. Ao concluir, instrui o usuário a executar `@speckit /review`.
+**Se houver lacunas:** injeta no chat um prompt de alinhamento que instrui o Copilot a perguntar ao usuário uma lacuna por vez e atualizar o arquivo `.speckit/` a cada resposta. Quando todas as lacunas estiverem fechadas, o agente orienta o usuário a executar `/validate` novamente.
+
+**Se válida (Story — DoR atingido):** gera todos os arquivos `.github/` (baseline + linguagem + framework + story-specific + prompts) e instrui o usuário a abrir o Copilot Chat em modo **Agente** e digitar `/implement`.
+
+**Se válida (Fix):** detecta a stack do workspace e gera todos os arquivos `.github/` (baseline + linguagem/framework detectados + fix-specific + prompts) e instrui o usuário a abrir o Copilot Chat em modo **Agente** e digitar `/fix-implement`.
 
 ---
 
 ### `@speckit /apply`
 
-Valida a Story e, se estiver completa, gera todos os arquivos de configuração do Copilot e instrui o usuário a abrir o Copilot Chat em modo **Agente** e digitar `/implement`:
+Valida a Story e, se estiver completa, gera todos os arquivos de configuração do Copilot e instrui o usuário a abrir o Copilot Chat em modo **Agente** e digitar `/implement`.
+
+> Para Fixes, use `/validate` — o `/apply` é exclusivo para Stories.
 
 ```
 .github/
@@ -236,33 +293,83 @@ Valida a Story e, se estiver completa, gera todos os arquivos de configuração 
 
 Os arquivos de instrução ficam em `.github/instructions/` e são carregados automaticamente pelo Copilot em toda sessão do workspace. Cada arquivo tem uma única responsabilidade e não ultrapassa ~80 linhas.
 
+#### Arquivos gerados para Fixes (`/validate` com FIX ativo)
+
+```
+.github/
+├── copilot-instructions.md                    # Índice do fix (stack detectada automaticamente)
+├── prompts/
+│   ├── fix-implement.prompt.md                # Sessão A — `/fix-implement`
+│   ├── fix-review.prompt.md                   # Sessão B — `/fix-review`
+│   └── fix-run.prompt.md                      # Modo monolítico — `/fix-run`
+└── instructions/
+    │
+    │  ── BASELINE (sempre gerados) ──
+    ├── 00-agent-integrity.instructions.md
+    ├── 01-performance.instructions.md
+    ├── 02-architecture.instructions.md
+    ├── 03-context-management.instructions.md
+    ├── 04-testing-standards.instructions.md
+    ├── 05-git-workflow.instructions.md
+    │
+    │  ── LINGUAGEM (auto-detectada do workspace) ──
+    ├── lang-<linguagem>.instructions.md
+    │
+    │  ── FRAMEWORK (auto-detectado do workspace) ──
+    ├── fw-<framework>.instructions.md
+    │
+    │  ── FIX-SPECIFIC (gerados a partir do fix) ──
+    ├── 10-fix-context.instructions.md
+    ├── 11-root-cause.instructions.md
+    ├── 12-fix-impact.instructions.md
+    ├── 13-regression-prevention.instructions.md
+    └── 14-fix-dof.instructions.md
+```
+
 ---
 
 ### `@speckit /review`
 
 Inicia a **Sessão B** — revisão independente e entrega.
 
-Deve ser executado quando o agente da Sessão A (implementação + testes) instruir o usuário com a mensagem *"Execute `@speckit /review`"*.
+Deve ser executado quando o agente da Sessão A instruir o usuário com a mensagem *"Execute `@speckit /review`"*.
 
-O comando instrui o usuário a abrir um novo Copilot Chat em modo **Agente** e digitar `/review`. O Copilot começa sem memória da Sessão A: lê a história, lista os arquivos modificados via `git diff`, lê cada arquivo e solicita o relatório de cobertura antes de iniciar o checklist. Após veredito APROVADO, executa a entrega (revalida testes, valida DoD e faz commit local).
+O comando instrui o usuário a abrir um novo Copilot Chat em modo **Agente** e digitar `/review` (para Stories) ou `/fix-review` (para Fixes). O agente começa sem memória da Sessão A: lê a spec, lista os arquivos modificados via `git diff`, lê cada arquivo e solicita o relatório de cobertura antes de iniciar o checklist. Após veredito APROVADO, executa a entrega (revalida testes, valida DoD/DoF e faz commit local).
 
 ---
 
 ### `@speckit /status`
 
-Exibe um resumo da História ativa: título, ID, linguagem, framework, arquitetura e status de validação.
+Exibe um resumo de todas as specs abertas no workspace, agrupadas por tipo:
+
+- **Stories abertas:** título, linguagem, framework, arquitetura e status de validação (✅ DoR atingido / ⚠️ lacunas)
+- **Fixes abertos:** título e severidade (🐛 critical / high / medium / low)
+
+Specs com `status: done` são ocultadas automaticamente.
 
 ---
 
 ## Prompts gerados
 
-Após `/apply`, três prompts ficam disponíveis em `.github/prompts/`.
+### Stories — após `/apply` ou `/validate`
+
+Três prompts ficam disponíveis em `.github/prompts/`:
 
 | Prompt | Sessão | Como usar | Cobre |
 |---|---|---|---|
 | `implement.prompt.md` | **A** | Copilot Chat → modo Agente → `/implement` | Alinhamento + plano + confirmação + implementação + testes (portões 0–2) |
 | `review.prompt.md` | **B** | Copilot Chat → modo Agente → `/review` | Revisão independente + entrega (portões 3–4) |
 | `run.prompt.md` | — | Copilot Chat → modo Agente → `/run` | Todos os portões em sessão única (hotfixes, chores) |
+
+### Fixes — após `/validate`
+
+Três prompts de fix ficam disponíveis em `.github/prompts/`:
+
+| Prompt | Sessão | Como usar | Cobre |
+|---|---|---|---|
+| `fix-implement.prompt.md` | **A** | Copilot Chat → modo Agente → `/fix-implement` | Investigação → root cause confirmada → fix → testes de regressão (portões 0–2) |
+| `fix-review.prompt.md` | **B** | Copilot Chat → modo Agente → `/fix-review` | Revisão independente + encerramento do fix (portões 3–4) |
+| `fix-run.prompt.md` | — | Copilot Chat → modo Agente → `/fix-run` | Todos os portões em sessão única (bugs simples) |
 
 > **Por que duas sessões?** O agente que implementou o código tem viés ao revisá-lo (anchoring bias). A **Sessão B** começa sem memória da implementação — lê apenas os artefatos produzidos — garantindo uma revisão genuinamente independente.
 
@@ -580,6 +687,254 @@ O prompt está em .github/prompts/implement.prompt.md.
 
 ---
 
+## Exemplo prático — Fix
+
+Fix completo para servir de referência. Representa um bug real e cobre todos os campos obrigatórios do template.
+
+**Contexto:** o mesmo serviço de cálculo de comissões do exemplo anterior. Em produção, comissões estão sendo calculadas em duplicata para uma parcela dos eventos — o mecanismo de idempotência falha silenciosamente quando o `movimentacaoId` chega com capitalização diferente da registrada no banco.
+
+### Arquivo: `.speckit/FIX-001.md`
+
+```markdown
+# Fix 001
+
+<!-- metadata
+id: 001
+title: Idempotência falha para movimentacaoId com capitalização mista
+createdAt: 2026-03-20
+version: 1
+type: fix
+status: open
+-->
+
+## Bug Description
+
+### Título do Bug
+Comissões duplicadas quando movimentacaoId chega com capitalização diferente da armazenada
+
+### Sintomas
+- Mesma movimentação processada duas vezes: dois registros na tabela `comissoes` com o mesmo `movimentacao_id` (diferindo apenas em case)
+- Evento `comissoes.calculadas.v1` emitido duas vezes para o mesmo `movimentacaoId`
+- Sem erro nos logs — o sistema processa silenciosamente como se fossem eventos distintos
+
+### Passos para Reproduzir
+- Publicar no tópico `movimentacoes.v1` um evento com `movimentacaoId: "MOV-abc123"`
+- Aguardar o processamento e confirmar o registro em `comissoes`
+- Publicar segundo evento com o mesmo ID em case diferente: `movimentacaoId: "MOV-ABC123"`
+- Verificar: dois registros inseridos em `comissoes` com o mesmo `movimentacao_id`
+
+### Ambiente Afetado
+Produção (AWS MSK + EKS). Reproduz em staging quando o producer envia IDs em uppercase. Java 21 / Spring Boot 3.2 / PostgreSQL 15.
+
+### Frequência de Ocorrência
+Intermitente — ocorre apenas quando o producer upstream (legado) normaliza o ID para uppercase no reenvio após falha transiente.
+
+---
+
+## Root Cause Hypothesis
+
+### Hipótese
+A consulta de idempotência em `ComissaoRepository.findByMovimentacaoId()` usa comparação case-sensitive (`=` no PostgreSQL sem `LOWER()`). O índice único na coluna `movimentacao_id` também é case-sensitive, permitindo inserção de `MOV-abc123` e `MOV-ABC123` como linhas distintas.
+
+### Arquivos/Componentes Suspeitos
+- `src/main/java/com/empresa/comissoes/adapter/out/persistence/ComissaoRepository.java` — query de idempotência
+- `src/main/java/com/empresa/comissoes/adapter/out/persistence/ComissaoEntity.java` — definição da coluna/índice
+- `V3__create_comissoes.sql` (migration) — índice único sem `LOWER()`
+
+---
+
+## Impact Assessment
+
+### Severidade
+critical
+
+### Usuários/Sistemas Afetados
+- Time Financeiro: fechamento mensal com valores inflados de comissão
+- Dashboard comercial: exibe comissão duplicada para vendedores afetados
+- Data lake: recebe eventos duplicados de `comissoes.calculadas.v1`, corrompendo agregações
+
+### Risco de Regressão
+- Alteração na query de idempotência pode afetar performance (uso de `LOWER()` invalida o índice B-tree padrão — adicionar índice funcional)
+- Migration DDL em produção requer downtime zero — usar `CREATE INDEX CONCURRENTLY`
+- Reprocessamento das movimentações duplicadas já registradas pode ser necessário
+
+---
+
+## Regression Prevention
+
+### Testes a Adicionar
+- Teste de integração: processar evento com `movimentacaoId` em lowercase, depois reenviar em uppercase — deve resultar em exatamente um registro em `comissoes`
+- Teste de integração: processar evento com `movimentacaoId` em uppercase, depois reenviar em lowercase — mesmo resultado
+- Teste unitário: `ComissaoRepository.findByMovimentacaoId()` retorna o registro independente do case do argumento
+- Teste de contrato: schema do evento `comissoes.calculadas.v1` emitido exatamente uma vez por `movimentacaoId` único (normalizado)
+
+---
+
+## DoF — Definition of Fixed
+
+- [ ] Bug não reproduz mais com os passos documentados
+- [ ] Root cause endereçado (não apenas patched)
+- [ ] Testes de regressão adicionados e passando
+- [ ] Cobertura ≥ 80%
+- [ ] Commit local na branch `fix/001-idempotencia-movimentacao-id-case`
+```
+
+### Como usar este fix
+
+```
+1. @speckit /fix              → cria .speckit/FIX-001.md
+2. Preencha o arquivo         → use o exemplo acima como referência
+3. @speckit /validate         → valida o fix
+                                (se houver lacunas: agente pergunta e preenche)
+                                (fix válido: detecta stack + gera .github/ + instrui próximo passo)
+4. Copilot Chat → modo Agente → /fix-implement
+                                (agente investiga, confirma root cause,
+                                 implementa o fix + testes de regressão — portões 0–2)
+5. @speckit /review           → instrui abrir nova sessão
+6. Copilot Chat → modo Agente → /fix-review
+                                (revisão independente + encerramento — portões 3–4)
+```
+
+> **Dica:** o fix acima tem todos os campos preenchidos — ao executar `@speckit /validate` o agente vai direto para a geração dos arquivos, sem perguntas de alinhamento.
+
+---
+
+### Fix incompleto — exemplo do fluxo de alinhamento
+
+Situação comum: o desenvolvedor registrou o sintoma logo após o chamado mas não investigou a causa raiz nem avaliou o impacto completamente.
+
+#### Arquivo: `.speckit/FIX-001.md` (incompleto)
+
+```markdown
+# Fix 001
+
+<!-- metadata
+id: 001
+title: Comissões duplicadas
+createdAt: 2026-03-20
+version: 1
+type: fix
+status: open
+-->
+
+## Bug Description
+
+### Título do Bug
+Comissões duplicadas em produção
+
+### Sintomas
+- Dois registros na tabela `comissoes` para a mesma movimentação
+
+### Passos para Reproduzir
+-
+
+### Ambiente Afetado
+Produção
+
+### Frequência de Ocorrência
+Intermitente
+
+---
+
+## Root Cause Hypothesis
+
+### Hipótese
+
+### Arquivos/Componentes Suspeitos
+-
+
+---
+
+## Impact Assessment
+
+### Severidade
+
+### Usuários/Sistemas Afetados
+
+### Risco de Regressão
+
+---
+
+## Regression Prevention
+
+### Testes a Adicionar
+-
+
+---
+
+## DoF — Definition of Fixed
+
+- [ ] Bug não reproduz mais com os passos documentados
+- [ ] Root cause endereçado (não apenas patched)
+- [ ] Testes de regressão adicionados e passando
+- [ ] Cobertura ≥ 80%
+- [ ] Commit local na branch `fix/001-<slug>`
+```
+
+#### O que acontece ao executar `@speckit /validate`
+
+O agente detecta as lacunas e inicia o alinhamento conversacional, **uma pergunta por vez**:
+
+```
+Agente: Encontrei 5 lacunas no fix. Vamos preenchê-las juntos.
+
+        Primeira lacuna — [Bug Description] campo `passos para reproduzir`:
+        Os passos estão vazios. Como você reproduz o bug?
+        Descreva a sequência de ações que leva ao comportamento incorreto.
+
+Usuário: Envio um evento com movimentacaoId "MOV-abc123", depois reenvio
+         o mesmo ID em uppercase "MOV-ABC123" — dois registros aparecem
+         na tabela comissoes.
+
+Agente: ✓ Campo atualizado em .speckit/FIX-001.md
+
+        Segunda lacuna — [Root Cause Hypothesis] campo `hipótese`:
+        Você tem alguma hipótese sobre por que isso acontece?
+        Algum componente ou camada suspeita?
+
+Usuário: Acho que a busca de idempotência não normaliza o case do ID.
+         Provavelmente está no ComissaoRepository.
+
+Agente: ✓ Campo atualizado. Adicionei o arquivo suspeito também.
+
+        Terceira lacuna — [Impact Assessment] campo `severidade`:
+        Qual é a severidade deste bug?
+        Opções: critical | high | medium | low
+
+Usuário: Critical — está inflando os valores de comissão no fechamento mensal.
+
+Agente: ✓ Campo atualizado.
+
+        Quarta lacuna — [Impact Assessment] campos `usuários afetados`
+        e `risco de regressão` estão vazios.
+        Quem é impactado além do time financeiro?
+        E quais áreas podem ser afetadas pela correção?
+
+... (continua até fechar todas as lacunas) ...
+
+Agente: Todas as lacunas foram preenchidas.
+        Execute @speckit /validate para gerar os arquivos de configuração
+        e iniciar a investigação do fix.
+```
+
+Ao executar `/validate` novamente com o fix completo:
+
+```
+✅ Fix válido.
+🔍 Stack detectada: java · springboot · hexagonal
+⏳ Gerando arquivos de configuração do Copilot...
+✅ 17 arquivo(s) gerado(s): ...
+
+▶ Próximo passo — iniciar a investigação:
+1. Abra um novo Copilot Chat
+2. Selecione o modo Agente
+3. Digite /fix-implement — o agente carregará o contexto do fix
+
+O prompt está em .github/prompts/fix-implement.prompt.md.
+```
+
+---
+
 ## Regras de teste e entrega
 
 ### Cobertura mínima obrigatória
@@ -600,12 +955,19 @@ O prompt `implement.prompt.md` exige testes para cinco categorias:
 
 ### Portão de entrega
 
-O agente só pode declarar uma história como **CONCLUÍDA** após passar pelo PORTÃO 4 do `review.prompt.md` (Sessão B), que valida sequencialmente:
+**Stories** — o agente só pode declarar a história como **CONCLUÍDA** após passar pelo PORTÃO 4 do `review.prompt.md` (Sessão B):
 
 1. **0 (zero) testes falhando** — evidência do relatório obrigatória
 2. **Cobertura ≥ 80%** — relatório completo exibido no chat
 3. **Todos os critérios do DoD atendidos** — checklist item a item
 4. **Commit local** na branch `feature/<id>-<slug>` seguindo Conventional Commits: `feat(<story-id>): <descrição>`
+
+**Fixes** — o agente só pode declarar o fix como **CONCLUÍDO** após passar pelo PORTÃO 4 do `fix-review.prompt.md` (Sessão B):
+
+1. **0 (zero) testes falhando** — evidência do relatório obrigatória
+2. **Cobertura ≥ 80%** nas linhas modificadas
+3. **Todos os critérios do DoF atendidos** — checklist item a item
+4. **Commit local** na branch `fix/<id>-<slug>` + atualização de `status: done` em `.speckit/FIX-XXX.md`
 
 ---
 
@@ -617,6 +979,7 @@ O arquivo `05-git-workflow.instructions.md` instrui o Copilot a seguir o gitflow
 main        ←── hotfix/<slug>
   ↑
 develop     ←── feature/<story-id>-<slug>   (commit local — sem push)
+            ←── fix/<fix-id>-<slug>         (commit local — sem push)
                 release/<versão>
 ```
 
@@ -656,17 +1019,24 @@ vscode-plugin-speckit/
     │   ├── speckitParticipant.ts
     │   └── commands/
     │       ├── newCommand.ts
-    │       ├── validateCommand.ts
+    │       ├── fixCommand.ts          # @speckit /fix
+    │       ├── validateCommand.ts     # detecta Story ou Fix automaticamente
     │       ├── applyCommand.ts
-    │       ├── statusCommand.ts
+    │       ├── statusCommand.ts       # lista Stories e Fixes abertos
     │       └── reviewCommand.ts
     ├── story/
     │   ├── Story.ts
     │   ├── StoryTemplate.ts
     │   ├── StoryParser.ts
     │   └── StoryValidator.ts
+    ├── fix/
+    │   ├── Fix.ts                     # interfaces Fix, TechStackDetection, FixGap
+    │   ├── FixTemplate.ts             # template FIX-XXX.md
+    │   ├── FixParser.ts
+    │   └── FixValidator.ts
     └── generator/
-        ├── CopilotConfigGenerator.ts
+        ├── CopilotConfigGenerator.ts         # Stories
+        ├── FixCopilotConfigGenerator.ts      # Fixes (stack auto-detectada)
         ├── baseline/
         │   ├── AgentIntegrityGenerator.ts
         │   ├── PerformanceGenerator.ts
@@ -694,7 +1064,15 @@ vscode-plugin-speckit/
         │   ├── ArchPatternGenerator.ts
         │   ├── DodGenerator.ts
         │   ├── IndexGenerator.ts
-        │   └── PromptsGenerator.ts          # implement · write-tests · review · finalize · run (orquestrador) · gap-filling
+        │   └── PromptsGenerator.ts    # implement · review · run · gap-filling
+        ├── fix/
+        │   ├── FixContextGenerator.ts
+        │   ├── RootCauseGenerator.ts
+        │   ├── ImpactGenerator.ts
+        │   ├── RegressionGenerator.ts
+        │   ├── FixDofGenerator.ts
+        │   ├── FixIndexGenerator.ts
+        │   └── FixPromptsGenerator.ts # fix-implement · fix-review · fix-run · gap-filling
         └── utils/
             ├── fileSystem.ts          # implementação VS Code (produção)
             ├── workspace.ts           # implementação VS Code (produção)

@@ -25,7 +25,10 @@ function createMockWorkspace(overrides: Partial<IWorkspace> = {}): IWorkspace {
   return {
     getWorkspaceRoot: vi.fn().mockReturnValue('C:\\workspace'),
     listStoryFiles: vi.fn().mockResolvedValue([]),
+    listFixFiles: vi.fn().mockResolvedValue([]),
     getActiveStoryPath: vi.fn().mockResolvedValue(undefined),
+    getActiveSpecPath: vi.fn().mockResolvedValue(undefined),
+    detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
     ...overrides,
   };
 }

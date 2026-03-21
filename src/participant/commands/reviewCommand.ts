@@ -13,9 +13,9 @@ export async function handleReviewCommand(
     return;
   }
 
-  const storyPath = await workspace.getActiveStoryPath();
-  if (!storyPath) {
-    stream.markdown('❌ Nenhuma história encontrada em `.speckit/`. Use `/new` para criar uma.');
+  const specPath = await workspace.getActiveSpecPath();
+  if (!specPath) {
+    stream.markdown('❌ Nenhuma história encontrada em `.speckit/`. Use `/new` ou `/fix` para criar uma.');
     return;
   }
 
