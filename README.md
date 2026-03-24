@@ -1262,6 +1262,17 @@ O SpecKit estrutura a implementação em **5 gates** distribuídos em duas sess�
 
 ## CHANGELOG
 
+### v0.1.7
+
+- **[fix]** `/draft` — prompt de elicitação agora força entrevista guiada: gate obrigatório no início do prompt instrui o agente a perguntar **uma questão por vez** antes de qualquer geração; "Default se não informado" redefinido para aplicar somente quando o usuário responde "não sei" após a pergunta — elimina o comportamento onde o agente derivava todas as respostas da ideia inicial e gerava o arquivo sem perguntar nada
+- **[fix]** `inferTarget` — tipo de retorno corrigido: `'fullstack'` removido do union type e alinhado com `Story.Target` (`'bff'`); fallback alterado de `'fullstack'` para `'backend'`
+- **[novo]** Testes de integração via interface do Chat Participant: `handleSpeckitRequest` exportado de `speckitParticipant.ts`; 14 novos testes cobrindo roteamento (`default` case), `/draft` (story intent + fix intent), `/fix`, e smoke de todos os 7 comandos sem lançar exceção
+- **[fix]** Asserts de `/status` nos testes de integração corrigidos para refletir output real (`✅` / `⚠️ N lacuna(s)`)
+
+### v0.1.6
+
+- **[melhoria]** Instruções pós-`/draft` atualizadas: recomendação explícita de **Novo Chat** para garantir contexto limpo na elicitação; adicionado aviso de que sessão dedicada é necessária para o agente de elicitação funcionar corretamente
+
 ### v0.1.5
 
 - **[novo]** Comando `/draft`: converte texto livre em prompt de elicitação guiada — Copilot conduz entrevista estruturada (6 fases para Story, 7 fases para Fix) e monta o `.speckit/STORY-XXX.md` ou `FIX-XXX.md` completo; detecção automática de intent via flags `--fix`/`--bug` e keywords de bug; ID auto-incrementado baseado em arquivos existentes
