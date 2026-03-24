@@ -88,6 +88,25 @@ describe('generateStoryElicitPrompt', () => {
     expect(result).toContain('"N/A"');
   });
 
+  it('contains concrete example of combined problem output', () => {
+    expect(result).toContain('Exemplo de output combinado');
+    expect(result).toContain('ponto de atrito');
+  });
+
+  it('always asks about architecture with contextual suggestion', () => {
+    expect(result).toContain('Sempre pergunte');
+    expect(result).toContain('confirma ou prefere outro');
+  });
+
+  it('always asks about auth/public access for security', () => {
+    expect(result).toContain('Este serviço será acessado por usuários autenticados');
+  });
+
+  it('contains external dependencies field', () => {
+    expect(result).toContain('Dependências Externas');
+    expect(result).toContain('depende de outra feature');
+  });
+
   it('contains the "Regras absolutas" section', () => {
     expect(result).toContain('Regras absolutas');
   });
@@ -177,6 +196,27 @@ describe('generateFixElicitPrompt', () => {
   it('distinguishes "não sei" from "N/A"', () => {
     expect(result).toContain('"Não sei"');
     expect(result).toContain('"N/A"');
+  });
+
+  it('merges hypothesis and suspected files into a single integrated question', () => {
+    expect(result).toContain('Onde você acha que está o problema e por quê');
+    expect(result).toContain('hipótese');
+    expect(result).toContain('localização');
+  });
+
+  it('expands technical context to cover cache and load balancer signals', () => {
+    expect(result).toContain('Redis');
+    expect(result).toContain('TTL');
+    expect(result).toContain('cache miss');
+  });
+
+  it('actively probes technical context based on symptom signals', () => {
+    expect(result).toContain('Pergunte se qualquer um destes sinais');
+  });
+
+  it('contains external dependencies field for fix prerequisites', () => {
+    expect(result).toContain('Dependências Externas');
+    expect(result).toContain('Pré-requisitos para a correção');
   });
 
   it('contains the "Regras absolutas" section', () => {

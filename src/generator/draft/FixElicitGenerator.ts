@@ -85,21 +85,26 @@ Pergunta: *"Sugiro o título: '[título proposto]'. Está adequado ou quer ajust
 
 ## FASE 2 — Root Cause Hypothesis
 
-### 2.1 Hipótese \`(hypothesis)\`
+### 2.1 Hipótese + Arquivos Suspeitos \`(hypothesis + suspectedFiles)\`
 
-Pergunta: *"Qual é sua hipótese sobre a causa raiz? O que você acha que está errado — lógica de negócio, integração, configuração ou infraestrutura?"*
+Faça uma única pergunta aberta que elicita hipótese e localização simultaneamente — separar as duas artificialmente produz respostas superficiais em ambos os campos:
 
-Default se não informado: "Hipótese a definir após análise dos logs e stack traces. Investigar a partir dos arquivos suspeitos listados."
+Pergunta: *"Onde você acha que está o problema e por quê? Pode incluir arquivos, módulos, componentes ou camadas suspeitas — caminhos parciais são suficientes."*
 
-### 2.2 Arquivos/Componentes Suspeitos \`(suspectedFiles)\`
+A partir da resposta, extraia:
+- A **hipótese** (o raciocínio causal: *por que* esse componente está errado)
+- Os **arquivos/componentes suspeitos** (a localização: *onde* investigar)
 
-Pergunta: *"Quais arquivos, módulos ou componentes você suspeita que contêm o problema? (caminhos parciais são suficientes)"*
+Se o usuário responder só com localização (sem raciocínio): pergunte *"Qual é a sua hipótese sobre o que está errado nesse componente?"*
+Se o usuário responder só com hipótese (sem localização): pergunte *"Em quais arquivos ou módulos você investigaria isso?"*
 
-Default se não informado: ["A identificar — realizar busca nos logs de erro, stack traces e histórico de commits recentes"].
+Default se não informado:
+- Hipótese: "A definir após análise dos logs e stack traces."
+- Arquivos suspeitos: ["A identificar — buscar nos logs de erro, stack traces e histórico de commits recentes"]
 
 ---
 
-> **Resumo de fase**: "Hipótese registrada. Componentes suspeitos: [lista]. Confirma?"
+> **Resumo de fase**: "Hipótese: [hipótese]. Componentes suspeitos: [lista]. Confirma?"
 
 ---
 
@@ -163,23 +168,42 @@ Default se não informado:
 
 ---
 
-## FASE 5 — Contexto Técnico (opcional)
+## FASE 5 — Contexto Técnico
 
-Avalie a partir da descrição inicial e das fases anteriores. Pergunte apenas se houver indicação clara no contexto.
+Avalie cada sub-campo ativamente com base nos sintomas, hipótese e frequência já coletados — não espere o usuário mencionar espontaneamente.
 
 ### 5.1 Messaging \`(messaging)\`
 
-Pergunte somente se a descrição mencionar Kafka, filas, eventos, mensageria ou processamento assíncrono:
-*"O bug ocorre no contexto de mensageria? (Kafka | NA)"*
+Pergunte se qualquer um destes sinais estiver presente nos dados das fases anteriores:
+- Sintomas envolvem processamento assíncrono, atraso, duplicação ou perda de mensagens
+- Hipótese menciona consumer, producer, tópico, fila ou offset
+- Frequência é intermitente (padrão típico de problemas de mensageria)
+
+Pergunta: *"O bug ocorre no contexto de mensageria (Kafka, SQS, RabbitMQ)? Se sim, qual?"*
 
 Default: "NA"
 
-### 5.2 Banco de Dados / Cloud \`(database)\`
+### 5.2 Banco de Dados / Cache / Cloud \`(database)\`
 
-Pergunte somente se a descrição mencionar banco de dados, storage, cache ou serviços cloud:
-*"Há banco de dados, cache (Redis) ou serviços cloud envolvidos? (DynamoDB | Aurora | RDS | Redis | S3 | NA)"*
+Pergunte se qualquer um destes sinais estiver presente:
+- Sintomas envolvem dados incorretos, ausentes ou desatualizados
+- Hipótese menciona query, transação, índice, lock, TTL ou expiração
+- Bug ocorre sob condição específica de carga (padrão de contenção de banco ou cache miss)
+- Ambiente de produção difere de staging (possível diferença de configuração de cache ou cloud)
+
+Pergunta: *"Há banco de dados, cache (Redis/Memcached) ou serviços cloud (DynamoDB, Aurora, RDS, S3) envolvidos na cadeia que falha?"*
+
+Se sim, pergunte: *"O comportamento difere entre produção e staging para esse componente? (indica possível diferença de configuração ou dados)"*
 
 Default: "NA"
+
+### 5.3 Dependências Externas \`(hypothesis — complemento)\`
+
+Sempre pergunte: *"A correção deste bug depende de acesso, credencial, deploy em outro serviço ou mudança de configuração de infraestrutura que você ainda não tem?"*
+
+Default se não informado: "Nenhuma dependência bloqueante identificada."
+
+> **Instrução de montagem**: se houver dependências, adicione ao final do campo \`Hipótese\`: "Pré-requisitos para a correção: {lista}."
 
 ---
 

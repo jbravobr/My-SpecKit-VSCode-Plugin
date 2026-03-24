@@ -40,6 +40,7 @@ Pergunta: *"O que torna esta entrega urgente ou relevante neste momento? Há um 
 Default se não informado: "Motivação de urgência não especificada — priorização a ser alinhada com o time de produto."
 
 > **Instrução de montagem**: combine 1.1 e 1.2 em um único parágrafo coeso no campo \`Problema\` do template de saída.
+> Exemplo de output combinado: *"O cálculo de comissões é feito em batch noturno, gerando visibilidade defasada de D+1 para os vendedores — um ponto de atrito recorrente no fechamento mensal. A entrega é urgente porque o time comercial cresceu 40% este trimestre e o volume de reclamações no suporte sobre comissões incorretas triplicou desde janeiro."*
 
 ### 1.3 Valor \`(value)\`
 
@@ -122,9 +123,15 @@ Default de fallback se nenhum contexto disponível: ["Funcionalidades de configu
 
 ### 3.2 Segurança \`(security)\`
 
-**Default obrigatório:** "Nenhum dado pessoal (PII) nos logs. Credenciais via variáveis de ambiente. Inputs validados contra schema antes do processamento."
+**Sempre pergunte** — independentemente do que o usuário mencionou:
+*"Este serviço será acessado por usuários autenticados, por sistemas internos via token, ou é uma operação pública sem autenticação?"*
 
-Pergunte somente se a ideia mencionar dados sensíveis, autenticação de usuários ou exposição pública: *"Há requisitos de autenticação, autorização ou LGPD que precisam ser observados?"*
+Com base na resposta, complemente com:
+- Se autenticado: *"Há requisitos de autorização por papel (RBAC) ou por recurso (ex: vendedor só vê suas próprias comissões)?"*
+- Se dados pessoais envolvidos ou LGPD aplicável: adicione restrição explícita ao campo.
+- Se público: adicione rate limiting e validação de input à especificação.
+
+**Default base (sempre incluir):** "Nenhum dado pessoal (PII) nos logs. Credenciais via variáveis de ambiente. Inputs validados contra schema antes do processamento."
 
 ### 3.3 Escalabilidade \`(scalability)\`
 
@@ -169,11 +176,17 @@ Default por linguagem: typescript → other | java → springboot | python → f
 
 ### 4.3 Arquitetura \`(architecture)\`
 
-Pergunta: *"Qual padrão arquitetural? (hexagonal | layered | microservices | monolith | serverless)"*
+**Sempre pergunte** — não infira silenciosamente. Sugira o default como opção baseada no contexto.
 
-Default baseado na complexidade inferida:
-- Lógica de domínio rica, múltiplos casos de uso, regras de negócio → "hexagonal"
-- CRUD simples, scripts, utilitários, jobs → "layered"
+Pergunta: *"Qual padrão arquitetural? (hexagonal | layered | microservices | monolith | serverless). Com base no que descreveu, sugiro [sugestão] — confirma ou prefere outro?"*
+
+Sugestão contextual:
+- Lógica de domínio rica, múltiplos casos de uso, regras de negócio → sugerir "hexagonal"
+- CRUD simples, scripts, utilitários, jobs → sugerir "layered"
+- Serviço isolado com responsabilidade única → sugerir "microservices"
+- Função cloud sem estado → sugerir "serverless"
+
+Se o usuário não souber: aplique a sugestão contextual e informe que está fazendo isso.
 
 ### 4.4 Target \`(target)\`
 
@@ -207,7 +220,15 @@ Se o usuário disser "não sei": registre como "A definir com o time de infra."
 
 ---
 
-## FASE 5 — DoR e DoD
+## FASE 5 — Dependências e DoR/DoD
+
+### 5.0 Dependências Externas \`(problem — complemento de contexto)\`
+
+Pergunta: *"Esta história depende de outra feature, ticket ou serviço externo que ainda não está disponível ou pronto? (ex: API de terceiro, schema de banco pendente, outra story do mesmo sprint)"*
+
+Default se não informado: "Nenhuma dependência bloqueante identificada."
+
+> **Instrução de montagem**: se houver dependências, registre-as ao final do campo \`Problema\` como um parágrafo separado: "Dependências: {lista}."
 
 ### DoR — Definition of Ready
 
