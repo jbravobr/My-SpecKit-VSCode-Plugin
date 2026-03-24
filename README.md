@@ -165,10 +165,16 @@ Ambos os caminhos convergem para o mesmo `.speckit/STORY-XXX.md` ou `FIX-XXX.md`
 **SpecKit responde:**
 
 > ✅ Prompt de elicitação criado: `.speckit/elicit-story.prompt.md` (STORY-001)
-> Abra o arquivo no Copilot Chat em modo **Agente** para iniciar a entrevista.
+>
+> **Próximo passo:** O arquivo foi aberto no editor. Para iniciar a elicitação:
+> - **Opção A (recomendada):** clique no ícone **▶ Run in Copilot Chat** na barra de título do editor → selecione **Novo Chat**
+> - **Opção B:** abra o Copilot Chat (`Ctrl+Alt+I`), mude para modo **Agente**, e escreva `#elicit-story.prompt.md` no campo de mensagem
+>
+> Use **Novo Chat** para garantir contexto limpo — o agente de elicitação precisa de uma sessão dedicada.
+>
 > Ao concluir, execute `@speckit /validate` para gerar os arquivos de configuração.
 
-**Conversa de elicitação (Copilot Chat — modo Agente, arquivo aberto):**
+**Conversa de elicitação (Copilot Chat — modo Agente, Novo Chat):**
 
 > **🤖 Agente**
 >
@@ -271,7 +277,12 @@ O SpecKit detecta as keywords `retorna 500` (erro HTTP) e roteia para fix automa
 **SpecKit responde:**
 
 > ✅ Prompt de elicitação criado: `.speckit/elicit-fix.prompt.md` (FIX-001)
-> Abra o arquivo no Copilot Chat em modo **Agente** para iniciar a entrevista.
+>
+> **Próximo passo:** O arquivo foi aberto no editor. Para iniciar a elicitação:
+> - **Opção A (recomendada):** clique no ícone **▶ Run in Copilot Chat** na barra de título do editor → selecione **Novo Chat**
+> - **Opção B:** abra o Copilot Chat (`Ctrl+Alt+I`), mude para modo **Agente**, e escreva `#elicit-fix.prompt.md` no campo de mensagem
+>
+> Use **Novo Chat** para garantir contexto limpo — o agente de elicitação precisa de uma sessão dedicada.
 
 **Conversa de elicitação (trecho):**
 
@@ -964,7 +975,13 @@ Converte texto livre em um prompt de elicitação que guia o Copilot a entrevist
 O SpecKit cria o arquivo de elicitação em `.speckit/` e instrui:
 
 > ✅ Prompt de elicitação criado: `.speckit/elicit-story.prompt.md` (STORY-001)
-> Abra o arquivo no Copilot Chat em modo **Agente** para iniciar a entrevista.
+>
+> **Próximo passo:** O arquivo foi aberto no editor. Para iniciar a elicitação:
+> - **Opção A (recomendada):** clique no ícone **▶ Run in Copilot Chat** na barra de título do editor → selecione **Novo Chat**
+> - **Opção B:** abra o Copilot Chat (`Ctrl+Alt+I`), mude para modo **Agente**, e escreva `#elicit-story.prompt.md` no campo de mensagem
+>
+> Use **Novo Chat** para garantir contexto limpo — o agente de elicitação precisa de uma sessão dedicada.
+>
 > Ao concluir, execute `@speckit /validate` para gerar os arquivos de configuração.
 
 **Fases da entrevista — Story (6 fases):**
