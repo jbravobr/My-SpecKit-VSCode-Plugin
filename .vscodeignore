@@ -6,4 +6,8 @@ src/**
 esbuild.js
 tsconfig.json
 out/**
-node_modules/**
+**/node_modules/**
+speckit-agent/**
+tests/**
+vitest.config.ts
+tsconfig.integration.json
