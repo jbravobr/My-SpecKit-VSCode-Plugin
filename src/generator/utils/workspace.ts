@@ -231,7 +231,7 @@ async function inferArchitecture(workspaceRoot: string): Promise<string | undefi
 async function inferTarget(
   workspaceRoot: string,
   deps: Record<string, unknown>,
-): Promise<'backend' | 'frontend' | 'fullstack' | 'script' | 'library'> {
+): Promise<'backend' | 'frontend' | 'bff' | 'script' | 'library'> {
   const hasFrontendDep = Boolean(deps['react'] || deps['@angular/core'] || deps['vue']);
   const hasBackendDep = Boolean(deps['express'] || deps['fastify'] || deps['koa'] || deps['nestjs']);
   if (hasFrontendDep && hasBackendDep) return 'bff';
@@ -248,5 +248,5 @@ async function inferTarget(
   } catch {
     // ignore
   }
-  return 'fullstack';
+  return 'backend';
 }
