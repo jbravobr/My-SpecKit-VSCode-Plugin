@@ -51,7 +51,12 @@ Pergunta em duas partes — faça a primeira, aguarde, depois a segunda:
 
 Default se não informado:
 - Parte A: derive da ideia inicial descrevendo o benefício operacional.
-- Parte B: "Indicador de sucesso a definir após primeira medição em produção."
+- Parte B: **não use "a definir após produção" como default** — sugira um candidato de métrica com base no domínio da ideia e peça confirmação:
+  - Domínio de cálculo/financeiro → "Redução de divergências entre valor calculado e valor esperado (ex: tickets de suporte sobre erros de cálculo)"
+  - Domínio de API/integração → "Latência P99 abaixo do SLA definido em 3.1 e taxa de erro < 0,1%"
+  - Domínio de eventos/streaming → "Lag de fila < threshold definido e taxa de mensagens em DLQ < 1%"
+  - Domínio de frontend/UX → "Taxa de conclusão do fluxo principal > X% e tempo médio de tarefa"
+  - Domínio genérico → "Redução mensurável da dor descrita em 1.1 — sugerir proxy metric ao usuário e pedir confirmação"
 
 > **Instrução de montagem**: combine A e B em um único parágrafo no campo \`Valor\`: "{benefício}. Indicador de sucesso: {métrica}."
 
@@ -81,15 +86,23 @@ Regras:
 
 Default se não informado: derive 2–3 user stories a partir da ideia inicial usando atores com objetivos de negócio claros.
 
+**Sinal de tamanho** — avalie e informe o usuário antes de prosseguir:
+- Apenas 1 user story identificada → *"Isso parece uma task, não uma story. Considere se faz mais sentido como subtarefa de uma story maior. Quer continuar como story mesmo assim?"*
+- Mais de 5 user stories identificadas → *"Isso parece um épico. Considere dividir em histórias menores entregáveis independentemente. Quer priorizar as 3–5 mais importantes para esta story?"*
+
 ### 2.2 Critérios de Aceite \`(acceptanceCriteria)\`
 
-Pergunta: *"Quais condições verificáveis provam que cada user story está funcionando? Inclua comportamentos do sistema, limites, e casos de erro relevantes."*
+Pergunta: *"Quais condições verificáveis provam que cada user story está funcionando? Inclua comportamentos do sistema, limites e casos de erro relevantes."*
 
 Regras:
 - Cada critério começa com verbo no infinitivo (Consumir, Persistir, Emitir, Rejeitar, Calcular, Validar, Retornar, Notificar)
 - Deve ser mensurável e testável por um teste automatizado
-- Cubra: happy path, limites de dados e pelo menos 1 caso de erro ou rejeição
-- Mínimo de 3 itens
+- Cubra obrigatoriamente:
+  - **Happy path**: o fluxo principal com dados válidos
+  - **Limites de dados**: valor mínimo/máximo aceito, tamanho máximo de payload ou lista, comportamento com payload vazio ou nulo
+  - **Rejeição**: pelo menos 1 caso em que o sistema deve rejeitar ou retornar erro (input inválido, pré-condição não atendida, recurso inexistente)
+  - **Idempotência** se a operação for de escrita: re-execução com os mesmos dados produz o mesmo resultado sem efeito colateral
+- Mínimo de 3 itens; ideal 5–7 para cobrir todos os quadrantes acima
 
 Default se não informado: derive 3–5 critérios a partir das user stories, cobrindo happy path + 1 caso de rejeição.
 
@@ -135,7 +148,26 @@ Com base na resposta, complemente com:
 
 ### 3.3 Escalabilidade \`(scalability)\`
 
-**Default obrigatório:** "Escalonamento horizontal via réplicas stateless. Sem estado local em memória entre execuções."
+Pergunta: *"Há estimativa de carga esperada — usuários simultâneos, requisições por hora, volume de eventos ou tamanho de payload? (ordem de grandeza é suficiente)"*
+
+A partir da resposta, estruture o campo em duas partes claramente separadas:
+
+**Parte 1 — Requisitos de código** (o que o time de desenvolvimento controla diretamente):
+- Design stateless: nenhum estado de sessão ou contexto em memória entre requisições/execuções
+- Paginação obrigatória em listas: limite máximo de itens por resposta (ex: 100 registros/página)
+- Timeouts e circuit breakers em integrações externas: evitar cascata de falhas
+- Pool de conexões configurável: não abrir conexão nova por requisição
+- Operações de escrita assíncronas onde possível: não bloquear o fluxo principal
+- Se houver estimativa de carga → adicionar: "Suportar [N] usuários simultâneos / [N] eventos/hora sem degradação de latência além do SLA definido em 3.1"
+
+**Parte 2 — Recomendações de infraestrutura** (para discussão com o time de infra — fora do controle direto do desenvolvimento):
+- Escalonamento horizontal habilitado pela ausência de estado local (pré-condição criada pelo código)
+- Estratégia de autoscaling a definir com o time de infra com base nas métricas de carga coletadas em produção
+- Limites de recursos (CPU/memória) a calibrar após primeira medição em produção
+
+**Default se carga não informada:**
+- Requisitos de código: stateless, paginação ≤ 100 itens, timeouts em integrações, pool de conexões
+- Recomendações de infra: "Escalonamento horizontal a definir com o time de infra após baseline de produção"
 
 ### 3.4 Usabilidade \`(usability)\`
 
@@ -204,8 +236,8 @@ Default: "backend"
 
 Pergunta: *"Qual banco de dados será utilizado? (tecnologia + propósito)"*
 
-Se não informado: "A definir — nenhum banco identificado na ideia inicial."
-Se o usuário disser "não sei": registre como "A definir com o time de arquitetura." (não aplique default — é uma lacuna real).
+Se o usuário não mencionar banco: "Nenhum banco de dados identificado na ideia inicial — confirmar se necessário."
+Se o usuário disser "não sei" explicitamente: registre como "A definir com o time de arquitetura — lacuna identificada." (não aplique default; sinaliza que existe uma decisão pendente).
 
 ### 4.6 Infraestrutura \`(infrastructure)\`
 
@@ -234,14 +266,14 @@ Default se não informado: "Nenhuma dependência bloqueante identificada."
 
 Avalie cada critério individualmente após preencher as fases anteriores.
 
-**Critérios verificáveis pelo AI** (marque \`[x]\` se o dado foi coletado durante a entrevista):
-- [ ] User stories com critérios de aceite mensuráveis
-- [ ] Escopo delimitado (o que está e o que não está incluído)
-- [ ] Requisitos não-funcionais definidos (performance, segurança, disponibilidade)
-- [ ] Stack técnica decidida (linguagem, framework, arquitetura)
-- [ ] Padrão arquitetural definido
+**Critérios verificáveis pelo AI** — marque \`[x]\` **somente se o dado foi efetivamente coletado** durante a entrevista (resposta do usuário ou default aplicado com confirmação). Se o campo ficou como "A definir" ou "não sei", mantenha \`[ ]\`:
+- [ ] User stories com critérios de aceite mensuráveis ← marque [x] se 2.1 e 2.2 foram preenchidos
+- [ ] Escopo delimitado (o que está e o que não está incluído) ← marque [x] se 2.3 foi preenchido
+- [ ] Requisitos não-funcionais definidos (performance, segurança, disponibilidade) ← marque [x] se 3.1–3.5 foram resolvidos (não "A definir")
+- [ ] Stack técnica decidida (linguagem, framework, arquitetura) ← marque [x] se 4.1–4.3 foram respondidos ou defaultados com confirmação
+- [ ] Padrão arquitetural definido ← marque [x] se 4.3 foi confirmado
 
-**Critérios que requerem ação humana** (mantenha sempre como \`[ ]\` — não marque automaticamente):
+**Critérios que requerem ação humana** (mantenha sempre como \`[ ]\` — jamais marque automaticamente):
 - [ ] Requisito de negócio documentado e aprovado pelo stakeholder responsável
 - [ ] DoD acordado com o time de desenvolvimento
 
@@ -361,11 +393,12 @@ status: open
 
 ### DoR — Definition of Ready
 
-- [x] User stories com critérios de aceite mensuráveis
-- [x] Escopo delimitado (o que está e o que não está incluído)
-- [x] Requisitos não-funcionais definidos (performance, segurança, disponibilidade)
-- [x] Stack técnica decidida (linguagem, framework, arquitetura)
-- [x] Padrão arquitetural definido
+{avalie cada critério individualmente conforme regra da Fase 5 — marque [x] somente para dados efetivamente coletados}
+- [ ] User stories com critérios de aceite mensuráveis
+- [ ] Escopo delimitado (o que está e o que não está incluído)
+- [ ] Requisitos não-funcionais definidos (performance, segurança, disponibilidade)
+- [ ] Stack técnica decidida (linguagem, framework, arquitetura)
+- [ ] Padrão arquitetural definido
 - [ ] Requisito de negócio documentado e aprovado pelo stakeholder responsável
 - [ ] DoD acordado com o time de desenvolvimento
 
@@ -378,14 +411,31 @@ status: open
 
 ---
 
+## Modo rápido
+
+Se o usuário disser "preenche tudo com defaults", "modo rápido" ou equivalente:
+1. Aplique todos os defaults sem perguntar
+2. Gere o arquivo completo
+3. Adicione ao final do arquivo, **antes do fechamento do bloco markdown**, a seção:
+
+\`\`\`
+### Campos preenchidos com default — revisar antes de /validate
+
+{lista de campos que não foram confirmados pelo usuário, um por linha}
+\`\`\`
+
+4. Confirme: "✅ Spec gerada com defaults. Revise os campos listados acima antes de rodar \`@speckit /validate\`."
+
 ## Regras absolutas
 
 - Faça **UMA pergunta por vez** nas fases 1–4. Nunca agrupe perguntas.
 - "Não sei" ≠ "N/A": registre "A definir" para lacunas e "N/A" para campos inaplicáveis.
-- Nunca marque \`[x]\` em critérios de DoR que requerem ação humana (aprovação, alinhamento de time).
+- Nunca marque \`[x]\` em critérios de DoR que não foram efetivamente coletados ou que requerem ação humana.
 - Performance P99 não se aplica a serviços assíncronos — avalie o contexto antes de usar.
+- Escalabilidade: requisitos de código primeiro; infraestrutura como recomendação, nunca como prescrição.
 - Out-of-scope deve ser derivado do contexto da ideia, não de defaults genéricos.
+- KPI de sucesso: sugira um candidato com base no domínio — não defira para "após produção".
 - **Nunca** implemente código. **Nunca** sugira implementações. Apenas elicite e documente a spec.
-- O output final deve ser **somente** o conteúdo do arquivo \`.speckit/STORY-${nextId}.md\` — sem texto adicional além da confirmação de criação.
+- O output final deve ser **somente** o conteúdo do arquivo \`.speckit/STORY-${nextId}.md\` — sem texto adicional além da confirmação de criação (exceto no modo rápido).
 `;
 }

@@ -107,6 +107,44 @@ describe('generateStoryElicitPrompt', () => {
     expect(result).toContain('depende de outra feature');
   });
 
+  it('suggests domain-specific KPI candidate instead of deferring', () => {
+    expect(result).toContain('não use "a definir após produção" como default');
+    expect(result).toContain('Domínio de cálculo/financeiro');
+  });
+
+  it('contains acceptance criteria quadrant guidance (limits, null, idempotency)', () => {
+    expect(result).toContain('nulo');
+    expect(result).toContain('Idempotência');
+    expect(result).toContain('Rejeição');
+  });
+
+  it('contains story size signal (task vs epic)', () => {
+    expect(result).toContain('Sinal de tamanho');
+    expect(result).toContain('épico');
+    expect(result).toContain('task');
+  });
+
+  it('contains scalability as code requirements + infra recommendations', () => {
+    expect(result).toContain('Requisitos de código');
+    expect(result).toContain('Recomendações de infraestrutura');
+    expect(result).toContain('Escalonamento horizontal habilitado');
+  });
+
+  it('DoR template uses conditional marking, not hardcoded [x]', () => {
+    expect(result).toContain('avalie cada critério individualmente');
+    expect(result).not.toMatch(/- \[x\] User stories/);
+  });
+
+  it('contains consistent database gap treatment', () => {
+    expect(result).toContain('não mencionar banco');
+    expect(result).toContain('lacuna identificada');
+  });
+
+  it('contains fast mode instruction', () => {
+    expect(result).toContain('Modo rápido');
+    expect(result).toContain('Campos preenchidos com default');
+  });
+
   it('contains the "Regras absolutas" section', () => {
     expect(result).toContain('Regras absolutas');
   });
@@ -204,6 +242,11 @@ describe('generateFixElicitPrompt', () => {
     expect(result).toContain('localização');
   });
 
+  it('separately extracts suspectedFiles and suspectedComponents', () => {
+    expect(result).toContain('suspectedFiles');
+    expect(result).toContain('suspectedComponents');
+  });
+
   it('expands technical context to cover cache and load balancer signals', () => {
     expect(result).toContain('Redis');
     expect(result).toContain('TTL');
@@ -217,6 +260,32 @@ describe('generateFixElicitPrompt', () => {
   it('contains external dependencies field for fix prerequisites', () => {
     expect(result).toContain('Dependências Externas');
     expect(result).toContain('Pré-requisitos para a correção');
+  });
+
+  it('contains urgency / deadline field for fix prioritization', () => {
+    expect(result).toContain('Urgência / Prazo');
+    expect(result).toContain('SLA contratual');
+  });
+
+  it('cross-validates severity with workaround from field 1.5', () => {
+    expect(result).toContain('Antes de perguntar');
+    expect(result).toContain('cruze com o dado já coletado em 1.5');
+  });
+
+  it('regression risk requires level and rationale, not just a task', () => {
+    expect(result).toContain('avaliação com nível e razão');
+    expect(result).toContain('Alto:');
+    expect(result).toContain('Baixo:');
+  });
+
+  it('handles partial reproduction steps explicitly', () => {
+    expect(result).toContain('parcialmente conhecidos');
+    expect(result).toContain('tempo exato desconhecido');
+  });
+
+  it('contains fast mode instruction', () => {
+    expect(result).toContain('Modo rápido');
+    expect(result).toContain('Campos preenchidos com default');
   });
 
   it('contains the "Regras absolutas" section', () => {

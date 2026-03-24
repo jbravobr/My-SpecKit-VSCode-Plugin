@@ -46,9 +46,10 @@ Default se não informado: "Data de primeira ocorrência não identificada — v
 
 Pergunta: *"Quais são os passos exatos para reproduzir o problema? Liste em ordem numerada."*
 
-**Sem default aceitável.** Se o usuário não souber:
-- Se o bug for intermitente: registre "Bug intermitente — não reproduzível de forma consistente. Investigar via logs e traces de produção."
-- Se o bug for consistente mas os passos forem desconhecidos: registre "Passos de reprodução a documentar antes de iniciar a correção — risco de correção especulativa."
+**Sem default aceitável.** Trate os três casos possíveis:
+- **Passos conhecidos**: registre a lista numerada.
+- **Passos parcialmente conhecidos** (usuário sabe parte mas não tudo): registre os passos conhecidos e marque as lacunas explicitamente. Ex: \`"1. Fazer login como usuário vendedor. 2. Aguardar token expirar (tempo exato desconhecido). 3. Realizar requisição — ocorre o erro."\` Passos com incerteza são válidos e mais úteis que nenhum passo.
+- **Bug intermitente ou passos desconhecidos**: registre \`"Bug intermitente — não reproduzível de forma consistente. Investigar via logs e traces de produção antes de iniciar a correção."\`
 
 ### 1.4 Ambiente Afetado \`(environment — parte A)\`
 
@@ -70,7 +71,15 @@ Pergunta: *"O bug ocorre sempre, intermitentemente ou apenas sob condição espe
 
 Default se não informado: "Frequência não determinada — coletar dados de observabilidade (logs, traces)."
 
-### 1.7 Título do Bug \`(title)\`
+### 1.7 Urgência / Prazo \`(symptoms — complemento de contexto)\`
+
+Pergunta: *"Há SLA contratual, compromisso com cliente, data de release ou evento externo que define quando este bug precisa estar corrigido?"*
+
+Default se não informado: "Nenhum prazo externo identificado — priorização a ser alinhada com o time."
+
+> **Instrução de montagem**: se houver prazo, adicione ao final do campo \`Sintomas\` como linha separada: "Prazo para correção: {prazo e razão}."
+
+### 1.8 Título do Bug \`(title)\`
 
 Com base nos sintomas coletados em 1.1–1.6, proponha um título conciso no formato:
 **"[Componente/Área] — [comportamento incorreto observado]"**
@@ -79,7 +88,7 @@ Pergunta: *"Sugiro o título: '[título proposto]'. Está adequado ou quer ajust
 
 ---
 
-> **Resumo de fase**: "Bug caracterizado como: [título]. Ocorre [frequência], no ambiente [ambiente]. Confirma antes de seguirmos para a hipótese de causa raiz?"
+> **Resumo de fase**: "Bug caracterizado como: [título]. Ocorre [frequência], no ambiente [ambiente]. Prazo: [prazo ou nenhum identificado]. Confirma antes de seguirmos para a hipótese de causa raiz?"
 
 ---
 
@@ -91,9 +100,10 @@ Faça uma única pergunta aberta que elicita hipótese e localização simultane
 
 Pergunta: *"Onde você acha que está o problema e por quê? Pode incluir arquivos, módulos, componentes ou camadas suspeitas — caminhos parciais são suficientes."*
 
-A partir da resposta, extraia:
-- A **hipótese** (o raciocínio causal: *por que* esse componente está errado)
-- Os **arquivos/componentes suspeitos** (a localização: *onde* investigar)
+A partir da resposta, extraia e separe:
+- A **hipótese** → campo \`hypothesis\`: o raciocínio causal (*por que* está errado)
+- Os **arquivos suspeitos** → campo \`suspectedFiles\`: caminhos de arquivo, módulos ou pacotes (ex: \`src/auth/TokenService.ts\`, \`lib/oauth\`)
+- Os **componentes suspeitos** → campo \`suspectedComponents\`: camadas arquiteturais, serviços ou integrações sem caminho de arquivo (ex: \`middleware de autenticação\`, \`Redis cache layer\`, \`OAuth provider externo\`)
 
 Se o usuário responder só com localização (sem raciocínio): pergunte *"Qual é a sua hipótese sobre o que está errado nesse componente?"*
 Se o usuário responder só com hipótese (sem localização): pergunte *"Em quais arquivos ou módulos você investigaria isso?"*
@@ -112,9 +122,14 @@ Default se não informado:
 
 ### 3.1 Severidade \`(severity)\`
 
-Pergunta: *"Qual é a severidade? (critical | high | medium | low)"*
+**Antes de perguntar**, cruze com o dado já coletado em 1.5 (workaround) e sugira ativamente:
+- Funcionalidade principal + sem workaround (1.5 = "Nenhum workaround identificado") → sugerir **high**; se serviço completamente indisponível ou perda de dados → sugerir **critical**
+- Funcionalidade degradada + workaround existe (1.5 tem valor) → sugerir **medium**
+- Impacto cosmético ou edge case → sugerir **low**
 
-Guia de calibração:
+Pergunta: *"Com base no que descreveu — funcionalidade [impactada] e [workaround/sem workaround] — sugiro severidade '[sugestão]'. Confirma ou quer ajustar?"*
+
+Guia de calibração para referência:
 - **critical**: serviço indisponível para todos os usuários, perda de dados em produção, ou violação de compliance
 - **high**: funcionalidade principal quebrada sem workaround disponível
 - **medium**: funcionalidade degradada, workaround existe e é viável
@@ -137,7 +152,15 @@ Default se não informado:
 
 Pergunta: *"Ao corrigir este bug, quais outras áreas do sistema podem ser impactadas acidentalmente? Há fluxos que compartilham o componente suspeito?"*
 
-Default se não informado: "Avaliar impacto nos módulos adjacentes ao componente suspeito antes de implementar a correção."
+**O campo deve conter uma avaliação com nível e razão — não uma instrução de trabalho futuro.**
+
+Se o usuário fornecer a informação, registre como: "[nível]: [razão]"
+Exemplos:
+- "Alto: componente de autenticação utilizado por todos os endpoints da API — qualquer alteração tem superfície de regressão ampla."
+- "Médio: módulo de cálculo de comissão compartilhado por 3 fluxos (venda direta, venda por parceiro, estorno)."
+- "Baixo: validação isolada em um único endpoint sem dependentes diretos identificados."
+
+Default se não informado: derive do componente suspeito coletado em 2.1 e estime o risco com base no nome/camada do componente. Se não houver informação suficiente: "Risco a avaliar — componente suspeito não identificado. Executar análise de dependências antes de iniciar a correção."
 
 ---
 
@@ -234,7 +257,8 @@ Após coletar todas as respostas (ou aplicar os defaults onde aplicável):
 2. Substitua **todos** os campos pelos valores coletados — nunca deixe um campo em branco
 3. Combine 1.1 + 1.2 em um único parágrafo coeso no campo \`Sintomas\`
 4. Combine 1.4 + 1.5 no campo \`Ambiente Afetado\`: "{ambiente}. Workaround: {workaround}"
-5. Posicione o título aprovado em 1.7 no metadata e no cabeçalho
+5. Posicione o título aprovado em 1.8 no metadata e no cabeçalho
+5a. Se houver urgência/prazo (1.7), adicione ao final do campo \`Sintomas\`
 6. Salve o conteúdo completo em \`.speckit/FIX-${nextId}.md\`
 7. Confirme: "✅ \`FIX-${nextId}.md\` criado em \`.speckit/\`. Use \`@speckit /validate\` para verificar completude e gerar a configuração do Copilot."
 
@@ -257,10 +281,10 @@ status: open
 ### Bug Description
 
 #### Título do Bug
-{título aprovado em 1.7}
+{título aprovado em 1.8}
 
 #### Sintomas
-{parágrafo combinando 1.1 + 1.2: comportamento observado vs. esperado + primeira ocorrência + gatilho}
+{parágrafo combinando 1.1 + 1.2: comportamento observado vs. esperado + primeira ocorrência + gatilho. Se houver prazo (1.7), adicione no final: "Prazo para correção: {prazo}."}
 
 #### Passos para Reproduzir
 {lista de 1.3 — um item por linha precedido de "-", ou declaração explícita de não-reprodutibilidade}
@@ -320,13 +344,30 @@ status: open
 
 ---
 
+## Modo rápido
+
+Se o usuário disser "preenche tudo com defaults", "modo rápido" ou equivalente:
+1. Aplique todos os defaults sem perguntar
+2. Gere o arquivo completo
+3. Adicione ao final do arquivo, **antes do fechamento do bloco markdown**, a seção:
+
+\`\`\`
+### Campos preenchidos com default — revisar antes de /validate
+
+{lista de campos que não foram confirmados pelo usuário, um por linha}
+\`\`\`
+
+4. Confirme: "✅ Fix gerado com defaults. Revise os campos listados acima antes de rodar \`@speckit /validate\`."
+
 ## Regras absolutas
 
 - Faça **UMA pergunta por vez** nas fases 1–5. Nunca agrupe perguntas.
 - "Não sei" ≠ "N/A": registre lacunas explicitamente; não aplique defaults genéricos para campos investigativos.
-- **Passos de reprodução não têm default aceitável** — force o usuário ou registre explicitamente a não-reprodutibilidade.
-- O **título do bug é proposto ao final da Fase 1**, não no início.
+- **Passos de reprodução não têm default aceitável** — force o usuário, aceite passos parciais com incertezas marcadas, ou registre a não-reprodutibilidade.
+- O **título do bug é proposto ao final da Fase 1** (campo 1.8), não no início.
+- Severidade deve ser sugerida com base no cruzamento de workaround (1.5) + funcionalidade impactada — não apenas pelo guia genérico.
+- Risco de regressão deve ser uma avaliação com nível e razão — não uma instrução de trabalho futuro.
 - **Nunca** implemente a correção. **Nunca** sugira código. Apenas elicite e documente o fix.
-- O output final deve ser **somente** o conteúdo do arquivo \`.speckit/FIX-${nextId}.md\` — sem texto adicional além da confirmação de criação.
+- O output final deve ser **somente** o conteúdo do arquivo \`.speckit/FIX-${nextId}.md\` — sem texto adicional além da confirmação de criação (exceto no modo rápido).
 `;
 }
