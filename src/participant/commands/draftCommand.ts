@@ -58,7 +58,10 @@ export async function handleDraftCommand(
 
     stream.markdown(
       `✅ Prompt de elicitação criado: \`.speckit/${fileName}\`\n\n` +
-      `**Próximo passo:** Abra o arquivo acima no Copilot Chat (clique em "Open in Copilot" ou use \`#${fileName}\`). ` +
+      `**Próximo passo:** O arquivo foi aberto no editor. Para iniciar a elicitação:\n\n` +
+      `- **Opção A (recomendada):** Com o arquivo aberto no editor, clique no ícone **▶ Run in Copilot Chat** na barra de título → selecione **Novo Chat**\n` +
+      `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#${fileName}\` no campo de mensagem\n\n` +
+      `> Use **Novo Chat** para garantir contexto limpo — o agente de elicitação precisa de uma sessão dedicada.\n\n` +
       `O Copilot vai conduzir uma entrevista guiada e gerar o \`FIX-${nextId}.md\` completo.\n\n` +
       `Quando o arquivo estiver pronto, use \`@speckit /validate\` para verificar completude e gerar a configuração do Copilot.\n`,
     );
@@ -76,7 +79,10 @@ export async function handleDraftCommand(
 
     stream.markdown(
       `✅ Prompt de elicitação criado: \`.speckit/${fileName}\`\n\n` +
-      `**Próximo passo:** Abra o arquivo acima no Copilot Chat (clique em "Open in Copilot" ou use \`#${fileName}\`). ` +
+      `**Próximo passo:** O arquivo foi aberto no editor. Para iniciar a elicitação:\n\n` +
+      `- **Opção A (recomendada):** Com o arquivo aberto no editor, clique no ícone **▶ Run in Copilot Chat** na barra de título → selecione **Novo Chat**\n` +
+      `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#${fileName}\` no campo de mensagem\n\n` +
+      `> Use **Novo Chat** para garantir contexto limpo — o agente de elicitação precisa de uma sessão dedicada.\n\n` +
       `O Copilot vai conduzir uma entrevista guiada e gerar o \`STORY-${nextId}.md\` completo.\n\n` +
       `Quando o arquivo estiver pronto, use \`@speckit /validate\` para verificar completude e gerar a configuração do Copilot.\n`,
     );
