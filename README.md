@@ -2,7 +2,7 @@
 
 Plugin para VS Code que implementa o fluxo de **Spec Driven Development (SDD)**: você define uma História estruturada (nova feature) ou um Fix estruturado (correção de bug) antes de escrever código, e o plugin gera automaticamente os arquivos de configuração do GitHub Copilot que "primam" a sessão com todo o contexto do projeto.
 
-O Copilot passa a conhecer o requisito de negócio, critérios de aceite, restrições não-funcionais, stack técnica, padrão arquitetural, regras de teste e convenções de versionamento — antes de qualquer conversa começar.
+O Copilot passa a conhecer o requisito de negócio, critérios de aceite, restrições não-funcionais, stack técnica, padrão arquitetural, regras de teste, convenções de versionamento, padrões de segurança, observabilidade e resiliência — antes de qualquer conversa começar.
 
 ---
 
@@ -43,6 +43,7 @@ O SpecKit expõe um **Chat Participant** chamado `@speckit`. Todo o fluxo aconte
 │     → @speckit /validate novamente                   │
 │     ↓ DoR atingido                                   │
 │     Gera todos os arquivos .github/                  │
+│     Gera workflows CI em .github/workflows/          │
 │     → "Abra o Copilot Chat em modo Agente            │
 │        e digite /implement"                          │
 │                                                      │
@@ -245,11 +246,50 @@ Apache Kafka (AWS MSK), Docker, Kubernetes (EKS). CI/CD via GitHub Actions.
 ```
 1. @speckit /new              → cria .speckit/STORY-001.md
 2. Preencha o arquivo         → use o exemplo acima como referência
-3. @speckit /validate         → DoR atingido: gera .github/ + instrui próximo passo
+3. @speckit /validate         → DoR atingido: gera .github/ + .github/workflows/ + instrui próximo passo
 4. Copilot Chat → modo Agente → /implement
 5. @speckit /review           → instrui abrir nova sessão
 6. Copilot Chat → modo Agente → /review
 ```
+
+#### O que o `@speckit /validate` gera para esta história
+
+Como a história tem `infrastructure: Kafka (AWS MSK)`, `database: PostgreSQL`, `target: backend` e `language: java`, o plugin gera o conjunto completo de instruções contextualizadas:
+
+```
+.github/
+├── copilot-instructions.md
+├── workflows/
+│   ├── quality-gate.yml          ← CI: lint + build + mvn verify (jacoco ≥80%)
+│   └── security-scan.yml         ← CI: TruffleHog + Semgrep
+├── prompts/
+│   ├── implement.prompt.md       ← Gates 0–2: alinhamento → implementação → testes
+│   ├── review.prompt.md          ← Gates 3–4: revisão independente → entrega
+│   └── run.prompt.md             ← Sessão única: todos os gates
+└── instructions/
+    ├── 00-agent-integrity.instructions.md
+    ├── 01-performance.instructions.md
+    ├── 02-architecture.instructions.md       ← HTTP resilience: timeout, retry, circuit breaker
+    ├── 03-context-management.instructions.md
+    ├── 04-testing-standards.instructions.md  ← Critérios de aceite + teste de carga (P99 < 300ms)
+    ├── 05-git-workflow.instructions.md
+    ├── 06-credential-security.instructions.md
+    ├── 07-observability.instructions.md      ← SLOs da story: 99,5% / P99 < 300ms
+    ├── 08-security-tests.instructions.md
+    ├── lang-java.instructions.md             ← Java 17+/21: Records, virtual threads
+    ├── fw-springboot.instructions.md
+    ├── infra-kafka.instructions.md           ← Consumer, Producer, DLQ, Retry, Schema Registry
+    ├── pattern-crud.instructions.md
+    ├── pattern-idempotency.instructions.md   ← Idempotency-Key, deduplicação, TTL
+    ├── 10-business-context.instructions.md
+    ├── 11-functional-spec.instructions.md
+    ├── 12-nonfunctional-spec.instructions.md
+    ├── 13-tech-stack.instructions.md
+    ├── 14-architecture-pattern.instructions.md
+    └── 15-dod-checklist.instructions.md
+```
+
+> **24 arquivos gerados** — todos contextualizados com os dados desta história específica.
 
 ---
 
@@ -407,7 +447,7 @@ Ao executar `/validate` com a história completa:
 >
 > ✅ DoR atingido — história válida.
 > ⏳ Gerando arquivos de configuração do Copilot...
-> ✅ 19 arquivo(s) gerado(s) em `.github/`
+> ✅ 24 arquivo(s) gerado(s) em `.github/`
 >
 > **▶ Próximo passo — iniciar a implementação:**
 > 1. Abra um novo Copilot Chat
@@ -596,8 +636,6 @@ Mudanças no componente ExportButton
 
 #### O que acontece ao executar `@speckit /validate`
 
-O agente detecta as lacunas e conduz o alinhamento **uma pergunta por vez**.
-
 > **🤖 Agente**
 >
 > Encontrei 4 lacunas no fix. Vamos preenchê-las juntos.
@@ -614,17 +652,15 @@ O agente detecta as lacunas e conduz o alinhamento **uma pergunta por vez**.
 >
 > **Lacuna 2 — [Root Cause Hypothesis] hipótese vazia:**
 > Com base no erro `window.print is not a function`, qual é sua hipótese da causa raiz?
-> O componente usa `window.print()` diretamente ou via alguma biblioteca?
 
-**👤 Você** — O componente usa `window.print()` diretamente. A hipótese é que o Firefox bloqueia `window.print()` quando chamado dentro de um handler de evento `onClick` assíncrono — o Firefox exige que o `window.print()` seja chamado diretamente no handler síncrono.
+**👤 Você** — O componente usa `window.print()` diretamente. A hipótese é que o Firefox bloqueia `window.print()` quando chamado dentro de um handler `onClick` assíncrono — o Firefox exige que o `window.print()` seja chamado no handler síncrono.
 
 > **🤖 Agente**
 >
-> ✓ Hipótese registrada com rastreamento ao `ExportButton.tsx`.
+> ✓ Hipótese registrada.
 >
 > **Lacuna 3 — [Impact Assessment] severidade não preenchida:**
 > Qual a severidade deste bug? (critical · high · medium · low)
-> Considere: o Firefox representa ~30% da base e a exportação é uma funcionalidade core?
 
 **👤 Você** — High — exportação é usada diariamente pelo time financeiro.
 
@@ -634,7 +670,6 @@ O agente detecta as lacunas e conduz o alinhamento **uma pergunta por vez**.
 >
 > **Lacuna 4 — [Regression Prevention] testes não definidos:**
 > Quais testes de regressão devem ser adicionados para garantir que o bug não volte?
-> Dica: considere testar o comportamento do botão em diferentes contextos (handler síncrono x assíncrono).
 
 **👤 Você** — Teste unitário que verifica se `window.print()` é chamado de forma síncrona. Teste de integração que simula o clique no botão e verifica a chamada.
 
@@ -651,7 +686,7 @@ Ao executar `/validate` com o fix completo:
 > ✅ Fix válido — todos os campos obrigatórios preenchidos.
 > 🔍 Detectando stack do workspace... TypeScript + React encontrados.
 > ⏳ Gerando arquivos de configuração do Copilot...
-> ✅ 14 arquivo(s) gerado(s) em `.github/`
+> ✅ 16 arquivo(s) gerado(s) em `.github/`
 >
 > **▶ Próximo passo — iniciar a investigação e correção:**
 > 1. Abra um novo Copilot Chat
@@ -683,6 +718,10 @@ Cria o arquivo `.speckit/STORY-XXX.md` (numeração automática) e abre no edito
 
 **Arquiteturas suportadas:** `hexagonal` · `layered` · `microservices` · `monolith` · `serverless`
 
+**Targets suportados:** `backend` · `frontend` · `bff` · `script` · `library`
+
+> **Dica sobre NFRs:** Preencha o campo `Performance` com o SLA real (ex: `P99 < 200ms`) e o campo `Disponibilidade` com o uptime esperado (ex: `99,9%`). Esses valores são usados para parametrizar os SLOs no arquivo de observabilidade gerado e para acionar a seção de testes de performance no arquivo de padrões de teste.
+
 ---
 
 ### `@speckit /fix`
@@ -697,7 +736,7 @@ Cria o arquivo `.speckit/FIX-XXX.md` (numeração automática) e abre no editor.
 | Regression Prevention | Testes a adicionar para prevenir regressão |
 | DoF | Critérios de Definition of Fixed |
 
-> **Stack técnica detectada automaticamente** a partir do workspace — não é necessário especificá-la no arquivo.
+> **Stack técnica detectada automaticamente** a partir do workspace (`package.json`, `pom.xml`, `requirements.txt`) — não é necessário especificá-la no arquivo.
 
 ---
 
@@ -706,7 +745,7 @@ Cria o arquivo `.speckit/FIX-XXX.md` (numeração automática) e abre no editor.
 Detecta automaticamente o tipo da spec ativa em `.speckit/` (Story ou Fix) e valida campos obrigatórios.
 
 - **Se houver lacunas:** injeta no chat um prompt de alinhamento — o Copilot pergunta uma lacuna por vez e atualiza o arquivo. Quando tudo estiver preenchido, orienta a executar `/validate` novamente.
-- **Se válida (Story):** gera todos os arquivos `.github/` e instrui a abrir o Copilot Chat em modo **Agente** e digitar `/implement`.
+- **Se válida (Story):** gera todos os arquivos `.github/` incluindo workflows de CI e instrui a abrir o Copilot Chat em modo **Agente** e digitar `/implement`.
 - **Se válida (Fix):** detecta a stack do workspace, gera todos os arquivos `.github/` e instrui a abrir o Copilot Chat em modo **Agente** e digitar `/fix-implement`.
 
 ---
@@ -744,22 +783,49 @@ Specs com `status: done` são ocultadas automaticamente.
 
 ### Stories
 
+O conjunto exato de arquivos varia conforme a stack declarada na história. Abaixo o conjunto completo para uma história com todos os triggers ativos.
+
 ```
 .github/
 ├── copilot-instructions.md
+├── workflows/
+│   ├── quality-gate.yml          ← Lint + Build + Testes com cobertura ≥80% (por linguagem)
+│   └── security-scan.yml         ← TruffleHog (secrets) + Semgrep (SAST)
 ├── prompts/
-│   ├── implement.prompt.md       # Sessão A — /implement
-│   ├── review.prompt.md          # Sessão B — /review
-│   └── run.prompt.md             # Sessão única — /run
+│   ├── implement.prompt.md       ← Sessão A — /implement (Gates 0–2)
+│   ├── review.prompt.md          ← Sessão B — /review (Gates 3–4)
+│   └── run.prompt.md             ← Sessão única — /run (Gates 0–4)
 └── instructions/
+    │
+    │  ── Baseline (sempre gerados) ──────────────────────────────
     ├── 00-agent-integrity.instructions.md
     ├── 01-performance.instructions.md
     ├── 02-architecture.instructions.md
     ├── 03-context-management.instructions.md
     ├── 04-testing-standards.instructions.md
     ├── 05-git-workflow.instructions.md
-    ├── lang-<linguagem>.instructions.md
-    ├── fw-<framework>.instructions.md
+    ├── 06-credential-security.instructions.md
+    ├── 07-observability.instructions.md
+    ├── 08-security-tests.instructions.md
+    │
+    │  ── Linguagem (conforme `language`) ────────────────────────
+    ├── lang-typescript.instructions.md   (ou java · javascript · csharp · python)
+    │
+    │  ── Framework (conforme `framework`) ───────────────────────
+    ├── fw-springboot.instructions.md     (ou react · angular · dotnet · fastapi)
+    │
+    │  ── Infraestrutura (detectada em `infrastructure` / `database`) ──
+    ├── infra-kafka.instructions.md        ← se "kafka" em infrastructure
+    ├── infra-aws.instructions.md          ← se Aurora/DynamoDB/RDS/MySQL em database
+    ├── infra-glue.instructions.md         ← se "glue" em infrastructure ou python script
+    │
+    │  ── Padrões (conforme `target`) ────────────────────────────
+    ├── pattern-crud.instructions.md       ← se target = backend ou bff
+    ├── pattern-idempotency.instructions.md← se target = backend ou bff
+    ├── pattern-bff.instructions.md        ← se target = bff
+    ├── pattern-contract-testing.instructions.md ← se target = bff
+    │
+    │  ── Contexto da story (sempre gerados) ─────────────────────
     ├── 10-business-context.instructions.md
     ├── 11-functional-spec.instructions.md
     ├── 12-nonfunctional-spec.instructions.md
@@ -774,21 +840,132 @@ Specs com `status: done` são ocultadas automaticamente.
 .github/
 ├── copilot-instructions.md
 ├── prompts/
-│   ├── fix-implement.prompt.md   # Sessão A — /fix-implement
-│   ├── fix-review.prompt.md      # Sessão B — /fix-review
-│   └── fix-run.prompt.md         # Sessão única — /fix-run
+│   ├── fix-implement.prompt.md   ← Sessão A — /fix-implement (Gates 0–2)
+│   ├── fix-review.prompt.md      ← Sessão B — /fix-review (Gates 3–4)
+│   └── fix-run.prompt.md         ← Sessão única — /fix-run (Gates 0–4)
 └── instructions/
+    │
+    │  ── Baseline (sempre gerados) ──────────────────────────────
     ├── 00-agent-integrity.instructions.md
     ├── 01-performance.instructions.md
     ├── 02-architecture.instructions.md
     ├── 03-context-management.instructions.md
     ├── 04-testing-standards.instructions.md
     ├── 05-git-workflow.instructions.md
+    ├── 06-credential-security.instructions.md
+    ├── 07-observability.instructions.md
+    ├── 08-security-tests.instructions.md
+    │
+    │  ── Linguagem e Framework (auto-detectados) ─────────────────
     ├── lang-<linguagem>.instructions.md
     ├── fw-<framework>.instructions.md
+    │
+    │  ── Infraestrutura (conforme technicalContext do fix) ───────
+    ├── infra-kafka.instructions.md   ← se messaging inclui "kafka"
+    ├── infra-aws.instructions.md     ← se database inclui Aurora/DynamoDB/RDS
+    │
+    │  ── Padrões (conforme target detectado) ─────────────────────
+    ├── pattern-crud.instructions.md       ← se target = backend ou bff
+    ├── pattern-idempotency.instructions.md← se target = backend ou bff
+    ├── pattern-bff.instructions.md        ← se target = bff
+    │
+    │  ── Contexto do fix (sempre gerados) ────────────────────────
     ├── 10-fix-context.instructions.md
     ├── 11-root-cause.instructions.md
     ├── 12-fix-impact.instructions.md
     ├── 13-regression-prevention.instructions.md
     └── 14-fix-dof.instructions.md
 ```
+
+---
+
+## O que cada arquivo instrui o Copilot a fazer
+
+### Arquivos de baseline
+
+| Arquivo | Instrui o agente a... |
+|---|---|
+| `00-agent-integrity` | Nunca assumir nomes de funções/tabelas/endpoints sem vê-los; declarar incerteza explicitamente; respeitar escopo da story; exigir 80% de cobertura antes de declarar "done" |
+| `01-performance` | Analisar Big-O antes de propor solução; usar `Promise.all`/`Task.WhenAll` para I/O paralelo; considerar paginação, caching e índices em todo acesso a dados |
+| `02-architecture` | Respeitar a arquitetura da story (hexagonal, layered etc.); aplicar SOLID; **configurar timeout, retry e circuit breaker em todo cliente HTTP de saída**; propagar `traceparent` em chamadas externas |
+| `03-context-management` | Não misturar implementação de módulos independentes; pedir arquivos relevantes antes de propor mudanças; declarar quando o contexto está insuficiente |
+| `04-testing-standards` | Testar happy path, edge cases e error cases; estrutura AAA obrigatória; **listar os cenários derivados dos critérios de aceite da story**; **adicionar testes de carga quando NFR de latência está definido** |
+| `05-git-workflow` | Usar Conventional Commits; criar branch `feature/<id>-<slug>`; nunca commitar diretamente em main |
+| `06-credential-security` | Usar IAM roles (nunca access keys hardcoded); recuperar secrets via SecretsManager/Vault em runtime; nunca logar tokens, senhas ou chaves |
+| `07-observability` | JSON estruturado com `traceId`; propagar `traceparent` W3C; métricas Prometheus; **SLOs parametrizados com os valores de disponibilidade e latência declarados na story**; monitorar consumer lag em Kafka/SQS |
+| `08-security-tests` | Testar: sem token → 401, token expirado → 401, role insuficiente → 403, SQL injection → 400, XSS → 400; nunca stack trace no response; mass assignment ignorado |
+
+### Arquivos de infraestrutura
+
+| Arquivo | Instrui o agente a... |
+|---|---|
+| `infra-kafka` | Configurar `acks=all` e `enable.idempotence=true` no producer; deduplica no consumer antes de persistir; DLQ com headers de origem obrigatória; backoff exponencial com jitter; graceful shutdown em SIGTERM |
+| `infra-aws` | DynamoDB: design de access patterns antes do schema, single-table design, ConditionExpression para optimistic locking; RDS/Aurora: usar connection pool (HikariCP/EF Core), prepared statements obrigatórios, Flyway para migrations; credenciais via DefaultCredentialsProvider (nunca accessKeyId hardcoded) |
+| `infra-glue` | Estrutura de GlueJob em Python; logging estruturado; tratamento de falhas parciais em ETL |
+
+### Arquivos de padrões
+
+| Arquivo | Instrui o agente a... |
+|---|---|
+| `pattern-crud` | Organizar em Repository → Service → Controller; paginação obrigatória em listagens; RFC 7807 ProblemDetail para erros; validação no controller antes de chegar ao domínio |
+| `pattern-idempotency` | Usar `Idempotency-Key` header para POST; PUT é naturalmente idempotente; deduplica por chave de negócio antes de persistir; armazenar resultado com TTL (Redis/DynamoDB); 201 na criação, 200 em repetição, 409 em processamento |
+| `pattern-bff` | BFF é orquestração — sem lógica de domínio; fan-out paralelo com `CompletableFuture.allOf`/`Task.WhenAll`; circuit breaker por downstream; partial response (retorna o que obteve, sinaliza o que falhou); normalizar erros downstream em RFC 7807 antes de responder |
+| `pattern-contract-testing` | WireMock stubs por downstream obrigatórios; Pact para consumer-driven contracts; testar: happy path, 404, 500 e timeout do downstream |
+
+### Workflows de CI
+
+| Arquivo | O que faz |
+|---|---|
+| `quality-gate.yml` | Roda em todo PR para `main`/`develop`: lint → build → testes com cobertura ≥80%. Comando de teste parametrizado pela linguagem: `vitest` (TS/JS), `mvn verify -Djacoco` (Java), `pytest --cov-fail-under=80` (Python), `dotnet test /p:CoverageThreshold=80` (C#). Faz upload do relatório de cobertura como artefato. |
+| `security-scan.yml` | Roda em PRs e semanalmente: **TruffleHog** (detecção de secrets no histórico git) + **Semgrep** (análise estática de segurança). Falha o PR se secret verificado ou padrão SAST de risco alto for encontrado. |
+
+---
+
+## Gates de implementação
+
+O SpecKit estrutura a implementação em **5 gates** distribuídos em duas sessões:
+
+### Sessão A — `/implement` ou `/fix-implement`
+
+| Gate | Nome | O que acontece |
+|---|---|---|
+| **Gate 0** | Alinhamento | Agente lê a spec completa, verifica gaps, apresenta plano de implementação e aguarda confirmação do usuário antes de escrever qualquer código |
+| **Gate 1** | Implementação | Cria branch, planeja tarefas, implementa feature/fix seguindo stack e arquitetura definidos. Sem refatorações fora de escopo. Commits incrementais. |
+| **Gate 2** | Testes | Planeja testes cobrindo todos os cenários dos critérios de aceite + edge cases + error cases. Executa suite. Cobertura ≥80% obrigatória. Para Fix: teste de regressão deve **falhar sem o fix** e passar com ele. |
+
+> Ao concluir o Gate 2, o agente instrui: *"Execute `@speckit /review` para iniciar a revisão independente."*
+
+### Sessão B — `/review` ou `/fix-review`
+
+| Gate | Nome | O que acontece |
+|---|---|---|
+| **Gate 3** | Revisão | Nova sessão sem memória da implementação. Agente lê a spec, lista arquivos modificados, lê cada arquivo, solicita relatório de cobertura. Verifica: funcionalidade, arquitetura, qualidade, testes, segurança, observabilidade, NFRs, git, DoD/DoF. Corrige falhas encontradas. |
+| **Gate 4** | Entrega | Rebase na main, re-executa testes, valida DoD/DoF item por item, verifica prontidão para produção, commit de encerramento. |
+
+> **Sessão única:** use `/run` (Stories) ou `/fix-run` (Fixes) para executar todos os gates em uma única sessão de Copilot. Indicado para features pequenas ou em ambientes de desenvolvimento isolados.
+
+---
+
+## CHANGELOG
+
+### v0.1.3
+
+- **[novo]** Geração de workflows CI: `quality-gate.yml` e `security-scan.yml` em `.github/workflows/` — parametrizados pela linguagem da story
+- **[novo]** `pattern-idempotency.instructions.md`: guia completo de idempotência REST para targets `backend` e `bff` — Idempotency-Key, deduplicação por chave de negócio, TTL, tabela de status HTTP
+- **[novo]** Generators de infraestrutura: Kafka, AWS (DynamoDB + RDS Aurora), GlueJob
+- **[novo]** Generators de padrão: CRUD, BFF, Contract Testing (WireMock + Pact)
+- **[novo]** Generators de baseline: CredentialSecurity, SecurityTests
+- **[melhoria]** `07-observability`: SLOs agora refletem os valores reais de `performance` e `availability` da story; adicionado monitoramento de consumer lag (Kafka/SQS) e traceId em jobs batch
+- **[melhoria]** `04-testing-standards`: lista os critérios de aceite da story como cenários mínimos obrigatórios; adiciona seção de testes de performance (k6/Gatling/Locust) quando NFR de latência está definido
+- **[melhoria]** `02-architecture`: nova seção de resiliência para clientes HTTP genéricos — timeout, retry com backoff (sem retry em 4xx), propagação de `traceparent`, circuit breaker com referências por stack
+
+### v0.1.2
+
+- Adição do fluxo de Fix (correção de bug)
+- Detecção automática de stack técnica para Fixes
+- Templates estruturados para Story e Fix
+
+### v0.1.1
+
+- Fluxo inicial de Story com gates de implementação e revisão
+- Comandos `/new`, `/validate`, `/apply`, `/review`, `/status`
