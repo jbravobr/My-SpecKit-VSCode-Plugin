@@ -68,7 +68,7 @@ export async function generateCopilotConfig(
 
   // Baseline — parametrized generators receive story context
   await write(path.join(instructionsDir, '00-agent-integrity.instructions.md'), generateAgentIntegrity());
-  await write(path.join(instructionsDir, '01-performance.instructions.md'), generatePerformance());
+  await write(path.join(instructionsDir, '01-performance.instructions.md'), generatePerformance(story.nonFunctionalSpec));
   await write(path.join(instructionsDir, '02-architecture.instructions.md'), generateArchitecture());
   await write(path.join(instructionsDir, '03-context-management.instructions.md'), generateContextManagement());
   await write(path.join(instructionsDir, '04-testing-standards.instructions.md'), generateTestingStandards(story));

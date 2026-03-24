@@ -351,7 +351,7 @@ ${criteria || '- [ ] (critérios não especificados)'}
 - [ ] Nenhum dado sensível nos logs (senha, token, PII não auditável)
 
 ### Requisitos não-funcionais
-- [ ] Performance: ${story.nonFunctionalSpec.performance || '(não especificado)'}
+- [ ] Performance: ${story.nonFunctionalSpec.performance?.trim() || 'P99 < 500ms (baseline padrão)'}
 - [ ] Segurança: ${story.nonFunctionalSpec.security || '(não especificado)'}
 
 ### Git
@@ -796,7 +796,7 @@ ${criteria || '- [ ] (critérios não especificados)'}
 - [ ] Nenhum dado sensível nos logs
 
 **Não-funcionais:**
-- [ ] Performance: ${story.nonFunctionalSpec.performance || '(não especificado)'}
+- [ ] Performance: ${story.nonFunctionalSpec.performance?.trim() || 'P99 < 500ms (baseline padrão)'}
 - [ ] Segurança: ${story.nonFunctionalSpec.security || '(não especificado)'}
 
 **Git:**

@@ -107,11 +107,13 @@ describe('TestingStandardsGenerator', () => {
     expect(result).toContain('P99');
   });
 
-  it('omits performance test section when story has no performance NFR', () => {
+  it('emits performance test section with default label when story has no performance NFR', () => {
     const story = loadStory('story-complete.md');
     const noPerf = { ...story, nonFunctionalSpec: { ...story.nonFunctionalSpec, performance: '' } };
     const result = generateTestingStandards(noPerf);
-    expect(result).not.toContain('Teste de performance');
+    expect(result).toContain('Teste de performance');
+    expect(result).toContain('baseline padrão');
+    expect(result).toContain('P99 < 500ms');
   });
 
   it('omits acceptance criteria section when story has none', () => {
@@ -121,6 +123,31 @@ describe('TestingStandardsGenerator', () => {
       functionalSpec: { ...story.functionalSpec, acceptanceCriteria: [] },
     };
     expect(generateTestingStandards(noCriteria)).not.toContain('Cenários mínimos obrigatórios derivados');
+  });
+});
+
+describe('PerformanceGenerator', () => {
+  it('uses default P99 and availability when nfr is not provided', () => {
+    const result = generatePerformance();
+    expect(result).toContain('P99 < 500ms');
+    expect(result).toContain('99,9%');
+  });
+
+  it('emits default note when no NFR is declared', () => {
+    const result = generatePerformance();
+    expect(result).toContain('Nenhum NFR de performance declarado');
+  });
+
+  it('uses story P99 when performance NFR is declared', () => {
+    const story = loadStory('story-complete.md');
+    const result = generatePerformance(story.nonFunctionalSpec);
+    expect(result).toContain('P99 < 200ms');
+  });
+
+  it('does not emit default note when story NFR is declared', () => {
+    const story = loadStory('story-complete.md');
+    const result = generatePerformance(story.nonFunctionalSpec);
+    expect(result).not.toContain('Nenhum NFR de performance declarado');
   });
 });
 

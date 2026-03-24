@@ -1,8 +1,20 @@
-export function generatePerformance(): string {
+import { NonFunctionalSpec } from '../../story/Story';
+
+export function generatePerformance(nfr?: NonFunctionalSpec): string {
+  const latency = nfr?.performance?.trim() || 'P99 < 500ms';
+  const availability = nfr?.availability?.trim() || '99,9%';
+  const defaultNote = !nfr?.performance?.trim()
+    ? '\n> ⚠ Nenhum NFR de performance declarado na story — aplicando baseline padrão.'
+    : '';
+
   return `---
 applyTo: "**"
 ---
 # Performance — Obsessão com Eficiência Algorítmica
+
+## Constraint desta story
+- **Latência P99**: ${latency}
+- **Disponibilidade**: ${availability}${defaultNote}
 
 ## Princípios inegociáveis
 - Analise a complexidade Big-O antes de propor qualquer solução

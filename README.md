@@ -720,7 +720,7 @@ Cria o arquivo `.speckit/STORY-XXX.md` (numeração automática) e abre no edito
 
 **Targets suportados:** `backend` · `frontend` · `bff` · `script` · `library`
 
-> **Dica sobre NFRs:** Preencha o campo `Performance` com o SLA real (ex: `P99 < 200ms`) e o campo `Disponibilidade` com o uptime esperado (ex: `99,9%`). Esses valores são usados para parametrizar os SLOs no arquivo de observabilidade gerado e para acionar a seção de testes de performance no arquivo de padrões de teste.
+> **Sobre NFRs de performance:** Os campos `Performance` e `Disponibilidade` são opcionais — quando não preenchidos, o plugin aplica automaticamente os valores baseline (`P99 < 500ms` e `99,9%`) em todos os arquivos que dependem desses valores (`01-performance`, `04-testing-standards`, `07-observability`). Preencha com valores reais (ex: `P99 < 200ms`, `99,5% uptime`) para refletir os SLOs do seu serviço nos artefatos gerados.
 
 ---
 
@@ -886,10 +886,10 @@ O conjunto exato de arquivos varia conforme a stack declarada na história. Abai
 | Arquivo | Instrui o agente a... |
 |---|---|
 | `00-agent-integrity` | Nunca assumir nomes de funções/tabelas/endpoints sem vê-los; declarar incerteza explicitamente; respeitar escopo da story; exigir 80% de cobertura antes de declarar "done" |
-| `01-performance` | Analisar Big-O antes de propor solução; usar `Promise.all`/`Task.WhenAll` para I/O paralelo; considerar paginação, caching e índices em todo acesso a dados |
+| `01-performance` | Analisar Big-O antes de propor solução; usar `Promise.all`/`Task.WhenAll` para I/O paralelo; considerar paginação, caching e índices em todo acesso a dados. **Inclui seção "Constraint desta story"** com os SLOs de latência (P99) e disponibilidade declarados na história — ou os valores baseline (`P99 < 500ms` / `99,9%`) quando o NFR não foi preenchido |
 | `02-architecture` | Respeitar a arquitetura da story (hexagonal, layered etc.); aplicar SOLID; **configurar timeout, retry e circuit breaker em todo cliente HTTP de saída**; propagar `traceparent` em chamadas externas |
 | `03-context-management` | Não misturar implementação de módulos independentes; pedir arquivos relevantes antes de propor mudanças; declarar quando o contexto está insuficiente |
-| `04-testing-standards` | Testar happy path, edge cases e error cases; estrutura AAA obrigatória; **listar os cenários derivados dos critérios de aceite da story**; **adicionar testes de carga quando NFR de latência está definido** |
+| `04-testing-standards` | Testar happy path, edge cases e error cases; estrutura AAA obrigatória; **listar os cenários derivados dos critérios de aceite da story**; **seção de testes de carga sempre presente** — usa o NFR de latência declarado ou `P99 < 500ms (baseline padrão)` quando não preenchido |
 | `05-git-workflow` | Usar Conventional Commits; criar branch `feature/<id>-<slug>`; nunca commitar diretamente em main |
 | `06-credential-security` | Usar IAM roles (nunca access keys hardcoded); recuperar secrets via SecretsManager/Vault em runtime; nunca logar tokens, senhas ou chaves |
 | `07-observability` | JSON estruturado com `traceId`; propagar `traceparent` W3C; métricas Prometheus; **SLOs parametrizados com os valores de disponibilidade e latência declarados na story**; monitorar consumer lag em Kafka/SQS |
@@ -947,6 +947,12 @@ O SpecKit estrutura a implementação em **5 gates** distribuídos em duas sess�
 ---
 
 ## CHANGELOG
+
+### v0.1.4
+
+- **[melhoria]** `01-performance`: agora parametrizado com os NFRs da story — injeta seção "Constraint desta story" com latência P99 e disponibilidade; aplica `P99 < 500ms` e `99,9%` como baseline quando o campo não foi preenchido
+- **[melhoria]** `04-testing-standards`: seção de testes de carga agora **sempre gerada** — usa o NFR declarado (label `NFR declarado:`) ou o threshold baseline `P99 < 500ms` (label `baseline padrão:`) quando ausente; elimina o gate silencioso que antes omitia a seção inteiramente
+- **[melhoria]** Prompts de implementação e revisão: campo `Performance` nos checklists de NFRs agora exibe `P99 < 500ms (baseline padrão)` em vez de `(não especificado)` quando o campo não foi preenchido
 
 ### v0.1.3
 

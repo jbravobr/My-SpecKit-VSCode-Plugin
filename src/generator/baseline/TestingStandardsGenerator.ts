@@ -59,12 +59,13 @@ ${items}
 }
 
 function buildPerformanceTestSection(story?: Story): string {
-  const perf = story?.nonFunctionalSpec?.performance?.trim();
-  if (!perf) return '';
+  const declared = story?.nonFunctionalSpec?.performance?.trim();
+  const perf = declared || 'P99 < 500ms (baseline padrão — nenhum NFR declarado)';
+  const label = declared ? `NFR declarado: ${perf}` : `baseline padrão: ${perf}`;
 
   const langHint = buildPerfToolHint(story);
   return `
-## Teste de performance — NFR declarado: ${perf}
+## Teste de performance — ${label}
 - Esta story define um requisito de latência. O Gate 2 exige validação deste NFR por teste de carga
 - Ferramenta sugerida: ${langHint}
 - Cenário mínimo: simular carga realista no endpoint principal e verificar que P99 ≤ threshold declarado
