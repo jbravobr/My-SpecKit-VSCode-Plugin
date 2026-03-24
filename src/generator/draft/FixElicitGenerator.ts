@@ -13,6 +13,18 @@ export function generateFixElicitPrompt(roughInput: string, nextId: string): str
 
 ---
 
+## ⚠️ MODO PADRÃO: ENTREVISTA GUIADA — LEIA ANTES DE QUALQUER AÇÃO
+
+**Você DEVE conduzir uma entrevista interativa, fase por fase.** Não gere o arquivo antes de concluir todas as fases.
+
+- Sua **primeira mensagem** deve conter SOMENTE a pergunta 1.1 — nenhum outro texto, nenhum resumo, nenhum arquivo.
+- Após cada resposta do usuário, faça a próxima pergunta da sequência — UMA por vez.
+- A descrição inicial é apenas contexto de partida. Ela **não substitui** as respostas do usuário nas perguntas.
+- **"Default se não informado"** ao longo deste prompt significa: o usuário foi perguntado e respondeu "não sei", "pula" ou omitiu a resposta. Nunca aplique um default sem ter feito a pergunta primeiro.
+- **Exceção única:** se o usuário escrever "modo rápido", "preenche com defaults" ou equivalente → aplique a seção "Modo rápido" ao final deste prompt.
+
+---
+
 ## Convenções desta entrevista
 
 - **"Não sei"** → significa que a informação existe mas não foi obtida ainda: registre como lacuna explícita (ex: "A investigar"). Não aplique default genérico.

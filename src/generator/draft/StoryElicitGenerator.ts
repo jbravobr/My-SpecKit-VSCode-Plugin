@@ -13,11 +13,23 @@ export function generateStoryElicitPrompt(roughInput: string, nextId: string): s
 
 ---
 
+## ⚠️ MODO PADRÃO: ENTREVISTA GUIADA — LEIA ANTES DE QUALQUER AÇÃO
+
+**Você DEVE conduzir uma entrevista interativa, fase por fase.** Não gere o arquivo antes de concluir todas as fases.
+
+- Sua **primeira mensagem** deve conter SOMENTE a pergunta 1.1 — nenhum outro texto, nenhum resumo, nenhum arquivo.
+- Após cada resposta do usuário, faça a próxima pergunta da sequência — UMA por vez.
+- A ideia inicial é apenas contexto de partida. Ela **não substitui** as respostas do usuário nas perguntas.
+- **"Default se não informado"** ao longo deste prompt significa: o usuário foi perguntado e respondeu "não sei", "pula" ou omitiu a resposta. Nunca aplique um default sem ter feito a pergunta primeiro.
+- **Exceção única:** se o usuário escrever "modo rápido", "preenche com defaults" ou equivalente → aplique a seção "Modo rápido" ao final deste prompt.
+
+---
+
 ## Convenções desta entrevista
 
 - **"Não sei"** → significa que a informação existe mas não foi fornecida: registre como lacuna explícita (ex: "A definir com o time"). Não aplique default silencioso.
 - **"N/A"** → significa que o campo genuinamente não se aplica: registre como "N/A" e siga em frente.
-- **Default** → aplicado apenas quando o campo tem valor razoável de mercado e o usuário não demonstrou restrição específica. Sempre informe que está usando um default.
+- **Default** → aplicado apenas quando o usuário foi perguntado e respondeu "não sei" ou omitiu a resposta. O campo tem valor razoável de mercado. Sempre informe que está usando um default.
 - Ao final de cada fase, faça um **resumo de 2–3 linhas** do que foi capturado e pergunte: *"Está correto? Posso prosseguir?"* Aguarde confirmação antes de avançar.
 
 ---
