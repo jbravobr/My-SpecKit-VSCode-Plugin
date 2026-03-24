@@ -62,6 +62,16 @@ Mudanças no middleware de autenticação podem impactar outros fluxos de autent
 
 ---
 
+## Contexto Técnico
+
+### Messaging
+NA
+
+### Banco de Dados / Cloud
+NA
+
+---
+
 ## DoF — Definition of Fixed
 
 - [ ] Bug não reproduz mais com os passos documentados

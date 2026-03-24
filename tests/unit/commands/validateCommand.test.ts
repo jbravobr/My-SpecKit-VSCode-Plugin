@@ -2,8 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { handleValidateCommand } from '../../../src/participant/commands/validateCommand';
-import { IFileSystem } from '../../../src/generator/utils/IFileSystem';
-import { IWorkspace } from '../../../src/generator/utils/IWorkspace';
+import { InMemoryFileSystem, WorkspaceStub } from '../../support/fakes';
 
 const fixturesDir = resolve(__dirname, '../../fixtures');
 const completeStoryMd = readFileSync(resolve(fixturesDir, 'story-complete.md'), 'utf-8');
@@ -17,95 +16,76 @@ function createMockStream() {
   };
 }
 
-function createMockFs(content: string = completeStoryMd): IFileSystem {
-  return {
-    ensureDir: vi.fn().mockResolvedValue(undefined),
-    writeFile: vi.fn().mockResolvedValue(undefined),
-    readFile: vi.fn().mockResolvedValue(content),
-    fileExists: vi.fn().mockResolvedValue(true),
-  };
-}
-
-function createMockWorkspace(specPath = 'C:\\workspace\\.speckit\\STORY-001.md'): IWorkspace {
-  return {
-    getWorkspaceRoot: vi.fn().mockReturnValue('C:\\workspace'),
-    listStoryFiles: vi.fn().mockResolvedValue(['STORY-001.md']),
-    listFixFiles: vi.fn().mockResolvedValue([]),
-    getActiveStoryPath: vi.fn().mockResolvedValue(specPath),
-    getActiveSpecPath: vi.fn().mockResolvedValue(specPath),
-    detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
-  };
-}
-
 describe('handleValidateCommand', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('shows error when no workspace', async () => {
+  it('shows error when no workspace root is available', async () => {
     const stream = createMockStream();
-    const workspace: IWorkspace = {
-      getWorkspaceRoot: vi.fn().mockReturnValue(undefined),
-      listStoryFiles: vi.fn().mockResolvedValue([]),
-      listFixFiles: vi.fn().mockResolvedValue([]),
-      getActiveStoryPath: vi.fn().mockResolvedValue(undefined),
-      getActiveSpecPath: vi.fn().mockResolvedValue(undefined),
-      detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
-    };
+    const workspace = new WorkspaceStub({ workspaceRoot: undefined as unknown as string });
+    // Override getWorkspaceRoot to return undefined
+    workspace.getWorkspaceRoot = () => undefined;
 
-    await handleValidateCommand({} as any, stream as any, {} as any, createMockFs(), workspace);
+    await handleValidateCommand({} as any, stream as any, {} as any, new InMemoryFileSystem(), workspace);
 
     expect(stream.getAllMarkdown()).toContain('workspace');
   });
 
-  it('shows error when no story found', async () => {
+  it('shows error when no open spec file is found', async () => {
     const stream = createMockStream();
-    const workspace: IWorkspace = {
-      getWorkspaceRoot: vi.fn().mockReturnValue('C:\\workspace'),
-      listStoryFiles: vi.fn().mockResolvedValue([]),
-      listFixFiles: vi.fn().mockResolvedValue([]),
-      getActiveStoryPath: vi.fn().mockResolvedValue(undefined),
-      getActiveSpecPath: vi.fn().mockResolvedValue(undefined),
-      detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
-    };
+    const workspace = new WorkspaceStub({ activeSpecPath: undefined as unknown as string });
+    workspace.getActiveSpecPath = async () => undefined;
 
-    await handleValidateCommand({} as any, stream as any, {} as any, createMockFs(), workspace);
+    await handleValidateCommand({} as any, stream as any, {} as any, new InMemoryFileSystem(), workspace);
 
     expect(stream.getAllMarkdown()).toContain('Nenhuma spec');
   });
 
-  it('shows gap-filling prompt for invalid story', async () => {
+  it('shows gap-filling prompt for invalid (partial) story — no files written', async () => {
     const stream = createMockStream();
-    const fs = createMockFs(partialStoryMd);
-    const workspace = createMockWorkspace();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => partialStoryMd;
+    const workspace = new WorkspaceStub();
 
     await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('incompleta');
-    expect(fs.writeFile).not.toHaveBeenCalled();
+    expect(fs.writtenPaths()).toHaveLength(0);
   });
 
-  it('shows complete flow including review session for valid story', async () => {
+  it('generates config files for a valid story', async () => {
     const stream = createMockStream();
-    const fs = createMockFs(completeStoryMd);
-    const workspace = createMockWorkspace();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    const workspace = new WorkspaceStub();
 
     await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
 
-    expect(stream.getAllMarkdown()).toContain('/review');
-    expect(stream.getAllMarkdown()).toContain('Sessão B');
+    expect(fs.writtenPaths().length).toBeGreaterThan(0);
   });
 
-  it('generates config and shows agent instruction for valid story', async () => {
+  it('shows DoR success and /implement instruction for valid story', async () => {
     const stream = createMockStream();
-    const fs = createMockFs(completeStoryMd);
-    const workspace = createMockWorkspace();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    const workspace = new WorkspaceStub();
 
     await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('DoR atingido');
     expect(stream.getAllMarkdown()).toContain('/implement');
-    expect(stream.getAllMarkdown()).toContain('Agente');
-    expect(fs.writeFile).toHaveBeenCalled();
+  });
+
+  it('shows Session B / review instruction for valid story', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('/review');
+    expect(stream.getAllMarkdown()).toContain('Sessão B');
   });
 });

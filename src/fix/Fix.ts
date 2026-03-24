@@ -36,6 +36,11 @@ export interface RegressionPrevention {
   testsToAdd: string[];
 }
 
+export interface FixTechnicalContext {
+  messaging: string;
+  database: string;
+}
+
 export interface Dof {
   criteria: string[];
 }
@@ -46,6 +51,7 @@ export interface Fix {
   rootCauseHypothesis: RootCauseHypothesis;
   impactAssessment: ImpactAssessment;
   regressionPrevention: RegressionPrevention;
+  technicalContext: FixTechnicalContext;
   dof: Dof;
 }
 
@@ -53,7 +59,9 @@ export interface TechStackDetection {
   language: Language;
   framework: Framework;
   architecture?: string;
-  target: 'backend' | 'frontend' | 'fullstack' | 'script' | 'library';
+  target: 'backend' | 'frontend' | 'bff' | 'script' | 'library';
+  messaging?: 'kafka';
+  cloud?: 'aws';
   confidence: 'high' | 'low';
   source: string;
 }

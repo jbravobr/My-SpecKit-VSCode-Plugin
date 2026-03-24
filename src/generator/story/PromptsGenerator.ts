@@ -143,6 +143,12 @@ ${criteriaList || '- (não especificado)'}
 
 **5. Cenários derivados** — casos que emergem da implementação; documente com comentário
 
+**6. Cenários de segurança** — para toda rota protegida ou operação com dado sensível:
+- Requisição não autenticada: deve retornar \`401\` (nunca \`500\` ou \`403\`)
+- Requisição com papel insuficiente: deve retornar \`403\`
+- Input com caractere especial / payload de injeção: deve retornar \`400\`, nunca \`500\`
+- Resposta de erro: não deve conter stack trace, query SQL, ou valor de campo sensível
+
 ### Estrutura obrigatória (AAA)
 \`\`\`
 // Arrange — configure o estado inicial
@@ -331,6 +337,19 @@ ${criteria || '- [ ] (critérios não especificados)'}
 - [ ] Error cases cobertos (not found, inválido, permissão)
 - [ ] Sem testes ignorados sem justificativa
 
+### Testes de Segurança
+- [ ] Toda rota protegida testada sem token: retorna \`401\`
+- [ ] Toda rota protegida testada com papel insuficiente: retorna \`403\`
+- [ ] Input inválido / malicioso não retorna \`500\` — retorna \`400\` com ProblemDetail
+- [ ] Mensagem de erro não expõe stack trace, query SQL ou dados internos ao cliente
+- [ ] Campos sensíveis (token, senha, chave) ausentes nos DTOs de resposta e nos logs
+
+### Observabilidade
+- [ ] Endpoint de health check presente e respondendo sem autenticação
+- [ ] Logs estruturados com \`traceId\` / \`requestId\` em todas as operações
+- [ ] \`traceId\` propagado para respostas de erro (campo \`traceId\` no ProblemDetail)
+- [ ] Nenhum dado sensível nos logs (senha, token, PII não auditável)
+
 ### Requisitos não-funcionais
 - [ ] Performance: ${story.nonFunctionalSpec.performance || '(não especificado)'}
 - [ ] Segurança: ${story.nonFunctionalSpec.security || '(não especificado)'}
@@ -414,6 +433,13 @@ Se qualquer item falhar: corrija, faça commit atômico e reexecute. Não avance
 ${dodList || '- [ ] (critérios não definidos na story)'}
 
 Todos os itens devem estar marcados antes de prosseguir.
+
+### Passo 3.5 — Prod Readiness
+- [ ] Health check endpoint acessível sem autenticação e respondendo \`200\`
+- [ ] Nenhuma credencial hardcoded ou em variável de ambiente definida manualmente no código
+- [ ] Logs estruturados com \`traceId\` — verificado com execução local
+- [ ] Sem dados sensíveis em mensagens de log: grep por \`password\`, \`secret\`, \`token\` nos logs de startup
+- [ ] Sem \`System.out.println\`, \`console.log\`, \`print()\` de debug remanescentes em produção
 
 ### Passo 4 — Commit de fechamento (somente se houver arquivos pendentes)
 \`\`\`bash
@@ -743,19 +769,43 @@ ${criteria || '- [ ] (critérios não especificados)'}
 - [ ] Sem imports de infraestrutura no domínio
 - [ ] Responsabilidades bem separadas por camada
 
-**Qualidade:**
-- [ ] Convenções de **${story.technicalSpec.language}** seguidas
-- [ ] Convenções de **${story.technicalSpec.framework}** seguidas
+**Qualidade de código:**
+- [ ] Convenções de **${story.technicalSpec.language}** seguidas (ver \`instructions/lang-*\`)
+- [ ] Convenções de **${story.technicalSpec.framework}** seguidas (ver \`instructions/fw-*\`)
 - [ ] Sem código morto ou comentado sem justificativa
+
+**Testes:**
+- [ ] 0 (zero) falhas — execute o runner antes de marcar
+- [ ] Cobertura ≥ 80% (relatório apresentado)
+- [ ] Happy path coberto para cada critério de aceite
+- [ ] Edge cases cobertos (null, vazio, limites)
+- [ ] Error cases cobertos (not found, inválido, permissão)
+
+**Testes de Segurança:**
+- [ ] Toda rota protegida testada sem token: retorna \`401\`
+- [ ] Input inválido não retorna \`500\`
+- [ ] Mensagem de erro não expõe stack trace ou dados internos
+
+**Segurança e Credenciais:**
+- [ ] Nenhuma credencial hardcoded ou em variável de ambiente definida manualmente
+- [ ] Campos sensíveis ausentes nos DTOs de resposta e nos logs
+
+**Observabilidade:**
+- [ ] Health endpoint acessível e respondendo
+- [ ] Logs estruturados com \`traceId\` / \`requestId\`
+- [ ] Nenhum dado sensível nos logs
+
+**Não-funcionais:**
+- [ ] Performance: ${story.nonFunctionalSpec.performance || '(não especificado)'}
+- [ ] Segurança: ${story.nonFunctionalSpec.security || '(não especificado)'}
 
 **Git:**
 - [ ] Branch segue padrão \`feature/${storyId}-<slug>\`
 - [ ] Commits seguem Conventional Commits
 - [ ] Sem commits genéricos ("fix", "wip", "test")
 
-**Não-funcionais:**
-- [ ] Performance: ${story.nonFunctionalSpec.performance || '(não especificado)'}
-- [ ] Segurança: ${story.nonFunctionalSpec.security || '(não especificado)'}
+**DoD:**
+${dodList || '- [ ] (não especificado)'}
 
 **Não avance para o Gate 4 sem veredito: APROVADO**
 
@@ -821,6 +871,13 @@ Se qualquer item falhar: corrija, faça commit atômico e reexecute. Não avance
 ${dodList || '- [ ] (critérios não definidos na story)'}
 
 Todos os itens devem estar marcados antes de prosseguir.
+
+### Passo 3.5 — Prod Readiness
+- [ ] Health check endpoint acessível sem autenticação e respondendo \`200\`
+- [ ] Nenhuma credencial hardcoded ou em variável de ambiente definida manualmente no código
+- [ ] Logs estruturados com \`traceId\` — verificado com execução local
+- [ ] Sem dados sensíveis em mensagens de log: grep por \`password\`, \`secret\`, \`token\` nos logs de startup
+- [ ] Sem \`System.out.println\`, \`console.log\`, \`print()\` de debug remanescentes em produção
 
 ### Passo 4 — Commit de fechamento (somente se houver arquivos pendentes)
 \`\`\`bash

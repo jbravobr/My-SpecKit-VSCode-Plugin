@@ -32,7 +32,7 @@ export interface NonFunctionalSpec {
 export type Language = 'typescript' | 'javascript' | 'java' | 'csharp' | 'python';
 export type Framework = 'dotnet' | 'springboot' | 'angular' | 'react' | 'fastapi' | 'other';
 export type Architecture = 'hexagonal' | 'layered' | 'microservices' | 'monolith' | 'serverless';
-export type Target = 'backend' | 'frontend' | 'fullstack' | 'script' | 'library';
+export type Target = 'backend' | 'frontend' | 'bff' | 'script' | 'library';
 
 export interface TechnicalSpec {
   language: Language | '';

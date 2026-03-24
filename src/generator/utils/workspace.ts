@@ -118,11 +118,15 @@ export async function detectTechStack(): Promise<TechStackDetection> {
     const content = Buffer.from(bytes).toString('utf-8');
     const framework: import('../../story/Story').Framework = content.includes('spring-boot') ? 'springboot' : 'other';
     const architecture = await inferArchitecture(workspaceRoot);
+    const messaging = (content.includes('spring-kafka') || content.includes('kafka-clients'))
+      ? 'kafka' as const
+      : undefined;
     return {
       language: 'java',
       framework,
       architecture,
       target: 'backend',
+      ...(messaging ? { messaging } : {}),
       confidence: 'high',
       source: 'pom.xml',
     };
@@ -230,7 +234,7 @@ async function inferTarget(
 ): Promise<'backend' | 'frontend' | 'fullstack' | 'script' | 'library'> {
   const hasFrontendDep = Boolean(deps['react'] || deps['@angular/core'] || deps['vue']);
   const hasBackendDep = Boolean(deps['express'] || deps['fastify'] || deps['koa'] || deps['nestjs']);
-  if (hasFrontendDep && hasBackendDep) return 'fullstack';
+  if (hasFrontendDep && hasBackendDep) return 'bff';
   if (hasFrontendDep) return 'frontend';
   if (hasBackendDep) return 'backend';
   try {

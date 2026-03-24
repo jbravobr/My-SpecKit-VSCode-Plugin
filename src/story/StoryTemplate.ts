@@ -104,7 +104,8 @@ status: open
 <!-- TODO: Escolha exatamente um: hexagonal | layered | microservices | monolith | serverless -->
 
 ### Target
-<!-- TODO: Escolha exatamente um: backend | frontend | fullstack | script | library -->
+<!-- TODO: Escolha exatamente um: backend | frontend | bff | script | library
+     bff = serviço que atua como Backend for Frontend (orquestração, auth relay, transformação de resposta para o cliente) -->
 
 ### Banco de Dados
 <!-- TODO: Tecnologia e versão. Ex: "PostgreSQL 15 (tabela comissoes); tabelas de configuração já existentes." -->

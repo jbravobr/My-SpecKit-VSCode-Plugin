@@ -72,6 +72,16 @@ status: open
 
 ---
 
+## Contexto Técnico
+
+### Messaging
+<!-- TODO: Kafka | NA -->
+
+### Banco de Dados / Cloud
+<!-- TODO: DynamoDB | Aurora MySQL | NA -->
+
+---
+
 ## DoF — Definition of Fixed
 
 - [ ] Bug não reproduz mais com os passos documentados

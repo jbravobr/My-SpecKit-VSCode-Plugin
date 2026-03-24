@@ -21,4 +21,42 @@ describe('language generators', () => {
       expect(result.length).toBeGreaterThan(0);
     });
   });
+
+  it('TypeScript: covers strict mode, interface, Zod, unknown and satisfies', () => {
+    const result = generateTypeScript();
+    expect(result).toContain('strict');
+    expect(result).toContain('interface');
+    expect(result).toContain('Zod');
+    expect(result).toContain('unknown');
+    expect(result).toContain('satisfies');
+  });
+
+  it('JavaScript: covers ESM, async and parallel I/O', () => {
+    const result = generateJavaScript();
+    expect(result).toContain('ESM');
+    expect(result).toContain('Async/await');
+    expect(result).toContain('Promise.all');
+  });
+
+  it('Java: covers Records, constructor injection, Optional and Stream API', () => {
+    const result = generateJava();
+    expect(result).toContain('Records');
+    expect(result).toContain('Constructor injection');
+    expect(result).toContain('Optional');
+    expect(result).toContain('Stream API');
+  });
+
+  it('CSharp: covers Nullable, LINQ and async', () => {
+    const result = generateCSharp();
+    expect(result).toContain('Nullable');
+    expect(result).toContain('LINQ');
+    expect(result).toContain('async');
+  });
+
+  it('Python: covers type hints, Pydantic and asyncio', () => {
+    const result = generatePython();
+    expect(result).toContain('Type hints');
+    expect(result).toContain('Pydantic');
+    expect(result).toContain('asyncio');
+  });
 });

@@ -1,15 +1,12 @@
 import { Story, emptyStory, Language, Framework, Architecture, Target, SpecStatus } from './Story';
-
-// --- Module-level static regexes (compiled once at load time) ---
-const RE_BULLET       = /^-\s+\S/;
-const RE_DOR_ITEM     = /^-\s+\[/;
-const RE_DOR_CHECKED  = /\[x\]/i;
-const RE_DOR_PREFIX   = /^-\s+\[.\]\s+/;
-const RE_BULLET_PFX   = /^-\s+/;
-const RE_TODO         = /<!--\s*TODO[^>]*-->/g;
-const RE_HTML_COMMENT = /<!--.*?-->/gs;
-const RE_META_BLOCK   = /<!--\s*metadata\s*([\s\S]*?)-->/;
-const RE_SECTION_SPLIT = /^(###?\s+.+)$/m;
+import {
+  buildSectionMap,
+  parseMetaFields,
+  extractBulletList,
+  parseDorItems,
+  cleanTodo,
+  RE_META_BLOCK,
+} from '../parser/BaseParser';
 
 export function parseStory(markdown: string): Story {
   const story = emptyStory();
@@ -58,69 +55,3 @@ export function parseStory(markdown: string): Story {
   return story;
 }
 
-/** Single-pass: splits markdown on heading lines, strips HTML comments once per block. */
-function buildSectionMap(markdown: string): Map<string, string> {
-  const map = new Map<string, string>();
-  const lines = markdown.split('\n');
-  let currentHeading: string | null = null;
-  let buffer: string[] = [];
-
-  const flush = () => {
-    if (currentHeading !== null) {
-      map.set(currentHeading, buffer.join('\n').replace(RE_HTML_COMMENT, '').trim());
-    }
-  };
-
-  for (const line of lines) {
-    const headingMatch = /^###?\s+(.+)$/.exec(line);
-    if (headingMatch) {
-      flush();
-      currentHeading = headingMatch[1].trim();
-      buffer = [];
-    } else if (line.trim() === '---') {
-      flush();
-      currentHeading = null;
-      buffer = [];
-    } else {
-      buffer.push(line);
-    }
-  }
-  flush();
-
-  return map;
-}
-
-/** Parses all `key: value` pairs from a metadata block in one pass. */
-function parseMetaFields(meta: string): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const line of meta.split('\n')) {
-    const colon = line.indexOf(':');
-    if (colon !== -1) {
-      result[line.slice(0, colon).trim()] = line.slice(colon + 1).trim();
-    }
-  }
-  return result;
-}
-
-function extractBulletList(section: string): string[] {
-  return section
-    .split('\n')
-    .filter(line => RE_BULLET.test(line))
-    .map(line => line.replace(RE_BULLET_PFX, '').trim())
-    .filter(line => line.length > 0);
-}
-
-function parseDorItems(section: string): { text: string; checked: boolean }[] {
-  return section
-    .split('\n')
-    .filter(line => RE_DOR_ITEM.test(line))
-    .map(line => ({
-      checked: RE_DOR_CHECKED.test(line),
-      text: line.replace(RE_DOR_PREFIX, '').trim(),
-    }));
-}
-
-function cleanTodo(value: string): string {
-  if (!value) return '';
-  return value.replace(RE_TODO, '').trim();
-}

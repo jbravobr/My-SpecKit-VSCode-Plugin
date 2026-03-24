@@ -135,6 +135,14 @@ describe('PromptsGenerator', () => {
       expect(result).toContain('Botão "Login com GitHub" presente na página de login');
     });
 
+    it('Gate 3 contains security checklist (401, health, traceId, credential)', () => {
+      const result = generateReviewPrompt(completeStory);
+      expect(result).toContain('401');
+      expect(result).toContain('health');
+      expect(result).toContain('traceId');
+      expect(result).toMatch(/credencial|secret|hardcoded/i);
+    });
+
     it('does not throw for empty story', () => {
       expect(() => generateReviewPrompt(emptyStory())).not.toThrow();
     });
@@ -203,6 +211,14 @@ describe('PromptsGenerator', () => {
     it('contains test commit pattern in PORTÃO 2', () => {
       const result = generateRunPrompt(completeStory);
       expect(result).toMatch(/git commit -m "test\(\S+\): TEST-N/);
+    });
+
+    it('Gate 3 contains security checklist (401, Health, traceId, credential)', () => {
+      const result = generateRunPrompt(completeStory);
+      expect(result).toContain('401');
+      expect(result).toMatch(/health/i);
+      expect(result).toContain('traceId');
+      expect(result).toMatch(/credencial|secret|hardcoded/i);
     });
 
     it('does not throw for empty story', () => {

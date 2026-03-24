@@ -1,14 +1,13 @@
 import { Fix, FixMetadata, Severity } from './Fix';
 import { SpecStatus } from '../story/Story';
-
-// --- Static regexes ---
-const RE_BULLET       = /^-\s+\S/;
-const RE_DOR_ITEM     = /^-\s+\[/;
-const RE_DOR_PREFIX   = /^-\s+\[.\]\s+/;
-const RE_BULLET_PFX   = /^-\s+/;
-const RE_TODO         = /<!--\s*TODO[^>]*-->/g;
-const RE_HTML_COMMENT = /<!--.*?-->/gs;
-const RE_META_BLOCK   = /<!--\s*metadata\s*([\s\S]*?)-->/;
+import {
+  buildSectionMap,
+  parseMetaFields,
+  extractBulletList,
+  parseDofItems,
+  cleanTodo,
+  RE_META_BLOCK,
+} from '../parser/BaseParser';
 
 export function parseFix(markdown: string): Fix {
   const metadata = parseMetadata(markdown);
@@ -38,6 +37,10 @@ export function parseFix(markdown: string): Fix {
     regressionPrevention: {
       testsToAdd: extractBulletList(get('Testes a Adicionar')),
     },
+    technicalContext: {
+      messaging: cleanTodo(get('Messaging')),
+      database: cleanTodo(get('Banco de Dados / Cloud')),
+    },
     dof: {
       criteria: parseDofItems(get('DoF — Definition of Fixed')),
     },
@@ -57,65 +60,3 @@ function parseMetadata(markdown: string): FixMetadata {
   };
 }
 
-function buildSectionMap(markdown: string): Map<string, string> {
-  const map = new Map<string, string>();
-  const lines = markdown.split('\n');
-  let currentHeading: string | null = null;
-  let buffer: string[] = [];
-
-  const flush = () => {
-    if (currentHeading !== null) {
-      map.set(currentHeading, buffer.join('\n').replace(RE_HTML_COMMENT, '').trim());
-    }
-  };
-
-  for (const line of lines) {
-    const headingMatch = /^###?\s+(.+)$/.exec(line);
-    if (headingMatch) {
-      flush();
-      currentHeading = headingMatch[1].trim();
-      buffer = [];
-    } else if (line.trim() === '---') {
-      flush();
-      currentHeading = null;
-      buffer = [];
-    } else {
-      buffer.push(line);
-    }
-  }
-  flush();
-
-  return map;
-}
-
-function parseMetaFields(meta: string): Record<string, string> {
-  const result: Record<string, string> = {};
-  for (const line of meta.split('\n')) {
-    const colon = line.indexOf(':');
-    if (colon !== -1) {
-      result[line.slice(0, colon).trim()] = line.slice(colon + 1).trim();
-    }
-  }
-  return result;
-}
-
-function extractBulletList(section: string): string[] {
-  return section
-    .split('\n')
-    .filter(line => RE_BULLET.test(line))
-    .map(line => line.replace(RE_BULLET_PFX, '').trim())
-    .filter(line => line.length > 0);
-}
-
-function parseDofItems(section: string): string[] {
-  return section
-    .split('\n')
-    .filter(line => RE_DOR_ITEM.test(line))
-    .map(line => line.replace(RE_DOR_PREFIX, '').trim())
-    .filter(line => line.length > 0);
-}
-
-function cleanTodo(value: string): string {
-  if (!value) return '';
-  return value.replace(RE_TODO, '').trim();
-}

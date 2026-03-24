@@ -281,7 +281,30 @@ git commit -m "test(${fixId}): regressão"
 
 ## Gate 3 — Revisão
 
-Verifique: bug não reproduz, código limpo, testes passando, DoF atendido.
+### Bug Fix Verification
+- [ ] O cenário dos "Passos para Reproduzir" não ocorre mais após o fix
+- [ ] A root cause foi endereçada — não apenas o sintoma
+- [ ] Nenhuma mudança fora do escopo do bug
+
+### Código
+- [ ] Segue convenções de **${stack.language}** (ver \`instructions/lang-*\`)
+- [ ] Mudanças cirúrgicas — sem refatoração desnecessária
+- [ ] Sem código morto, debug statements ou comentários temporários
+
+### Testes
+- [ ] Teste de regressão principal presente e passando
+- [ ] 0 (zero) falhas — execute o runner antes de marcar
+- [ ] Cobertura ≥ 80% nas linhas modificadas
+
+### Segurança (verifique se o bug estava relacionado a)
+- [ ] Credencial exposta em log ou resposta — confirmado ausente após o fix
+- [ ] Input não sanitizado — validação adicionada se necessário
+- [ ] Dados sensíveis expostos em mensagem de erro — corrigido
+
+### DoF
+${dofList}
+
+**Não avance para o Gate 4 sem todos os itens acima verificados.**
 
 ---
 

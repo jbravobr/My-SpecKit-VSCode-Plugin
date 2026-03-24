@@ -12,5 +12,9 @@ applyTo: "**/*.java"
 - **Constructor injection** sempre (nunca field injection com @Autowired)
 - Prefira \`var\` para inferência local onde o tipo é óbvio no contexto
 - Use \`@NotNull\`/\`@Nullable\` nas assinaturas públicas
+- Java 21: text blocks (\`"""..."""\`) para SQL, JSON e mensagens multiline
+- Java 21: virtual threads (\`Executors.newVirtualThreadPerTaskExecutor()\`) para serviços com I/O intenso — não usar para CPU-bound
+- \`@Value\` (Lombok) para objetos de domínio imutáveis quando Records não são adequados (ex.: estágios de builder mutáveis)
+- Exceções checadas vs não-checadas: use unchecked (\`RuntimeException\`) para erros de domínio; lance tipos específicos; nunca lance \`Exception\` diretamente
 `;
 }
