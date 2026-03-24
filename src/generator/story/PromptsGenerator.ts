@@ -285,6 +285,13 @@ export function generateReviewPrompt(story: Story): string {
   const storyId = story.metadata.id || '001';
   const criteria = story.functionalSpec.acceptanceCriteria.map(c => `- [ ] ${c}`).join('\n');
   const dodList = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
+  const hasKafka = (story.technicalSpec.infrastructure ?? '').toLowerCase().includes('kafka');
+  const performanceCheck = hasKafka
+    ? 'Throughput / consumer lag (P99 não se aplica a consumers async — usar SLO de lag)'
+    : (story.nonFunctionalSpec.performance?.trim() || 'P99 < 500ms (baseline padrão)');
+  const scalabilityLine = story.nonFunctionalSpec.scalability?.trim()
+    ? `\n- [ ] Escalabilidade (código): ${story.nonFunctionalSpec.scalability.trim()}`
+    : '';
 
   return `# Review Story — Sessão B (Gates 3–4)
 
@@ -351,8 +358,9 @@ ${criteria || '- [ ] (critérios não especificados)'}
 - [ ] Nenhum dado sensível nos logs (senha, token, PII não auditável)
 
 ### Requisitos não-funcionais
-- [ ] Performance: ${story.nonFunctionalSpec.performance?.trim() || 'P99 < 500ms (baseline padrão)'}
-- [ ] Segurança: ${story.nonFunctionalSpec.security || '(não especificado)'}
+- [ ] Performance: ${performanceCheck}
+- [ ] Segurança: ${story.nonFunctionalSpec.security || '(não especificado)'}${scalabilityLine}
+- [ ] Idempotência: operações de escrita não duplicam estado — Idempotency-Key ou deduplicação por chave de negócio presente
 
 ### Git
 - [ ] Branch segue padrão \`feature/${storyId}-<slug>\`
