@@ -10,6 +10,9 @@ import { generateArchitecture } from './baseline/ArchitectureGenerator';
 import { generateContextManagement } from './baseline/ContextManagementGenerator';
 import { generateTestingStandards } from './baseline/TestingStandardsGenerator';
 import { generateGitWorkflow } from './baseline/GitWorkflowGenerator';
+import { generateCredentialSecurity } from './baseline/CredentialSecurityGenerator';
+import { generateObservability } from './baseline/ObservabilityGenerator';
+import { generateSecurityTests } from './baseline/SecurityTestsGenerator';
 import { generateTypeScript } from './language/TypeScriptGenerator';
 import { generateJavaScript } from './language/JavaScriptGenerator';
 import { generateJava } from './language/JavaGenerator';
@@ -31,6 +34,12 @@ import {
   generateFixReviewPrompt,
   generateFixRunPrompt,
 } from './fix/FixPromptsGenerator';
+import { generateKafka } from './infra/KafkaGenerator';
+import { generateAws } from './infra/AwsGenerator';
+import { generateCrudPattern } from './pattern/CrudPatternGenerator';
+import { generateBffPattern } from './pattern/BffPatternGenerator';
+import { generateIdempotency } from './baseline/IdempotencyGenerator';
+import { isNa } from './utils/na';
 
 export async function generateFixCopilotConfig(
   workspaceRoot: string,
@@ -60,13 +69,16 @@ export async function generateFixCopilotConfig(
   // Index
   await write(path.join(githubDir, 'copilot-instructions.md'), generateFixIndex(fix, stack));
 
-  // Baseline
+  // Baseline — nfr not available for Fix; generators accept undefined gracefully
   await write(path.join(instructionsDir, '00-agent-integrity.instructions.md'), generateAgentIntegrity());
   await write(path.join(instructionsDir, '01-performance.instructions.md'), generatePerformance());
   await write(path.join(instructionsDir, '02-architecture.instructions.md'), generateArchitecture());
   await write(path.join(instructionsDir, '03-context-management.instructions.md'), generateContextManagement());
   await write(path.join(instructionsDir, '04-testing-standards.instructions.md'), generateTestingStandards());
   await write(path.join(instructionsDir, '05-git-workflow.instructions.md'), generateGitWorkflow());
+  await write(path.join(instructionsDir, '06-credential-security.instructions.md'), generateCredentialSecurity());
+  await write(path.join(instructionsDir, '07-observability.instructions.md'), generateObservability());
+  await write(path.join(instructionsDir, '08-security-tests.instructions.md'), generateSecurityTests());
 
   // Language (auto-detected)
   const langGenerators: Record<string, () => string> = {
@@ -92,6 +104,34 @@ export async function generateFixCopilotConfig(
   const fwGen = fwGenerators[stack.framework];
   if (fwGen) {
     await write(path.join(instructionsDir, `fw-${stack.framework}.instructions.md`), fwGen());
+  }
+
+  // Infrastructure generators — driven by user-filled technicalContext fields
+  const msg = fix.technicalContext.messaging;
+  const db = fix.technicalContext.database;
+  const dbLc = db.toLowerCase();
+
+  if (!isNa(msg) && msg.toLowerCase().includes('kafka')) {
+    await write(path.join(instructionsDir, 'infra-kafka.instructions.md'), generateKafka());
+  }
+
+  const needsAws =
+    !isNa(db) && (dbLc.includes('dynamodb') || dbLc.includes('aurora') || dbLc.includes('rds') || dbLc.includes('mysql'));
+  if (needsAws) {
+    await write(path.join(instructionsDir, 'infra-aws.instructions.md'), generateAws({ technicalSpec: { database: db, infrastructure: '' } } as any));
+  }
+
+  // Pattern generators
+  if (stack.target === 'backend' || stack.target === 'bff') {
+    await write(
+      path.join(instructionsDir, 'pattern-crud.instructions.md'),
+      generateCrudPattern(stack.language, stack.framework),
+    );
+    await write(path.join(instructionsDir, 'pattern-idempotency.instructions.md'), generateIdempotency());
+  }
+
+  if (stack.target === 'bff') {
+    await write(path.join(instructionsDir, 'pattern-bff.instructions.md'), generateBffPattern());
   }
 
   // Fix-specific instructions
