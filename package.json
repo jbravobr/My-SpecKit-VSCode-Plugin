@@ -45,6 +45,10 @@
           {
             "name": "review",
             "description": "Iniciar revisão independente e entrega"
+          },
+          {
+            "name": "draft",
+            "description": "Rascunhar uma spec (story ou fix) a partir de texto livre"
           }
         ]
       }

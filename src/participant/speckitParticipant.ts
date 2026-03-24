@@ -5,6 +5,7 @@ import { handleValidateCommand } from './commands/validateCommand';
 import { handleApplyCommand } from './commands/applyCommand';
 import { handleReviewCommand } from './commands/reviewCommand';
 import { handleStatusCommand } from './commands/statusCommand';
+import { handleDraftCommand } from './commands/draftCommand';
 
 export function registerSpeckitParticipant(context: vscode.ExtensionContext): void {
   const participant = vscode.chat.createChatParticipant(
@@ -36,6 +37,9 @@ export function registerSpeckitParticipant(context: vscode.ExtensionContext): vo
         case 'status':
           await handleStatusCommand(request, stream, token);
           break;
+        case 'draft':
+          await handleDraftCommand(request, stream, token);
+          break;
         default:
           stream.markdown(
             '**SpecKit** — Spec Driven Development\n\n' +
@@ -45,7 +49,8 @@ export function registerSpeckitParticipant(context: vscode.ExtensionContext): vo
             '- `/validate` — Validar DoR/completude e gerar configuração Copilot\n' +
             '- `/apply` — Gerar configuração Copilot e iniciar implementação\n' +
             '- `/review` — Iniciar revisão independente (após implementação + testes)\n' +
-            '- `/status` — Ver todas as specs abertas (Stories e Fixes)\n',
+            '- `/status` — Ver todas as specs abertas (Stories e Fixes)\n' +
+            '- `/draft` — Rascunhar uma spec (story ou fix) a partir de texto livre\n',
           );
       }
     },
