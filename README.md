@@ -939,7 +939,7 @@ O SpecKit estrutura a implementação em **5 gates** distribuídos em duas sess�
 
 | Gate | Nome | O que acontece |
 |---|---|---|
-| **Gate 3** | Revisão | Nova sessão sem memória da implementação. Agente lê a spec, lista arquivos modificados, lê cada arquivo, solicita relatório de cobertura. Verifica: funcionalidade, arquitetura, qualidade, testes, segurança, observabilidade, NFRs, git, DoD/DoF. Corrige falhas encontradas. |
+| **Gate 3** | Revisão | Nova sessão sem memória da implementação. Agente lê a spec, lista arquivos modificados, lê cada arquivo, solicita relatório de cobertura. Verifica: funcionalidade, arquitetura, qualidade, testes, segurança, observabilidade, git, DoD/DoF — e um checklist de NFRs expandido: **performance** (com isenção de P99 para consumers Kafka/async, usando SLO de throughput/lag em vez do baseline síncrono), **escalabilidade de código** (stateless, paginação, timeouts, pool de conexões — quando declarado na spec), **idempotência** (operações de escrita não duplicam estado). Corrige falhas encontradas. |
 | **Gate 4** | Entrega | Rebase na main, re-executa testes, valida DoD/DoF item por item, verifica prontidão para produção, commit de encerramento. |
 
 > **Sessão única:** use `/run` (Stories) ou `/fix-run` (Fixes) para executar todos os gates em uma única sessão de Copilot. Indicado para features pequenas ou em ambientes de desenvolvimento isolados.
@@ -947,6 +947,10 @@ O SpecKit estrutura a implementação em **5 gates** distribuídos em duas sess�
 ---
 
 ## CHANGELOG
+
+### v0.1.5
+
+- **[melhoria]** Gate 3 (`review.prompt.md`): checklist de NFRs expandido — **isenção de P99 para services assíncronos** (quando `infrastructure` inclui Kafka, o check de latência muda de "P99 < 500ms" para "throughput / consumer lag", evitando falso negativo em consumers que processam em lote); **escalabilidade de código** adicionada ao checklist (stateless, sem estado local entre requisições, queries com paginação, timeouts configurados, sem gerenciamento manual de pool) quando o campo `Escalabilidade` estiver preenchido na spec; **idempotência** adicionada como item obrigatório do Gate 3 para operações de escrita (verificar Idempotency-Key ou deduplicação por chave de negócio)
 
 ### v0.1.4
 
