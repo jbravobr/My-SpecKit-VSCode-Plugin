@@ -1,0 +1,199 @@
+import { describe, it, expect, beforeAll } from 'vitest';
+import { generateStoryElicitPrompt } from '../../../../src/generator/draft/StoryElicitGenerator';
+import { generateFixElicitPrompt } from '../../../../src/generator/draft/FixElicitGenerator';
+
+describe('generateStoryElicitPrompt', () => {
+  const roughInput = 'Quero calcular comissão de vendedores baseado em eventos Kafka';
+  const nextId = '001';
+  let result: string;
+
+  beforeAll(() => {
+    result = generateStoryElicitPrompt(roughInput, nextId);
+  });
+
+  it('contains the rough input verbatim', () => {
+    expect(result).toContain(roughInput);
+  });
+
+  it('references the correct story ID in file path', () => {
+    expect(result).toContain('STORY-001');
+    expect(result).toContain('.speckit/STORY-001.md');
+  });
+
+  it('contains all 6 phases', () => {
+    expect(result).toContain('FASE 1');
+    expect(result).toContain('FASE 2');
+    expect(result).toContain('FASE 3');
+    expect(result).toContain('FASE 4');
+    expect(result).toContain('FASE 5');
+    expect(result).toContain('FASE 6');
+  });
+
+  it('contains "Por que agora?" field for urgency', () => {
+    expect(result).toContain('Por que agora');
+  });
+
+  it('contains KPI / measurable indicator prompt', () => {
+    expect(result).toContain('indicador');
+    expect(result).toContain('métr');
+  });
+
+  it('warns against "sistema" as user story actor', () => {
+    expect(result).toContain('Evite "sistema" como ator');
+  });
+
+  it('instructs to derive out-of-scope from context, not generic defaults', () => {
+    expect(result).toContain('deriva');
+    expect(result).toContain('contexto');
+  });
+
+  it('contains async performance exemption rule', () => {
+    expect(result).toContain('assíncrono');
+    expect(result).toContain('consumer');
+  });
+
+  it('contains NFR performance default (P99 < 500ms)', () => {
+    expect(result).toContain('P99 < 500ms');
+  });
+
+  it('contains NFR availability default with backoff exponencial', () => {
+    expect(result).toContain('backoff exponencial');
+  });
+
+  it('contains DoR split between AI-verifiable and human-required criteria', () => {
+    expect(result).toContain('verificáveis pelo AI');
+    expect(result).toContain('requerem ação humana');
+  });
+
+  it('does not auto-check human DoR criteria (stakeholder approval, team alignment)', () => {
+    expect(result).toContain('aprovado pelo stakeholder responsável');
+    expect(result).toContain('DoD acordado com o time');
+    // Human criteria must remain unchecked
+    expect(result).toContain('- [ ] Requisito de negócio documentado e aprovado pelo stakeholder responsável');
+    expect(result).toContain('- [ ] DoD acordado com o time de desenvolvimento');
+  });
+
+  it('contains contextual DoD additions based on target/tech', () => {
+    expect(result).toContain('Kafka');
+    expect(result).toContain('DLQ rate');
+    expect(result).toContain('WCAG 2.1');
+  });
+
+  it('contains phase summary/confirmation instructions', () => {
+    expect(result).toContain('Resumo de fase');
+  });
+
+  it('distinguishes "não sei" from "N/A"', () => {
+    expect(result).toContain('"Não sei"');
+    expect(result).toContain('"N/A"');
+  });
+
+  it('contains the "Regras absolutas" section', () => {
+    expect(result).toContain('Regras absolutas');
+  });
+
+  it('contains "UMA pergunta por vez" rule', () => {
+    expect(result).toContain('UMA pergunta por vez');
+  });
+
+  it('uses a different ID when nextId changes', () => {
+    const result002 = generateStoryElicitPrompt(roughInput, '002');
+    expect(result002).toContain('STORY-002');
+    expect(result002).not.toContain('STORY-001');
+  });
+});
+
+describe('generateFixElicitPrompt', () => {
+  const roughInput = 'O login OAuth2 retorna 500 após expiração do token de refresh';
+  const nextId = '001';
+  let result: string;
+
+  beforeAll(() => {
+    result = generateFixElicitPrompt(roughInput, nextId);
+  });
+
+  it('contains the rough input verbatim', () => {
+    expect(result).toContain(roughInput);
+  });
+
+  it('references the correct fix ID in file path', () => {
+    expect(result).toContain('FIX-001');
+    expect(result).toContain('.speckit/FIX-001.md');
+  });
+
+  it('contains Bug Description phase', () => {
+    expect(result).toContain('Bug Description');
+  });
+
+  it('contains Root Cause Hypothesis phase', () => {
+    expect(result).toContain('Root Cause Hypothesis');
+  });
+
+  it('contains Impact Assessment phase', () => {
+    expect(result).toContain('Impact Assessment');
+  });
+
+  it('contains Regression Prevention phase', () => {
+    expect(result).toContain('Regression Prevention');
+  });
+
+  it('contains DoF — Definition of Fixed', () => {
+    expect(result).toContain('Definition of Fixed');
+  });
+
+  it('collects symptoms before proposing title', () => {
+    const titlePos = result.indexOf('Título do Bug');
+    const symptomsPos = result.indexOf('Sintomas');
+    expect(symptomsPos).toBeLessThan(titlePos);
+  });
+
+  it('contains first occurrence field', () => {
+    expect(result).toContain('Primeira Ocorrência');
+  });
+
+  it('contains workaround field', () => {
+    expect(result).toContain('Workaround');
+  });
+
+  it('contains volume quantification in impact assessment', () => {
+    expect(result).toContain('Quantos usuários');
+    expect(result).toContain('Volume');
+  });
+
+  it('does not provide a generic default for reproduction steps', () => {
+    expect(result).toContain('não têm default aceitável');
+    expect(result).toContain('não reproduzível');
+  });
+
+  it('contains contextual DoF additions (DLQ, auth, communication)', () => {
+    expect(result).toContain('DLQ');
+    expect(result).toContain('Comunicação de resolução');
+  });
+
+  it('contains phase summary/confirmation instructions', () => {
+    expect(result).toContain('Resumo de fase');
+  });
+
+  it('distinguishes "não sei" from "N/A"', () => {
+    expect(result).toContain('"Não sei"');
+    expect(result).toContain('"N/A"');
+  });
+
+  it('contains the "Regras absolutas" section', () => {
+    expect(result).toContain('Regras absolutas');
+  });
+
+  it('contains "UMA pergunta por vez" rule', () => {
+    expect(result).toContain('UMA pergunta por vez');
+  });
+
+  it('contains Montagem Final phase', () => {
+    expect(result).toContain('Montagem Final');
+  });
+
+  it('uses a different ID when nextId changes', () => {
+    const result002 = generateFixElicitPrompt(roughInput, '002');
+    expect(result002).toContain('FIX-002');
+    expect(result002).not.toContain('FIX-001');
+  });
+});
