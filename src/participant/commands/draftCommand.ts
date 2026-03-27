@@ -7,7 +7,7 @@ import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 
-const FIX_KEYWORDS = /\b(bug|erro|error|falha|falhou|quebrad|broke|broken|crash|regression|regress[aã]o|corrigir|corre[cç][aã]o|n[aã]o funciona)\b/i;
+const FIX_KEYWORDS = /quebrad|\b(bug|erro|error|falha|falhou|broke|broken|crash|regression|regress[aã]o|corrigir|corre[cç][aã]o|n[aã]o funciona)\b/i;
 
 export function detectDraftIntent(prompt: string): 'story' | 'fix' {
   if (/--fix\b|--bug\b/i.test(prompt)) return 'fix';
