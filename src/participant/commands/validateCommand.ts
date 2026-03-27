@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { parseStory } from '../../story/StoryParser';
 import { validateStory } from '../../story/StoryValidator';
 import { generateGapFillingPrompt } from '../../generator/story/PromptsGenerator';
@@ -63,12 +64,22 @@ async function validateStory_(
     .join('\n');
 
   if (!result.valid) {
+    const gapPromptContent = generateGapFillingPrompt(story, result.gaps);
+    const gapPromptPath = path.join(workspaceRoot, '.speckit', 'gap-fill.prompt.md');
+    await fs.writeFile(gapPromptPath, gapPromptContent);
+    const doc = await vscode.workspace.openTextDocument(gapPromptPath);
+    await vscode.window.showTextDocument(doc);
+
     stream.markdown(
       `⚠️ **História incompleta — ${result.gaps.length} lacuna(s) encontrada(s)**\n\n` +
       `**Status do DoR:**\n${dorLines}\n\n` +
-      '---\n\n',
+      '---\n\n' +
+      `✅ Arquivo de preenchimento criado: \`.speckit/gap-fill.prompt.md\`\n\n` +
+      `**Próximo passo:** Execute o arquivo no Copilot Agent para preencher as lacunas:\n\n` +
+      `- **Opção A (recomendada):** Com o arquivo aberto no editor, clique no ícone **▶ Run in Copilot Chat** na barra de título → selecione **Novo Chat**\n` +
+      `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#gap-fill.prompt.md\` no campo de mensagem\n\n` +
+      `Após preencher todas as lacunas, execute \`@speckit /validate\` novamente.\n`,
     );
-    stream.markdown(generateGapFillingPrompt(story, result.gaps));
     return;
   }
 
@@ -105,10 +116,20 @@ async function validateFix_(
   const result = validateFix(fix);
 
   if (!result.valid) {
+    const gapPromptContent = generateFixGapFillingPrompt(fix, result.gaps);
+    const gapPromptPath = path.join(workspaceRoot, '.speckit', 'gap-fill.prompt.md');
+    await fs.writeFile(gapPromptPath, gapPromptContent);
+    const doc = await vscode.workspace.openTextDocument(gapPromptPath);
+    await vscode.window.showTextDocument(doc);
+
     stream.markdown(
-      `⚠️ **Fix incompleto — ${result.gaps.length} lacuna(s) encontrada(s)**\n\n---\n\n`,
+      `⚠️ **Fix incompleto — ${result.gaps.length} lacuna(s) encontrada(s)**\n\n---\n\n` +
+      `✅ Arquivo de preenchimento criado: \`.speckit/gap-fill.prompt.md\`\n\n` +
+      `**Próximo passo:** Execute o arquivo no Copilot Agent para preencher as lacunas:\n\n` +
+      `- **Opção A (recomendada):** Com o arquivo aberto no editor, clique no ícone **▶ Run in Copilot Chat** na barra de título → selecione **Novo Chat**\n` +
+      `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#gap-fill.prompt.md\` no campo de mensagem\n\n` +
+      `Após preencher todas as lacunas, execute \`@speckit /validate\` novamente.\n`,
     );
-    stream.markdown(generateFixGapFillingPrompt(fix, result.gaps));
     return;
   }
 
