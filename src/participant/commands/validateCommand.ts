@@ -78,7 +78,7 @@ async function validateStory_(
       `**Próximo passo:** Execute o arquivo no Copilot Agent para preencher as lacunas:\n\n` +
       `- **Opção A (recomendada):** Com o arquivo aberto no editor, clique no ícone **▶ Run in Copilot Chat** na barra de título → selecione **Novo Chat**\n` +
       `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#gap-fill.prompt.md\` no campo de mensagem\n\n` +
-      `Após preencher todas as lacunas, execute \`@speckit /validate\` novamente.\n`,
+      `Após preencher todas as lacunas, neste mesmo chat, digite \`/validate\` (sem \`@speckit\`) para revalidar.\n`,
     );
     return;
   }
@@ -128,7 +128,7 @@ async function validateFix_(
       `**Próximo passo:** Execute o arquivo no Copilot Agent para preencher as lacunas:\n\n` +
       `- **Opção A (recomendada):** Com o arquivo aberto no editor, clique no ícone **▶ Run in Copilot Chat** na barra de título → selecione **Novo Chat**\n` +
       `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#gap-fill.prompt.md\` no campo de mensagem\n\n` +
-      `Após preencher todas as lacunas, execute \`@speckit /validate\` novamente.\n`,
+      `Após preencher todas as lacunas, neste mesmo chat, digite \`/validate\` (sem \`@speckit\`) para revalidar.\n`,
     );
     return;
   }

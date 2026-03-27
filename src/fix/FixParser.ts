@@ -42,7 +42,7 @@ export function parseFix(markdown: string): Fix {
       database: cleanTodo(get('Banco de Dados / Cloud')),
     },
     dof: {
-      criteria: parseDofItems(get('DoF — Definition of Fixed')),
+      criteria: parseDofItems(get('DoF - Definition of Fixed')),
     },
   };
 }

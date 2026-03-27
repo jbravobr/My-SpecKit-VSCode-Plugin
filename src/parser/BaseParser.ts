@@ -27,7 +27,7 @@ export function buildSectionMap(markdown: string): Map<string, string> {
     const headingMatch = /^#{2,4}\s+(.+)$/.exec(line);
     if (headingMatch) {
       flush();
-      currentHeading = headingMatch[1].trim();
+      currentHeading = headingMatch[1].trim().replace(/\u2014/g, '-');
       buffer = [];
     } else if (line.trim() === '---') {
       flush();

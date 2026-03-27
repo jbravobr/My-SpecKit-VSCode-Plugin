@@ -586,7 +586,7 @@ Conduza uma conversa estruturada para preencher cada lacuna acima:
 
 Informe o usuário:
 
-> Todas as lacunas foram preenchidas. Execute \`@speckit /validate\` para gerar os arquivos de configuração, revisar o plano completo e iniciar a implementação.
+> Todas as lacunas foram preenchidas. Informe ao usuário que pode digitar \`/validate\` neste chat para gerar os arquivos de configuração e iniciar a implementação.
 `;
 }
 
