@@ -24,7 +24,7 @@ export function buildSectionMap(markdown: string): Map<string, string> {
   };
 
   for (const line of lines) {
-    const headingMatch = /^###?\s+(.+)$/.exec(line);
+    const headingMatch = /^#{2,4}\s+(.+)$/.exec(line);
     if (headingMatch) {
       flush();
       currentHeading = headingMatch[1].trim();
