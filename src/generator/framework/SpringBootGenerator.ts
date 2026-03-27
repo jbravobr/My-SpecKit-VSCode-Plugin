@@ -36,7 +36,12 @@ applyTo: "**/*.java"
 - MDC: popule \`traceId\` e \`spanId\` no ponto de entrada da requisição (filter ou interceptor); inclua em todos os logs
 
 ## Exception Handling (atualizado)
-- \`@ControllerAdvice\` deve retornar \`ProblemDetail\` (Spring 6+, RFC 7807) — substitua bodies de erro customizados
+- \`@ControllerAdvice\` deve retornar \`ProblemDetail\` (Spring 6+, RFC 7807) — substitua bodies de erro customizados; habilite com \`spring.mvc.problemdetails.enabled=true\`
 - \`@PreAuthorize\` para autorização em nível de método — nunca confie em headers do cliente para identidade
+
+## Spring Boot 3.3+ — Recursos modernos
+- **Virtual threads**: habilite com \`spring.threads.virtual.enabled=true\` (application.yml) — Tomcat e agendadores usarão virtual threads automaticamente; remove necessidade de tuning de pool para I/O-bound
+- **\`@HttpExchange\`**: cliente HTTP declarativo nativo (substitui Feign) — defina interface com \`@GetExchange\`/\`@PostExchange\`, registre via \`HttpServiceProxyFactory\`; sem dependência externa
+- **Testes**: use \`@ImportAutoConfiguration\` em vez de \`@SpringBootTest\` para testes de slice mais rápidos; \`@RestClientTest\` para testar \`@HttpExchange\` clients com \`MockRestServiceServer\`
 `;
 }
