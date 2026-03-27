@@ -1262,6 +1262,17 @@ O SpecKit estrutura a implementação em **5 gates** distribuídos em duas sess�
 
 ## CHANGELOG
 
+### v0.1.8
+
+- **[fix]** `/validate` e `/apply` — história ou fix inválido agora cria `gap-fill.prompt.md` em disco e abre no editor, em vez de apenas streamar instruções no chat; elimina o travamento do fluxo onde o agente não conseguia editar arquivos por ser um Chat Participant (sem permissão de escrita) e o usuário ficava preso sem ação clara
+- **[fix]** `/review` — diferencia automaticamente spec de story vs fix: instrui `review.prompt.md`/`/review` para stories e `fix-review.prompt.md`/`/fix-review` para fixes; guarda contra arquivo de prompt não encontrado e sugere `/validate` nesse caso
+- **[fix]** `/draft` — regex de detecção de intent corrigido: `quebrad` separado do grupo com word boundary para detectar corretamente "quebrado", "quebrando" e demais derivados (antes a word boundary bloqueava o match)
+- **[fix]** `FixPromptsGenerator` — Gate 4 agora emite o comando de teste correto para a stack detectada (`npx vitest` para TypeScript/JavaScript, `./mvnw verify` para Java, `dotnet test` para C#, `pytest` para Python) em vez de listar todos os runners de todas as linguagens simultaneamente
+- **[melhoria]** Generators de linguagem atualizados com práticas correntes: Java 21 (unnamed patterns `_`, `SequencedCollection`, `StructuredTaskScope` para concorrência estruturada); Python 3.11+ (`asyncio.TaskGroup`, `ExceptionGroup`/`except*`, `uv` como package manager, `ruff` substituindo black/isort/flake8); C# (`required` properties, collection expressions `[...]`, `TimeProvider` para tempo testável)
+- **[melhoria]** Generators de framework atualizados: Spring Boot 3.3+ (`spring.threads.virtual.enabled=true`, `@HttpExchange` como substituto nativo ao Feign, `@RestClientTest`); React 19 (Actions API — `useActionState`, `useFormStatus`, `useOptimistic`; `use(promise)` + Suspense como padrão de data fetching; nota sobre React Compiler); Angular 19 (zoneless change detection, `linkedSignal()`, `resource()`, nova sintaxe `input()`/`output()`/`viewChild()` como funções)
+- **[melhoria]** `ContractTestingGenerator` — exemplos Pact adicionados para TypeScript (`pact-js`) e Python (`pact-python`); antes apenas Java era coberto
+- **[melhoria]** CI `security-scan.yml` — job SAST agora exporta SARIF e publica resultados na aba **Security** do GitHub via `github/codeql-action/upload-sarif`
+
 ### v0.1.7
 
 - **[fix]** `/draft` — prompt de elicitação agora força entrevista guiada: gate obrigatório no início do prompt instrui o agente a perguntar **uma questão por vez** antes de qualquer geração; "Default se não informado" redefinido para aplicar somente quando o usuário responde "não sei" após a pergunta — elimina o comportamento onde o agente derivava todas as respostas da ideia inicial e gerava o arquivo sem perguntar nada
