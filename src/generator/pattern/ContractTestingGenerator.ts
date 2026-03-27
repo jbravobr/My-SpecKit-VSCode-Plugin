@@ -53,5 +53,32 @@ contract/
   catalog-service.json
   inventory-service.json
 \`\`\`
+
+## Pact por linguagem do BFF consumer
+
+**TypeScript / JavaScript (pact-js):**
+\`\`\`typescript
+// consumer side — define a interação
+const interaction = pact.addInteraction({
+  state: 'order 123 exists',
+  uponReceiving: 'a request for order 123',
+  withRequest: { method: 'GET', path: '/api/orders/123' },
+  willRespondWith: { status: 200, body: { id: '123', status: 'open' } },
+});
+// execute o test e publique o contrato gerado em contract/orders-service.json
+\`\`\`
+
+**Python (pact-python):**
+\`\`\`python
+# consumer side
+pact.given('order 123 exists') \\
+    .upon_receiving('a request for order 123') \\
+    .with_request('GET', '/api/orders/123') \\
+    .will_respond_with(200, body={'id': '123', 'status': 'open'})
+\`\`\`
+
+**Java (pact-jvm) — já coberto nos exemplos WireMock acima.**
+
+> Os exemplos WireMock no topo desta instrução usam sintaxe Java — em projetos TypeScript ou Python adapte os stubs à biblioteca equivalente (\`msw\`, \`responses\`, \`httpretty\`).
 `;
 }

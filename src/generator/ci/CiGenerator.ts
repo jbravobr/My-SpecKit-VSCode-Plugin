@@ -143,15 +143,23 @@ jobs:
   sast:
     name: Static Analysis (Semgrep)
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
     container:
       image: returntocorp/semgrep
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Semgrep SAST scan
-        run: semgrep ci --config=auto --error
+      - name: Semgrep SAST scan (SARIF)
+        run: semgrep ci --config=auto --sarif --output=semgrep.sarif
         env:
           SEMGREP_APP_TOKEN: \${{ secrets.SEMGREP_APP_TOKEN }}
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
 `;
 }
