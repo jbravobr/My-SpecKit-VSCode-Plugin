@@ -103,4 +103,14 @@ describe('handleFixCommand', () => {
     const writtenContent = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0][1] as string;
     expect(writtenContent).toContain('type: fix');
   });
+
+  it('success message includes /validate instruction', async () => {
+    const stream = createMockStream();
+    const workspace = createMockWorkspace({ listFixFiles: vi.fn().mockResolvedValue([]) });
+    const fs = createMockFs();
+
+    await handleFixCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('/validate');
+  });
 });

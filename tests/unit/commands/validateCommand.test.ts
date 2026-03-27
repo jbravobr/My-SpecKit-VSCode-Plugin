@@ -7,6 +7,8 @@ import { InMemoryFileSystem, WorkspaceStub } from '../../support/fakes';
 const fixturesDir = resolve(__dirname, '../../fixtures');
 const completeStoryMd = readFileSync(resolve(fixturesDir, 'story-complete.md'), 'utf-8');
 const partialStoryMd = readFileSync(resolve(fixturesDir, 'story-partial.md'), 'utf-8');
+const completeFixMd = readFileSync(resolve(fixturesDir, 'fix-complete.md'), 'utf-8');
+const partialFixMd = readFileSync(resolve(fixturesDir, 'fix-partial.md'), 'utf-8');
 
 function createMockStream() {
   const calls: string[] = [];
@@ -42,7 +44,7 @@ describe('handleValidateCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Nenhuma spec');
   });
 
-  it('shows gap-filling prompt for invalid (partial) story — no files written', async () => {
+  it('writes gap-fill prompt file and instructs Copilot Agent for invalid (partial) story', async () => {
     const stream = createMockStream();
     const fs = new InMemoryFileSystem();
     fs.readFile = async () => partialStoryMd;
@@ -51,7 +53,9 @@ describe('handleValidateCommand', () => {
     await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('incompleta');
-    expect(fs.writtenPaths()).toHaveLength(0);
+    expect(fs.hasFile('gap-fill.prompt.md')).toBe(true);
+    expect(stream.getAllMarkdown()).toContain('gap-fill.prompt.md');
+    expect(stream.getAllMarkdown()).toContain('Copilot Agent');
   });
 
   it('generates config files for a valid story', async () => {
@@ -87,5 +91,60 @@ describe('handleValidateCommand', () => {
 
     expect(stream.getAllMarkdown()).toContain('/review');
     expect(stream.getAllMarkdown()).toContain('Sessão B');
+  });
+
+  // ── Fix branches ──────────────────────────────────────────────────────────
+
+  it('writes gap-fill.prompt.md and instructs Copilot Agent for invalid (partial) fix', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => partialFixMd;
+    const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-002.md' });
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Fix incompleto');
+    expect(fs.hasFile('gap-fill.prompt.md')).toBe(true);
+    expect(stream.getAllMarkdown()).toContain('gap-fill.prompt.md');
+    expect(stream.getAllMarkdown()).toContain('Copilot Agent');
+  });
+
+  it('generates config files for a valid fix', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeFixMd;
+    const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-001.md' });
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Fix válido');
+    expect(stream.getAllMarkdown()).toContain('arquivo(s) gerado(s)');
+    expect(fs.writtenPaths().length).toBeGreaterThan(0);
+  });
+
+  it('shows /fix-implement and Session B instruction for a valid fix', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeFixMd;
+    const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-001.md' });
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('/fix-implement');
+    expect(stream.getAllMarkdown()).toContain('Sessão B');
+  });
+
+  it('streams error and returns early when generateFixCopilotConfig throws', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeFixMd;
+    const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-001.md' });
+    workspace.detectTechStack = async () => { throw new Error('stack detection failed'); };
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Erro ao detectar stack');
+    expect(stream.getAllMarkdown()).toContain('stack detection failed');
+    expect(stream.getAllMarkdown()).not.toContain('/fix-implement');
   });
 });

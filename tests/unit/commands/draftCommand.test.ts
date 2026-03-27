@@ -69,6 +69,46 @@ describe('detectDraftIntent', () => {
   it('returns story by default when no keywords match', () => {
     expect(detectDraftIntent('Adicionar dashboard de métricas em tempo real')).toBe('story');
   });
+
+  it('returns fix when keyword "bug" is detected', () => {
+    expect(detectDraftIntent('Tem um bug na tela de login')).toBe('fix');
+  });
+
+  it('returns fix when keyword "error" (English) is detected', () => {
+    expect(detectDraftIntent('Getting an error on submit')).toBe('fix');
+  });
+
+  it('returns fix when keyword "falhou" is detected', () => {
+    expect(detectDraftIntent('O pagamento falhou durante o checkout')).toBe('fix');
+  });
+
+  it('returns fix when keyword "quebrado" (quebrad stem) is detected', () => {
+    expect(detectDraftIntent('O link está quebrado após o deploy')).toBe('fix');
+  });
+
+  it('returns fix when keyword "broke" is detected', () => {
+    expect(detectDraftIntent('The recent commit broke the auth flow')).toBe('fix');
+  });
+
+  it('returns fix when keyword "broken" is detected', () => {
+    expect(detectDraftIntent('Pagination is broken on mobile')).toBe('fix');
+  });
+
+  it('returns fix when keyword "regression" is detected', () => {
+    expect(detectDraftIntent('This looks like a regression in the payment module')).toBe('fix');
+  });
+
+  it('returns fix when keyword "regressão" (Portuguese) is detected', () => {
+    expect(detectDraftIntent('Parece uma regressão no módulo de auth')).toBe('fix');
+  });
+
+  it('returns fix when keyword "corrigir" is detected', () => {
+    expect(detectDraftIntent('Preciso corrigir o comportamento do scroll')).toBe('fix');
+  });
+
+  it('returns fix when keyword "correção" (cedilla) is detected', () => {
+    expect(detectDraftIntent('Necessária correção no módulo de relatórios')).toBe('fix');
+  });
 });
 
 describe('handleDraftCommand', () => {

@@ -8,6 +8,8 @@ import { IWorkspace } from '../../../src/generator/utils/IWorkspace';
 const fixturesDir = resolve(__dirname, '../../fixtures');
 const completeStoryMd = readFileSync(resolve(fixturesDir, 'story-complete.md'), 'utf-8');
 const partialStoryMd = readFileSync(resolve(fixturesDir, 'story-partial.md'), 'utf-8');
+const completeFixMd = readFileSync(resolve(fixturesDir, 'fix-complete.md'), 'utf-8');
+const partialFixMd = readFileSync(resolve(fixturesDir, 'fix-partial.md'), 'utf-8');
 
 function createMockStream() {
   const calls: string[] = [];
@@ -92,5 +94,80 @@ describe('handleApplyCommand', () => {
     await handleApplyCommand({} as any, stream as any, {} as any, createMockFs(), workspace);
 
     expect(stream.getAllMarkdown()).toContain('workspace');
+  });
+
+  it('shows error when no active spec is found', async () => {
+    const stream = createMockStream();
+    const workspace = createMockWorkspace();
+    (workspace.getActiveSpecPath as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+    await handleApplyCommand({} as any, stream as any, {} as any, createMockFs(), workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Nenhuma spec');
+  });
+
+  it('suggests /validate when story has gaps — no files written', async () => {
+    const stream = createMockStream();
+    const fs = createMockFs(partialStoryMd);
+    const workspace = createMockWorkspace();
+
+    await handleApplyCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('/validate');
+    expect(fs.writeFile).not.toHaveBeenCalled();
+  });
+
+  // ── Fix branches ──────────────────────────────────────────────────────────
+
+  it('shows error when fix is invalid — lists gaps and suggests /validate', async () => {
+    const stream = createMockStream();
+    const fs = createMockFs(partialFixMd);
+    const workspace = createMockWorkspace('C:\\workspace\\.speckit\\FIX-002.md');
+
+    await handleApplyCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Fix incompleto');
+    expect(output).toContain('[');
+    expect(output).toContain('/validate');
+    expect(fs.writeFile).not.toHaveBeenCalled();
+  });
+
+  it('generates config files when fix is valid', async () => {
+    const stream = createMockStream();
+    const fs = createMockFs(completeFixMd);
+    const workspace = createMockWorkspace('C:\\workspace\\.speckit\\FIX-001.md');
+
+    await handleApplyCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('arquivo(s) gerado(s)');
+    expect(fs.writeFile).toHaveBeenCalled();
+  });
+
+  it('shows /fix-implement agent instruction when fix is valid', async () => {
+    const stream = createMockStream();
+    const fs = createMockFs(completeFixMd);
+    const workspace = createMockWorkspace('C:\\workspace\\.speckit\\FIX-001.md');
+
+    await handleApplyCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('/fix-implement');
+    expect(output).toContain('Agente');
+    expect(output).toContain('fix-implement.prompt.md');
+  });
+
+  it('streams error and returns early when generateFixCopilotConfig throws for a valid fix', async () => {
+    const stream = createMockStream();
+    const fs = createMockFs(completeFixMd);
+    const workspace = createMockWorkspace('C:\\workspace\\.speckit\\FIX-001.md');
+    (workspace.detectTechStack as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('stack unavailable'));
+
+    await handleApplyCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Erro ao detectar stack');
+    expect(output).toContain('stack unavailable');
+    expect(output).not.toContain('/fix-implement');
   });
 });
