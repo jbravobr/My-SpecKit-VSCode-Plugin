@@ -12,6 +12,7 @@ import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
+import { appendLog } from '../../generator/utils/SessionLogger';
 
 function extractSpecType(content: string): 'story' | 'fix' {
   const metaMatch = /<!--\s*metadata\s*([\s\S]*?)-->/.exec(content);
@@ -70,6 +71,14 @@ async function validateStory_(
     const doc = await vscode.workspace.openTextDocument(gapPromptPath);
     await vscode.window.showTextDocument(doc);
 
+    await appendLog(workspaceRoot, {
+      command: '/validate',
+      specId: story.metadata.id,
+      specTitle: story.metadata.title,
+      outcome: `⚠️ Inválida — ${result.gaps.length} lacuna(s)`,
+      detail: result.gaps.map(g => `- [${g.section}] ${g.field}: ${g.message}`).join('\n'),
+    }, fs);
+
     stream.markdown(
       `⚠️ **História incompleta — ${result.gaps.length} lacuna(s) encontrada(s)**\n\n` +
       `**Status do DoR:**\n${dorLines}\n\n` +
@@ -78,7 +87,7 @@ async function validateStory_(
       `**Próximo passo:** Execute o arquivo no Copilot Agent para preencher as lacunas:\n\n` +
       `- **Opção A (recomendada):** Com o arquivo aberto no editor, clique no ícone **▶ Run in Copilot Chat** na barra de título → selecione **Novo Chat**\n` +
       `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#gap-fill.prompt.md\` no campo de mensagem\n\n` +
-      `Após preencher todas as lacunas, neste mesmo chat, digite \`/validate\` (sem \`@speckit\`) para revalidar.\n`,
+      `Após preencher todas as lacunas, volte ao chat do **@speckit** e execute \`@speckit /validate\` para revalidar.\n`,
     );
     return;
   }
@@ -87,6 +96,15 @@ async function validateStory_(
   stream.markdown('⏳ Gerando arquivos de configuração do Copilot...\n');
   const files = await generateCopilotConfig(workspaceRoot, story, fs);
   const fileList = files.map(f => `- \`${f}\``).join('\n');
+
+  await appendLog(workspaceRoot, {
+    command: '/validate',
+    specId: story.metadata.id,
+    specTitle: story.metadata.title,
+    outcome: `✅ Válida — ${files.length} arquivo(s) gerado(s)`,
+    detail: files.map(f => `- ${f}`).join('\n'),
+  }, fs);
+
   stream.markdown(`✅ **${files.length} arquivo(s) gerado(s):**\n\n${fileList}\n\n---\n\n`);
 
   stream.markdown(
@@ -122,13 +140,21 @@ async function validateFix_(
     const doc = await vscode.workspace.openTextDocument(gapPromptPath);
     await vscode.window.showTextDocument(doc);
 
+    await appendLog(workspaceRoot, {
+      command: '/validate',
+      specId: fix.metadata.id,
+      specTitle: fix.metadata.title,
+      outcome: `⚠️ Fix inválido — ${result.gaps.length} lacuna(s)`,
+      detail: result.gaps.map(g => `- [${g.section}] ${g.field}: ${g.message}`).join('\n'),
+    }, fs);
+
     stream.markdown(
       `⚠️ **Fix incompleto — ${result.gaps.length} lacuna(s) encontrada(s)**\n\n---\n\n` +
       `✅ Arquivo de preenchimento criado: \`.speckit/gap-fill.prompt.md\`\n\n` +
       `**Próximo passo:** Execute o arquivo no Copilot Agent para preencher as lacunas:\n\n` +
       `- **Opção A (recomendada):** Com o arquivo aberto no editor, clique no ícone **▶ Run in Copilot Chat** na barra de título → selecione **Novo Chat**\n` +
       `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#gap-fill.prompt.md\` no campo de mensagem\n\n` +
-      `Após preencher todas as lacunas, neste mesmo chat, digite \`/validate\` (sem \`@speckit\`) para revalidar.\n`,
+      `Após preencher todas as lacunas, volte ao chat do **@speckit** e execute \`@speckit /validate\` para revalidar.\n`,
     );
     return;
   }
@@ -139,6 +165,15 @@ async function validateFix_(
   try {
     const files = await generateFixCopilotConfig(workspaceRoot, fix, fs, workspace);
     const fileList = files.map(f => `- \`${f}\``).join('\n');
+
+    await appendLog(workspaceRoot, {
+      command: '/validate',
+      specId: fix.metadata.id,
+      specTitle: fix.metadata.title,
+      outcome: `✅ Fix válido — ${files.length} arquivo(s) gerado(s)`,
+      detail: files.map(f => `- ${f}`).join('\n'),
+    }, fs);
+
     stream.markdown(`✅ **${files.length} arquivo(s) gerado(s):**\n\n${fileList}\n\n---\n\n`);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

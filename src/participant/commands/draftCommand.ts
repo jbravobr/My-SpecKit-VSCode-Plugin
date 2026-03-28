@@ -6,6 +6,7 @@ import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
+import { appendLog } from '../../generator/utils/SessionLogger';
 
 const FIX_KEYWORDS = /quebrad|\b(bug|erro|error|falha|falhou|broke|broken|crash|regression|regress[aã]o|corrigir|corre[cç][aã]o|n[aã]o funciona)\b/i;
 
@@ -53,6 +54,13 @@ export async function handleDraftCommand(
     const content = generateFixElicitPrompt(roughInput, nextId);
     await fs.writeFile(filePath, content);
 
+    await appendLog(workspaceRoot, {
+      command: '/draft',
+      specId: nextId,
+      outcome: `✅ Elicitação de fix iniciada — FIX-${nextId}`,
+      detail: `Input: ${roughInput.slice(0, 120)}${roughInput.length > 120 ? '…' : ''}`,
+    }, fs);
+
     const doc = await vscode.workspace.openTextDocument(filePath);
     await vscode.window.showTextDocument(doc);
 
@@ -73,6 +81,13 @@ export async function handleDraftCommand(
 
     const content = generateStoryElicitPrompt(roughInput, nextId);
     await fs.writeFile(filePath, content);
+
+    await appendLog(workspaceRoot, {
+      command: '/draft',
+      specId: nextId,
+      outcome: `✅ Elicitação de story iniciada — STORY-${nextId}`,
+      detail: `Input: ${roughInput.slice(0, 120)}${roughInput.length > 120 ? '…' : ''}`,
+    }, fs);
 
     const doc = await vscode.workspace.openTextDocument(filePath);
     await vscode.window.showTextDocument(doc);

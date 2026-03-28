@@ -118,9 +118,9 @@ ${dofList}
 
 ## Sessão A concluída
 
-Gates 0–2 completos. Para iniciar a revisão independente:
+Gates 0–2 completos. **Encerre esta sessão.**
 
-> Execute \`@speckit /review\` no Copilot Chat.
+Para iniciar a revisão independente, o usuário deve abrir um novo Copilot Chat em modo Agente e executar \`@speckit /review\`.
 
 Não faça mais alterações de código nesta sessão.
 `;

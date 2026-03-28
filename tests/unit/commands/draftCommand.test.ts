@@ -168,6 +168,52 @@ describe('handleDraftCommand', () => {
     expect(stream.getAllMarkdown()).toContain('STORY-001');
   });
 
+  it('written elicit-story content contains REGRA MESTRE (anti-loop guard)', async () => {
+    const stream = createMockStream();
+    const workspace = createMockWorkspace({ listStoryFiles: vi.fn().mockResolvedValue([]) });
+    const fs = createMockFs();
+
+    await handleDraftCommand(
+      createMockRequest('Quero calcular comissão baseado em eventos Kafka'),
+      stream as any, {} as any, fs, workspace,
+    );
+
+    const [, writtenContent] = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0] as [string, string];
+    expect(writtenContent).toContain('REGRA MESTRE');
+    expect(writtenContent).toContain('Uma mensagem');
+    expect(writtenContent).toContain('uma pergunta');
+  });
+
+  it('written elicit-story content does not contain auto-apply anti-pattern', async () => {
+    const stream = createMockStream();
+    const workspace = createMockWorkspace({ listStoryFiles: vi.fn().mockResolvedValue([]) });
+    const fs = createMockFs();
+
+    await handleDraftCommand(
+      createMockRequest('Quero calcular comissão baseado em eventos Kafka'),
+      stream as any, {} as any, fs, workspace,
+    );
+
+    const [, writtenContent] = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0] as [string, string];
+    expect(writtenContent).not.toContain('aplique os defaults abaixo informando que está fazendo isso');
+    expect(writtenContent).not.toContain('Pergunte apenas se houver sinais de restrição específica');
+  });
+
+  it('written elicit-story content embeds the user rough input', async () => {
+    const stream = createMockStream();
+    const workspace = createMockWorkspace({ listStoryFiles: vi.fn().mockResolvedValue([]) });
+    const fs = createMockFs();
+    const roughInput = 'Quero calcular comissão baseado em eventos Kafka';
+
+    await handleDraftCommand(
+      createMockRequest(roughInput),
+      stream as any, {} as any, fs, workspace,
+    );
+
+    const [, writtenContent] = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0] as [string, string];
+    expect(writtenContent).toContain(roughInput);
+  });
+
   it('creates elicit-fix.prompt.md for fix intent (--fix flag)', async () => {
     const stream = createMockStream();
     const workspace = createMockWorkspace({ listFixFiles: vi.fn().mockResolvedValue([]) });
@@ -184,6 +230,21 @@ describe('handleDraftCommand', () => {
     );
     expect(stream.getAllMarkdown()).toContain('elicit-fix.prompt.md');
     expect(stream.getAllMarkdown()).toContain('FIX-001');
+  });
+
+  it('written elicit-fix content contains REGRA MESTRE (anti-loop guard)', async () => {
+    const stream = createMockStream();
+    const workspace = createMockWorkspace({ listFixFiles: vi.fn().mockResolvedValue([]) });
+    const fs = createMockFs();
+
+    await handleDraftCommand(
+      createMockRequest('Login retorna 500 --fix'),
+      stream as any, {} as any, fs, workspace,
+    );
+
+    const [, writtenContent] = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0] as [string, string];
+    expect(writtenContent).toContain('REGRA MESTRE');
+    expect(writtenContent).not.toContain('aplique os defaults abaixo informando que está fazendo isso');
   });
 
   it('creates elicit-fix.prompt.md for fix intent (keyword "erro")', async () => {
