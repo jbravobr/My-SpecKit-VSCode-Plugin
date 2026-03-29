@@ -77,8 +77,10 @@ export function parseDorItems(section: string): { text: string; checked: boolean
 export function parseDofItems(section: string): string[] {
   return section
     .split('\n')
-    .filter(line => RE_DOR_ITEM.test(line))
-    .map(line => line.replace(RE_DOR_PREFIX, '').trim())
+    .filter(line => RE_BULLET.test(line))
+    .map(line => RE_DOR_ITEM.test(line)
+      ? line.replace(RE_DOR_PREFIX, '').trim()
+      : line.replace(RE_BULLET_PFX, '').trim())
     .filter(line => line.length > 0);
 }
 

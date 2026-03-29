@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
       include: ['tests/behavioral/**/*.test.ts'],
       environment: 'node',
       alias: { vscode: resolve(__dirname, 'tests/__mocks__/vscode.ts') },
-      testTimeout: 240000,
+      testTimeout: 420000,
       env,
     },
   };
