@@ -49,6 +49,10 @@
           {
             "name": "draft",
             "description": "Rascunhar uma spec (story ou fix) a partir de texto livre"
+          },
+          {
+            "name": "setup",
+            "description": "Verificar ferramentas instaladas no ambiente (Node.js, Python, Git)"
           }
         ]
       }

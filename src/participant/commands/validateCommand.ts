@@ -13,6 +13,8 @@ import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { appendLog } from '../../generator/utils/SessionLogger';
+import { checkEnvironment, formatEnvCheckInline } from '../../generator/utils/EnvironmentChecker';
+import { TechStackDetection } from '../../fix/Fix';
 
 function extractSpecType(content: string): 'story' | 'fix' {
   const metaMatch = /<!--\s*metadata\s*([\s\S]*?)-->/.exec(content);
@@ -107,6 +109,15 @@ async function validateStory_(
 
   stream.markdown(`✅ **${files.length} arquivo(s) gerado(s):**\n\n${fileList}\n\n---\n\n`);
 
+  const storyLang = story.technicalSpec.language as TechStackDetection['language'] | '';
+  if (storyLang) {
+    const envReport = checkEnvironment({ language: storyLang } as TechStackDetection);
+    const envLine = formatEnvCheckInline(envReport);
+    if (envLine) {
+      stream.markdown(envLine);
+    }
+  }
+
   stream.markdown(
     '▶ **Fluxo de implementação — do início ao código pronto:**\n\n' +
     '**Sessão A — Implementação (portões 0–2):**\n' +
@@ -175,6 +186,17 @@ async function validateFix_(
     }, fs);
 
     stream.markdown(`✅ **${files.length} arquivo(s) gerado(s):**\n\n${fileList}\n\n---\n\n`);
+
+    try {
+      const detectedStack = await workspace.detectTechStack();
+      const envReport = checkEnvironment(detectedStack);
+      const envLine = formatEnvCheckInline(envReport);
+      if (envLine) {
+        stream.markdown(envLine);
+      }
+    } catch {
+      // stack already validated during config generation — skip env check silently
+    }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     stream.markdown(`❌ **Erro ao detectar stack:** ${msg}\n`);

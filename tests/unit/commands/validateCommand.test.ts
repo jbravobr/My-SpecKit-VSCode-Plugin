@@ -4,6 +4,13 @@ import { resolve } from 'path';
 import { handleValidateCommand } from '../../../src/participant/commands/validateCommand';
 import { InMemoryFileSystem, WorkspaceStub } from '../../support/fakes';
 
+vi.mock('../../../src/generator/utils/EnvironmentChecker', () => ({
+  checkEnvironment: vi.fn().mockReturnValue({ tools: [], stackLanguage: 'typescript' }),
+  formatEnvCheckInline: vi.fn().mockReturnValue(''),
+}));
+
+import { checkEnvironment, formatEnvCheckInline } from '../../../src/generator/utils/EnvironmentChecker';
+
 const fixturesDir = resolve(__dirname, '../../fixtures');
 const completeStoryMd = readFileSync(resolve(fixturesDir, 'story-complete.md'), 'utf-8');
 const partialStoryMd = readFileSync(resolve(fixturesDir, 'story-partial.md'), 'utf-8');
@@ -21,6 +28,8 @@ function createMockStream() {
 describe('handleValidateCommand', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(checkEnvironment).mockReturnValue({ tools: [], stackLanguage: 'typescript' });
+    vi.mocked(formatEnvCheckInline).mockReturnValue('');
   });
 
   it('shows error when no workspace root is available', async () => {
@@ -146,5 +155,66 @@ describe('handleValidateCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Erro ao detectar stack');
     expect(stream.getAllMarkdown()).toContain('stack detection failed');
     expect(stream.getAllMarkdown()).not.toContain('/fix-implement');
+  });
+
+  // ── Environment check integration ─────────────────────────────────────────
+
+  it('calls checkEnvironment with story language after valid story is generated', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(checkEnvironment).toHaveBeenCalledWith(expect.objectContaining({ language: 'typescript' }));
+  });
+
+  it('streams env check result after valid story config is generated', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    const workspace = new WorkspaceStub();
+    vi.mocked(formatEnvCheckInline).mockReturnValue('✅ **Ambiente verificado** — Git 2.43.0, Node.js 20.11.0 disponíveis.\n\n');
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Ambiente verificado');
+  });
+
+  it('streams missing tools warning after valid story when tools are absent', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    const workspace = new WorkspaceStub();
+    vi.mocked(formatEnvCheckInline).mockReturnValue('⚠️ **Ferramentas ausentes para implementação:**\n\n- **Git**: instalar em https://git-scm.com/downloads\n\n');
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Ferramentas ausentes');
+    expect(stream.getAllMarkdown()).toContain('Git');
+  });
+
+  it('calls checkEnvironment with detected stack after valid fix config is generated', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeFixMd;
+    const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-001.md' });
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(checkEnvironment).toHaveBeenCalledWith(expect.objectContaining({ language: 'typescript' }));
+  });
+
+  it('streams env check result after valid fix config is generated', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeFixMd;
+    const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-001.md' });
+    vi.mocked(formatEnvCheckInline).mockReturnValue('✅ **Ambiente verificado** — Git 2.43.0 disponível.\n\n');
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Ambiente verificado');
   });
 });

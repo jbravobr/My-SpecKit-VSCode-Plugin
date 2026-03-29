@@ -6,6 +6,7 @@ import { handleApplyCommand } from './commands/applyCommand';
 import { handleReviewCommand } from './commands/reviewCommand';
 import { handleStatusCommand } from './commands/statusCommand';
 import { handleDraftCommand } from './commands/draftCommand';
+import { handleSetupCommand } from './commands/setupCommand';
 
 export async function handleSpeckitRequest(
   request: vscode.ChatRequest,
@@ -37,6 +38,9 @@ export async function handleSpeckitRequest(
     case 'draft':
       await handleDraftCommand(request, stream, token);
       break;
+    case 'setup':
+      await handleSetupCommand(request, stream, token);
+      break;
     default:
       stream.markdown(
         '**SpecKit** — Spec Driven Development\n\n' +
@@ -47,7 +51,8 @@ export async function handleSpeckitRequest(
         '- `/apply` — Gerar configuração Copilot e iniciar implementação\n' +
         '- `/review` — Iniciar revisão independente (após implementação + testes)\n' +
         '- `/status` — Ver todas as specs abertas (Stories e Fixes)\n' +
-        '- `/draft` — Rascunhar uma spec (story ou fix) a partir de texto livre\n',
+        '- `/draft` — Rascunhar uma spec (story ou fix) a partir de texto livre\n' +
+        '- `/setup` — Verificar ferramentas instaladas no ambiente\n',
       );
   }
 }
