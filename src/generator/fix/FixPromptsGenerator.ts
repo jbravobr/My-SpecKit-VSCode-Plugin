@@ -1,5 +1,17 @@
 import { Fix, FixGap, TechStackDetection } from '../../fix/Fix';
 
+const TEST_COMMANDS: Record<string, string> = {
+  typescript: 'npx vitest run --coverage --coverage.thresholds.lines=80',
+  javascript: 'npx vitest run --coverage --coverage.thresholds.lines=80',
+  java: './mvnw verify -Djacoco.haltOnFailure=true -Djacoco.minimum.coverage=0.80',
+  csharp: 'dotnet test --collect:"XPlat Code Coverage" /p:CoverageThreshold=80',
+  python: 'pytest --cov=src --cov-fail-under=80 --cov-report=term-missing',
+};
+
+function testCommandForStack(language: string): string {
+  return TEST_COMMANDS[language] ?? TEST_COMMANDS['typescript'];
+}
+
 export function generateFixImplementPrompt(fix: Fix, stack: TechStackDetection): string {
   const fixId = fix.metadata.id || '001';
   const dofList = fix.dof.criteria.map(c => `- [ ] ${c}`).join('\n') || '- [ ] (não especificado)';
@@ -106,9 +118,9 @@ ${dofList}
 
 ## Sessão A concluída
 
-Gates 0–2 completos. Para iniciar a revisão independente:
+Gates 0–2 completos. **Encerre esta sessão.**
 
-> Execute \`@speckit /review\` no Copilot Chat.
+Para iniciar a revisão independente, o usuário deve abrir um novo Copilot Chat em modo Agente e executar \`@speckit /review\`.
 
 Não faça mais alterações de código nesta sessão.
 `;
@@ -194,10 +206,7 @@ git rebase origin/develop
 
 ### Passo 2 — Reexecute os testes
 \`\`\`bash
-npm test -- --coverage
-./mvnw test
-dotnet test --collect:"XPlat Code Coverage"
-pytest --cov=. --cov-report=term-missing
+${testCommandForStack(stack.language)}
 \`\`\`
 
 - [ ] 0 (zero) falhas

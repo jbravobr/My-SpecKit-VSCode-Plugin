@@ -13,7 +13,7 @@ export const RE_META_BLOCK   = /<!--\s*metadata\s*([\s\S]*?)-->/;
 /** Single-pass: splits markdown on heading lines, strips HTML comments once per block. */
 export function buildSectionMap(markdown: string): Map<string, string> {
   const map = new Map<string, string>();
-  const lines = markdown.split('\n');
+  const lines = markdown.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
   let currentHeading: string | null = null;
   let buffer: string[] = [];
 
@@ -24,10 +24,10 @@ export function buildSectionMap(markdown: string): Map<string, string> {
   };
 
   for (const line of lines) {
-    const headingMatch = /^###?\s+(.+)$/.exec(line);
+    const headingMatch = /^#{2,4}\s+(.+)$/.exec(line);
     if (headingMatch) {
       flush();
-      currentHeading = headingMatch[1].trim();
+      currentHeading = headingMatch[1].trim().replace(/\u2014/g, '-');
       buffer = [];
     } else if (line.trim() === '---') {
       flush();
@@ -45,7 +45,7 @@ export function buildSectionMap(markdown: string): Map<string, string> {
 /** Parses all `key: value` pairs from a metadata block in one pass. */
 export function parseMetaFields(meta: string): Record<string, string> {
   const result: Record<string, string> = {};
-  for (const line of meta.split('\n')) {
+  for (const line of meta.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n')) {
     const colon = line.indexOf(':');
     if (colon !== -1) {
       result[line.slice(0, colon).trim()] = line.slice(colon + 1).trim();
@@ -77,8 +77,10 @@ export function parseDorItems(section: string): { text: string; checked: boolean
 export function parseDofItems(section: string): string[] {
   return section
     .split('\n')
-    .filter(line => RE_DOR_ITEM.test(line))
-    .map(line => line.replace(RE_DOR_PREFIX, '').trim())
+    .filter(line => RE_BULLET.test(line))
+    .map(line => RE_DOR_ITEM.test(line)
+      ? line.replace(RE_DOR_PREFIX, '').trim()
+      : line.replace(RE_BULLET_PFX, '').trim())
     .filter(line => line.length > 0);
 }
 

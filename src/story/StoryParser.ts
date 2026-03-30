@@ -46,11 +46,11 @@ export function parseStory(markdown: string): Story {
   story.technicalSpec.database       = cleanTodo(get('Banco de Dados'));
   story.technicalSpec.infrastructure = cleanTodo(get('Infraestrutura'));
 
-  const dorItems = parseDorItems(get('DoR — Definition of Ready'));
+  const dorItems = parseDorItems(get('DoR - Definition of Ready'));
   story.dor.criteria = dorItems.map(d => d.text);
   story.dor.checked  = dorItems.map(d => d.checked);
 
-  story.dod.criteria = extractBulletList(get('DoD — Definition of Done'));
+  story.dod.criteria = extractBulletList(get('DoD - Definition of Done'));
 
   return story;
 }

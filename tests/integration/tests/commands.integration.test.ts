@@ -158,11 +158,11 @@ suite('Commands integration — história completa', () => {
     assert.ok(out.includes('hexagonal'), 'Deveria exibir a arquitetura');
   });
 
-  test('/status: exibe status "Válida"', async () => {
+  test('/status: exibe ícone de story válida (✅)', async () => {
     const stream = createStream();
     await handleStatusCommand({} as any, stream as any, {} as any);
 
-    assert.ok(stream.getAll().includes('Válida'), 'Status deveria ser Válida');
+    assert.ok(stream.getAll().includes('✅'), 'Status deveria exibir ✅ para story válida');
   });
 
   // --- /review ---
@@ -248,13 +248,13 @@ suite('Commands integration — história incompleta', () => {
 
   // --- /status ---
 
-  test('/status: exibe status "Incompleta"', async () => {
+  test('/status: exibe ícone de story com lacunas (⚠️)', async () => {
     const stream = createStream();
     await handleStatusCommand({} as any, stream as any, {} as any);
 
     assert.ok(
-      stream.getAll().includes('Incompleta'),
-      'Status deveria ser Incompleta',
+      stream.getAll().includes('lacuna'),
+      'Status deveria indicar lacunas com ⚠️',
     );
   });
 

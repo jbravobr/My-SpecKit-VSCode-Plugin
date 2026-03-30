@@ -3,7 +3,22 @@
     "allow": [
       "Bash(npm install:*)",
       "Bash(npm run:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(npx @vscode/vsce package --out \"Publish/0.1.6/speckit-0.1.6.vsix\")",
+      "Bash(wc -l C:/Users/jbrav/source/vscode-plugin-speckit/tests/unit/**/*.test.ts)",
+      "Bash(du -sh \"C:/Users/jbrav/source/vscode-plugin-speckit/tests/fixtures/\"*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npx:*)",
+      "Bash(git push:*)",
+      "Bash(git checkout:*)",
+      "Bash(grep:*)",
+      "Bash(node -e \"const p=require\\(''./package.json''\\); console.log\\(p.version\\)\")",
+      "Bash(grep -n \"^#{1,4}\" \"C:/Users/jbrav/source/vscode-plugin-speckit/src/generator/story/PromptsGenerator.ts\")",
+      "Bash(node -e \"const p=require\\(''./package.json''\\); console.log\\(JSON.stringify\\(p.scripts, null, 2\\)\\)\")",
+      "Bash(node -e \"const p=require\\(''./package.json''\\); console.log\\(p.version, p.name\\)\")",
+      "Bash(npm version:*)",
+      "Bash(mkdir:*)"
     ]
   }
 }

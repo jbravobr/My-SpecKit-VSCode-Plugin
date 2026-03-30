@@ -6,6 +6,7 @@ import { parseFix } from '../../../src/fix/FixParser';
 const fixturesDir = resolve(__dirname, '../../fixtures');
 const completeFixMd = readFileSync(resolve(fixturesDir, 'fix-complete.md'), 'utf-8');
 const emptyFixMd = readFileSync(resolve(fixturesDir, 'fix-empty.md'), 'utf-8');
+const completeFixH4Md = readFileSync(resolve(fixturesDir, 'fix-complete-h4.md'), 'utf-8');
 
 describe('parseFix', () => {
   it('parses a complete fix correctly', () => {
@@ -71,5 +72,36 @@ describe('parseFix', () => {
     expect(fix.metadata.version).toBe(1);
     expect(fix.metadata.createdAt).toBe('2026-01-15');
     expect(fix.metadata.type).toBe('fix');
+  });
+
+  // Regression: template uses ### for groups and #### for content fields.
+  // The parser must handle h4 headings — previously only h2/h3 were recognised.
+  describe('h4 heading format (output of FixElicitGenerator)', () => {
+    it('parses all content fields from #### headings', () => {
+      const fix = parseFix(completeFixH4Md);
+
+      expect(fix.metadata.title).toBe('Login OAuth2 retorna 500 após expiração do token');
+      expect(fix.metadata.type).toBe('fix');
+
+      expect(fix.bugDescription.title).toContain('500 quando token expirado');
+      expect(fix.bugDescription.symptoms).toContain('HTTP 500');
+      expect(fix.bugDescription.stepsToReproduce).toHaveLength(3);
+      expect(fix.bugDescription.stepsToReproduce[0]).toContain('GitHub OAuth2');
+      expect(fix.bugDescription.environment).toContain('Node.js 20');
+      expect(fix.bugDescription.frequency).toBe('sempre');
+
+      expect(fix.rootCauseHypothesis.hypothesis).toContain('TokenExpiredError');
+      expect(fix.rootCauseHypothesis.suspectedFiles).toHaveLength(2);
+      expect(fix.rootCauseHypothesis.suspectedFiles[0]).toContain('auth.ts');
+
+      expect(fix.impactAssessment.severity).toBe('high');
+      expect(fix.impactAssessment.affectedUsers).toContain('sessões longas');
+      expect(fix.impactAssessment.regressionRisk).toContain('middleware');
+
+      expect(fix.regressionPrevention.testsToAdd).toHaveLength(2);
+      expect(fix.regressionPrevention.testsToAdd[0]).toContain('401');
+
+      expect(fix.dof.criteria).toHaveLength(5);
+    });
   });
 });

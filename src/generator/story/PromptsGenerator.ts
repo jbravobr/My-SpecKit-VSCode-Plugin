@@ -190,9 +190,9 @@ Só avance para a próxima tarefa após 0 falhas e commit concluído.
 
 ## Sessão A concluída
 
-Gates 0–2 completos. Para iniciar a revisão independente:
+Gates 0–2 completos. **Encerre esta sessão.**
 
-> Execute \`@speckit /review\` no Copilot Chat.
+Para iniciar a revisão independente, o usuário deve abrir um novo Copilot Chat em modo Agente e executar \`@speckit /review\`.
 
 Não faça mais alterações de código nesta sessão.
 `;
@@ -586,7 +586,7 @@ Conduza uma conversa estruturada para preencher cada lacuna acima:
 
 Informe o usuário:
 
-> Todas as lacunas foram preenchidas. Execute \`@speckit /validate\` para gerar os arquivos de configuração, revisar o plano completo e iniciar a implementação.
+> Todas as lacunas foram preenchidas. Informe ao usuário que pode executar \`@speckit /validate\` no chat do SpecKit para gerar os arquivos de configuração e iniciar a implementação.
 `;
 }
 

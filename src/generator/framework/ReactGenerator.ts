@@ -18,6 +18,14 @@ applyTo: "**/*.tsx,**/*.ts,**/*.jsx,**/*.js"
 - Toda função criada dentro de componente que é passada como prop: envolva com \`useCallback\`
 - Todo valor computado custoso: envolva com \`useMemo\`
 
+## React 19 — APIs modernas
+- **Actions**: mutações assíncronas via \`useActionState(action, initialState)\` — substitui o padrão manual de \`useState\` para loading/error em submissões
+- **\`useFormStatus\`**: leia \`pending\` dentro de componentes filho de um form sem prop drilling — desabilite o botão de submit enquanto o action processa
+- **\`useOptimistic\`**: atualize a UI otimisticamente durante uma mutação assíncrona; o estado reverte automaticamente se a action falhar
+- **\`use(promise)\`**: leia uma Promise ou Context dentro de componentes e hooks — integra com Suspense para data fetching sem \`useEffect\`
+- **Suspense para data fetching**: envolva componentes que usam \`use(promise)\` com \`<Suspense fallback={...}>\` — não implemente loading state manual quando Suspense é aplicável
+- **React Compiler** (opt-in): quando habilitado (\`babel-plugin-react-compiler\`), o compilador insere memoização automaticamente — remova \`useCallback\`/\`useMemo\` redundantes para evitar conflito
+
 ## Performance
 - \`React.memo\` em dumb components que recebem props estáveis
 - Evite criar objetos ou arrays inline em JSX — extraia para fora do componente ou memoize

@@ -6,6 +6,7 @@ import { parseStory } from '../../../src/story/StoryParser';
 const fixturesDir = resolve(__dirname, '../../fixtures');
 const completeStoryMd = readFileSync(resolve(fixturesDir, 'story-complete.md'), 'utf-8');
 const emptyStoryMd = readFileSync(resolve(fixturesDir, 'story-empty.md'), 'utf-8');
+const completeStoryH4Md = readFileSync(resolve(fixturesDir, 'story-complete-h4.md'), 'utf-8');
 
 describe('parseStory', () => {
   it('parses a complete story correctly', () => {
@@ -74,5 +75,43 @@ describe('parseStory', () => {
     const story = parseStory(completeStoryMd);
     expect(story.metadata.version).toBe(1);
     expect(story.metadata.createdAt).toBe('2026-01-15');
+  });
+
+  // Regression: template uses ### for groups and #### for content fields.
+  // The parser must handle h4 headings — previously only h2/h3 were recognised.
+  describe('h4 heading format (output of StoryElicitGenerator)', () => {
+    it('parses all content fields from #### headings', () => {
+      const story = parseStory(completeStoryH4Md);
+
+      expect(story.metadata.title).toBe('Autenticação via OAuth2 com GitHub');
+
+      expect(story.businessRequirement.problem).toContain('fricção no onboarding');
+      expect(story.businessRequirement.value).toContain('Login social via GitHub');
+      expect(story.businessRequirement.stakeholders).toHaveLength(3);
+
+      expect(story.functionalSpec.userStories).toHaveLength(2);
+      expect(story.functionalSpec.acceptanceCriteria).toHaveLength(4);
+      expect(story.functionalSpec.outOfScope).toHaveLength(2);
+
+      expect(story.nonFunctionalSpec.performance).toContain('P99');
+      expect(story.nonFunctionalSpec.security).toContain('HTTPS');
+
+      expect(story.technicalSpec.language).toBe('typescript');
+      expect(story.technicalSpec.framework).toBe('react');
+      expect(story.technicalSpec.architecture).toBe('hexagonal');
+      expect(story.technicalSpec.target).toBe('frontend');
+
+      expect(story.dod.criteria).toHaveLength(5);
+    });
+
+    it('parses DoR items and checked state from #### format', () => {
+      const story = parseStory(completeStoryH4Md);
+
+      expect(story.dor.criteria).toHaveLength(7);
+      expect(story.dor.checked).toHaveLength(7);
+      // first 5 checked, last 2 unchecked (human-only criteria)
+      expect(story.dor.checked.slice(0, 5).every(c => c)).toBe(true);
+      expect(story.dor.checked.slice(5).every(c => !c)).toBe(true);
+    });
   });
 });
