@@ -1,7 +1,7 @@
-import * as vscode from 'vscode';
 import * as path from 'path';
-import { SpecStatus } from '../../story/Story';
+import * as vscode from 'vscode';
 import { TechStackDetection } from '../../fix/Fix';
+import { SpecStatus } from '../../story/Story';
 
 export function getWorkspaceRoot(): string | undefined {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -12,7 +12,10 @@ export async function listStoryFiles(dirPath: string): Promise<string[]> {
     const uri = vscode.Uri.file(dirPath);
     const entries = await vscode.workspace.fs.readDirectory(uri);
     return entries
-      .filter(([name, type]) => type === vscode.FileType.File && name.startsWith('STORY-') && name.endsWith('.md'))
+      .filter(
+        ([name, type]) =>
+          type === vscode.FileType.File && name.startsWith('STORY-') && name.endsWith('.md'),
+      )
       .map(([name]) => name);
   } catch {
     return [];
@@ -24,7 +27,10 @@ export async function listFixFiles(dirPath: string): Promise<string[]> {
     const uri = vscode.Uri.file(dirPath);
     const entries = await vscode.workspace.fs.readDirectory(uri);
     return entries
-      .filter(([name, type]) => type === vscode.FileType.File && name.startsWith('FIX-') && name.endsWith('.md'))
+      .filter(
+        ([name, type]) =>
+          type === vscode.FileType.File && name.startsWith('FIX-') && name.endsWith('.md'),
+      )
       .map(([name]) => name);
   } catch {
     return [];
@@ -64,9 +70,7 @@ export async function getActiveSpecPath(): Promise<string | undefined> {
     }),
   );
 
-  const openFiles = statusResults
-    .filter(({ status }) => status === 'open')
-    .map(({ name }) => name);
+  const openFiles = statusResults.filter(({ status }) => status === 'open').map(({ name }) => name);
 
   if (openFiles.length === 0) return undefined;
 
@@ -104,6 +108,7 @@ export async function detectTechStack(): Promise<TechStackDetection> {
       framework,
       architecture,
       target,
+      projectStage: 'brownfield',
       confidence: framework !== 'other' ? 'high' : 'low',
       source: 'package.json',
     };
@@ -116,17 +121,21 @@ export async function detectTechStack(): Promise<TechStackDetection> {
     const pomUri = vscode.Uri.file(path.join(workspaceRoot, 'pom.xml'));
     const bytes = await vscode.workspace.fs.readFile(pomUri);
     const content = Buffer.from(bytes).toString('utf-8');
-    const framework: import('../../story/Story').Framework = content.includes('spring-boot') ? 'springboot' : 'other';
+    const framework: import('../../story/Story').Framework = content.includes('spring-boot')
+      ? 'springboot'
+      : 'other';
     const architecture = await inferArchitecture(workspaceRoot);
-    const messaging = (content.includes('spring-kafka') || content.includes('kafka-clients'))
-      ? 'kafka' as const
-      : undefined;
+    const messaging =
+      content.includes('spring-kafka') || content.includes('kafka-clients')
+        ? ('kafka' as const)
+        : undefined;
     return {
       language: 'java',
       framework,
       architecture,
       target: 'backend',
       ...(messaging ? { messaging } : {}),
+      projectStage: 'brownfield',
       confidence: 'high',
       source: 'pom.xml',
     };
@@ -137,7 +146,9 @@ export async function detectTechStack(): Promise<TechStackDetection> {
   // 3. *.csproj
   try {
     const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(workspaceRoot));
-    const csproj = entries.find(([name, type]) => type === vscode.FileType.File && name.endsWith('.csproj'));
+    const csproj = entries.find(
+      ([name, type]) => type === vscode.FileType.File && name.endsWith('.csproj'),
+    );
     if (csproj) {
       const architecture = await inferArchitecture(workspaceRoot);
       return {
@@ -145,6 +156,7 @@ export async function detectTechStack(): Promise<TechStackDetection> {
         framework: 'dotnet',
         architecture,
         target: 'backend',
+        projectStage: 'brownfield',
         confidence: 'high',
         source: csproj[0],
       };
@@ -159,13 +171,18 @@ export async function detectTechStack(): Promise<TechStackDetection> {
       const uri = vscode.Uri.file(path.join(workspaceRoot, pyFile));
       const bytes = await vscode.workspace.fs.readFile(uri);
       const content = Buffer.from(bytes).toString('utf-8');
-      const framework: import('../../story/Story').Framework = content.toLowerCase().includes('fastapi') ? 'fastapi' : 'other';
+      const framework: import('../../story/Story').Framework = content
+        .toLowerCase()
+        .includes('fastapi')
+        ? 'fastapi'
+        : 'other';
       const architecture = await inferArchitecture(workspaceRoot);
       return {
         language: 'python',
         framework,
         architecture,
         target: 'backend',
+        projectStage: 'brownfield',
         confidence: framework !== 'other' ? 'high' : 'low',
         source: pyFile,
       };
@@ -176,7 +193,7 @@ export async function detectTechStack(): Promise<TechStackDetection> {
 
   throw new Error(
     'Stack não detectada automaticamente. Nenhum arquivo reconhecido (package.json, pom.xml, *.csproj, requirements.txt, pyproject.toml) foi encontrado no workspace. ' +
-    'Adicione um arquivo de dependências ou use /new (STORY) para especificar a stack manualmente.',
+      'Adicione um arquivo de dependências ou use /new (STORY) para especificar a stack manualmente.',
   );
 }
 
@@ -190,7 +207,16 @@ async function readSpecStatus(filePath: string): Promise<SpecStatus> {
     if (!metaMatch) return 'open';
     const statusMatch = /^status:\s*(.+)$/m.exec(metaMatch[1]);
     if (!statusMatch) return 'open';
-    return statusMatch[1].trim() === 'done' ? 'done' : 'open';
+    const s = statusMatch[1].trim() as SpecStatus;
+    const valid: Set<string> = new Set([
+      'open',
+      'in-progress',
+      'review',
+      'blocked',
+      'done',
+      'cancelled',
+    ]);
+    return valid.has(s) ? s : 'open';
   } catch {
     return 'open';
   }
@@ -221,7 +247,8 @@ async function inferArchitecture(workspaceRoot: string): Promise<string | undefi
       .filter(([, type]) => type === vscode.FileType.Directory)
       .map(([name]) => name);
     if (dirs.includes('domain') && dirs.includes('ports')) return 'hexagonal';
-    if (dirs.includes('controllers') && dirs.includes('services') && dirs.includes('repositories')) return 'layered';
+    if (dirs.includes('controllers') && dirs.includes('services') && dirs.includes('repositories'))
+      return 'layered';
   } catch {
     // no src/ dir or can't read
   }
@@ -233,7 +260,9 @@ async function inferTarget(
   deps: Record<string, unknown>,
 ): Promise<'backend' | 'frontend' | 'bff' | 'script' | 'library'> {
   const hasFrontendDep = Boolean(deps['react'] || deps['@angular/core'] || deps['vue']);
-  const hasBackendDep = Boolean(deps['express'] || deps['fastify'] || deps['koa'] || deps['nestjs']);
+  const hasBackendDep = Boolean(
+    deps['express'] || deps['fastify'] || deps['koa'] || deps['nestjs'],
+  );
   if (hasFrontendDep && hasBackendDep) return 'bff';
   if (hasFrontendDep) return 'frontend';
   if (hasBackendDep) return 'backend';

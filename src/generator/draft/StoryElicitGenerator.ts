@@ -1,8 +1,68 @@
-export function generateStoryElicitPrompt(roughInput: string, nextId: string): string {
-  return `# Elicit Story — STORY-${nextId}
+import { WorkspaceDefaults } from '../../config/WorkspaceDefaults';
+import { SpecType } from '../../story/Story';
+
+const TYPE_LABELS: Record<SpecType, string> = {
+  story: 'História',
+  refactoring: 'Refactoring',
+  spike: 'Spike / PoC',
+};
+
+function buildDefaultsContext(defaults: WorkspaceDefaults | undefined): string {
+  if (!defaults || Object.keys(defaults).length === 0) return '';
+  const lines: string[] = ['## Defaults do workspace (pré-carregados)', ''];
+  if (defaults.language) lines.push(`- **Linguagem:** ${defaults.language}`);
+  if (defaults.framework) lines.push(`- **Framework:** ${defaults.framework}`);
+  if (defaults.architecture) lines.push(`- **Arquitetura:** ${defaults.architecture}`);
+  if (defaults.target) lines.push(`- **Target:** ${defaults.target}`);
+  if (defaults.projectStage) lines.push(`- **Estágio:** ${defaults.projectStage}`);
+  if (defaults.database) lines.push(`- **Database:** ${defaults.database}`);
+  if (defaults.infrastructure) lines.push(`- **Infraestrutura:** ${defaults.infrastructure}`);
+  lines.push(
+    '',
+    '> Use estes valores como default na Fase 4 (Especificação Técnica). Se o usuário confirmar ou omitir, aplique-os diretamente.',
+    '',
+  );
+  return lines.join('\n');
+}
+
+function buildTypeContext(specType: SpecType): string {
+  if (specType === 'refactoring') {
+    return `## Tipo: Refactoring
+
+> Esta spec é um **refactoring** — melhoria interna sem mudança de comportamento externo.
+> Adapte as perguntas: foco em debt técnico, métricas de qualidade, área de impacto.
+> User stories não se aplicam — use "Escopo da Refatoração" no lugar.
+> Critérios de aceite focam em: mesmos testes passando, métricas melhoradas, zero regressão.
+
+`;
+  }
+  if (specType === 'spike') {
+    return `## Tipo: Spike / PoC
+
+> Esta spec é um **spike** — investigação técnica com deliverable de conhecimento.
+> Adapte as perguntas: foco em hipótese, critérios de viabilidade, timebox.
+> O output não é software de produção — é um documento de decisão.
+> Critérios de aceite focam em: hipótese validada/invalidada, recomendação documentada.
+
+`;
+  }
+  return '';
+}
+
+export function generateStoryElicitPrompt(
+  roughInput: string,
+  nextId: string,
+  specType: SpecType = 'story',
+  defaults?: WorkspaceDefaults,
+): string {
+  const typeLabel = TYPE_LABELS[specType];
+  const defaultsCtx = buildDefaultsContext(defaults);
+  const typeCtx = buildTypeContext(specType);
+
+  return `# Elicit ${typeLabel} — STORY-${nextId}
 
 > Você é um analista de produto e arquiteto de software sênior.
-> Seu objetivo é transformar a ideia abaixo em uma história SDD completa,
+> Seu objetivo é transformar a ideia abaixo em uma ${typeLabel.toLowerCase()} SDD completa,
 > salva em \`.speckit/STORY-${nextId}.md\`.
 >
 > **Não escreva código. Não implemente nada. Apenas elicite e documente a spec.**
@@ -11,7 +71,7 @@ export function generateStoryElicitPrompt(roughInput: string, nextId: string): s
 
 > ${roughInput}
 
----
+${typeCtx}${defaultsCtx}---
 
 ## ⚠️ REGRA MESTRE — LEIA ANTES DE QUALQUER AÇÃO
 
@@ -36,6 +96,7 @@ export function generateStoryElicitPrompt(roughInput: string, nextId: string): s
 
 - **"Não sei"** → registre como "A definir com o time". Não aplique default.
 - **"N/A"** → registre como "N/A" e siga em frente.
+- **"Pular"** → registre o campo como "<!-- TODO: A ser preenchido -->" e avance para a próxima pergunta. O campo ficará como lacuna para o \`/validate\` detectar.
 - **Default** → aplicado somente quando o usuário foi perguntado e omitiu a resposta. Informe que está usando um default.
 - Ao final de cada fase, apresente um resumo de 2–3 linhas do que foi capturado e pergunte se está correto. Sua mensagem termina aí — aguarde confirmação antes de avançar.
 
@@ -327,8 +388,8 @@ Após coletar todas as respostas (ou aplicar os defaults onde aplicável e infor
 5. **DoR**: avalie cada critério individualmente:
    - **Critérios verificáveis pelo AI**: marque \`[x]\` somente se o dado foi efetivamente coletado (resposta do usuário ou default aplicado e informado)
    - **Critérios que requerem ação humana** (aprovação de stakeholder, alinhamento com o time): mantenha sempre \`[ ]\`
-6. Exiba o conteúdo completo como um bloco de código markdown — **não execute código, não use terminal, não crie arquivos**
-7. Após exibir o bloco, confirme: "✅ Copie o conteúdo acima para \`.speckit/STORY-${nextId}.md\`. Depois use \`@speckit /validate\` para verificar completude e gerar a configuração do Copilot."
+6. Crie o arquivo \`.speckit/STORY-${nextId}.md\` com o conteúdo completo usando a ferramenta de criação de arquivo
+7. Após criar o arquivo, confirme: "✅ Arquivo \`.speckit/STORY-${nextId}.md\` criado com sucesso. Use \`@speckit /validate\` para verificar completude e gerar a configuração do Copilot."
 
 ### Template de saída
 
@@ -338,7 +399,7 @@ id: ${nextId}
 title: {título derivado da ideia inicial — conciso, orientado ao valor de negócio}
 createdAt: {data de hoje no formato YYYY-MM-DD}
 version: 1
-type: story
+type: ${specType}
 status: open
 -->
 

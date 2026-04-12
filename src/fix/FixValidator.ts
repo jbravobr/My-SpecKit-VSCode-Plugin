@@ -25,11 +25,7 @@ export function validateFix(fix: Fix): FixValidationResult {
   }
 
   if (!fix.impactAssessment.severity || !VALID_SEVERITIES.has(fix.impactAssessment.severity)) {
-    gap(
-      'Impact Assessment',
-      'severity',
-      'Severidade deve ser: critical | high | medium | low',
-    );
+    gap('Impact Assessment', 'severity', 'Severidade deve ser: critical | high | medium | low');
   }
 
   if (fix.dof.criteria.length === 0) {

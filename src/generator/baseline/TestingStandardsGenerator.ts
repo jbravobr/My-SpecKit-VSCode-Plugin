@@ -47,10 +47,11 @@ ${perfSection}
 }
 
 function buildAcceptanceCriteriaSection(story?: Story): string {
-  const criteria = story?.functionalSpec?.acceptanceCriteria?.filter(c => c.trim().length > 0) ?? [];
+  const criteria =
+    story?.functionalSpec?.acceptanceCriteria?.filter((c) => c.trim().length > 0) ?? [];
   if (criteria.length === 0) return '';
 
-  const items = criteria.map(c => `  - \`${c.trim()}\``).join('\n');
+  const items = criteria.map((c) => `  - \`${c.trim()}\``).join('\n');
   return `
 ## Cenários mínimos obrigatórios derivados dos critérios de aceite
 Os cenários abaixo são o mínimo esperado — cada critério de aceite deve ter ao menos um teste:

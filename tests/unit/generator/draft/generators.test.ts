@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import { generateStoryElicitPrompt } from '../../../../src/generator/draft/StoryElicitGenerator';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { generateFixElicitPrompt } from '../../../../src/generator/draft/FixElicitGenerator';
+import { generateStoryElicitPrompt } from '../../../../src/generator/draft/StoryElicitGenerator';
 
 describe('generateStoryElicitPrompt', () => {
   const roughInput = 'Quero calcular comissão de vendedores baseado em eventos Kafka';
@@ -69,7 +69,9 @@ describe('generateStoryElicitPrompt', () => {
     expect(result).toContain('aprovado pelo stakeholder responsável');
     expect(result).toContain('DoD acordado com o time');
     // Human criteria must remain unchecked
-    expect(result).toContain('- [ ] Requisito de negócio documentado e aprovado pelo stakeholder responsável');
+    expect(result).toContain(
+      '- [ ] Requisito de negócio documentado e aprovado pelo stakeholder responsável',
+    );
     expect(result).toContain('- [ ] DoD acordado com o time de desenvolvimento');
   });
 
@@ -157,6 +159,37 @@ describe('generateStoryElicitPrompt', () => {
     const result002 = generateStoryElicitPrompt(roughInput, '002');
     expect(result002).toContain('STORY-002');
     expect(result002).not.toContain('STORY-001');
+  });
+
+  it('includes refactoring context when specType is refactoring', () => {
+    const r = generateStoryElicitPrompt(roughInput, '001', 'refactoring');
+    expect(r).toContain('Refactoring');
+    expect(r).toContain('type: refactoring');
+    expect(r).toContain('debt técnico');
+  });
+
+  it('includes spike context when specType is spike', () => {
+    const r = generateStoryElicitPrompt(roughInput, '001', 'spike');
+    expect(r).toContain('Spike');
+    expect(r).toContain('type: spike');
+    expect(r).toContain('hipótese');
+  });
+
+  it('includes workspace defaults context when defaults provided', () => {
+    const r = generateStoryElicitPrompt(roughInput, '001', 'story', {
+      language: 'java',
+      framework: 'springboot',
+      projectStage: 'brownfield',
+    });
+    expect(r).toContain('java');
+    expect(r).toContain('springboot');
+    expect(r).toContain('brownfield');
+    expect(r).toContain('Defaults do workspace');
+  });
+
+  it('omits defaults context when defaults is empty', () => {
+    const r = generateStoryElicitPrompt(roughInput, '001', 'story', {});
+    expect(r).not.toContain('Defaults do workspace');
   });
 });
 

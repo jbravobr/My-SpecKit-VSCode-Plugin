@@ -1,13 +1,13 @@
-import { Fix, FixMetadata, Severity } from './Fix';
-import { SpecStatus } from '../story/Story';
 import {
   buildSectionMap,
-  parseMetaFields,
+  cleanTodo,
   extractBulletList,
   parseDofItems,
-  cleanTodo,
+  parseMetaFields,
   RE_META_BLOCK,
 } from '../parser/BaseParser';
+import { Gate, SpecStatus } from '../story/Story';
+import { Fix, FixMetadata, Severity } from './Fix';
 
 export function parseFix(markdown: string): Fix {
   const metadata = parseMetadata(markdown);
@@ -56,7 +56,26 @@ function parseMetadata(markdown: string): FixMetadata {
     createdAt: fields['createdAt'] ?? '',
     version: parseInt(fields['version'] ?? '1', 10),
     type: 'fix',
-    status: (fields['status'] as SpecStatus) === 'done' ? 'done' : 'open',
+    status: parseFixStatus(fields['status']),
+    gate: parseGate(fields['gate']),
   };
 }
 
+const VALID_STATUSES = new Set<SpecStatus>([
+  'open',
+  'in-progress',
+  'review',
+  'blocked',
+  'done',
+  'cancelled',
+]);
+
+function parseFixStatus(raw: string | undefined): SpecStatus {
+  const v = raw?.trim() as SpecStatus;
+  return VALID_STATUSES.has(v) ? v : 'open';
+}
+
+function parseGate(raw: string | undefined): Gate {
+  const n = parseInt(raw ?? '0', 10);
+  return (n >= 0 && n <= 4 ? n : 0) as Gate;
+}

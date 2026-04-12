@@ -1,7 +1,10 @@
-import { Fix } from '../../fix/Fix';
-import { TechStackDetection } from '../../fix/Fix';
+import { Fix, TechStackDetection } from '../../fix/Fix';
 
-export function generateFixIndex(fix: Fix, stack: TechStackDetection): string {
+export function generateFixIndex(
+  fix: Fix,
+  stack: TechStackDetection,
+  contextSkillName = 'speckit-fix-context',
+): string {
   return `# SpecKit — Fix ${fix.metadata.id}: ${fix.metadata.title || '(sem título)'}
 
 ## Tipo: Bug Fix
@@ -17,9 +20,13 @@ Corrigir o bug descrito em \`.speckit/FIX-${fix.metadata.id}.md\`.
 - Escopo estritamente limitado ao bug — zero mudanças fora do escopo
 - Testes de regressão são obrigatórios
 
-## Instruções carregadas
+## Skills (carregados sob demanda)
+- \`skills/speckit-baseline\` — padrões de engenharia, testes, segurança, git
+- \`skills/speckit-stack\` — convenções de ${stack.language}/${stack.framework}
+- \`skills/${contextSkillName}\` — contexto do bug, root cause, impacto, regressão
 
-Todas as instruções em \`.github/instructions/\` são aplicadas automaticamente.
-Use os prompts em \`.github/prompts/\` para conduzir o fluxo de implementação.
+## Agents (selecione no dropdown)
+- **speckit-fix-implementador** — Sessão A: investigação → correção → testes (Gates 0–2)
+- **speckit-fix-revisor** — Sessão B: revisão independente → entrega (Gates 3–4)
 `;
 }

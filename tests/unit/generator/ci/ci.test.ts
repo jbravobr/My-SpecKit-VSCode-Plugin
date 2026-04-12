@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { parseStory } from '../../../../src/story/StoryParser';
-import { generateCiQualityGate, generateCiSecurityScan } from '../../../../src/generator/ci/CiGenerator';
+import {
+  generateCiQualityGate,
+  generateCiSecurityScan,
+} from '../../../../src/generator/ci/CiGenerator';
 
 const fixturesDir = resolve(__dirname, '../../../fixtures');
 function loadStory(filename: string) {

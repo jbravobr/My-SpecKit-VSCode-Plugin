@@ -1,7 +1,9 @@
 import { Fix } from '../../fix/Fix';
 
 export function generateRegression(fix: Fix): string {
-  const tests = fix.regressionPrevention.testsToAdd.map(t => `- [ ] ${t}`).join('\n') || '- [ ] (nenhum teste especificado)';
+  const tests =
+    fix.regressionPrevention.testsToAdd.map((t) => `- [ ] ${t}`).join('\n') ||
+    '- [ ] (nenhum teste especificado)';
 
   return `---
 applyTo: '**'

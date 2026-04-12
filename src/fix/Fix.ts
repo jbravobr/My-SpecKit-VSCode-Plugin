@@ -1,4 +1,4 @@
-import { Language, Framework, SpecStatus } from '../story/Story';
+import { Framework, Gate, Language, ProjectStage, SpecStatus } from '../story/Story';
 
 export interface FixMetadata {
   id: string;
@@ -7,6 +7,7 @@ export interface FixMetadata {
   version: number;
   type: 'fix';
   status: SpecStatus;
+  gate: Gate;
 }
 
 export interface BugDescription {
@@ -62,6 +63,7 @@ export interface TechStackDetection {
   target: 'backend' | 'frontend' | 'bff' | 'script' | 'library';
   messaging?: 'kafka';
   cloud?: 'aws';
+  projectStage: ProjectStage;
   confidence: 'high' | 'low';
   source: string;
 }

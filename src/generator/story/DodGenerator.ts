@@ -1,7 +1,7 @@
 import { Story } from '../../story/Story';
 
 export function generateDod(story: Story): string {
-  const criteria = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
+  const criteria = story.dod.criteria.map((c) => `- [ ] ${c}`).join('\n');
 
   return `---
 applyTo: "**"

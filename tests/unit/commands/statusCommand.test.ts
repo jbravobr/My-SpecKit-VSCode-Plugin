@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { handleStatusCommand } from '../../../src/participant/commands/statusCommand';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IFileSystem } from '../../../src/generator/utils/IFileSystem';
 import { IWorkspace } from '../../../src/generator/utils/IWorkspace';
+import { handleStatusCommand } from '../../../src/participant/commands/statusCommand';
 
 const fixturesDir = resolve(__dirname, '../../fixtures');
 const completeStoryMd = readFileSync(resolve(fixturesDir, 'story-complete.md'), 'utf-8');
@@ -17,7 +17,9 @@ const doneFixMd = '<!-- metadata\nid: 001\ntitle: Done Fix\ntype: fix\nstatus: d
 function createMockStream() {
   const calls: string[] = [];
   return {
-    markdown: vi.fn((t: string) => { calls.push(t); }),
+    markdown: vi.fn((t: string) => {
+      calls.push(t);
+    }),
     getAllMarkdown: () => calls.join(''),
   };
 }
@@ -28,6 +30,9 @@ function createMockFs(content: string = completeStoryMd): IFileSystem {
     writeFile: vi.fn().mockResolvedValue(undefined),
     readFile: vi.fn().mockResolvedValue(content),
     fileExists: vi.fn().mockResolvedValue(true),
+    listDir: vi.fn().mockResolvedValue([]),
+    deleteFile: vi.fn().mockResolvedValue(undefined),
+    deleteDir: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -38,7 +43,14 @@ function createMockWorkspace(): IWorkspace {
     listFixFiles: vi.fn().mockResolvedValue([]),
     getActiveStoryPath: vi.fn().mockResolvedValue('C:\\workspace\\.speckit\\STORY-001.md'),
     getActiveSpecPath: vi.fn().mockResolvedValue('C:\\workspace\\.speckit\\STORY-001.md'),
-    detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
+    detectTechStack: vi.fn().mockResolvedValue({
+      language: 'typescript',
+      framework: 'react',
+      target: 'frontend',
+      projectStage: 'brownfield',
+      confidence: 'high',
+      source: 'package.json',
+    }),
   };
 }
 
@@ -55,7 +67,14 @@ describe('handleStatusCommand', () => {
       listFixFiles: vi.fn().mockResolvedValue([]),
       getActiveStoryPath: vi.fn().mockResolvedValue(undefined),
       getActiveSpecPath: vi.fn().mockResolvedValue(undefined),
-      detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
+      detectTechStack: vi.fn().mockResolvedValue({
+        language: 'typescript',
+        framework: 'react',
+        target: 'frontend',
+        projectStage: 'brownfield',
+        confidence: 'high',
+        source: 'package.json',
+      }),
     };
 
     await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(), workspace);
@@ -65,35 +84,65 @@ describe('handleStatusCommand', () => {
 
   it('shows story title in output', async () => {
     const stream = createMockStream();
-    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(), createMockWorkspace());
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(),
+      createMockWorkspace(),
+    );
 
     expect(stream.getAllMarkdown()).toContain('Autenticação via OAuth2 com GitHub');
   });
 
   it('shows language in output', async () => {
     const stream = createMockStream();
-    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(), createMockWorkspace());
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(),
+      createMockWorkspace(),
+    );
 
     expect(stream.getAllMarkdown()).toContain('typescript');
   });
 
   it('shows framework in output', async () => {
     const stream = createMockStream();
-    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(), createMockWorkspace());
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(),
+      createMockWorkspace(),
+    );
 
     expect(stream.getAllMarkdown()).toContain('react');
   });
 
   it('shows architecture in output', async () => {
     const stream = createMockStream();
-    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(), createMockWorkspace());
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(),
+      createMockWorkspace(),
+    );
 
     expect(stream.getAllMarkdown()).toContain('hexagonal');
   });
 
   it('shows Stories and Fixes sections', async () => {
     const stream = createMockStream();
-    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(), createMockWorkspace());
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(),
+      createMockWorkspace(),
+    );
 
     expect(stream.getAllMarkdown()).toContain('Stories abertas');
     expect(stream.getAllMarkdown()).toContain('Fixes abertos');
@@ -101,7 +150,13 @@ describe('handleStatusCommand', () => {
 
   it('shows nenhum when no fixes exist', async () => {
     const stream = createMockStream();
-    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(), createMockWorkspace());
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(),
+      createMockWorkspace(),
+    );
 
     expect(stream.getAllMarkdown()).toContain('nenhum');
   });
@@ -110,7 +165,13 @@ describe('handleStatusCommand', () => {
 
   it('skips story with status done', async () => {
     const stream = createMockStream();
-    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(doneStoryMd), createMockWorkspace());
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(doneStoryMd),
+      createMockWorkspace(),
+    );
 
     const output = stream.getAllMarkdown();
     expect(output).not.toContain('Done Story');
@@ -120,14 +181,26 @@ describe('handleStatusCommand', () => {
 
   it('shows ✅ icon for a valid story', async () => {
     const stream = createMockStream();
-    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(completeStoryMd), createMockWorkspace());
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(completeStoryMd),
+      createMockWorkspace(),
+    );
 
     expect(stream.getAllMarkdown()).toContain('✅');
   });
 
   it('shows ⚠️ icon and gap count for an invalid story', async () => {
     const stream = createMockStream();
-    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(partialStoryMd), createMockWorkspace());
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(partialStoryMd),
+      createMockWorkspace(),
+    );
 
     const output = stream.getAllMarkdown();
     expect(output).toContain('⚠️');
@@ -163,7 +236,13 @@ describe('handleStatusCommand', () => {
     (workspace.listStoryFiles as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     (workspace.listFixFiles as ReturnType<typeof vi.fn>).mockResolvedValue(['FIX-001.md']);
 
-    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(doneFixMd), workspace);
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(doneFixMd),
+      workspace,
+    );
 
     const output = stream.getAllMarkdown();
     expect(output).not.toContain('Done Fix');
@@ -177,7 +256,13 @@ describe('handleStatusCommand', () => {
     (workspace.listStoryFiles as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     (workspace.listFixFiles as ReturnType<typeof vi.fn>).mockResolvedValue(['FIX-001.md']);
 
-    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(completeFixMd), workspace);
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(completeFixMd),
+      workspace,
+    );
 
     expect(stream.getAllMarkdown()).toContain('[high]');
   });
@@ -188,7 +273,13 @@ describe('handleStatusCommand', () => {
     (workspace.listStoryFiles as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     (workspace.listFixFiles as ReturnType<typeof vi.fn>).mockResolvedValue(['FIX-001.md']);
 
-    await handleStatusCommand({} as any, stream as any, {} as any, createMockFs(fixEmptyMd), workspace);
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(fixEmptyMd),
+      workspace,
+    );
 
     const output = stream.getAllMarkdown();
     expect(output).toContain('🐛');
@@ -206,5 +297,72 @@ describe('handleStatusCommand', () => {
     await handleStatusCommand({} as any, stream as any, {} as any, fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('erro ao ler arquivo');
+  });
+
+  // ── Gate labels ───────────────────────────────────────────────────────────
+
+  it('shows gate label for a story at gate 0', async () => {
+    const stream = createMockStream();
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(completeStoryMd),
+      createMockWorkspace(),
+    );
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('🚪 Gate 0 — Alinhamento');
+  });
+
+  it('shows gate label for a story at gate 2', async () => {
+    const stream = createMockStream();
+    const storyAtGate2 = completeStoryMd.replace('version: 1', 'version: 1\ngate: 2');
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(storyAtGate2),
+      createMockWorkspace(),
+    );
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('🚪 Gate 2 — Testes');
+  });
+
+  it('shows status label for a story', async () => {
+    const stream = createMockStream();
+    const storyInProgress = completeStoryMd.replace(
+      'version: 1',
+      'version: 1\nstatus: in-progress',
+    );
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(storyInProgress),
+      createMockWorkspace(),
+    );
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('[in-progress]');
+  });
+
+  it('shows gate label for a fix', async () => {
+    const stream = createMockStream();
+    const workspace = createMockWorkspace();
+    (workspace.listStoryFiles as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (workspace.listFixFiles as ReturnType<typeof vi.fn>).mockResolvedValue(['FIX-001.md']);
+
+    await handleStatusCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      createMockFs(completeFixMd),
+      workspace,
+    );
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('🚪 Gate 0 — Alinhamento');
   });
 });

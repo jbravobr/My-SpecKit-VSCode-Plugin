@@ -6,6 +6,32 @@ O Copilot passa a conhecer o requisito de negócio, critérios de aceite, restri
 
 ---
 
+## Guia de leitura
+
+| Ordem | Seção                         | Quando ler                                   |
+| ----- | ----------------------------- | -------------------------------------------- |
+| 1     | **Como usar**                 | Fluxo essencial de ponta a ponta             |
+| 2     | **Comandos**                  | Referência objetiva de cada comando          |
+| 3     | **Paleta de comandos**        | Atalhos via `Ctrl+Shift+P`                   |
+| 4     | **Configuração do workspace** | Defaults, detecção de stack, backup, logging |
+| 5     | **Arquivos gerados**          | O que o plugin cria e para que serve         |
+| 6     | **Gates de implementação**    | Como os agents conduzem a implementação      |
+| 7     | **Exemplos práticos**         | Cenários completos (Story e Fix)             |
+
+**Resumo do fluxo em 4 passos:**
+
+```mermaid
+flowchart LR
+    A[Criar spec] -->|/draft /new /fix| B[Validar]
+    B -->|/validate| C[Implementar]
+    C -->|agent implementador| D[Revisar]
+    D -->|agent revisor| E((Done))
+```
+
+> **Criar** e **validar** acontecem no chat `@speckit`. **Implementar** e **revisar** acontecem em sessões separadas do Copilot Chat, selecionando os agents no dropdown.
+
+---
+
 ## Pré-requisitos
 
 - VS Code `^1.93.0`
@@ -26,135 +52,702 @@ O Copilot passa a conhecer o requisito de negócio, critérios de aceite, restri
 
 O SpecKit expõe um **Chat Participant** chamado `@speckit`. Todo o fluxo acontece no Copilot Chat.
 
+> O participant é marcado como **sticky** — uma vez invocado, ele permanece selecionado até você trocar de participant. Não é necessário digitar `@speckit` em cada mensagem.
+
 ### Ponto de entrada: estruturado ou por texto livre
 
-O SpecKit oferece dois pontos de entrada para criar uma spec. Escolha o que se adapta ao momento:
-
-| Modo | Comando | Quando usar |
-|---|---|---|
-| **Texto livre** | `@speckit /draft <descrição>` | Ideia ainda informal, não sabe os campos obrigatórios, quer ser guiado |
-| **Template direto** | `@speckit /new` ou `/fix` | Já conhece a estrutura e quer preencher diretamente |
+| Modo                | Comando                       | Quando usar                                                            |
+| ------------------- | ----------------------------- | ---------------------------------------------------------------------- |
+| **Texto livre**     | `@speckit /draft <descrição>` | Ideia ainda informal, não sabe os campos obrigatórios, quer ser guiado |
+| **Template direto** | `@speckit /new` ou `/fix`     | Já conhece a estrutura e quer preencher diretamente                    |
 
 Ambos os caminhos convergem para o mesmo `.speckit/STORY-XXX.md` ou `FIX-XXX.md` e seguem o mesmo fluxo de validação e implementação.
 
 ### Fluxo — Nova Feature (História)
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Entrada A — Texto livre (/draft)                               │
-│                                                                 │
-│  @speckit /draft "Quero calcular comissão de vendedores         │
-│                   baseado em eventos Kafka"                     │
-│     ↓ Cria .speckit/elicit-story.prompt.md (STORY-001)         │
-│     ↓ Instrui: "abra com Copilot Chat em modo Agente"          │
-│                                                                 │
-│  Copilot Chat — modo Agente                                     │
-│     Abra elicit-story.prompt.md                                 │
-│     Agente conduz entrevista estruturada (6 fases)             │
-│     → Cria .speckit/STORY-001.md completo                      │
-└─────────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────────┐
-│  Entrada B — Template direto (/new)                             │
-│                                                                 │
-│  @speckit /new  →  Cria .speckit/STORY-XXX.md e abre no editor │
-│     ↓ Preencha a História (parcial ou completa)                 │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph entrada [Criar a spec]
+        direction TB
+        A1["draft - Texto livre"] --> A2["elicit-story.prompt.md"]
+        A2 --> A3["Entrevista 6 fases"]
+        A3 --> A4["STORY-XXX.md"]
 
-                  História em .speckit/STORY-XXX.md
-                             ↓
-┌──────────────────────────────────────────────────────┐
-│  Opção A — via /validate                             │
-│                                                      │
-│  @speckit /validate                                  │
-│     ↓ história com lacunas?                          │
-│     Agente pergunta uma lacuna por vez               │
-│     e atualiza o arquivo da história                 │
-│     → @speckit /validate novamente                   │
-│     ↓ DoR atingido                                   │
-│     Gera todos os arquivos .github/                  │
-│     Gera workflows CI em .github/workflows/          │
-│     → "Abra o Copilot Chat em modo Agente            │
-│        e digite /implement"                          │
-│                                                      │
-│  Copilot Chat — modo Agente                          │
-│     /implement                                       │
-│     Agente apresenta plano · usuário confirma        │
-│     SESSÃO A: Agente implementa + testa              │
-│     → Agente diz: "execute @speckit /review"         │
-│                                                      │
-│  @speckit /review                                    │
-│     → "Abra novo Copilot Chat em modo Agente         │
-│        e digite /review"                             │
-│                                                      │
-│  Copilot Chat — modo Agente (nova sessão)            │
-│     /review                                          │
-│     SESSÃO B: Agente revisa + entrega                │
-└──────────────────────────────────────────────────────┘
-┌──────────────────────────────────────────────────────┐
-│  Opção B — via /apply                                │
-│                                                      │
-│  @speckit /apply                                     │
-│     ↓ gera todos os arquivos .github/                │
-│     → "Abra o Copilot Chat em modo Agente            │
-│        e digite /implement"                          │
-│  (mesmo fluxo de Sessão A → B da Opção A)            │
-└──────────────────────────────────────────────────────┘
+        B1["new - Template direto"] --> B2["STORY-XXX.md no editor"]
+    end
+
+    subgraph validacao [Validar]
+        V1["validate"] --> V2{"Lacunas?"}
+        V2 -- Sim --> V3["gap-fill.prompt.md"] --> V1
+        V2 -- Nao --> V4["DoR atingido + 9 arquivos"]
+    end
+
+    subgraph impl [Implementar + Revisar]
+        I1["agent implementador - Gates 0 a 2"] --> I2["agent revisor - Gates 3 a 4"]
+    end
+
+    A4 --> V1
+    B2 --> V1
+    V4 --> I1
 ```
 
 ### Fluxo — Correção de Bug (Fix)
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Entrada A — Texto livre (/draft --fix ou detecção automática)  │
-│                                                                 │
-│  @speckit /draft "Login OAuth2 retorna 500 após expiração       │
-│                   do token --fix"                               │
-│     ↓ Cria .speckit/elicit-fix.prompt.md (FIX-001)             │
-│     ↓ Instrui: "abra com Copilot Chat em modo Agente"          │
-│                                                                 │
-│  Copilot Chat — modo Agente                                     │
-│     Abra elicit-fix.prompt.md                                   │
-│     Agente conduz entrevista estruturada (7 fases)             │
-│     → Cria .speckit/FIX-001.md completo                        │
-└─────────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────────┐
-│  Entrada B — Template direto (/fix)                             │
-│                                                                 │
-│  @speckit /fix  →  Cria .speckit/FIX-XXX.md e abre no editor   │
-│     ↓ Preencha o Fix (bug, hipótese, impacto, testes)          │
-│     A stack técnica é detectada automaticamente                 │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph entrada [Criar a spec - Fix]
+        direction TB
+        A1["draft --fix - Texto livre"] --> A2["elicit-fix.prompt.md"]
+        A2 --> A3["Entrevista 7 fases"]
+        A3 --> A4["FIX-XXX.md"]
 
-                  Fix em .speckit/FIX-XXX.md
-                             ↓
-    @speckit /validate
-       ↓ fix com lacunas?
-       Agente pergunta uma lacuna por vez e atualiza o arquivo
-       → @speckit /validate novamente
-       ↓ Fix válido
-       Stack detectada → gera todos os arquivos .github/
-       → "Abra o Copilot Chat em modo Agente
-          e digite /fix-implement"
-                       ↓
-    Copilot Chat — modo Agente
-       /fix-implement
-       SESSÃO A: investigação → root cause confirmada → fix → testes de regressão
-       → Agente diz: "execute @speckit /review"
-                       ↓
-    @speckit /review
-       → "Abra novo Copilot Chat em modo Agente
-          e digite /fix-review"
-                       ↓
-    Copilot Chat — modo Agente (nova sessão)
-       /fix-review
-       SESSÃO B: revisão independente + encerramento do fix
+        B1["fix - Template direto"] --> B2["FIX-XXX.md + stack auto"]
+    end
+
+    subgraph validacao [Validar]
+        V1["validate"] --> V2{"Lacunas?"}
+        V2 -- Sim --> V3["gap-fill.prompt.md"] --> V1
+        V2 -- Nao --> V4["Fix valido + 7 arquivos"]
+    end
+
+    subgraph impl [Corrigir + Revisar]
+        I1["agent fix-implementador - Gates 0 a 2"] --> I2["agent fix-revisor - Gates 3 a 4"]
+    end
+
+    A4 --> V1
+    B2 --> V1
+    V4 --> I1
 ```
 
 ---
 
-## Exemplo prático — /draft (elicitação)
+## Comandos
 
-### Story via texto livre
+### `@speckit /draft`
+
+Converte texto livre em um prompt de elicitação que guia o Copilot a entrevistar você e montar a spec completa — Story ou Fix — sem que você precise conhecer os campos obrigatórios de antemão.
+
+```
+@speckit /draft <descrição livre>
+```
+
+**Detecção automática de intent:**
+
+| Input                                                                     | Intent detectado                   | Arquivo gerado                             |
+| ------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------ |
+| `@speckit /draft Quero calcular comissão de vendedores via Kafka`         | story                              | `.speckit/elicit-story-{nextId}.prompt.md` |
+| `@speckit /draft Login retorna 500 após expiração do token --fix`         | fix (flag `--fix`)                 | `.speckit/elicit-fix-{nextId}.prompt.md`   |
+| `@speckit /draft O botão de exportar não funciona no Firefox`             | fix (keyword `não funciona`)       | `.speckit/elicit-fix-{nextId}.prompt.md`   |
+| `@speckit /draft Crash ao abrir o modal de pagamento`                     | fix (keyword `crash`)              | `.speckit/elicit-fix-{nextId}.prompt.md`   |
+| `@speckit /draft Migrar módulo de pagamento para hexagonal --refactoring` | refactoring (flag `--refactoring`) | `.speckit/elicit-story-{nextId}.prompt.md` |
+| `@speckit /draft Avaliar viabilidade de SSR com Next.js --spike`          | spike (flag `--spike`)             | `.speckit/elicit-story-{nextId}.prompt.md` |
+
+**Flags explícitas:**
+
+| Flag            | Intent      | Aliases      |
+| --------------- | ----------- | ------------ |
+| `--fix`         | fix         | `--bug`      |
+| `--refactoring` | refactoring | `--refactor` |
+| `--spike`       | spike       | `--poc`      |
+
+> Flags `--refactoring` e `--spike` geram um `elicit-story-{id}.prompt.md` com `type: refactoring` ou `type: spike` no metadata da spec. A entrevista é a mesma de story, mas o agente adapta o foco (refactoring → escopo cirúrgico; spike → viabilidade e aprendizado).
+
+**Keywords que ativam intent fix (detecção automática, sem flag):** `bug`, `erro`, `error`, `falha`, `falhou`, `quebrado`, `broke`, `broken`, `crash`, `regressão`, `regression`, `corrigir`, `correção`, `não funciona`.
+
+**Após a geração:** o SpecKit cria o arquivo de elicitação, abre no editor e instrui a iniciar um **Novo Chat em modo Agente** para conduzir a entrevista estruturada.
+
+<details>
+<summary><strong>Fases da entrevista — Story (6 fases)</strong></summary>
+
+| Fase | Tema                    | Campos elicitados                                                                                                                  |
+| ---- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Requisito de negócio    | Problema + urgência, valor de negócio + KPI candidato, stakeholders                                                                |
+| 2    | Especificação funcional | User stories, critérios de aceite (quadrante: happy path · limites · rejeição · idempotência), fora de escopo derivado do contexto |
+| 3    | NFRs                    | Performance (P99 com isenção para async), segurança, escalabilidade como código + recomendações de infra, disponibilidade          |
+| 4    | Especificação técnica   | Linguagem, framework, arquitetura (sempre pergunta, sugere mas não presume), target, banco, infra                                  |
+| 5    | Dependências, DoR e DoD | DoR com critérios AI-verificáveis separados dos de ação humana, DoD contextual (Kafka → DLQ rate, frontend → WCAG 2.1)             |
+| 6    | Montagem final          | Salva `.speckit/STORY-XXX.md`, confirma criação                                                                                    |
+
+</details>
+
+<details>
+<summary><strong>Fases da entrevista — Fix (7 fases)</strong></summary>
+
+| Fase | Tema                   | Campos elicitados                                                                                                            |
+| ---- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Bug description        | Sintomas, primeira ocorrência, passos para reproduzir, ambiente, workaround, frequência, urgência — título proposto no final |
+| 2    | Hipótese               | Pergunta aberta — extrai `hypothesis`, `suspectedFiles`, `suspectedComponents`                                               |
+| 3    | Impacto                | Severidade cruzada com workaround, volume de usuários afetados, risco de regressão com nível e razão                         |
+| 4    | Prevenção de regressão | Testes a adicionar                                                                                                           |
+| 5    | Contexto técnico       | Sinaliza ativamente: Redis/TTL/cache miss, load balancer, config env, version flags                                          |
+| 6    | DoF                    | Critérios de Definition of Fixed + adições contextuais                                                                       |
+| 7    | Montagem final         | Salva `.speckit/FIX-XXX.md`, confirma criação                                                                                |
+
+</details>
+
+> **Regras do agente:** UMA pergunta por vez. Nunca inventa ou assume resposta. Resumo e confirmação ao final de cada fase. "Não sei" ≠ "N/A".
+
+---
+
+### `@speckit /new`
+
+Cria o arquivo `.speckit/STORY-XXX.md` (numeração automática) e abre no editor.
+
+| Seção                       | O que preencher                                                      |
+| --------------------------- | -------------------------------------------------------------------- |
+| Requisito de Negócio        | Problema, valor de negócio, stakeholders                             |
+| Especificação Funcional     | User stories, critérios de aceite, fora de escopo                    |
+| Especificação Não-Funcional | Performance, segurança, escalabilidade, usabilidade, disponibilidade |
+| Especificação Técnica       | Linguagem, framework, arquitetura, target, banco, infra              |
+| DoR                         | Marcar com `[x]` os critérios já atendidos                           |
+| DoD                         | Critérios de conclusão                                               |
+
+<details>
+<summary><strong>Valores suportados</strong></summary>
+
+| Campo       | Valores                                                               |
+| ----------- | --------------------------------------------------------------------- |
+| Linguagem   | `typescript` · `javascript` · `java` · `csharp` · `python`            |
+| Framework   | `dotnet` · `springboot` · `angular` · `react` · `fastapi` · `other`   |
+| Arquitetura | `hexagonal` · `layered` · `microservices` · `monolith` · `serverless` |
+| Target      | `backend` · `frontend` · `bff` · `script` · `library`                 |
+
+</details>
+
+<details>
+<summary><strong>Metadata da spec (campos automáticos)</strong></summary>
+
+Cada spec contém um bloco `<!-- metadata -->` no markdown com campos gerenciados automaticamente:
+
+| Campo          | Valores                                                              | Descrição                                                                  |
+| -------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `type`         | `story` · `refactoring` · `spike`                                    | Tipo da spec (story default, ou via `--refactoring`/`--spike` no `/draft`) |
+| `status`       | `open` · `in-progress` · `review` · `blocked` · `done` · `cancelled` | Ciclo de vida da spec                                                      |
+| `gate`         | `0` · `1` · `2` · `3` · `4`                                          | Gate atual de implementação                                                |
+| `projectStage` | `greenfield` · `brownfield`                                          | Maturidade do projeto (afeta profundidade das instruções)                  |
+
+> `type`, `status` e `gate` são usados pelo `/status` para exibir o progresso. O `projectStage` influencia o nível de detalhe dos skills gerados (greenfield → mais guardrails).
+
+</details>
+
+> **NFRs de performance** são opcionais — quando não preenchidos, o plugin aplica baseline (`P99 < 500ms` / `99,9%`) em todos os arquivos dependentes.
+
+---
+
+### `@speckit /fix`
+
+Cria o arquivo `.speckit/FIX-XXX.md` (numeração automática) e abre no editor.
+
+| Seção                 | O que preencher                                                                            |
+| --------------------- | ------------------------------------------------------------------------------------------ |
+| Bug Description       | Título, sintomas, passos para reproduzir, ambiente, frequência                             |
+| Root Cause Hypothesis | Hipótese da causa raiz, arquivos/componentes suspeitos                                     |
+| Impact Assessment     | Severidade (`critical` · `high` · `medium` · `low`), usuários afetados, risco de regressão |
+| Regression Prevention | Testes a adicionar para prevenir regressão                                                 |
+| DoF                   | Critérios de Definition of Fixed                                                           |
+
+> **Stack técnica detectada automaticamente** a partir do workspace (`package.json`, `pom.xml`, `*.csproj`, `requirements.txt`, `pyproject.toml`). Campos extras quando detectados: `messaging` (ex: Kafka), `database` (ex: PostgreSQL).
+
+---
+
+### `@speckit /validate`
+
+Detecta automaticamente o tipo da spec ativa em `.speckit/` (Story ou Fix) e valida campos obrigatórios.
+
+**Spec com lacunas:**
+
+1. Gera `.speckit/gap-fill.prompt.md` — um prompt estruturado que lista todas as lacunas
+2. Abre o arquivo no editor automaticamente
+3. Instrui a executar o prompt no Copilot Agent (via ▶ Run in Copilot Chat ou `#gap-fill.prompt.md`)
+4. O agente preenche as lacunas uma a uma e atualiza o arquivo da spec
+5. Após completar, volta ao `@speckit /validate` para revalidar
+6. **Stories:** exibe status do DoR com checkboxes (`[x]` / `[ ]`) para cada critério
+
+**Spec válida:**
+
+1. Faz **backup** do `copilot-instructions.md` existente em `.speckit/backups/`
+2. **Story válida:** gera 9 arquivos em `.github/` (skills + agents + prompt + workflows CI)
+3. **Fix válido:** detecta stack automaticamente, gera 7 arquivos em `.github/` (sem workflows CI)
+4. **Avalia DevTools do projeto** — verifica se ESLint, Prettier, husky e lint-staged estão configurados (ver abaixo)
+5. Instrui a abrir modo **Agente** com o agent **implementador** (dropdown) para Gates 0–2
+6. Registra log em `.speckit/logs/session-<data>.md`
+
+**Oferta de DevTools (automática):**
+
+Após gerar os arquivos em `.github/`, o `/validate` analisa o workspace do usuário e reporta quais ferramentas de qualidade estão presentes ou ausentes:
+
+| Ferramenta      | O que faz                                                |
+| --------------- | -------------------------------------------------------- |
+| **ESLint**      | Análise estática — detecta bugs antes da execução        |
+| **Prettier**    | Formatação automática — estilo consistente sem discussão |
+| **husky**       | Git hooks — impede commit de código com problemas        |
+| **lint-staged** | Lint apenas nos arquivos alterados — rápido no commit    |
+
+- ✅ Ferramentas já presentes são listadas com aviso de **não sobrescrever**
+- ⚠️ **Conflitos brownfield** são alertados (ex: `.eslintrc*` + `eslint.config.*` coexistentes)
+- 🔧 Ferramentas ausentes são descritas com impacto no projeto existente
+- O usuário opta via **botão interativo** ou flag `--devtools`
+
+Se aceito, gera `speckit-devtools/SKILL.md` em `.github/skills/` com instruções de instalação **adaptadas à stack** (TS/JS → ESLint + typescript-eslint + Prettier; Java → Checkstyle + Spotless; Python → Ruff; C# → dotnet format + Roslyn).
+
+> Se todas as ferramentas já estiverem configuradas, exibe apenas `✅ Tooling de qualidade já configurado`.
+>
+> Para incluir o skill diretamente sem botão: `@speckit /validate --devtools`
+
+---
+
+### `@speckit /status`
+
+Exibe resumo de todas as specs abertas no workspace:
+
+- **Stories:** título, linguagem/framework/arquitetura, status de validação (✅ DoR atingido / ⚠️ N lacunas), gate atual (`🚪 Gate N — Label`)
+- **Fixes:** título, severidade (🐛 critical / high / medium / low), gate atual (`🚪 Gate N — Label`)
+- Specs com `status: done` ou `cancelled` são ocultadas automaticamente
+
+**Exemplo de output:**
+
+```
+Stories abertas (2):
+- ✅ STORY-001.md — Cálculo de comissão [in-progress]  java / springboot / hexagonal  | 🚪 Gate 1 — Implementação
+- ⚠️ (3 lacunas) STORY-002.md — Dashboard vendas [open]  typescript / react / layered  | 🚪 Gate 0 — Alinhamento
+
+Fixes abertos (1):
+- 🐛 FIX-001.md — Login OAuth2 500 [high]  | 🚪 Gate 2 — Testes
+```
+
+---
+
+### Sem comando (help)
+
+Se chamar `@speckit` sem comando ou com comando desconhecido, exibe a lista de comandos disponíveis.
+
+---
+
+## Acesso pela paleta de comandos
+
+Além do Copilot Chat, o plugin registra atalhos na paleta de comandos (`Ctrl+Shift+P`):
+
+| Paleta de comandos         | Equivalente no chat  |
+| -------------------------- | -------------------- |
+| **SpecKit: Nova História** | `@speckit /new`      |
+| **SpecKit: Novo Fix**      | `@speckit /fix`      |
+| **SpecKit: Validar Spec**  | `@speckit /validate` |
+| **SpecKit: Status**        | `@speckit /status`   |
+
+Cada comando da paleta abre automaticamente o Copilot Chat com o comando correspondente.
+
+---
+
+## Configuração do workspace
+
+### Defaults (`defaults.yml`)
+
+Crie `.speckit/defaults.yml` para pré-preencher campos do template em `/new` e `/draft`:
+
+```yaml
+# .speckit/defaults.yml
+language: typescript
+framework: react
+architecture: hexagonal
+target: frontend
+projectStage: greenfield
+database: PostgreSQL
+infrastructure: AWS
+```
+
+| Campo            | Valores aceitos                                                       |
+| ---------------- | --------------------------------------------------------------------- |
+| `language`       | `typescript` · `javascript` · `java` · `csharp` · `python`            |
+| `framework`      | `dotnet` · `springboot` · `angular` · `react` · `fastapi` · `other`   |
+| `architecture`   | `hexagonal` · `layered` · `microservices` · `monolith` · `serverless` |
+| `target`         | `backend` · `frontend` · `bff` · `script` · `library`                 |
+| `projectStage`   | `greenfield` · `brownfield`                                           |
+| `database`       | texto livre (ex: `PostgreSQL 15`, `DynamoDB`)                         |
+| `infrastructure` | texto livre (ex: `AWS`, `Kafka, Docker, EKS`)                         |
+
+> Quando defaults existem, `/new` exibe `💡 Defaults aplicados de .speckit/defaults.yml` e o template já vem preenchido.
+
+### Detecção automática de stack (Fix)
+
+Para fixes, a stack é detectada automaticamente do workspace sem precisar de `defaults.yml`:
+
+| Arquivo detectado  | Language | Framework           | Lógica adicional                                                                      |
+| ------------------ | -------- | ------------------- | ------------------------------------------------------------------------------------- |
+| `package.json`     | TS ou JS | react/angular/other | TS se `tsconfig.json` existir. React se `react` nas deps. Angular se `@angular/core`. |
+| `pom.xml`          | java     | springboot          | Sempre Spring Boot se pom presente                                                    |
+| `*.csproj`         | csharp   | dotnet              | Glob match em qualquer `.csproj`                                                      |
+| `requirements.txt` | python   | fastapi/other       | FastAPI se `fastapi` nos requirements                                                 |
+| `pyproject.toml`   | python   | fastapi/other       | FastAPI se `fastapi` no conteúdo                                                      |
+
+**Detecção adicional:** `target` (backend/frontend/bff/library), `architecture` (hexagonal/layered via estrutura de pastas), `messaging` (kafka se `kafkajs`/`spring-kafka` nas deps), `projectStage` (greenfield se < 10 arquivos fonte).
+
+---
+
+## Backup e logging
+
+### Backup automático
+
+Antes de cada regeneração (`/validate` com spec válida), o plugin faz backup do `copilot-instructions.md` existente:
+
+```
+.speckit/backups/
+├── 2026-03-19T10-30-00-000Z/
+│   └── copilot-instructions.md
+├── 2026-03-19T14-15-00-000Z/
+│   └── copilot-instructions.md
+└── ...
+```
+
+- Máximo de **5 backups** — os mais antigos são podados automaticamente
+- Backup só ocorre se o arquivo existir e tiver conteúdo
+- Mensagem `💾 Backup do copilot-instructions.md anterior salvo` exibida no chat
+
+### Session logging
+
+Cada execução de `/validate` e `/draft` é registrada em log Markdown diário:
+
+```
+.speckit/logs/
+└── session-2026-03-19.md
+```
+
+Formato de cada entrada:
+
+```markdown
+## 2026-03-19 10:30 — @speckit /validate
+
+**Spec:** 001 — Cálculo de comissão
+**Resultado:** ✅ Válida — 9 arquivo(s) gerado(s)
+
+- .github/copilot-instructions.md
+- .github/skills/speckit-baseline/SKILL.md
+- ...
+```
+
+> Falhas de logging nunca interrompem o comando — o log é best-effort.
+
+---
+
+## Arquivos gerados
+
+O conjunto exato varia conforme a stack declarada. Abaixo a estrutura completa com todos os triggers ativos.
+
+<details>
+<summary><strong>Árvore — Stories (9 arquivos + 1 opcional)</strong></summary>
+
+```
+.github/
+├── copilot-instructions.md            ← Índice always-on (~400 tokens)
+├── workflows/
+│   ├── quality-gate.yml               ← Lint + Build + Testes ≥80%
+│   └── security-scan.yml              ← TruffleHog + Semgrep
+├── prompts/
+│   └── run.prompt.md                  ← Sessão única (Gates 0–4)
+├── skills/
+│   ├── speckit-baseline/SKILL.md      ← 10 seções NFR (keyword-activated)
+│   ├── speckit-stack/SKILL.md         ← Linguagem + framework + infra + patterns
+│   ├── speckit-context-STORY-{id}/SKILL.md ← Contexto específico da story
+│   └── speckit-devtools/SKILL.md      ← (opcional) DevTools: ESLint, Prettier, husky, lint-staged
+└── agents/
+    ├── speckit-implementador.agent.md ← Gates 0–2 (dropdown Copilot)
+    └── speckit-revisor.agent.md       ← Gates 3–4 (dropdown Copilot)
+```
+
+> A sessão de implementação usa o **agent implementador** (dropdown) para Gates 0–2. A revisão usa o **agent revisor** em nova sessão. O `run.prompt.md` é uma alternativa monolítica (todos os gates em uma sessão).
+> O skill DevTools é gerado apenas quando o usuário aceita a oferta via botão ou `--devtools`.
+
+</details>
+
+<details>
+<summary><strong>Árvore — Fixes (7 arquivos + 1 opcional — sem workflows CI)</strong></summary>
+
+```
+.github/
+├── copilot-instructions.md            ← Índice always-on (~400 tokens)
+├── prompts/
+│   └── fix-run.prompt.md              ← Sessão única (Gates 0–4)
+├── skills/
+│   ├── speckit-baseline/SKILL.md      ← 10 seções NFR (keyword-activated)
+│   ├── speckit-stack/SKILL.md         ← Stack auto-detectada do workspace
+│   ├── speckit-context-FIX-{id}/SKILL.md ← Contexto específico do fix
+│   └── speckit-devtools/SKILL.md      ← (opcional) DevTools: ESLint, Prettier, husky, lint-staged
+└── agents/
+    ├── speckit-fix-implementador.agent.md ← Gates 0–2 (dropdown Copilot)
+    └── speckit-fix-revisor.agent.md       ← Gates 3–4 (dropdown Copilot)
+```
+
+> Fixes **não geram workflows CI** — a premissa é que os workflows do projeto já existem. A stack técnica é **detectada automaticamente** do workspace.
+> O skill DevTools é gerado apenas quando o usuário aceita a oferta via botão ou `--devtools`.
+
+</details>
+
+<details>
+<summary><strong>O que cada arquivo instrui o Copilot a fazer</strong></summary>
+
+#### Baseline (seções dentro de `speckit-baseline/SKILL.md`)
+
+| Seção                    | Instrui o agente a...                                                                                                                               |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `00-agent-integrity`     | Nunca assumir nomes sem vê-los; declarar incerteza; respeitar escopo; exigir 80% cobertura                                                          |
+| `01-performance`         | Big-O antes de propor; `Promise.all`/`Task.WhenAll` para I/O paralelo; paginação + caching. **SLOs da story** (ou baseline `P99 < 500ms` / `99,9%`) |
+| `02-architecture`        | Respeitar arquitetura definida; SOLID; **timeout + retry + circuit breaker** em todo cliente HTTP; propagar `traceparent`                           |
+| `03-context-management`  | Não misturar módulos; pedir arquivos antes de propor; declarar contexto insuficiente                                                                |
+| `04-testing-standards`   | Happy path + edge + error; AAA obrigatório; **cenários dos critérios de aceite**; testes de carga com SLO declarado ou baseline                     |
+| `05-git-workflow`        | Conventional Commits; branch `feature/<id>-<slug>`; nunca commit direto em main                                                                     |
+| `06-credential-security` | IAM roles; secrets via SecretsManager/Vault; nunca logar tokens/senhas                                                                              |
+| `07-observability`       | JSON com `traceId`; `traceparent` W3C; Prometheus; **SLOs parametrizados**; consumer lag em Kafka/SQS                                               |
+| `08-security-tests`      | Sem token → 401; expirado → 401; role insuficiente → 403; SQL injection → 400; sem stack trace no response                                          |
+
+#### Infraestrutura (seções em `speckit-stack/SKILL.md`, se detectadas)
+
+| Arquivo       | Instrui o agente a...                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------------------ |
+| `infra-kafka` | `acks=all`; idempotence no producer; dedup no consumer; DLQ com headers; backoff + jitter; graceful shutdown |
+| `infra-aws`   | DynamoDB: access patterns first, single-table, optimistic locking. RDS: pool (HikariCP/EF Core), Flyway      |
+| `infra-glue`  | GlueJob Python; logging estruturado; falhas parciais em ETL                                                  |
+
+#### Padrões (seções em `speckit-stack/SKILL.md`, se aplicáveis)
+
+| Arquivo                    | Instrui o agente a...                                                                         |
+| -------------------------- | --------------------------------------------------------------------------------------------- |
+| `pattern-crud`             | Repository → Service → Controller; paginação; RFC 7807 ProblemDetail; validação no controller |
+| `pattern-idempotency`      | `Idempotency-Key` para POST; dedup por chave de negócio; TTL; 201/200/409                     |
+| `pattern-bff`              | Orquestração sem domínio; fan-out paralelo; circuit breaker; partial response; RFC 7807       |
+| `pattern-contract-testing` | WireMock stubs; Pact consumer-driven; testar: happy, 404, 500, timeout                        |
+
+#### Workflows CI
+
+| Arquivo             | O que faz                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------- |
+| `quality-gate.yml`  | PR → lint → build → testes ≥80%. Comando parametrizado por linguagem. Upload de cobertura como artefato |
+| `security-scan.yml` | PRs + semanal: TruffleHog (secrets) + Semgrep (SAST → SARIF → GitHub Security)                          |
+
+</details>
+
+---
+
+## Gates de implementação
+
+O SpecKit estrutura a implementação em **5 gates** distribuídos em duas sessões:
+
+```mermaid
+flowchart LR
+    subgraph sessaoA [Sessao A - agent implementador]
+        G0[Gate 0 - Alinhamento] --> G1[Gate 1 - Implementacao]
+        G1 --> G2[Gate 2 - Testes]
+    end
+
+    subgraph sessaoB [Sessao B - agent revisor]
+        G3[Gate 3 - Revisao] --> G4[Gate 4 - Entrega]
+    end
+
+    G2 -->|Novo Chat| G3
+```
+
+| Gate | Nome          | O que acontece                                                                                                                                        |
+| ---- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | Alinhamento   | Lê a spec, verifica gaps, apresenta plano e aguarda confirmação antes de escrever código                                                              |
+| 1    | Implementação | Cria branch, implementa feature/fix seguindo stack e arquitetura. Sem refatorações fora de escopo. Commits incrementais                               |
+| 2    | Testes        | Cenários dos critérios de aceite + edge cases + error cases. Cobertura ≥80%. Fix: regressão deve **falhar sem o fix** e passar com ele                |
+| 3    | Revisão       | Nova sessão sem memória. Verifica funcionalidade, arquitetura, qualidade, testes, segurança, observabilidade, git, DoD/DoF + checklist NFRs expandido |
+| 4    | Entrega       | Rebase na main, re-executa testes, valida DoD/DoF item por item, commit de encerramento                                                               |
+
+> **Sessão única:** use `run.prompt.md` (Stories) ou `fix-run.prompt.md` (Fixes) via ▶ Run in Copilot Chat para todos os gates em uma sessão. Indicado para features pequenas.
+
+---
+
+## Estratégia de prompt layering e tokens
+
+O SpecKit distribui o contexto em **3 camadas on-demand** para minimizar o consumo de tokens por interação. Em vez de carregar tudo de uma vez, cada camada é ativada por keyword matching ou seleção explícita.
+
+| Camada                        | Conteúdo                                                                                                        | Tokens          | Carregamento                 |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------- | ---------------------------- |
+| **Tier 1 — Always-on**        | `copilot-instructions.md` — índice mínimo com metadata da story, regras globais e referências aos skills/agents | ~400            | Automático, toda interação   |
+| **Tier 2 — Skills on-demand** | 3–4 pastas de skills ativadas por keyword                                                                       | ~1500–2500 cada | Automático via keyword match |
+| **Tier 3 — Agents**           | Agents com protocolo completo de gates, selecionados via dropdown                                               | ~2000–2500      | Manual, dropdown do Copilot  |
+
+### Skills — ativação por keyword
+
+| Skill        | Pasta                                  | Ativação                                                                       | Conteúdo                                                                                                                                                                             |
+| ------------ | -------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Baseline** | `.github/skills/speckit-baseline/`     | Keywords: agent, integrity, performance, testing, git, security, observability | 10 seções NFR: integridade do agente, performance, arquitetura, context management, testing standards, git workflow, credential security, observability, security tests, idempotency |
+| **Stack**    | `.github/skills/speckit-stack/`        | Keywords: nome da linguagem ou framework                                       | Regras por linguagem + framework + infra + patterns. Composição condicional — inclui apenas seções relevantes à stack declarada                                                      |
+| **Context**  | `.github/skills/speckit-context-{ID}/` | Keywords: ID da story ou fix                                                   | Spec completa: requisito de negócio, critérios de aceite, NFRs, stack técnica, DoR/DoD                                                                                               |
+| **DevTools** | `.github/skills/speckit-devtools/`     | Keywords: devtools, lint, eslint, prettier, format, husky, pre-commit          | Instruções de instalação de ESLint, Prettier, husky e lint-staged adaptadas à stack. Gerado sob demanda via botão ou `--devtools`                                                    |
+
+### Conteúdo do skill Stack — regras por linguagem, framework e lógica
+
+O skill `speckit-stack` é composto dinamicamente. Cada seção abaixo só é incluída se a stack declarada na spec a referenciar.
+
+<details>
+<summary><strong>Linguagens — ~10 regras por linguagem</strong></summary>
+
+| Linguagem              | Regras-chave                                                                                                                                                                                    |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **TypeScript**         | `strict: true` obrigatório; branded types para domain IDs; discriminated unions (não enums); Zod para runtime validation; `unknown` (nunca `any`); async/await only; `noUncheckedIndexedAccess` |
+| **Java 17+**           | Records para DTOs; sealed classes para ADTs; pattern matching em switch; Optional apenas como retorno; constructor injection; Java 21: virtual threads + StructuredTaskScope                    |
+| **C# .NET 8+**         | `Nullable enable`; records para DTOs; pattern matching; async obrigatório (sem `.Result`/`.Wait()`); `required` keyword; `TimeProvider` injetado (não `DateTime.Now`); primary constructors     |
+| **Python 3.11+**       | Type hints em tudo; Pydantic v2 para dados externos; `dataclasses(slots=True)` interno; asyncio + TaskGroup; match/case; structlog + request_id; ruff + mypy                                    |
+| **JavaScript ES2022+** | ESM only; `const` default; optional chaining + nullish coalescing; async/await + `Promise.all`; array methods sobre loops; feature-based organization; `Object.freeze`                          |
+
+</details>
+
+<details>
+<summary><strong>Frameworks — ~10 regras por framework</strong></summary>
+
+| Framework        | Regras-chave                                                                                                                                                                                                                                  |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **React**        | Functional components only; smart/dumb separation; `useReducer` para estado complexo; `useEffect` só para sync externo; React 19: Actions + `useFormStatus` + `useOptimistic`; React Compiler; Zod + react-hook-form                          |
+| **Angular**      | `OnPush` obrigatório; Signals para estado; `async` pipe (não `subscribe()`); Angular 17+: `input()`/`output()` functions; Angular 19: Zoneless + `linkedSignal()` + `resource()`; `trackBy` em todos os `*ngFor`; interceptors HTTP           |
+| **Spring Boot**  | Constructor injection + `@RequiredArgsConstructor`; Controller/Service/Repository; `@Transactional` no service; `ProblemDetail` RFC 7807; `@RetryableTopic` + DLT; Spring Boot 3.3+: virtual threads; `@HttpExchange` client; MDC com traceId |
+| **ASP.NET Core** | Clean Architecture; async `Task<T>` em todo I/O; `IOptions<T>` para config; `ILogger<T>` estruturado; middleware global de erros; query projection (nunca `SELECT *`); `ValidateOnStart()`                                                    |
+| **FastAPI**      | `APIRouter` por domínio; `/api/v1/<resource>`; routers/services/repositories; Pydantic v2 schemas separados por intent; async endpoints; `Depends()` para DI; exception handlers globais                                                      |
+
+</details>
+
+<details>
+<summary><strong>Padrões arquiteturais — composição condicional</strong></summary>
+
+| Padrão               | Regras-chave                                                                                                                                                                                                         |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **CRUD**             | Repository pattern; DTOs separados (Create/Update/Response); paginação obrigatória (max 100); Specification para filtros; RFC 7807 ProblemDetail; Idempotency-Key no POST; audit fields UTC; soft delete documentado |
+| **BFF**              | Orquestração sem domínio; fan-out paralelo obrigatório; token relay (validar + forward); timeout 3s por downstream; circuit breaker; partial response > falha total; stateless; RFC 7807                             |
+| **Contract Testing** | WireMock stubs por downstream; cenários: happy, 404, 500, timeout; Pact consumer-driven; Gate 2 só passa com todos os contract tests verdes                                                                          |
+| **Idempotência**     | PUT natural; POST com `Idempotency-Key` UUID v4; store com TTL >= 24h; dedup por business key; `ON CONFLICT DO NOTHING`; respostas: 201/200/409; Kafka: dedup por messageKey+offset                                  |
+
+</details>
+
+<details>
+<summary><strong>Infraestrutura — composição condicional</strong></summary>
+
+| Infra        | Regras-chave                                                                                                                                                                                                                            |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Kafka**    | Consumer group por serviço; at-least-once + idempotência; dedup antes de processar; `acks=all` + producer idempotente; DLQ com headers; backoff exponencial + jitter; graceful shutdown; topic naming: `<domain>.<entity>.<event>.v<N>` |
+| **AWS**      | DynamoDB: access patterns first, single-table, `ConditionExpression` optimistic locking; RDS: HikariCP min=2/max=10, Flyway, prepared statements only; IAM roles (nunca access keys manuais); `DefaultCredentialsProvider`              |
+| **Glue Job** | `getResolvedOptions` para params; `job.commit()` obrigatório; DynamicFrame para schema variável; pushdown predicates; erros para S3; Parquet snappy; Glue Catalog > raw S3; nunca `collect()` em datasets grandes                       |
+
+</details>
+
+<details>
+<summary><strong>Padrões de arquitetura (por story)</strong></summary>
+
+| Arquitetura       | Regras geradas na skill de contexto                                                     |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| **Hexagonal**     | Domain puro, Application, Ports Input/Output, Adapters; direção nunca invertida         |
+| **Layered**       | Presentation, Application, Domain, Infrastructure; controller nunca acessa repository   |
+| **Microservices** | SRP por serviço; timeout 3s; circuit breaker; fan-out paralelo; schema isolation; Sagas |
+| **Monolith**      | Modular com interfaces explícitas; sem dependências circulares                          |
+| **Serverless**    | Stateless; cold start mínimo; optimistic locking; idempotência; IAM least-privilege     |
+
+</details>
+
+### Agents — protocolo de gates
+
+| Agent                 | Arquivo                                             | Gates                                        | Seleção                  |
+| --------------------- | --------------------------------------------------- | -------------------------------------------- | ------------------------ |
+| **Implementador**     | `.github/agents/speckit-implementador.agent.md`     | 0–2 (alinhamento, implementação, testes)     | Dropdown no Copilot Chat |
+| **Revisor**           | `.github/agents/speckit-revisor.agent.md`           | 3–4 (revisão independente, entrega)          | Dropdown no Copilot Chat |
+| **Fix Implementador** | `.github/agents/speckit-fix-implementador.agent.md` | 0–2 (investigação, fix cirúrgico, regressão) | Dropdown no Copilot Chat |
+| **Fix Revisor**       | `.github/agents/speckit-fix-revisor.agent.md`       | 3–4 (verificação, encerramento)              | Dropdown no Copilot Chat |
+
+### Economia de tokens
+
+Sem layering, cada interação carregaria spec + regras + gates + exemplos (~10.000+ tokens de contexto). Com a estratégia de 3 camadas:
+
+| Cenário                        | Sem layering | Com layering                                         | Economia |
+| ------------------------------ | ------------ | ---------------------------------------------------- | -------- |
+| Pergunta geral sobre o projeto | ~10.000      | ~400 (tier 1)                                        | ~96%     |
+| Implementando feature          | ~10.000      | ~5.000 (tier 1 + baseline + stack + context)         | ~50%     |
+| Sessão de review               | ~10.000      | ~5.500 (tier 1 + baseline + context + agent revisor) | ~45%     |
+
+---
+
+## Garantias de qualidade por gate
+
+Cada gate impõe verificações específicas. Nenhum gate pode ser pulado.
+
+### Gate 0 — Alinhamento e confirmação
+
+- Leitura obrigatória de `.speckit/STORY-{id}.md` ou `FIX-{id}.md`
+- Verificação de campos preenchidos (título, valor, stack, critérios de aceite, DoD/DoF)
+- **Story**: apresenta plano completo (arquivos, cenários de teste, riscos, mitigações, checklist DoD)
+- **Fix**: inspeciona arquivos suspeitos via `git log --follow -p` e `git blame`, confirma ou revisa hipótese de causa raiz
+- **Gate bloqueante**: agente aguarda confirmação explícita antes de prosseguir
+
+### Gate 1 — Implementação disciplinada
+
+- **Story**: 1 task atômico por critério de aceite ou camada de arquitetura. Conventional Commit por task: `feat({storyId}): TASK-N — descrição`
+- **Fix**: correção cirúrgica apenas. Zero refatoração. Commit único: `fix({fixId}): descrição`
+- Aderência à arquitetura declarada (sem imports cross-layer, direção de dependência respeitada)
+- Pré-requisito: código compila, testes existentes não quebram
+
+### Gate 2 — Testes e cobertura
+
+- **0 falhas de teste** (condição inviolável)
+- **Cobertura >= 80%** (exigida com evidência)
+- Happy path: cada critério de aceite gera no mínimo 1 teste
+- Edge cases: null, vazio, limites
+- Error cases: not found, invalid, permission, timeout
+- Estrutura AAA obrigatória (Arrange, Act, Assert)
+- **Fix**: teste de regressão obrigatório — deve **falhar sem o fix** e passar com ele
+
+### Gate 3 — Revisão independente (nova sessão)
+
+Checklist de 11 dimensões verificadas pelo agent revisor:
+
+| #   | Dimensão            | Verificação                                                                                                    |
+| --- | ------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 1   | Funcionalidade      | Todos os critérios de aceite funcionando                                                                       |
+| 2   | Arquitetura         | Direção de dependência, isolamento de camadas                                                                  |
+| 3   | Qualidade de código | Convenções, sem dead code, sem comentários injustificados                                                      |
+| 4   | Testes              | 0 falhas, cobertura >= 80%, cenários happy/edge/error                                                          |
+| 5   | Segurança           | Rotas protegidas retornam 401/403. Input inválido retorna 400 (não 500). Sem tokens/senhas em DTOs ou logs     |
+| 6   | Observabilidade     | Health check presente e sem auth. Logs JSON com traceId/requestId. traceId propagado em erros. Sem PII em logs |
+| 7   | NFRs                | Performance (P99), segurança, escalabilidade, idempotência                                                     |
+| 8   | Git                 | Branch naming, Conventional Commits                                                                            |
+| 9   | DoD/DoF             | Todos os itens verificados                                                                                     |
+| 10  | Veredito            | APROVADO ou ALTERAÇÕES SOLICITADAS (com blockers vs suggestions)                                               |
+| 11  | Revalidação         | Se alterações, commits atômicos de fix e re-execução completa do checklist                                     |
+
+### Gate 4 — Entrega
+
+- Rebase na main (sem fast-forward)
+- Re-execução de todos os testes com report de cobertura
+- Verificação item por item de DoD (Story) ou DoF (Fix)
+- Commit de encerramento
+
+---
+
+## Exemplos práticos
+
+<details>
+<summary><strong>Story via /draft (elicitação por texto livre)</strong></summary>
+
+### Sequência: /draft → elicitação → /validate
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Você
+    participant SK as @speckit
+    participant AG as Copilot Agente
+
+    U->>SK: /draft "Calcular comissão via Kafka"
+    SK-->>U: ✅ Criado elicit-story-001.prompt.md
+    Note over SK,U: Abra em Novo Chat modo Agente
+
+    U->>AG: Abre elicit-story-001.prompt.md
+    loop 6 Fases (uma pergunta por vez)
+        AG-->>U: Pergunta sobre Negócio / Funcional / NFR / Tech / DoR / DoD
+        U->>AG: Responde
+        AG-->>U: ✓ Registrado. Próxima pergunta...
+    end
+    AG-->>U: ✅ STORY-001.md criado
+
+    U->>SK: /validate
+    SK-->>U: ✅ DoR atingido — 9 arquivos gerados em .github/
+    Note over SK,U: Abra Novo Chat → dropdown agent implementador
+```
 
 **Input:**
 
@@ -162,109 +755,49 @@ Ambos os caminhos convergem para o mesmo `.speckit/STORY-XXX.md` ou `FIX-XXX.md`
 @speckit /draft Quero calcular comissão de vendedores baseado em eventos Kafka quando uma venda é concluída
 ```
 
-**SpecKit responde:**
+**Trecho da entrevista (Fase 1 — Requisito de Negócio):**
 
-> ✅ Prompt de elicitação criado: `.speckit/elicit-story.prompt.md` (STORY-001)
->
-> **Próximo passo:** O arquivo foi aberto no editor. Para iniciar a elicitação:
-> - **Opção A (recomendada):** clique no ícone **▶ Run in Copilot Chat** na barra de título do editor → selecione **Novo Chat**
-> - **Opção B:** abra o Copilot Chat (`Ctrl+Alt+I`), mude para modo **Agente**, e escreva `#elicit-story.prompt.md` no campo de mensagem
->
-> Use **Novo Chat** para garantir contexto limpo — o agente de elicitação precisa de uma sessão dedicada.
->
-> Ao concluir, execute `@speckit /validate` para gerar os arquivos de configuração.
+| Passo | Agente pergunta        | Você responde                                                               |
+| ----- | ---------------------- | --------------------------------------------------------------------------- |
+| 1.1   | Qual dor isso resolve? | Cálculo em batch noturno, visibilidade D+1, atraso no fechamento financeiro |
+| 1.2   | Por que agora?         | Time comercial pedindo há 3 meses, pressão crescente                        |
+| 1.3   | Que KPI muda?          | Tempo venda → comissão: de D+1 para < 5 min                                 |
+| 1.4   | Stakeholders?          | Comercial, Financeiro, Plataforma de Dados                                  |
 
-**Conversa de elicitação (Copilot Chat — modo Agente, Novo Chat):**
+> As fases 2–5 seguem o mesmo padrão: uma pergunta por vez, resumo ao final de cada fase, confirmação antes de avançar.
+>
+> **Fase 6** — Agente monta o `STORY-001.md` completo e instrui: _"Execute `@speckit /validate`"_.
 
-> **🤖 Agente**
->
-> Vou te guiar pelo preenchimento da história **STORY-001** — *Cálculo de comissão via eventos Kafka*.
->
-> **FASE 1 — Requisito de Negócio**
->
-> **1.1 Problema:** Qual dor isso resolve? Detectei que a ideia envolve cálculo de comissão e Kafka — isso me leva a imaginar que o processo atual pode ser batch ou manual. O problema é visibilidade defasada das comissões para o time comercial?
+</details>
 
-**👤 Você** — Exatamente. O cálculo roda em batch noturno, o time comercial só vê os números no dia seguinte e isso atrasa o fechamento financeiro do mês.
+<details>
+<summary><strong>Fix via /draft (detecção automática de intent)</strong></summary>
 
-> **🤖 Agente**
->
-> ✓ Problema registrado: *"Cálculo em batch noturno — visibilidade D+1 para o time comercial, atraso no fechamento financeiro mensal."*
->
-> **1.2 Urgência:** Por que isso precisa ser resolvido agora? Existe um prazo, uma dor que piorou recentemente, ou uma decisão de negócio pendente disso?
+### Sequência: /draft → elicitação fix → /validate
 
-**👤 Você** — O time comercial está pedindo dashboard ao vivo há 3 meses. Não tem prazo duro, mas a pressão está aumentando.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Você
+    participant SK as @speckit
+    participant AG as Copilot Agente
 
-> **🤖 Agente**
->
-> ✓ Urgência registrada.
->
-> **1.3 Valor:** O que muda concretamente quando isso for entregue? Quero derivar um KPI candidato — no domínio de cálculo financeiro, algo como *"tempo entre venda e visibilidade da comissão"* faz sentido, ou você tem outro indicador em mente?
+    U->>SK: /draft "Login OAuth2 retorna 500 após expiração do token"
+    Note over SK: Detecta keyword "500" → intent fix
+    SK-->>U: ✅ Criado elicit-fix-001.prompt.md
+    Note over SK,U: Abra em Novo Chat modo Agente
 
-**👤 Você** — Tempo entre venda e comissão calculada é bom. Hoje é D+1, queremos D+0 em tempo real.
+    U->>AG: Abre elicit-fix-001.prompt.md
+    loop 7 Fases
+        AG-->>U: Pergunta sobre Bug / Hipótese / Impacto / Regressão / Contexto / DoF
+        U->>AG: Responde
+    end
+    AG-->>U: ✅ FIX-001.md criado
 
-> **🤖 Agente**
->
-> ✓ KPI candidato: *"Tempo entre evento de venda e comissão disponível — meta: < 5 minutos (D+0)".*
->
-> **1.4 Stakeholders:** Quem é impactado? Identifiquei *Time Comercial* e *Financeiro* — tem mais alguém? Ex: Plataforma de Dados, TI, clientes externos?
-
-**👤 Você** — Plataforma de Dados também consome o evento de saída para o data lake.
-
-> **🤖 Agente**
->
-> ✓ Stakeholders: Time Comercial, Financeiro, Plataforma de Dados.
->
-> **Resumo da Fase 1:**
-> - Problema: batch noturno → lag D+1 no cálculo
-> - Urgência: pressão crescente do time comercial há 3 meses
-> - KPI: tempo venda → comissão < 5 min
-> - Stakeholders: Time Comercial, Financeiro, Plataforma de Dados
->
-> Confirmo e avanço para a Fase 2?
-
-**👤 Você** — Confirma.
-
-> **🤖 Agente**
->
-> **FASE 2 — Especificação Funcional**
->
-> **2.1 User Stories:** Com base na ideia, proponho:
-> - *Como sistema, ao receber evento `movimentacoes.v1`, quero classificar a movimentação em um dos tipos de regra e calcular a comissão correspondente*
-> - *Como sistema, quero persistir a comissão calculada para que o histórico seja auditável*
-> - *Como sistema, quero emitir `comissoes.calculadas.v1` para notificar consumidores downstream*
->
-> Quais são os tipos de regra? (isso vai direto nos critérios de aceite)
-
-**👤 Você** — São 4: taxa fixa (percentual sobre o valor), escalonada (faixas de percentual progressivo), com teto (percentual com valor máximo) e bônus por categoria (valor fixo por categoria elegível).
-
-> **🤖 Agente**
->
-> ✓ 4 regras de cálculo registradas. Expandindo os critérios de aceite com os cenários numéricos de cada regra.
->
-> **2.2 Critérios de aceite — idempotência:** A movimentação pode ser re-entregue pelo Kafka (semântica at-least-once). Como deve se comportar ao receber o mesmo `movimentacaoId` duas vezes?
-
-**👤 Você** — Deve ignorar o reprocessamento — a comissão já calculada não pode ser duplicada.
-
-> **🤖 Agente**
->
-> ✓ Critério de idempotência adicionado: *"Processar o mesmo `movimentacaoId` duas vezes não gera duplicata — segunda ocorrência é ignorada com log de aviso."*
->
-> **2.3 Fora de escopo:** Derivando do contexto — proponho excluir: pagamento das comissões calculadas, API REST de consulta, recálculo retroativo, configuração das regras via interface. Você confirma ou quer adicionar/remover algo?
-
-**👤 Você** — Confirma tudo.
-
-> *(... fases 3, 4, 5 seguem o mesmo padrão, uma pergunta por vez ...)*
->
-> **FASE 6 — Montagem Final**
->
-> ✅ **STORY-001.md criado** em `.speckit/STORY-001.md`
->
-> Campos preenchidos: todos. Pronto para validação.
-> Execute `@speckit /validate` para gerar os arquivos de configuração e iniciar a implementação.
-
----
-
-### Fix via texto livre (detecção automática de intent)
+    U->>SK: /validate
+    SK-->>U: ✅ Fix válido — 7 arquivos gerados em .github/
+    Note over SK,U: Abra Novo Chat → dropdown agent fix-implementador
+```
 
 **Input:**
 
@@ -272,100 +805,39 @@ Ambos os caminhos convergem para o mesmo `.speckit/STORY-XXX.md` ou `FIX-XXX.md`
 @speckit /draft O login OAuth2 retorna 500 após expiração do token de refresh
 ```
 
-O SpecKit detecta as keywords `retorna 500` (erro HTTP) e roteia para fix automaticamente, sem necessidade de `--fix`.
+O SpecKit detecta `retorna 500` e roteia para fix automaticamente, sem `--fix`.
 
-**SpecKit responde:**
+**Trecho da entrevista (Fase 1 — Bug Description):**
 
-> ✅ Prompt de elicitação criado: `.speckit/elicit-fix.prompt.md` (FIX-001)
->
-> **Próximo passo:** O arquivo foi aberto no editor. Para iniciar a elicitação:
-> - **Opção A (recomendada):** clique no ícone **▶ Run in Copilot Chat** na barra de título do editor → selecione **Novo Chat**
-> - **Opção B:** abra o Copilot Chat (`Ctrl+Alt+I`), mude para modo **Agente**, e escreva `#elicit-fix.prompt.md` no campo de mensagem
->
-> Use **Novo Chat** para garantir contexto limpo — o agente de elicitação precisa de uma sessão dedicada.
+| Passo | Agente pergunta         | Você responde                                                             |
+| ----- | ----------------------- | ------------------------------------------------------------------------- |
+| 1.1   | Sintomas e stack trace? | `TokenExpiredError: jwt expired` no servidor, cliente recebe 500 genérico |
+| 1.2   | Quando começou?         | Após deploy de sexta-feira — regressão                                    |
+| 1.3   | Passos para reproduzir? | 1. Auth OAuth2 → 2. Esperar 1h → 3. Qualquer request. 100% reproduzível   |
+| 1.4   | Workaround?             | Logout + login resolve                                                    |
+| 1.5   | Urgência?               | Cliente enterprise, resolver no dia                                       |
 
-**Conversa de elicitação (trecho):**
+> Fases 2–6 aprofundam hipótese, impacto, regressão e DoF. **Fase 7** monta o `FIX-001.md`.
 
-> **🤖 Agente**
->
-> Vou te guiar pelo preenchimento do **FIX-001** — *Login OAuth2 / 500 após expiração de token*.
->
-> **FASE 1 — Bug Description**
->
-> **1.1 Sintomas:** O usuário recebe HTTP 500 após a sessão expirar. Você viu isso em logs também? Existe uma exception específica no stack trace?
+</details>
 
-**👤 Você** — Sim, aparece `TokenExpiredError: jwt expired` no log do servidor, mas o cliente recebe uma página de erro genérica 500 em vez de 401.
+<details>
+<summary><strong>Story via /new (template direto) — completa e incompleta</strong></summary>
 
-> **🤖 Agente**
->
-> ✓ Sintomas registrados: *"500 genérico retornado ao cliente; `TokenExpiredError` logada no servidor sem handler adequado."*
->
-> **1.2 Primeira ocorrência:** Quando isso foi observado pela primeira vez? É regressão de um deploy recente ou existe há mais tempo?
+### Story completa — vai direto para geração
 
-**👤 Você** — Foi reportado ontem. Começou após o deploy de sexta-feira.
+Serviço backend: consome eventos Kafka de movimentação de vendas, calcula comissão em 4 tipos de regra, persiste e emite evento.
 
-> **🤖 Agente**
->
-> ✓ Primeira ocorrência: *"Após deploy de sexta-feira — provável regressão."*
->
-> **1.3 Passos para reproduzir:** Como reproduzir exatamente? Se os passos forem parcialmente conhecidos, me diga o que você sabe — posso trabalhar com informação incompleta.
+| Passo | Ação                                                                 |
+| ----- | -------------------------------------------------------------------- |
+| 1     | `@speckit /new` → cria `.speckit/STORY-001.md`                       |
+| 2     | Preencha todos os campos (ver template abaixo)                       |
+| 3     | `@speckit /validate` → DoR atingido → gera `.github/` (9 arquivos)   |
+| 4     | Copilot Chat → selecione agent **speckit-implementador** (Gates 0–2) |
+| 5     | Novo Chat → selecione agent **speckit-revisor** (Gates 3–4)          |
 
-**👤 Você** — 1. Autenticar via GitHub OAuth2. 2. Aguardar 1 hora (expiração). 3. Fazer qualquer requisição autenticada. Reprodução 100% consistente.
-
-> *(... fase 1 continua: workaround, frequência, urgência ...)*
->
-> **1.4 Workaround:** Existe algum contorno que os usuários ou o time estão usando agora?
-
-**👤 Você** — Fazer logout e login novamente resolve.
-
-> **🤖 Agente**
->
-> ✓ Workaround registrado: *"Logout + login resolve."*
->
-> **1.5 Urgência / Prazo:** Com base no workaround disponível, a severidade real é moderada — o usuário pode se autenticar novamente. Mas existe SLA contratual, pressão de cliente VIP, ou risco de churn que eleva a prioridade?
-
-**👤 Você** — É um cliente enterprise que reportou. Queremos resolver hoje.
-
-> **🤖 Agente**
->
-> ✓ Urgência: *"Cliente enterprise — resolver no dia."*
->
-> **FASE 2 — Hipótese**
->
-> **2.1 Onde você acha que está o problema e por quê?** Inclua sua hipótese da causa raiz e os arquivos ou componentes onde suspeita que está o código afetado.
-
-**👤 Você** — Suspeito que o middleware de autenticação não tem handler para `TokenExpiredError`. O erro propaga sem ser tratado e o Express retorna 500 genérico. Arquivo suspeito: `src/middleware/auth.ts`.
-
-> **🤖 Agente**
->
-> ✓ Hipótese: *"Middleware sem handler para `TokenExpiredError` — erro propaga até o handler genérico do Express."*
-> ✓ Arquivos suspeitos: `src/middleware/auth.ts`, `src/routes/auth.ts` (callback OAuth2).
->
-> **FASE 3 — Impacto**
->
-> **3.1 Severidade:** Dado que existe workaround (logout + login), classifico como `high` — não é crítico (serviço continua operando) mas afeta todos os usuários com sessão > 1h. Você concorda ou prefere ajustar?
-
-**👤 Você** — Concorda, high está correto.
-
-> *(... fases 4, 5, 6, 7 seguem o mesmo padrão ...)*
->
-> **FASE 7 — Montagem Final**
->
-> ✅ **FIX-001.md criado** em `.speckit/FIX-001.md`
->
-> Execute `@speckit /validate` para detectar a stack e gerar os arquivos de configuração.
-
----
-
-## Exemplo prático — História
-
-### História completa
-
-Representa uma feature real com todos os campos obrigatórios preenchidos e DoR marcado. Ao executar `@speckit /validate` o agente vai direto para a geração dos arquivos, sem perguntas de alinhamento.
-
-**Contexto:** serviço backend que consome eventos de movimentação de vendas via Kafka, classifica cada movimentação em um dos 4 tipos de regra de comissão, calcula o valor, persiste e emite um evento de resultado.
-
-#### Arquivo: `.speckit/STORY-001.md`
+<details>
+<summary>Template preenchido: <code>.speckit/STORY-001.md</code></summary>
 
 ```markdown
 # História 001
@@ -382,14 +854,17 @@ version: 1
 ## Requisito de Negócio
 
 ### Problema
+
 O cálculo de comissões é executado em batch noturno, causando visibilidade defasada para o time comercial
 e atraso no fechamento financeiro do mês.
 
 ### Valor
+
 Cálculo de comissão em tempo real, por evento de movimentação, eliminando o lag de D+1. Habilita dashboards
 de comissão ao vivo para o time comercial e antecipa em até 24h o fechamento financeiro mensal.
 
 ### Stakeholders
+
 - Time Comercial (visibilidade de comissão em tempo real)
 - Financeiro (fechamento mensal mais rápido)
 - Plataforma de Dados (consumo do evento de saída para o data lake)
@@ -399,73 +874,79 @@ de comissão ao vivo para o time comercial e antecipa em até 24h o fechamento f
 ## Especificação Funcional
 
 ### User Stories
-- Como sistema, ao receber um evento de movimentação no tópico Kafka `movimentacoes.v1`, quero classificá-la
-  em um dos 4 tipos de regra e calcular a comissão correspondente
-- Como sistema, quero persistir a comissão calculada no banco de dados para que o histórico seja auditável
-- Como sistema, quero emitir um evento `comissoes.calculadas.v1` após o cálculo para notificar consumidores downstream
+
+- Como sistema, ao receber evento no tópico `movimentacoes.v1`, quero classificar em um dos 4 tipos de regra e calcular a comissão
+- Como sistema, quero persistir a comissão para histórico auditável
+- Como sistema, quero emitir evento `comissoes.calculadas.v1` para consumidores downstream
 
 ### Critérios de Aceite
-- Consumir eventos do tópico Kafka `movimentacoes.v1` com schema:
-  `{ movimentacaoId, vendedorId, produtoId, categoriaId, valor, timestamp }`
-- Classificar cada movimentação em exatamente um dos 4 tipos de regra:
-  TAXA_FIXA, ESCALONADA, COM_TETO, BONUS_CATEGORIA
-- TAXA_FIXA: aplicar percentual fixo definido no cadastro do vendedor sobre o valor da movimentação
-- ESCALONADA: aplicar faixas de percentual progressivo (ex: 2% até R$10.000, 3% de R$10.001–R$50.000, 4% acima)
-- COM_TETO: aplicar percentual com valor máximo de comissão (ex: 5% limitado a R$500,00)
-- BONUS_CATEGORIA: adicionar bônus fixo por unidade vendida quando a categoria do produto for elegível
-- Processar movimentação duplicada (mesmo `movimentacaoId`) de forma idempotente
-- Persistir na tabela `comissoes`: `(id, movimentacao_id, vendedor_id, tipo_regra, valor_comissao, calculado_em)`
-- Emitir evento no tópico `comissoes.calculadas.v1` com schema:
-  `{ comissaoId, movimentacaoId, vendedorId, tipoRegra, valorComissao, calculadoEm }`
-- Evento inválido → encaminhar para DLQ `movimentacoes.v1.dlq` com causa do erro no header
+
+- Consumir `movimentacoes.v1`: `{ movimentacaoId, vendedorId, produtoId, categoriaId, valor, timestamp }`
+- TAXA_FIXA: percentual fixo sobre o valor
+- ESCALONADA: faixas progressivas (2% até R$10k, 3% R$10k–R$50k, 4% acima)
+- COM_TETO: percentual com valor máximo (5% limitado a R$500)
+- BONUS_CATEGORIA: bônus fixo por categoria elegível
+- Idempotente: mesmo `movimentacaoId` não gera duplicata
+- Evento inválido → DLQ `movimentacoes.v1.dlq` com causa no header
 
 ### Fora de Escopo
-- Pagamento das comissões calculadas
-- Interface de usuário ou API REST de consulta
-- Recálculo retroativo de movimentações já processadas
-- Configuração das regras de comissão via API
+
+- Pagamento das comissões
+- API REST de consulta
+- Recálculo retroativo
+- Configuração de regras via API
 
 ---
 
 ## Especificação Não-Funcional
 
 ### Performance
-P99 < 300ms por evento. Capacidade de 1.000 eventos/minuto por partição Kafka sem degradação.
+
+P99 < 300ms por evento. 1.000 eventos/min por partição.
 
 ### Segurança
-Nenhum PII nos logs. Payload validado contra schema antes do processamento.
-Credenciais via variáveis de ambiente — sem hardcode.
+
+Sem PII nos logs. Payload validado contra schema. Credenciais via env vars.
 
 ### Escalabilidade
-Escalonamento horizontal via consumer group Kafka: 10 partições configuradas.
+
+Consumer group Kafka: 10 partições.
 
 ### Usabilidade
-N/A — serviço system-to-system.
+
+N/A — system-to-system.
 
 ### Disponibilidade
-99,5% uptime. Retry com backoff exponencial (3 tentativas, backoff inicial 500ms) antes de DLQ.
+
+99,5% uptime. Retry com backoff exponencial (3x, 500ms inicial).
 
 ---
 
 ## Especificação Técnica
 
 ### Linguagem
+
 java
 
 ### Framework
+
 springboot
 
 ### Arquitetura
+
 hexagonal
 
 ### Target
+
 backend
 
 ### Banco de Dados
-PostgreSQL 15 (tabela `comissoes`; tabelas `regras_comissao` e `vendedores_regras` já existentes)
+
+PostgreSQL 15
 
 ### Infraestrutura
-Apache Kafka (AWS MSK), Docker, Kubernetes (EKS). CI/CD via GitHub Actions.
+
+Apache Kafka (AWS MSK), Docker, Kubernetes (EKS), GitHub Actions
 
 ---
 
@@ -473,7 +954,7 @@ Apache Kafka (AWS MSK), Docker, Kubernetes (EKS). CI/CD via GitHub Actions.
 
 - [x] Requisito de negócio documentado e aprovado
 - [x] User stories com critérios de aceite mensuráveis
-- [x] Escopo delimitado (o que está e o que não está incluído)
+- [x] Escopo delimitado
 - [x] Requisitos não-funcionais definidos
 - [x] Stack técnica decidida
 - [x] Padrão arquitetural definido
@@ -484,239 +965,86 @@ Apache Kafka (AWS MSK), Docker, Kubernetes (EKS). CI/CD via GitHub Actions.
 ## DoD — Definition of Done
 
 - Todos os critérios de aceite validados por testes automatizados
-- Cobertura de testes ≥ 80% (unitários + integração)
-- As 4 regras de cálculo validadas com casos numéricos explícitos nos testes
-- Idempotência verificada: reprocessar o mesmo `movimentacaoId` não gera duplicata
-- DLQ funcional: evento inválido encaminhado com causa no header
-- Evento `comissoes.calculadas.v1` emitido e validado com schema correto
-- Nenhum PII nos logs
-- Commit local na branch `feature/001-calculo-comissao-kafka`
+- Cobertura ≥ 80%
+- 4 regras validadas com casos numéricos explícitos
+- Idempotência verificada
+- DLQ funcional com causa no header
+- Evento `comissoes.calculadas.v1` validado
+- Sem PII nos logs
+- Commit em `feature/001-calculo-comissao-kafka`
 ```
 
-#### Como usar esta história
+</details>
+
+#### Arquivos gerados para Java + Kafka + PostgreSQL + backend
 
 ```
-1. @speckit /new              → cria .speckit/STORY-001.md
-2. Preencha o arquivo         → use o exemplo acima como referência
-3. @speckit /validate         → DoR atingido: gera .github/ + .github/workflows/ + instrui próximo passo
-4. Copilot Chat → modo Agente → /implement
-5. @speckit /review           → instrui abrir nova sessão
-6. Copilot Chat → modo Agente → /review
-```
-
-#### O que o `@speckit /validate` gera para esta história
-
-Como a história tem `infrastructure: Kafka (AWS MSK)`, `database: PostgreSQL`, `target: backend` e `language: java`, o plugin gera o conjunto completo de instruções contextualizadas:
-
-```
-.github/
+.github/  (9 arquivos)
 ├── copilot-instructions.md
-├── workflows/
-│   ├── quality-gate.yml          ← CI: lint + build + mvn verify (jacoco ≥80%)
-│   └── security-scan.yml         ← CI: TruffleHog + Semgrep
-├── prompts/
-│   ├── implement.prompt.md       ← Gates 0–2: alinhamento → implementação → testes
-│   ├── review.prompt.md          ← Gates 3–4: revisão independente → entrega
-│   └── run.prompt.md             ← Sessão única: todos os gates
-└── instructions/
-    ├── 00-agent-integrity.instructions.md
-    ├── 01-performance.instructions.md
-    ├── 02-architecture.instructions.md       ← HTTP resilience: timeout, retry, circuit breaker
-    ├── 03-context-management.instructions.md
-    ├── 04-testing-standards.instructions.md  ← Critérios de aceite + teste de carga (P99 < 300ms)
-    ├── 05-git-workflow.instructions.md
-    ├── 06-credential-security.instructions.md
-    ├── 07-observability.instructions.md      ← SLOs da story: 99,5% / P99 < 300ms
-    ├── 08-security-tests.instructions.md
-    ├── lang-java.instructions.md             ← Java 17+/21: Records, virtual threads
-    ├── fw-springboot.instructions.md
-    ├── infra-kafka.instructions.md           ← Consumer, Producer, DLQ, Retry, Schema Registry
-    ├── pattern-crud.instructions.md
-    ├── pattern-idempotency.instructions.md   ← Idempotency-Key, deduplicação, TTL
-    ├── 10-business-context.instructions.md
-    ├── 11-functional-spec.instructions.md
-    ├── 12-nonfunctional-spec.instructions.md
-    ├── 13-tech-stack.instructions.md
-    ├── 14-architecture-pattern.instructions.md
-    └── 15-dod-checklist.instructions.md
+├── workflows/  quality-gate.yml · security-scan.yml
+├── prompts/    run.prompt.md
+├── skills/     speckit-baseline · speckit-stack · speckit-context-STORY-001
+└── agents/     speckit-implementador · speckit-revisor
 ```
-
-> **24 arquivos gerados** — todos contextualizados com os dados desta história específica.
 
 ---
 
-### História incompleta — fluxo de alinhamento
+### Story incompleta — fluxo de alinhamento
 
-Situação comum: o desenvolvedor preencheu o essencial mas deixou lacunas nos detalhes funcionais, nos requisitos não-funcionais e na arquitetura.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Você
+    participant SK as @speckit
 
-#### Arquivo: `.speckit/STORY-001.md` (incompleto)
+    U->>SK: /validate (story com lacunas)
+    SK-->>U: ⚠️ 6 lacunas encontradas
 
-```markdown
-# História 001
+    SK-->>U: Lacuna 1 — Qual o valor de negócio?
+    U->>SK: Eliminar lag D+1, dashboards ao vivo
+    SK-->>U: ✓ Atualizado
 
-<!-- metadata
-id: 001
-title: Cálculo de comissão a partir de eventos Kafka de movimentação
-createdAt: 2026-03-19
-version: 1
--->
+    SK-->>U: Lacuna 2 — Quais tipos de regra de comissão?
+    U->>SK: Taxa fixa, escalonada, com teto, bônus por categoria
+    SK-->>U: ✓ Atualizado
 
-## Requisito de Negócio
+    SK-->>U: Lacuna 3 — O que está fora de escopo?
+    U->>SK: Pagamento, API REST, recálculo, config de regras
+    SK-->>U: ✓ Atualizado
 
-### Problema
-O cálculo de comissões é feito em batch noturno e o time comercial não tem visibilidade em tempo real.
+    SK-->>U: Lacuna 4 — SLA de performance?
+    U->>SK: P99 < 300ms, 1k eventos/min
+    SK-->>U: ✓ Atualizado
 
-### Valor
+    SK-->>U: Lacuna 5 — Arquitetura?
+    U->>SK: Hexagonal
+    SK-->>U: ✓ Atualizado
 
-### Stakeholders
-- Time Comercial
+    SK-->>U: Lacuna 6 — DoD?
+    U->>SK: Idempotência, DLQ, sem PII, branch feature/001-...
+    SK-->>U: ✓ Todas as lacunas preenchidas
 
-## Especificação Funcional
-
-### User Stories
-- Como sistema, quero consumir eventos Kafka de movimentação e calcular a comissão
-
-### Critérios de Aceite
-- Consumir do tópico `movimentacoes.v1`
-- Calcular comissão conforme regra do vendedor
-- Persistir o resultado
-- Emitir evento de saída
-
-### Fora de Escopo
--
-
-## Especificação Não-Funcional
-
-### Performance
-### Segurança
-### Escalabilidade
-### Usabilidade
-### Disponibilidade
-
-## Especificação Técnica
-
-### Linguagem
-java
-
-### Framework
-springboot
-
-### Arquitetura
-
-### Target
-backend
-
-### Banco de Dados
-PostgreSQL
-
-### Infraestrutura
-Kafka, Kubernetes
-
-## DoR — Definition of Ready
-
-- [x] Requisito de negócio documentado e aprovado
-- [ ] User stories com critérios de aceite mensuráveis
-- [ ] Escopo delimitado (o que está e o que não está incluído)
-- [ ] Requisitos não-funcionais definidos
-- [x] Stack técnica decidida
-- [ ] Padrão arquitetural definido
-- [ ] DoD acordado com o time
-
-## DoD — Definition of Done
-
-- Todos os critérios de aceite validados
-- Cobertura de testes ≥ 80%
+    U->>SK: /validate (novamente)
+    SK-->>U: ✅ DoR atingido — 9 arquivos gerados
 ```
 
-#### O que acontece ao executar `@speckit /validate`
+</details>
 
-O agente detecta as lacunas e conduz o alinhamento **uma pergunta por vez**.
+<details>
+<summary><strong>Fix via /fix (template direto) — completo e incompleto</strong></summary>
 
-> **🤖 Agente**
->
-> Encontrei 6 lacunas na história. Vamos preenchê-las juntos, uma por vez.
->
-> **Lacuna 1 — [Requisito de Negócio] campo `valor`:**
-> Qual é o valor de negócio que esta feature entrega?
-> O que muda para o time comercial ou para o financeiro quando o cálculo passar a ser em tempo real?
+### Fix completo — vai direto para geração
 
-**👤 Você** — Elimina o lag de D+1 no cálculo, permite dashboards ao vivo e antecipa o fechamento financeiro mensal.
+| Passo | Ação                                                                     |
+| ----- | ------------------------------------------------------------------------ |
+| 1     | `@speckit /fix` → cria `.speckit/FIX-001.md`                             |
+| 2     | Preencha todos os campos (ver template abaixo)                           |
+| 3     | `@speckit /validate` → Fix válido → gera `.github/` (7 arquivos)         |
+| 4     | Copilot Chat → selecione agent **speckit-fix-implementador** (Gates 0–2) |
+| 5     | Novo Chat → selecione agent **speckit-fix-revisor** (Gates 3–4)          |
 
-> **🤖 Agente**
->
-> ✓ Campo `valor` atualizado em `.speckit/STORY-001.md`
->
-> **Lacuna 2 — [Especificação Funcional] critérios de aceite muito genéricos:**
-> A história menciona "regra do vendedor" — quais são os tipos de regra possíveis e como cada uma calcula a comissão?
-
-**👤 Você** — São 4 tipos: taxa fixa (percentual sobre o valor), escalonada (faixas de percentual), com teto (percentual com valor máximo) e bônus por categoria (valor fixo por categoria elegível).
-
-> **🤖 Agente**
->
-> ✓ Critérios de aceite detalhados para as 4 regras.
->
-> **Lacuna 3 — [Especificação Funcional] campo `fora de escopo` vazio:**
-> O que explicitamente NÃO deve ser implementado? Ex: pagamento das comissões, API de consulta, recálculo retroativo, configuração de regras?
-
-**👤 Você** — Pagamento, API REST, recálculo retroativo e configuração de regras.
-
-> **🤖 Agente**
->
-> ✓ Fora de escopo atualizado.
->
-> **Lacuna 4 — [Especificação Não-Funcional] performance:**
-> Qual o SLA esperado por evento (latência P99)? Existe um volume de pico definido em eventos/minuto?
-
-**👤 Você** — P99 < 300ms, capacidade de 1.000 eventos/minuto por partição.
-
-> **🤖 Agente**
->
-> ✓ Performance atualizada.
->
-> **Lacuna 5 — [Especificação Técnica] arquitetura não preenchida:**
-> Qual o padrão arquitetural do serviço? (hexagonal · layered · microservices · monolith · serverless)
-
-**👤 Você** — Hexagonal.
-
-> **🤖 Agente**
->
-> ✓ Arquitetura definida como `hexagonal`.
->
-> **Lacuna 6 — DoD incompleto:**
-> Além de critérios de aceite e cobertura ≥ 80%, quais outros critérios de conclusão devem ser exigidos? Ex: idempotência, DLQ funcional, sem PII nos logs, commit na branch?
-
-**👤 Você** — Idempotência verificada, DLQ funcional com causa no header, sem PII nos logs, commit na branch `feature/001-calculo-comissao-kafka`.
-
-> **🤖 Agente**
->
-> ✓ DoD atualizado. Todas as lacunas foram preenchidas.
->
-> Execute `@speckit /validate` novamente para gerar os arquivos de configuração e iniciar a implementação.
-
-Ao executar `/validate` com a história completa:
-
-> **🤖 Agente**
->
-> ✅ DoR atingido — história válida.
-> ⏳ Gerando arquivos de configuração do Copilot...
-> ✅ 24 arquivo(s) gerado(s) em `.github/`
->
-> **▶ Próximo passo — iniciar a implementação:**
-> 1. Abra um novo Copilot Chat
-> 2. Selecione o modo **Agente**
-> 3. Digite `/implement` — o agente carregará o plano completo
->
-> O prompt está em `.github/prompts/implement.prompt.md`.
-
----
-
-## Exemplo prático — Fix
-
-### Fix completo
-
-Representa um bug real com todos os campos obrigatórios preenchidos. Ao executar `@speckit /validate` o agente detecta a stack automaticamente, gera os arquivos e instrui a abrir `/fix-implement`.
-
-#### Arquivo: `.speckit/FIX-001.md`
+<details>
+<summary>Template preenchido: <code>.speckit/FIX-001.md</code></summary>
 
 ```markdown
 # Fix 001
@@ -733,588 +1061,273 @@ status: open
 ## Bug Description
 
 ### Título do Bug
+
 Login OAuth2 retorna erro 500 quando token expirado
 
 ### Sintomas
-A rota `/api/auth/callback` retorna HTTP 500 ao invés de 401 quando o token OAuth2 está expirado.
-O cliente recebe uma página de erro genérica e é deslogado abruptamente, sem mensagem adequada.
+
+`/api/auth/callback` retorna HTTP 500 ao invés de 401 com token expirado.
+Cliente recebe erro genérico e é deslogado sem mensagem.
 
 ### Passos para Reproduzir
+
 1. Autenticar via GitHub OAuth2
-2. Aguardar o token expirar (1 hora)
-3. Tentar realizar qualquer requisição autenticada
+2. Aguardar token expirar (1h)
+3. Qualquer requisição autenticada → 500
 
 ### Ambiente Afetado
+
 Production — Node.js 20, Express 4.18, Ubuntu 22.04
 
 ### Frequência de Ocorrência
-Sempre — 100% reproduzível após expiração do token.
+
+100% reproduzível após expiração.
 
 ---
 
 ## Root Cause Hypothesis
 
 ### Hipótese
-O middleware de autenticação não trata a exceção `TokenExpiredError` lançada pela biblioteca JWT.
-O erro propaga sem handler e o Express retorna 500 genérico ao invés de 401.
+
+Middleware não trata `TokenExpiredError` do JWT. Erro propaga sem handler → Express retorna 500.
 
 ### Arquivos/Componentes Suspeitos
-- `src/middleware/auth.ts` — tratamento de erros JWT
-- `src/routes/auth.ts` — callback OAuth2
+
+- `src/middleware/auth.ts`
+- `src/routes/auth.ts`
 
 ---
 
 ## Impact Assessment
 
 ### Severidade
+
 high
 
 ### Usuários/Sistemas Afetados
-Todos os usuários autenticados com sessões longas (> 1h). Estimativa: 60% dos usuários ativos por dia.
+
+~60% dos usuários ativos/dia (sessões > 1h).
 
 ### Risco de Regressão
-Mudanças no middleware de autenticação podem impactar outros fluxos: refresh de token,
-autenticação via API key e rotas públicas com autenticação opcional.
+
+Middleware impacta: refresh token, API key auth, rotas públicas opcionais.
 
 ---
 
 ## Regression Prevention
 
 ### Testes a Adicionar
-- Teste unitário: middleware retorna 401 quando `TokenExpiredError` é lançado
-- Teste unitário: middleware retorna 401 para token com assinatura inválida (`JsonWebTokenError`)
-- Teste de integração: `GET /api/me` com token expirado retorna `{ error: "token_expired" }` e status 401
-- Teste de integração: `GET /api/me` com token válido continua funcionando (regressão)
+
+- Unitário: middleware retorna 401 para `TokenExpiredError`
+- Unitário: middleware retorna 401 para `JsonWebTokenError`
+- Integração: `GET /api/me` com token expirado → 401 + `{ error: "token_expired" }`
+- Integração: `GET /api/me` com token válido continua OK
 
 ---
 
 ## DoF — Definition of Fixed
 
-- [ ] Bug não reproduz mais com os passos documentados
+- [ ] Bug não reproduz com passos documentados
 - [ ] Root cause endereçado (não apenas patched)
-- [ ] Testes de regressão adicionados e passando
+- [ ] Testes de regressão passando
 - [ ] Cobertura ≥ 80%
-- [ ] Commit local na branch `fix/001-oauth2-token-expired-500`
+- [ ] Commit em `fix/001-oauth2-token-expired-500`
 ```
 
-#### Como usar este fix
+</details>
 
-```
-1. @speckit /fix              → cria .speckit/FIX-001.md
-2. Preencha o arquivo         → use o exemplo acima como referência
-   (a stack técnica é detectada automaticamente do workspace)
-3. @speckit /validate         → Fix válido: gera .github/ + instrui próximo passo
-4. Copilot Chat → modo Agente → /fix-implement
-5. @speckit /review           → instrui abrir nova sessão
-6. Copilot Chat → modo Agente → /fix-review
-```
+> A **stack técnica é detectada automaticamente** do workspace (`package.json`, `pom.xml`, etc.).
 
 ---
 
 ### Fix incompleto — fluxo de alinhamento
 
-Situação comum: o desenvolvedor preencheu o bug e o ambiente mas não tem hipótese clara nem testes de regressão definidos.
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Você
+    participant SK as @speckit
 
-#### Arquivo: `.speckit/FIX-002.md` (incompleto)
+    U->>SK: /validate (fix com lacunas)
+    SK-->>U: ⚠️ 4 lacunas encontradas
 
-```markdown
-# Fix 002
+    SK-->>U: Lacuna 1 — Passos para reproduzir?
+    U->>SK: Relatório → Exportar PDF. Console: TypeError window.print
+    SK-->>U: ✓ Atualizado
 
-<!-- metadata
-id: 002
-title: Botão exportar PDF não responde no Firefox
-createdAt: 2026-03-20
-version: 1
-type: fix
-status: open
--->
+    SK-->>U: Lacuna 2 — Hipótese da causa raiz?
+    U->>SK: Firefox bloqueia window.print() em handler async
+    SK-->>U: ✓ Atualizado
 
-## Bug Description
+    SK-->>U: Lacuna 3 — Severidade?
+    U->>SK: High — usado diariamente pelo financeiro
+    SK-->>U: ✓ Atualizado
 
-### Título do Bug
-Botão exportar PDF não responde no Firefox
+    SK-->>U: Lacuna 4 — Testes de regressão?
+    U->>SK: Unitário: print síncrono. Integração: simula clique
+    SK-->>U: ✓ Todas preenchidas
 
-### Sintomas
-Ao clicar no botão de exportar PDF, nada acontece no Firefox 121.
-
-### Passos para Reproduzir
--
-
-### Ambiente Afetado
-Firefox 121, Windows 11
-
-### Frequência de Ocorrência
-Sempre no Firefox
-
----
-
-## Root Cause Hypothesis
-
-### Hipótese
-
-### Arquivos/Componentes Suspeitos
-- src/components/ExportButton.tsx
-
----
-
-## Impact Assessment
-
-### Severidade
-<!-- TODO: critical | high | medium | low -->
-
-### Usuários/Sistemas Afetados
-Usuários do Firefox (~30% da base)
-
-### Risco de Regressão
-Mudanças no componente ExportButton
-
----
-
-## Regression Prevention
-
-### Testes a Adicionar
--
-
----
-
-## DoF — Definition of Fixed
-
-- [ ] Bug não reproduz mais com os passos documentados
-- [ ] Root cause endereçado (não apenas patched)
-- [ ] Testes de regressão adicionados e passando
-- [ ] Cobertura ≥ 80%
-- [ ] Commit local na branch `fix/002-<slug>`
+    U->>SK: /validate (novamente)
+    SK-->>U: ✅ Fix válido — 7 arquivos gerados
 ```
 
-#### O que acontece ao executar `@speckit /validate`
-
-> **🤖 Agente**
->
-> Encontrei 4 lacunas no fix. Vamos preenchê-las juntos.
->
-> **Lacuna 1 — [Bug Description] passos para reproduzir vazios:**
-> Quais são os passos exatos para reproduzir o problema no Firefox?
-> Existe alguma mensagem de erro no console do navegador?
-
-**👤 Você** — Acessar o relatório de vendas, clicar em "Exportar PDF". No console do Firefox aparece: `TypeError: window.print is not a function`.
-
-> **🤖 Agente**
->
-> ✓ Passos e evidência de console registrados.
->
-> **Lacuna 2 — [Root Cause Hypothesis] hipótese vazia:**
-> Com base no erro `window.print is not a function`, qual é sua hipótese da causa raiz?
-
-**👤 Você** — O componente usa `window.print()` diretamente. A hipótese é que o Firefox bloqueia `window.print()` quando chamado dentro de um handler `onClick` assíncrono — o Firefox exige que o `window.print()` seja chamado no handler síncrono.
-
-> **🤖 Agente**
->
-> ✓ Hipótese registrada.
->
-> **Lacuna 3 — [Impact Assessment] severidade não preenchida:**
-> Qual a severidade deste bug? (critical · high · medium · low)
-
-**👤 Você** — High — exportação é usada diariamente pelo time financeiro.
-
-> **🤖 Agente**
->
-> ✓ Severidade definida como `high`.
->
-> **Lacuna 4 — [Regression Prevention] testes não definidos:**
-> Quais testes de regressão devem ser adicionados para garantir que o bug não volte?
-
-**👤 Você** — Teste unitário que verifica se `window.print()` é chamado de forma síncrona. Teste de integração que simula o clique no botão e verifica a chamada.
-
-> **🤖 Agente**
->
-> ✓ Testes de regressão definidos. Todas as lacunas foram preenchidas.
->
-> Execute `@speckit /validate` novamente para gerar os arquivos de configuração e iniciar a correção.
-
-Ao executar `/validate` com o fix completo:
-
-> **🤖 Agente**
->
-> ✅ Fix válido — todos os campos obrigatórios preenchidos.
-> 🔍 Detectando stack do workspace... TypeScript + React encontrados.
-> ⏳ Gerando arquivos de configuração do Copilot...
-> ✅ 16 arquivo(s) gerado(s) em `.github/`
->
-> **▶ Próximo passo — iniciar a investigação e correção:**
-> 1. Abra um novo Copilot Chat
-> 2. Selecione o modo **Agente**
-> 3. Digite `/fix-implement` — o agente investigará a root cause, aplicará o fix e adicionará testes de regressão
->
-> O prompt está em `.github/prompts/fix-implement.prompt.md`.
+</details>
 
 ---
 
-## Comandos
-
-### `@speckit /draft`
-
-Converte texto livre em um prompt de elicitação que guia o Copilot a entrevistar você e montar a spec completa — Story ou Fix — sem que você precise conhecer os campos obrigatórios de antemão.
-
-```
-@speckit /draft <descrição livre>
-```
-
-**Detecção automática de intent:**
-
-| Input | Intent detectado | Arquivo gerado |
-|---|---|---|
-| `@speckit /draft Quero calcular comissão de vendedores via Kafka` | story | `.speckit/elicit-story.prompt.md` |
-| `@speckit /draft Login retorna 500 após expiração do token --fix` | fix (flag `--fix`) | `.speckit/elicit-fix.prompt.md` |
-| `@speckit /draft O botão de exportar não funciona no Firefox` | fix (keyword `não funciona`) | `.speckit/elicit-fix.prompt.md` |
-| `@speckit /draft Crash ao abrir o modal de pagamento` | fix (keyword `crash`) | `.speckit/elicit-fix.prompt.md` |
-
-**Keywords que ativam intent fix (detecção automática, sem flag):** `bug`, `erro`, `error`, `falha`, `falhou`, `quebrado`, `broke`, `broken`, `crash`, `regressão`, `regression`, `corrigir`, `correção`, `não funciona`.
-
-**Após a geração:**
-
-O SpecKit cria o arquivo de elicitação em `.speckit/` e instrui:
-
-> ✅ Prompt de elicitação criado: `.speckit/elicit-story.prompt.md` (STORY-001)
->
-> **Próximo passo:** O arquivo foi aberto no editor. Para iniciar a elicitação:
-> - **Opção A (recomendada):** clique no ícone **▶ Run in Copilot Chat** na barra de título do editor → selecione **Novo Chat**
-> - **Opção B:** abra o Copilot Chat (`Ctrl+Alt+I`), mude para modo **Agente**, e escreva `#elicit-story.prompt.md` no campo de mensagem
->
-> Use **Novo Chat** para garantir contexto limpo — o agente de elicitação precisa de uma sessão dedicada.
->
-> Ao concluir, execute `@speckit /validate` para gerar os arquivos de configuração.
-
-**Fases da entrevista — Story (6 fases):**
-
-| Fase | Tema | Campos elicitados |
-|---|---|---|
-| 1 | Requisito de negócio | Problema + urgência, valor de negócio + KPI candidato, stakeholders |
-| 2 | Especificação funcional | User stories (Como [ator] quero [ação] para [benefício]), critérios de aceite (quadrante: happy path · limites · rejeição · idempotência), fora de escopo derivado do contexto |
-| 3 | NFRs | Performance (P99 com isenção para async), segurança, escalabilidade como código + recomendações de infra, disponibilidade |
-| 4 | Especificação técnica | Linguagem, framework, arquitetura (sempre pergunta, sugere mas não presume), target (inferido da ideia), banco, infra |
-| 5 | Dependências, DoR e DoD | Dependências externas, DoR com critérios AI-verificáveis separados dos que requerem ação humana, DoD contextual (Kafka → DLQ rate, frontend → WCAG 2.1) |
-| 6 | Montagem final | Substitui todos os campos, salva `.speckit/STORY-XXX.md`, confirma criação |
-
-**Fases da entrevista — Fix (7 fases):**
-
-| Fase | Tema | Campos elicitados |
-|---|---|---|
-| 1 | Bug description | Sintomas, primeira ocorrência, passos para reproduzir (admite parcialmente conhecidos), ambiente, workaround, frequência, urgência/prazo — título proposto pelo agente somente no final |
-| 2 | Hipótese | Pergunta aberta "onde acha que está o problema e por quê" — extrai `hypothesis`, `suspectedFiles`, `suspectedComponents` em campos separados |
-| 3 | Impacto | Severidade (cruzada com o workaround já coletado), volume de usuários afetados, risco de regressão com nível e razão |
-| 4 | Prevenção de regressão | Testes a adicionar |
-| 5 | Contexto técnico | Sinaliza ativamente: Redis/TTL/cache miss, load balancer, config env, version flags — se qualquer sinal estiver presente |
-| 6 | DoF | Critérios de Definition of Fixed + adições contextuais (DLQ, comunicação de resolução) |
-| 7 | Montagem final | Salva `.speckit/FIX-XXX.md`, confirma criação |
-
-> **Regras absolutas do agente de elicitação:** UMA pergunta por vez. Nunca inventa ou assume resposta. Ao final de cada fase, apresenta resumo e aguarda confirmação antes de prosseguir. "Não sei" (lacuna identificada) é tratado diferente de "N/A" (campo não aplicável).
-
-> **Modo rápido:** se você tiver pressa, o agente aceita respostas compactas preenchendo defaults onde a ideia permite — e sinaliza ao final quais campos foram assumidos e precisam de revisão.
-
----
-
-### `@speckit /new`
-
-Cria o arquivo `.speckit/STORY-XXX.md` (numeração automática) e abre no editor.
-
-| Seção | O que preencher |
-|---|---|
-| Requisito de Negócio | Problema, valor de negócio, stakeholders |
-| Especificação Funcional | User stories, critérios de aceite, fora de escopo |
-| Especificação Não-Funcional | Performance, segurança, escalabilidade, usabilidade, disponibilidade |
-| Especificação Técnica | Linguagem, framework, arquitetura, target, banco, infra |
-| DoR | Marcar com `[x]` os critérios já atendidos |
-| DoD | Critérios de conclusão |
-
-**Linguagens suportadas:** `typescript` · `javascript` · `java` · `csharp` · `python`
-
-**Frameworks suportados:** `dotnet` · `springboot` · `angular` · `react` · `fastapi` · `other`
-
-**Arquiteturas suportadas:** `hexagonal` · `layered` · `microservices` · `monolith` · `serverless`
-
-**Targets suportados:** `backend` · `frontend` · `bff` · `script` · `library`
-
-> **Sobre NFRs de performance:** Os campos `Performance` e `Disponibilidade` são opcionais — quando não preenchidos, o plugin aplica automaticamente os valores baseline (`P99 < 500ms` e `99,9%`) em todos os arquivos que dependem desses valores (`01-performance`, `04-testing-standards`, `07-observability`). Preencha com valores reais (ex: `P99 < 200ms`, `99,5% uptime`) para refletir os SLOs do seu serviço nos artefatos gerados.
-
----
-
-### `@speckit /fix`
-
-Cria o arquivo `.speckit/FIX-XXX.md` (numeração automática) e abre no editor.
-
-| Seção | O que preencher |
-|---|---|
-| Bug Description | Título, sintomas, passos para reproduzir, ambiente, frequência |
-| Root Cause Hypothesis | Hipótese da causa raiz, arquivos/componentes suspeitos |
-| Impact Assessment | Severidade (`critical` · `high` · `medium` · `low`), usuários/sistemas afetados, risco de regressão |
-| Regression Prevention | Testes a adicionar para prevenir regressão |
-| DoF | Critérios de Definition of Fixed |
-
-> **Stack técnica detectada automaticamente** a partir do workspace (`package.json`, `pom.xml`, `requirements.txt`) — não é necessário especificá-la no arquivo.
-
----
-
-### `@speckit /validate`
-
-Detecta automaticamente o tipo da spec ativa em `.speckit/` (Story ou Fix) e valida campos obrigatórios.
-
-- **Se houver lacunas:** injeta no chat um prompt de alinhamento — o Copilot pergunta uma lacuna por vez e atualiza o arquivo. Quando tudo estiver preenchido, orienta a executar `/validate` novamente.
-- **Se válida (Story):** gera todos os arquivos `.github/` incluindo workflows de CI e instrui a abrir o Copilot Chat em modo **Agente** e digitar `/implement`.
-- **Se válida (Fix):** detecta a stack do workspace, gera todos os arquivos `.github/` e instrui a abrir o Copilot Chat em modo **Agente** e digitar `/fix-implement`.
-
----
-
-### `@speckit /apply`
-
-Valida a Story e, se estiver completa, gera todos os arquivos de configuração do Copilot.
-
-> Para Fixes, use `/validate` — o `/apply` é exclusivo para Stories.
-
----
-
-### `@speckit /review`
-
-Inicia a **Sessão B** — revisão independente e entrega.
-
-Execute quando o agente da Sessão A instruir com *"Execute `@speckit /review`"*. O comando instrui a abrir um novo Copilot Chat em modo **Agente** e digitar `/review` (Stories) ou `/fix-review` (Fixes).
-
-> **Por que duas sessões?** O agente que implementou o código tem viés ao revisá-lo (anchoring bias). A Sessão B começa sem memória da implementação, garantindo uma revisão genuinamente independente.
-
----
-
-### `@speckit /status`
-
-Exibe um resumo de todas as specs abertas no workspace:
-
-- **Stories abertas:** título, linguagem, framework, arquitetura e status de validação (✅ DoR atingido / ⚠️ lacunas)
-- **Fixes abertos:** título e severidade (🐛 critical / high / medium / low)
-
-Specs com `status: done` são ocultadas automaticamente.
-
----
-
-## Arquivos gerados
-
-### Stories
-
-O conjunto exato de arquivos varia conforme a stack declarada na história. Abaixo o conjunto completo para uma história com todos os triggers ativos.
-
-```
-.github/
-├── copilot-instructions.md
-├── workflows/
-│   ├── quality-gate.yml          ← Lint + Build + Testes com cobertura ≥80% (por linguagem)
-│   └── security-scan.yml         ← TruffleHog (secrets) + Semgrep (SAST)
-├── prompts/
-│   ├── implement.prompt.md       ← Sessão A — /implement (Gates 0–2)
-│   ├── review.prompt.md          ← Sessão B — /review (Gates 3–4)
-│   └── run.prompt.md             ← Sessão única — /run (Gates 0–4)
-└── instructions/
-    │
-    │  ── Baseline (sempre gerados) ──────────────────────────────
-    ├── 00-agent-integrity.instructions.md
-    ├── 01-performance.instructions.md
-    ├── 02-architecture.instructions.md
-    ├── 03-context-management.instructions.md
-    ├── 04-testing-standards.instructions.md
-    ├── 05-git-workflow.instructions.md
-    ├── 06-credential-security.instructions.md
-    ├── 07-observability.instructions.md
-    ├── 08-security-tests.instructions.md
-    │
-    │  ── Linguagem (conforme `language`) ────────────────────────
-    ├── lang-typescript.instructions.md   (ou java · javascript · csharp · python)
-    │
-    │  ── Framework (conforme `framework`) ───────────────────────
-    ├── fw-springboot.instructions.md     (ou react · angular · dotnet · fastapi)
-    │
-    │  ── Infraestrutura (detectada em `infrastructure` / `database`) ──
-    ├── infra-kafka.instructions.md        ← se "kafka" em infrastructure
-    ├── infra-aws.instructions.md          ← se Aurora/DynamoDB/RDS/MySQL em database
-    ├── infra-glue.instructions.md         ← se "glue" em infrastructure ou python script
-    │
-    │  ── Padrões (conforme `target`) ────────────────────────────
-    ├── pattern-crud.instructions.md       ← se target = backend ou bff
-    ├── pattern-idempotency.instructions.md← se target = backend ou bff
-    ├── pattern-bff.instructions.md        ← se target = bff
-    ├── pattern-contract-testing.instructions.md ← se target = bff
-    │
-    │  ── Contexto da story (sempre gerados) ─────────────────────
-    ├── 10-business-context.instructions.md
-    ├── 11-functional-spec.instructions.md
-    ├── 12-nonfunctional-spec.instructions.md
-    ├── 13-tech-stack.instructions.md
-    ├── 14-architecture-pattern.instructions.md
-    └── 15-dod-checklist.instructions.md
-```
-
-### Fixes
-
-```
-.github/
-├── copilot-instructions.md
-├── prompts/
-│   ├── fix-implement.prompt.md   ← Sessão A — /fix-implement (Gates 0–2)
-│   ├── fix-review.prompt.md      ← Sessão B — /fix-review (Gates 3–4)
-│   └── fix-run.prompt.md         ← Sessão única — /fix-run (Gates 0–4)
-└── instructions/
-    │
-    │  ── Baseline (sempre gerados) ──────────────────────────────
-    ├── 00-agent-integrity.instructions.md
-    ├── 01-performance.instructions.md
-    ├── 02-architecture.instructions.md
-    ├── 03-context-management.instructions.md
-    ├── 04-testing-standards.instructions.md
-    ├── 05-git-workflow.instructions.md
-    ├── 06-credential-security.instructions.md
-    ├── 07-observability.instructions.md
-    ├── 08-security-tests.instructions.md
-    │
-    │  ── Linguagem e Framework (auto-detectados) ─────────────────
-    ├── lang-<linguagem>.instructions.md
-    ├── fw-<framework>.instructions.md
-    │
-    │  ── Infraestrutura (conforme technicalContext do fix) ───────
-    ├── infra-kafka.instructions.md   ← se messaging inclui "kafka"
-    ├── infra-aws.instructions.md     ← se database inclui Aurora/DynamoDB/RDS
-    │
-    │  ── Padrões (conforme target detectado) ─────────────────────
-    ├── pattern-crud.instructions.md       ← se target = backend ou bff
-    ├── pattern-idempotency.instructions.md← se target = backend ou bff
-    ├── pattern-bff.instructions.md        ← se target = bff
-    │
-    │  ── Contexto do fix (sempre gerados) ────────────────────────
-    ├── 10-fix-context.instructions.md
-    ├── 11-root-cause.instructions.md
-    ├── 12-fix-impact.instructions.md
-    ├── 13-regression-prevention.instructions.md
-    └── 14-fix-dof.instructions.md
-```
-
----
-
-## O que cada arquivo instrui o Copilot a fazer
-
-### Arquivos de baseline
-
-| Arquivo | Instrui o agente a... |
-|---|---|
-| `00-agent-integrity` | Nunca assumir nomes de funções/tabelas/endpoints sem vê-los; declarar incerteza explicitamente; respeitar escopo da story; exigir 80% de cobertura antes de declarar "done" |
-| `01-performance` | Analisar Big-O antes de propor solução; usar `Promise.all`/`Task.WhenAll` para I/O paralelo; considerar paginação, caching e índices em todo acesso a dados. **Inclui seção "Constraint desta story"** com os SLOs de latência (P99) e disponibilidade declarados na história — ou os valores baseline (`P99 < 500ms` / `99,9%`) quando o NFR não foi preenchido |
-| `02-architecture` | Respeitar a arquitetura da story (hexagonal, layered etc.); aplicar SOLID; **configurar timeout, retry e circuit breaker em todo cliente HTTP de saída**; propagar `traceparent` em chamadas externas |
-| `03-context-management` | Não misturar implementação de módulos independentes; pedir arquivos relevantes antes de propor mudanças; declarar quando o contexto está insuficiente |
-| `04-testing-standards` | Testar happy path, edge cases e error cases; estrutura AAA obrigatória; **listar os cenários derivados dos critérios de aceite da story**; **seção de testes de carga sempre presente** — usa o NFR de latência declarado ou `P99 < 500ms (baseline padrão)` quando não preenchido |
-| `05-git-workflow` | Usar Conventional Commits; criar branch `feature/<id>-<slug>`; nunca commitar diretamente em main |
-| `06-credential-security` | Usar IAM roles (nunca access keys hardcoded); recuperar secrets via SecretsManager/Vault em runtime; nunca logar tokens, senhas ou chaves |
-| `07-observability` | JSON estruturado com `traceId`; propagar `traceparent` W3C; métricas Prometheus; **SLOs parametrizados com os valores de disponibilidade e latência declarados na story**; monitorar consumer lag em Kafka/SQS |
-| `08-security-tests` | Testar: sem token → 401, token expirado → 401, role insuficiente → 403, SQL injection → 400, XSS → 400; nunca stack trace no response; mass assignment ignorado |
-
-### Arquivos de infraestrutura
-
-| Arquivo | Instrui o agente a... |
-|---|---|
-| `infra-kafka` | Configurar `acks=all` e `enable.idempotence=true` no producer; deduplica no consumer antes de persistir; DLQ com headers de origem obrigatória; backoff exponencial com jitter; graceful shutdown em SIGTERM |
-| `infra-aws` | DynamoDB: design de access patterns antes do schema, single-table design, ConditionExpression para optimistic locking; RDS/Aurora: usar connection pool (HikariCP/EF Core), prepared statements obrigatórios, Flyway para migrations; credenciais via DefaultCredentialsProvider (nunca accessKeyId hardcoded) |
-| `infra-glue` | Estrutura de GlueJob em Python; logging estruturado; tratamento de falhas parciais em ETL |
-
-### Arquivos de padrões
-
-| Arquivo | Instrui o agente a... |
-|---|---|
-| `pattern-crud` | Organizar em Repository → Service → Controller; paginação obrigatória em listagens; RFC 7807 ProblemDetail para erros; validação no controller antes de chegar ao domínio |
-| `pattern-idempotency` | Usar `Idempotency-Key` header para POST; PUT é naturalmente idempotente; deduplica por chave de negócio antes de persistir; armazenar resultado com TTL (Redis/DynamoDB); 201 na criação, 200 em repetição, 409 em processamento |
-| `pattern-bff` | BFF é orquestração — sem lógica de domínio; fan-out paralelo com `CompletableFuture.allOf`/`Task.WhenAll`; circuit breaker por downstream; partial response (retorna o que obteve, sinaliza o que falhou); normalizar erros downstream em RFC 7807 antes de responder |
-| `pattern-contract-testing` | WireMock stubs por downstream obrigatórios; Pact para consumer-driven contracts; testar: happy path, 404, 500 e timeout do downstream |
-
-### Workflows de CI
-
-| Arquivo | O que faz |
-|---|---|
-| `quality-gate.yml` | Roda em todo PR para `main`/`develop`: lint → build → testes com cobertura ≥80%. Comando de teste parametrizado pela linguagem: `vitest` (TS/JS), `mvn verify -Djacoco` (Java), `pytest --cov-fail-under=80` (Python), `dotnet test /p:CoverageThreshold=80` (C#). Faz upload do relatório de cobertura como artefato. |
-| `security-scan.yml` | Roda em PRs e semanalmente: **TruffleHog** (detecção de secrets no histórico git) + **Semgrep** (análise estática de segurança). Falha o PR se secret verificado ou padrão SAST de risco alto for encontrado. |
-
----
-
-## Gates de implementação
-
-O SpecKit estrutura a implementação em **5 gates** distribuídos em duas sessões:
-
-### Sessão A — `/implement` ou `/fix-implement`
-
-| Gate | Nome | O que acontece |
-|---|---|---|
-| **Gate 0** | Alinhamento | Agente lê a spec completa, verifica gaps, apresenta plano de implementação e aguarda confirmação do usuário antes de escrever qualquer código |
-| **Gate 1** | Implementação | Cria branch, planeja tarefas, implementa feature/fix seguindo stack e arquitetura definidos. Sem refatorações fora de escopo. Commits incrementais. |
-| **Gate 2** | Testes | Planeja testes cobrindo todos os cenários dos critérios de aceite + edge cases + error cases. Executa suite. Cobertura ≥80% obrigatória. Para Fix: teste de regressão deve **falhar sem o fix** e passar com ele. |
-
-> Ao concluir o Gate 2, o agente instrui: *"Execute `@speckit /review` para iniciar a revisão independente."*
-
-### Sessão B — `/review` ou `/fix-review`
-
-| Gate | Nome | O que acontece |
-|---|---|---|
-| **Gate 3** | Revisão | Nova sessão sem memória da implementação. Agente lê a spec, lista arquivos modificados, lê cada arquivo, solicita relatório de cobertura. Verifica: funcionalidade, arquitetura, qualidade, testes, segurança, observabilidade, git, DoD/DoF — e um checklist de NFRs expandido: **performance** (com isenção de P99 para consumers Kafka/async, usando SLO de throughput/lag em vez do baseline síncrono), **escalabilidade de código** (stateless, paginação, timeouts, pool de conexões — quando declarado na spec), **idempotência** (operações de escrita não duplicam estado). Corrige falhas encontradas. |
-| **Gate 4** | Entrega | Rebase na main, re-executa testes, valida DoD/DoF item por item, verifica prontidão para produção, commit de encerramento. |
-
-> **Sessão única:** use `/run` (Stories) ou `/fix-run` (Fixes) para executar todos os gates em uma única sessão de Copilot. Indicado para features pequenas ou em ambientes de desenvolvimento isolados.
-
----
-
-## CHANGELOG
-
-### v0.1.8
-
-- **[fix]** `/validate` e `/apply` — história ou fix inválido agora cria `gap-fill.prompt.md` em disco e abre no editor, em vez de apenas streamar instruções no chat; elimina o travamento do fluxo onde o agente não conseguia editar arquivos por ser um Chat Participant (sem permissão de escrita) e o usuário ficava preso sem ação clara
-- **[fix]** `/review` — diferencia automaticamente spec de story vs fix: instrui `review.prompt.md`/`/review` para stories e `fix-review.prompt.md`/`/fix-review` para fixes; guarda contra arquivo de prompt não encontrado e sugere `/validate` nesse caso
-- **[fix]** `/draft` — regex de detecção de intent corrigido: `quebrad` separado do grupo com word boundary para detectar corretamente "quebrado", "quebrando" e demais derivados (antes a word boundary bloqueava o match)
-- **[fix]** `FixPromptsGenerator` — Gate 4 agora emite o comando de teste correto para a stack detectada (`npx vitest` para TypeScript/JavaScript, `./mvnw verify` para Java, `dotnet test` para C#, `pytest` para Python) em vez de listar todos os runners de todas as linguagens simultaneamente
-- **[melhoria]** Generators de linguagem atualizados com práticas correntes: Java 21 (unnamed patterns `_`, `SequencedCollection`, `StructuredTaskScope` para concorrência estruturada); Python 3.11+ (`asyncio.TaskGroup`, `ExceptionGroup`/`except*`, `uv` como package manager, `ruff` substituindo black/isort/flake8); C# (`required` properties, collection expressions `[...]`, `TimeProvider` para tempo testável)
-- **[melhoria]** Generators de framework atualizados: Spring Boot 3.3+ (`spring.threads.virtual.enabled=true`, `@HttpExchange` como substituto nativo ao Feign, `@RestClientTest`); React 19 (Actions API — `useActionState`, `useFormStatus`, `useOptimistic`; `use(promise)` + Suspense como padrão de data fetching; nota sobre React Compiler); Angular 19 (zoneless change detection, `linkedSignal()`, `resource()`, nova sintaxe `input()`/`output()`/`viewChild()` como funções)
-- **[melhoria]** `ContractTestingGenerator` — exemplos Pact adicionados para TypeScript (`pact-js`) e Python (`pact-python`); antes apenas Java era coberto
-- **[melhoria]** CI `security-scan.yml` — job SAST agora exporta SARIF e publica resultados na aba **Security** do GitHub via `github/codeql-action/upload-sarif`
-
-### v0.1.7
-
-- **[fix]** `/draft` — prompt de elicitação agora força entrevista guiada: gate obrigatório no início do prompt instrui o agente a perguntar **uma questão por vez** antes de qualquer geração; "Default se não informado" redefinido para aplicar somente quando o usuário responde "não sei" após a pergunta — elimina o comportamento onde o agente derivava todas as respostas da ideia inicial e gerava o arquivo sem perguntar nada
-- **[fix]** `inferTarget` — tipo de retorno corrigido: `'fullstack'` removido do union type e alinhado com `Story.Target` (`'bff'`); fallback alterado de `'fullstack'` para `'backend'`
-- **[novo]** Testes de integração via interface do Chat Participant: `handleSpeckitRequest` exportado de `speckitParticipant.ts`; 14 novos testes cobrindo roteamento (`default` case), `/draft` (story intent + fix intent), `/fix`, e smoke de todos os 7 comandos sem lançar exceção
-- **[fix]** Asserts de `/status` nos testes de integração corrigidos para refletir output real (`✅` / `⚠️ N lacuna(s)`)
-
-### v0.1.6
-
-- **[melhoria]** Instruções pós-`/draft` atualizadas: recomendação explícita de **Novo Chat** para garantir contexto limpo na elicitação; adicionado aviso de que sessão dedicada é necessária para o agente de elicitação funcionar corretamente
-
-### v0.1.5
-
-- **[novo]** Comando `/draft`: converte texto livre em prompt de elicitação guiada — Copilot conduz entrevista estruturada (6 fases para Story, 7 fases para Fix) e monta o `.speckit/STORY-XXX.md` ou `FIX-XXX.md` completo; detecção automática de intent via flags `--fix`/`--bug` e keywords de bug; ID auto-incrementado baseado em arquivos existentes
-- **[novo]** Elicitação de Story: fase de KPI com inferência por domínio (financeiro, API, streaming, frontend), critérios de aceite com quadrante (happy path · limites · rejeição · idempotência), sinal de tamanho (task vs épico), escalabilidade dividida em requisitos de código + recomendações de infraestrutura, DoR com critérios AI-verificáveis separados dos que requerem ação humana, DoD contextual (Kafka → DLQ rate, frontend → WCAG 2.1, schema → migration)
-- **[novo]** Elicitação de Fix: título coletado após sintomas (não antes), hipótese + arquivos suspeitos em pergunta única aberta, severidade cruzada com workaround já coletado, risco de regressão com nível e razão (não apenas tarefa), passos de reprodução aceitam parcialmente conhecidos, campo de urgência/SLA, contexto técnico com sinalização ativa (Redis/TTL, cache miss, load balancer)
-- **[melhoria]** Gate 3 (`review.prompt.md`): checklist de NFRs expandido — **isenção de P99 para services assíncronos** (quando `infrastructure` inclui Kafka, o check de latência muda de "P99 < 500ms" para "throughput / consumer lag"); **escalabilidade de código** adicionada ao checklist quando o campo estiver preenchido na spec; **idempotência** adicionada como item obrigatório para operações de escrita
-
-### v0.1.4
-
-- **[melhoria]** `01-performance`: agora parametrizado com os NFRs da story — injeta seção "Constraint desta story" com latência P99 e disponibilidade; aplica `P99 < 500ms` e `99,9%` como baseline quando o campo não foi preenchido
-- **[melhoria]** `04-testing-standards`: seção de testes de carga agora **sempre gerada** — usa o NFR declarado (label `NFR declarado:`) ou o threshold baseline `P99 < 500ms` (label `baseline padrão:`) quando ausente; elimina o gate silencioso que antes omitia a seção inteiramente
-- **[melhoria]** Prompts de implementação e revisão: campo `Performance` nos checklists de NFRs agora exibe `P99 < 500ms (baseline padrão)` em vez de `(não especificado)` quando o campo não foi preenchido
-
-### v0.1.3
-
-- **[novo]** Geração de workflows CI: `quality-gate.yml` e `security-scan.yml` em `.github/workflows/` — parametrizados pela linguagem da story
-- **[novo]** `pattern-idempotency.instructions.md`: guia completo de idempotência REST para targets `backend` e `bff` — Idempotency-Key, deduplicação por chave de negócio, TTL, tabela de status HTTP
-- **[novo]** Generators de infraestrutura: Kafka, AWS (DynamoDB + RDS Aurora), GlueJob
-- **[novo]** Generators de padrão: CRUD, BFF, Contract Testing (WireMock + Pact)
-- **[novo]** Generators de baseline: CredentialSecurity, SecurityTests
-- **[melhoria]** `07-observability`: SLOs agora refletem os valores reais de `performance` e `availability` da story; adicionado monitoramento de consumer lag (Kafka/SQS) e traceId em jobs batch
-- **[melhoria]** `04-testing-standards`: lista os critérios de aceite da story como cenários mínimos obrigatórios; adiciona seção de testes de performance (k6/Gatling/Locust) quando NFR de latência está definido
-- **[melhoria]** `02-architecture`: nova seção de resiliência para clientes HTTP genéricos — timeout, retry com backoff (sem retry em 4xx), propagação de `traceparent`, circuit breaker com referências por stack
-
-### v0.1.2
-
-- Adição do fluxo de Fix (correção de bug)
-- Detecção automática de stack técnica para Fixes
-- Templates estruturados para Story e Fix
-
-### v0.1.1
-
-- Fluxo inicial de Story com gates de implementação e revisão
-- Comandos `/new`, `/validate`, `/apply`, `/review`, `/status`
+## Matriz de maturidade
+
+Avaliação baseada na versão **0.2.1** do plugin com evidências verificáveis do código-fonte.
+
+### Visão geral
+
+| Dimensão            | Nível       | Score |
+| ------------------- | ----------- | ----- |
+| Arquitetura         | Avançado    | 5/5   |
+| Qualidade de código | Avançado    | 5/5   |
+| Testes              | Avançado    | 5/5   |
+| Segurança           | Avançado    | 5/5   |
+| Funcionalidades     | Avançado    | 4/5   |
+| Observabilidade     | Consolidado | 4/5   |
+| Documentação        | Consolidado | 4/5   |
+| DevOps / Linting    | Consolidado | 4/5   |
+| Resiliência / Erros | Avançado    | 5/5   |
+
+### Detalhamento por dimensão
+
+<details>
+<summary><strong>Arquitetura — 5/5</strong></summary>
+
+| Critério                 | Status | Evidência                                                       |
+| ------------------------ | ------ | --------------------------------------------------------------- |
+| SOLID compliance         | OK     | Generators sao funcoes puras; Single Responsibility por arquivo |
+| Dependency Inversion     | OK     | IFileSystem + IWorkspace injetados em todos os commands         |
+| Composicao sobre heranca | OK     | Nenhuma heranca entre generators; composicao via parametro      |
+| Separacao de camadas     | OK     | Parser, Validator, Generator, FileSystem em modulos distintos   |
+| Extension Host safety    | OK     | Nenhum bloqueio sincrono; async/await em todo I/O               |
+| Disposal correto         | OK     | context.subscriptions.push em todas as subscriptions            |
+
+</details>
+
+<details>
+<summary><strong>Qualidade de codigo — 5/5</strong></summary>
+
+| Critério                  | Status | Evidência                                           |
+| ------------------------- | ------ | --------------------------------------------------- |
+| TypeScript strict mode    | OK     | tsconfig.json: strict: true                         |
+| Parser single-pass        | OK     | BaseParser com regex compilado em nivel de modulo   |
+| Idempotencia de geracao   | OK     | Mesmos inputs geram mesmos outputs sem side effects |
+| Sem credenciais hardcoded | OK     | Zero ocorrencias em src/                            |
+| Encoding cross-platform   | OK     | Suporte a CRLF, LF e CR via LineEndings tests       |
+| Tamanho de arquivos       | OK     | Nenhum arquivo src/ excede 300 linhas               |
+
+</details>
+
+<details>
+<summary><strong>Testes — 5/5</strong></summary>
+
+| Critério                          | Status       | Evidência                                                               |
+| --------------------------------- | ------------ | ----------------------------------------------------------------------- |
+| Testes unitarios                  | 611 passando | 33 arquivos de teste cobrindo parsers, validators, generators, commands |
+| Testes de integracao              | OK           | @vscode/test-electron com workspace isolado                             |
+| Testes comportamentais            | OK           | E2E com Anthropic API real; valida pipeline completo                    |
+| Fixtures reutilizaveis            | OK           | 11 fixtures em tests/fixtures/ (completo, parcial, vazio, H4)           |
+| Mocks isolados                    | OK           | tests/**mocks**/vscode.ts com VS Code API completa                      |
+| Edge cases                        | OK           | Line endings, campos vazios, severity invalida, story parcial           |
+| Comportamento sobre implementacao | OK           | Testes verificam resultado, nao detalhes internos                       |
+
+</details>
+
+<details>
+<summary><strong>Seguranca — 5/5</strong></summary>
+
+| Critério                     | Status | Evidência                                             |
+| ---------------------------- | ------ | ----------------------------------------------------- |
+| Generators de seguranca      | OK     | CredentialSecurityGenerator + SecurityTestsGenerator  |
+| IAM e rotacao de credenciais | OK     | Regras para AWS Secrets Manager, Key Vault, Vault     |
+| Input validation             | OK     | StoryValidator e FixValidator com campos obrigatorios |
+| HTML sanitization            | OK     | Parser remove HTML comments via regex seguro          |
+| Pre-commit hooks gerados     | OK     | git-secrets + trufflehog nas instrucoes geradas       |
+| SAST/SCA no CI               | OK     | security-scan.yml com Semgrep + TruffleHog            |
+
+</details>
+
+<details>
+<summary><strong>Funcionalidades — 4/5</strong></summary>
+
+| Critério              | Status  | Evidência                                                             |
+| --------------------- | ------- | --------------------------------------------------------------------- |
+| Commands core         | 5/5     | /new, /fix, /draft, /validate, /status                                |
+| Linguagens suportadas | 5/5     | TypeScript, JavaScript, Java, C#, Python                              |
+| Frameworks suportados | 5/5     | React, Angular, SpringBoot, .NET, FastAPI                             |
+| Infraestrutura        | 3/3     | AWS, Kafka, Glue Job                                                  |
+| Patterns              | 3/3     | BFF, CRUD, Contract Testing                                           |
+| CI/CD gerado          | OK      | quality-gate.yml + security-scan.yml por linguagem                    |
+| Agents autonomos      | OK      | Implementador + Revisor para Story e Fix                              |
+| DevTools assessment   | OK      | /validate avalia ESLint, Prettier, husky, lint-staged e oferece skill |
+| Multi-workspace       | Parcial | Funciona por workspace aberto; sem SQLite ainda                       |
+
+</details>
+
+<details>
+<summary><strong>Observabilidade — 4/5</strong></summary>
+
+| Critério                   | Status  | Evidência                                           |
+| -------------------------- | ------- | --------------------------------------------------- |
+| Log estruturado            | OK      | SessionLogger grava .speckit/logs/session-<date>.md |
+| Health check gerado        | OK      | Liveness + Readiness nos prompts                    |
+| Metricas geradas           | OK      | Prometheus /metrics nas instrucoes                  |
+| Tracing distribuido        | OK      | W3C traceparent propagation                         |
+| Kafka consumer lag         | OK      | Monitoramento + threshold de alerta                 |
+| Metricas do proprio plugin | Ausente | Sem telemetria interna do plugin                    |
+
+</details>
+
+<details>
+<summary><strong>Documentacao — 4/5</strong></summary>
+
+| Critério                  | Status  | Evidência                                        |
+| ------------------------- | ------- | ------------------------------------------------ |
+| README usuario            | OK      | Guia completo com diagramas, exemplos, templates |
+| JSDoc em funcoes criticas | OK      | BaseParser, generators, test headers             |
+| Templates documentados    | OK      | Story e Fix com todos os campos                  |
+| Gates documentados        | OK      | 5 gates com descricao detalhada                  |
+| Limitacoes conhecidas     | Ausente | Sem secao de limitacoes ou troubleshooting       |
+| Contribuicao              | Ausente | Sem CONTRIBUTING.md                              |
+
+</details>
+
+<details>
+<summary><strong>DevOps / Linting — 4/5</strong></summary>
+
+| Critério                | Status  | Evidência                                                           |
+| ----------------------- | ------- | ------------------------------------------------------------------- |
+| ESLint configurado      | OK      | eslint.config.mjs (flat config v10) + typescript-eslint             |
+| Prettier configurado    | OK      | .prettierrc + .prettierignore                                       |
+| npm run lint            | OK      | `lint`, `lint:fix`, `format`, `format:check` no package.json        |
+| Pre-commit hooks locais | OK      | husky + lint-staged — executa ESLint + Prettier nos arquivos staged |
+| CI lint gate            | Ausente | Sem GitHub Actions configurado para o repo do plugin                |
+
+</details>
+
+<details>
+<summary><strong>Resiliencia / Erros — 5/5</strong></summary>
+
+| Critério                | Status | Evidência                                                                        |
+| ----------------------- | ------ | -------------------------------------------------------------------------------- |
+| Generators idempotentos | OK     | Sem state mutation; safe to re-run                                               |
+| Fallback em validacao   | OK     | Gaps reportados um a um ao usuario                                               |
+| Filesystem errors       | OK     | try/catch em todos os commands (readFile, writeFile) com mensagem amigavel       |
+| Spec size guard         | OK     | Aviso quando spec > 50 KB com dicas de otimizacao; fluxo nunca bloqueado         |
+| Graceful degradation    | OK     | Generators com write individual try/catch; CancellationToken checado entre gates |
+
+</details>
+
+### Roadmap de melhoria
+
+| Prioridade | Acao                                     | Dimensao impactada |
+| ---------- | ---------------------------------------- | ------------------ |
+| Media      | Secao de limitacoes conhecidas no README | Documentacao       |
+| Baixa      | Telemetria interna do plugin (opt-in)    | Observabilidade    |
+| Baixa      | CONTRIBUTING.md                          | Documentacao       |
+| Planejado  | SQLite para estado multi-workspace       | Funcionalidades    |

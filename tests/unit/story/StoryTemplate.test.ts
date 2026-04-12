@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { vi } from 'vitest';
-import { generateStoryTemplate } from '../../../src/story/StoryTemplate';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseStory } from '../../../src/story/StoryParser';
+import { generateStoryTemplate } from '../../../src/story/StoryTemplate';
 
 describe('generateStoryTemplate', () => {
   beforeEach(() => {
@@ -19,7 +18,7 @@ describe('generateStoryTemplate', () => {
     expect(template).toContain('# História 001');
   });
 
-  it('contains today\'s date', () => {
+  it("contains today's date", () => {
     const template = generateStoryTemplate('042');
     expect(template).toContain('createdAt: 2026-03-20');
   });
@@ -47,5 +46,62 @@ describe('generateStoryTemplate', () => {
     expect(story.businessRequirement.problem).toBe('');
     expect(story.technicalSpec.language).toBe('');
     expect(story.functionalSpec.userStories).toHaveLength(0);
+  });
+
+  it('contains gate and projectStage fields', () => {
+    const template = generateStoryTemplate('001');
+    expect(template).toContain('gate: 0');
+    expect(template).toContain('### Estágio do Projeto');
+    expect(template).toContain('greenfield | brownfield');
+  });
+
+  it('parses gate as 0 from generated template', () => {
+    const template = generateStoryTemplate('001');
+    const story = parseStory(template);
+    expect(story.metadata.gate).toBe(0);
+    expect(story.technicalSpec.projectStage).toBe('');
+  });
+
+  describe('with workspace defaults', () => {
+    it('pre-fills tech spec when defaults are provided', () => {
+      const template = generateStoryTemplate('001', {
+        language: 'typescript',
+        framework: 'react',
+        architecture: 'hexagonal',
+        target: 'frontend',
+        projectStage: 'brownfield',
+      });
+      const story = parseStory(template);
+      expect(story.technicalSpec.language).toBe('typescript');
+      expect(story.technicalSpec.framework).toBe('react');
+      expect(story.technicalSpec.architecture).toBe('hexagonal');
+      expect(story.technicalSpec.target).toBe('frontend');
+      expect(story.technicalSpec.projectStage).toBe('brownfield');
+    });
+
+    it('keeps TODO placeholders for unset defaults', () => {
+      const template = generateStoryTemplate('001', { language: 'java' });
+      const story = parseStory(template);
+      expect(story.technicalSpec.language).toBe('java');
+      expect(story.technicalSpec.framework).toBe('');
+      expect(story.technicalSpec.architecture).toBe('');
+    });
+
+    it('pre-fills database and infrastructure', () => {
+      const template = generateStoryTemplate('001', {
+        database: 'PostgreSQL 15',
+        infrastructure: 'AWS ECS',
+      });
+      const story = parseStory(template);
+      expect(story.technicalSpec.database).toBe('PostgreSQL 15');
+      expect(story.technicalSpec.infrastructure).toBe('AWS ECS');
+    });
+
+    it('uses empty defaults without changing template behavior', () => {
+      const template = generateStoryTemplate('001', {});
+      const story = parseStory(template);
+      expect(story.technicalSpec.language).toBe('');
+      expect(story.technicalSpec.framework).toBe('');
+    });
   });
 });

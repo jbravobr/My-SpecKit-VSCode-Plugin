@@ -1,10 +1,10 @@
-import { Story, Gap } from '../../story/Story';
+import { Gap, Story } from '../../story/Story';
 
 export function generateImplementPrompt(story: Story): string {
   const storyId = story.metadata.id || '001';
-  const criteria = story.functionalSpec.acceptanceCriteria.map(c => `- [ ] ${c}`).join('\n');
-  const criteriaList = story.functionalSpec.acceptanceCriteria.map(c => `- ${c}`).join('\n');
-  const dodList = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
+  const criteria = story.functionalSpec.acceptanceCriteria.map((c) => `- [ ] ${c}`).join('\n');
+  const criteriaList = story.functionalSpec.acceptanceCriteria.map((c) => `- ${c}`).join('\n');
+  const dodList = story.dod.criteria.map((c) => `- [ ] ${c}`).join('\n');
 
   return `# Implement Story — Sessão A (Gates 0–2)
 
@@ -192,7 +192,7 @@ Só avance para a próxima tarefa após 0 falhas e commit concluído.
 
 Gates 0–2 completos. **Encerre esta sessão.**
 
-Para iniciar a revisão independente, o usuário deve abrir um novo Copilot Chat em modo Agente e executar \`@speckit /review\`.
+Para iniciar a revisão independente, o usuário deve abrir um novo Copilot Chat em modo Agente e digitar \`/review\`.
 
 Não faça mais alterações de código nesta sessão.
 `;
@@ -200,8 +200,8 @@ Não faça mais alterações de código nesta sessão.
 
 // @deprecated — conteúdo absorvido por generateImplementPrompt (PORTÃO 2)
 export function generateWriteTestsPrompt(story: Story): string {
-  const criteria = story.functionalSpec.acceptanceCriteria.map(c => `- ${c}`).join('\n');
-  const dod = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
+  const criteria = story.functionalSpec.acceptanceCriteria.map((c) => `- ${c}`).join('\n');
+  const dod = story.dod.criteria.map((c) => `- [ ] ${c}`).join('\n');
   return `# Write Tests
 
 Story: **${story.metadata.title || story.metadata.id}**
@@ -283,12 +283,12 @@ Só declare os testes concluídos quando o relatório mostrar cobertura ≥ 80% 
 
 export function generateReviewPrompt(story: Story): string {
   const storyId = story.metadata.id || '001';
-  const criteria = story.functionalSpec.acceptanceCriteria.map(c => `- [ ] ${c}`).join('\n');
-  const dodList = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
+  const criteria = story.functionalSpec.acceptanceCriteria.map((c) => `- [ ] ${c}`).join('\n');
+  const dodList = story.dod.criteria.map((c) => `- [ ] ${c}`).join('\n');
   const hasKafka = (story.technicalSpec.infrastructure ?? '').toLowerCase().includes('kafka');
   const performanceCheck = hasKafka
     ? 'Throughput / consumer lag (P99 não se aplica a consumers async — usar SLO de lag)'
-    : (story.nonFunctionalSpec.performance?.trim() || 'P99 < 500ms (baseline padrão)');
+    : story.nonFunctionalSpec.performance?.trim() || 'P99 < 500ms (baseline padrão)';
   const scalabilityLine = story.nonFunctionalSpec.scalability?.trim()
     ? `\n- [ ] Escalabilidade (código): ${story.nonFunctionalSpec.scalability.trim()}`
     : '';
@@ -488,7 +488,7 @@ Somente após todos os gates concluídos com sucesso, emita:
 
 // @deprecated — conteúdo absorvido por generateReviewPrompt (PORTÃO 4)
 export function generateFinalizePrompt(story: Story): string {
-  const dod = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
+  const dod = story.dod.criteria.map((c) => `- [ ] ${c}`).join('\n');
   return `# Finalize Story — Portão de Entrega
 
 Story: **${story.metadata.title || story.metadata.id}**
@@ -549,9 +549,7 @@ O agente só pode emitir a frase abaixo após todos os passos acima concluídos 
 
 export function generateGapFillingPrompt(story: Story, gaps: Gap[]): string {
   const storyId = story.metadata.id || '001';
-  const gapList = gaps
-    .map(g => `- **[${g.section}]** \`${g.field}\`: ${g.message}`)
-    .join('\n');
+  const gapList = gaps.map((g) => `- **[${g.section}]** \`${g.field}\`: ${g.message}`).join('\n');
 
   return `# Story Alignment — Preenchimento de Lacunas
 
@@ -592,8 +590,8 @@ Informe o usuário:
 
 export function generateRunPrompt(story: Story): string {
   const storyId = story.metadata.id || '001';
-  const criteria = story.functionalSpec.acceptanceCriteria.map(c => `- [ ] ${c}`).join('\n');
-  const dodList = story.dod.criteria.map(c => `- [ ] ${c}`).join('\n');
+  const criteria = story.functionalSpec.acceptanceCriteria.map((c) => `- [ ] ${c}`).join('\n');
+  const dodList = story.dod.criteria.map((c) => `- [ ] ${c}`).join('\n');
 
   return `# Run Story — Modo Monolítico
 
@@ -713,7 +711,7 @@ Formato obrigatório:
 ### Cenários obrigatórios
 
 **1. Happy path** — um teste por critério de aceite:
-${story.functionalSpec.acceptanceCriteria.map(c => `- ${c}`).join('\n') || '- (não especificado)'}
+${story.functionalSpec.acceptanceCriteria.map((c) => `- ${c}`).join('\n') || '- (não especificado)'}
 
 **2. Edge cases** — para toda função/método:
 - Entrada nula ou vazia (null, undefined, "", [], {})

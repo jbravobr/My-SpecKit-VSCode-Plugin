@@ -1,7 +1,8 @@
 import { Fix } from '../../fix/Fix';
 
 export function generateFixContext(fix: Fix): string {
-  const steps = fix.bugDescription.stepsToReproduce.map(s => `- ${s}`).join('\n') || '- (não especificado)';
+  const steps =
+    fix.bugDescription.stepsToReproduce.map((s) => `- ${s}`).join('\n') || '- (não especificado)';
 
   return `---
 applyTo: '**'
@@ -27,8 +28,10 @@ ${steps}
 
 **Hipótese:** ${fix.rootCauseHypothesis.hypothesis || '(não especificado)'}
 
-${fix.rootCauseHypothesis.suspectedFiles.length > 0
-  ? `**Arquivos/Componentes Suspeitos:**\n${fix.rootCauseHypothesis.suspectedFiles.map(f => `- ${f}`).join('\n')}`
-  : ''}
+${
+  fix.rootCauseHypothesis.suspectedFiles.length > 0
+    ? `**Arquivos/Componentes Suspeitos:**\n${fix.rootCauseHypothesis.suspectedFiles.map((f) => `- ${f}`).join('\n')}`
+    : ''
+}
 `;
 }

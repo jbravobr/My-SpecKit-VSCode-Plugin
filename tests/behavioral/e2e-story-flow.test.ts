@@ -47,7 +47,7 @@ async function sendMessage(messages: Message[]): Promise<string> {
   });
   return response.content
     .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-    .map(b => b.text)
+    .map((b) => b.text)
     .join('');
 }
 
@@ -89,8 +89,8 @@ async function runFullInterview(answers: string[], maxTurns = 40): Promise<strin
     if (/STORY-\d+\.md.*criado|criado.*STORY-\d+\.md/i.test(response)) {
       // The markdown might have been in a previous response — return what we have
       const lastMarkdown = messages
-        .filter(m => m.role === 'assistant')
-        .map(m => extractMarkdown(m.content))
+        .filter((m) => m.role === 'assistant')
+        .map((m) => extractMarkdown(m.content))
         .filter(Boolean)
         .pop();
       if (lastMarkdown) return lastMarkdown;
@@ -117,14 +117,14 @@ const SCRIPTED_ANSWERS = [
   'Vendedores verão comissões em tempo real após cada venda.',
   'Redução de 80% nas reclamações de suporte sobre comissões.',
   'Time comercial, time de produto, sistemas de BI.',
-  'Sim.',  // title confirmation
-  'Sim.',  // phase 1 summary confirmation
+  'Sim.', // title confirmation
+  'Sim.', // phase 1 summary confirmation
 
   // Phase 2 — Functional spec
   'Como vendedor, quero ver minha comissão calculada em tempo real após cada venda. Como sistema de BI, quero receber eventos de comissão calculada.',
   'Consumir evento Kafka venda.concluida. Calcular comissão conforme tabela. Persistir resultado. Emitir evento comissao.calculada. Garantir idempotência.',
   'Cálculo de bônus anuais. Interface de gestão de regras. Relatórios de auditoria.',
-  'Sim.',  // phase 2 summary confirmation
+  'Sim.', // phase 2 summary confirmation
 
   // Phase 3 — NFR (one question per field)
   'Processamento assíncrono via Kafka — latência não se aplica, monitorar lag.',
@@ -132,13 +132,13 @@ const SCRIPTED_ANSWERS = [
   'Volume esperado: ~10k eventos/hora no pico.',
   'Não há interface de usuário, N/A.',
   '99,9% uptime, sem RTO específico definido.',
-  'Sim.',  // phase 3 summary confirmation
+  'Sim.', // phase 3 summary confirmation
 
   // Phase 4 — Technical spec
   'TypeScript.',
   'other',
   'hexagonal',
-  'Sim.',  // phase 4 summary confirmation
+  'Sim.', // phase 4 summary confirmation
 
   // Phase 5 — DoD
   'Aceito os critérios base. Adicionar: monitoramento de offset lag e DLQ rate.',
@@ -153,82 +153,98 @@ const SCRIPTED_ANSWERS = [
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 describe.skipIf(SKIP)('E2E — Story generation pipeline', () => {
+  it(
+    'fast path: "modo rápido" generates a story that passes StoryValidator',
+    { timeout: 60_000 },
+    async () => {
+      const messages: Message[] = [{ role: 'user', content: 'modo rápido' }];
+      const response = await sendMessage(messages);
 
-  it('fast path: "modo rápido" generates a story that passes StoryValidator', { timeout: 60_000 }, async () => {
-    const messages: Message[] = [{ role: 'user', content: 'modo rápido' }];
-    const response = await sendMessage(messages);
+      // Extract the generated markdown
+      const markdown = extractMarkdown(response);
+      expect(
+        markdown,
+        `LLM did not generate a markdown block.\nResponse:\n${response}`,
+      ).not.toBeNull();
 
-    // Extract the generated markdown
-    const markdown = extractMarkdown(response);
-    expect(markdown, `LLM did not generate a markdown block.\nResponse:\n${response}`).not.toBeNull();
+      // Parse the generated story
+      const story = parseStory(markdown!);
 
-    // Parse the generated story
-    const story = parseStory(markdown!);
+      // Assert all required fields are populated
+      expect(story.metadata.title, 'title missing').toBeTruthy();
+      expect(story.businessRequirement.problem, 'problem missing').toBeTruthy();
+      expect(story.businessRequirement.value, 'value missing').toBeTruthy();
+      expect(story.businessRequirement.stakeholders.length, 'no stakeholders').toBeGreaterThan(0);
+      expect(story.functionalSpec.userStories.length, 'no user stories').toBeGreaterThan(0);
+      expect(
+        story.functionalSpec.acceptanceCriteria.length,
+        'no acceptance criteria',
+      ).toBeGreaterThan(0);
+      expect(story.nonFunctionalSpec.performance, 'performance missing').toBeTruthy();
+      expect(story.nonFunctionalSpec.security, 'security missing').toBeTruthy();
+      expect(story.technicalSpec.language, 'language missing').toBeTruthy();
+      expect(story.technicalSpec.architecture, 'architecture missing').toBeTruthy();
+      expect(story.dod.criteria.length, 'no DoD criteria').toBeGreaterThan(0);
 
-    // Assert all required fields are populated
-    expect(story.metadata.title, 'title missing').toBeTruthy();
-    expect(story.businessRequirement.problem, 'problem missing').toBeTruthy();
-    expect(story.businessRequirement.value, 'value missing').toBeTruthy();
-    expect(story.businessRequirement.stakeholders.length, 'no stakeholders').toBeGreaterThan(0);
-    expect(story.functionalSpec.userStories.length, 'no user stories').toBeGreaterThan(0);
-    expect(story.functionalSpec.acceptanceCriteria.length, 'no acceptance criteria').toBeGreaterThan(0);
-    expect(story.nonFunctionalSpec.performance, 'performance missing').toBeTruthy();
-    expect(story.nonFunctionalSpec.security, 'security missing').toBeTruthy();
-    expect(story.technicalSpec.language, 'language missing').toBeTruthy();
-    expect(story.technicalSpec.architecture, 'architecture missing').toBeTruthy();
-    expect(story.dod.criteria.length, 'no DoD criteria').toBeGreaterThan(0);
+      // Run the validator — should have no structural gaps
+      const result = validateStory(story);
+      const structuralGaps = result.gaps.filter((g) => g.section !== 'DoR');
+      expect(
+        structuralGaps,
+        `Structural gaps found:\n${structuralGaps.map((g) => `  [${g.section}] ${g.message}`).join('\n')}`,
+      ).toHaveLength(0);
+    },
+  );
 
-    // Run the validator — should have no structural gaps
-    const result = validateStory(story);
-    const structuralGaps = result.gaps.filter(g => g.section !== 'DoR');
-    expect(
-      structuralGaps,
-      `Structural gaps found:\n${structuralGaps.map(g => `  [${g.section}] ${g.message}`).join('\n')}`,
-    ).toHaveLength(0);
-  });
+  it(
+    'full interview: autonomous multi-turn flow produces a valid story',
+    { timeout: 240_000 },
+    async () => {
+      const markdown = await runFullInterview(SCRIPTED_ANSWERS);
 
-  it('full interview: autonomous multi-turn flow produces a valid story', { timeout: 240_000 }, async () => {
-    const markdown = await runFullInterview(SCRIPTED_ANSWERS);
+      expect(markdown, 'LLM never generated the STORY file after 40 turns').not.toBeNull();
 
-    expect(markdown, 'LLM never generated the STORY file after 40 turns').not.toBeNull();
+      // Parse the generated story
+      const story = parseStory(markdown!);
 
-    // Parse the generated story
-    const story = parseStory(markdown!);
+      // Assert all required fields are populated
+      expect(story.metadata.title, 'title missing').toBeTruthy();
+      expect(story.businessRequirement.problem, 'problem missing').toBeTruthy();
+      expect(story.businessRequirement.value, 'value missing').toBeTruthy();
+      expect(story.businessRequirement.stakeholders.length, 'no stakeholders').toBeGreaterThan(0);
+      expect(story.functionalSpec.userStories.length, 'no user stories').toBeGreaterThan(0);
+      expect(
+        story.functionalSpec.acceptanceCriteria.length,
+        'no acceptance criteria',
+      ).toBeGreaterThan(0);
+      expect(story.nonFunctionalSpec.performance, 'performance missing').toBeTruthy();
+      expect(story.nonFunctionalSpec.security, 'security missing').toBeTruthy();
+      expect(story.technicalSpec.language, 'language missing').toBeTruthy();
+      expect(story.technicalSpec.architecture, 'architecture missing').toBeTruthy();
+      expect(story.dod.criteria.length, 'no DoD criteria').toBeGreaterThan(0);
 
-    // Assert all required fields are populated
-    expect(story.metadata.title, 'title missing').toBeTruthy();
-    expect(story.businessRequirement.problem, 'problem missing').toBeTruthy();
-    expect(story.businessRequirement.value, 'value missing').toBeTruthy();
-    expect(story.businessRequirement.stakeholders.length, 'no stakeholders').toBeGreaterThan(0);
-    expect(story.functionalSpec.userStories.length, 'no user stories').toBeGreaterThan(0);
-    expect(story.functionalSpec.acceptanceCriteria.length, 'no acceptance criteria').toBeGreaterThan(0);
-    expect(story.nonFunctionalSpec.performance, 'performance missing').toBeTruthy();
-    expect(story.nonFunctionalSpec.security, 'security missing').toBeTruthy();
-    expect(story.technicalSpec.language, 'language missing').toBeTruthy();
-    expect(story.technicalSpec.architecture, 'architecture missing').toBeTruthy();
-    expect(story.dod.criteria.length, 'no DoD criteria').toBeGreaterThan(0);
+      // Run the validator — should have no structural gaps
+      const result = validateStory(story);
+      const structuralGaps = result.gaps.filter((g) => g.section !== 'DoR');
+      expect(
+        structuralGaps,
+        `Structural gaps found:\n${structuralGaps.map((g) => `  [${g.section}] ${g.message}`).join('\n')}`,
+      ).toHaveLength(0);
 
-    // Run the validator — should have no structural gaps
-    const result = validateStory(story);
-    const structuralGaps = result.gaps.filter(g => g.section !== 'DoR');
-    expect(
-      structuralGaps,
-      `Structural gaps found:\n${structuralGaps.map(g => `  [${g.section}] ${g.message}`).join('\n')}`,
-    ).toHaveLength(0);
-
-    // DoR: human-only criteria are expected unchecked — that's correct behavior
-    // But AI-verifiable criteria should be checked if data was collected
-    const aiVerifiable = result.dorStatus.filter(d =>
-      !d.criterion.includes('aprovado pelo stakeholder') &&
-      !d.criterion.includes('acordado com o time'),
-    );
-    const checkedAiVerifiable = aiVerifiable.filter(d => d.checked).length;
-    expect(
-      checkedAiVerifiable,
-      `Expected some AI-verifiable DoR criteria to be checked.\nDoR status:\n${result.dorStatus.map(d => `  [${d.checked ? 'x' : ' '}] ${d.criterion}`).join('\n')}`,
-    ).toBeGreaterThan(0);
-  });
-
+      // DoR: human-only criteria are expected unchecked — that's correct behavior
+      // But AI-verifiable criteria should be checked if data was collected
+      const aiVerifiable = result.dorStatus.filter(
+        (d) =>
+          !d.criterion.includes('aprovado pelo stakeholder') &&
+          !d.criterion.includes('acordado com o time'),
+      );
+      const checkedAiVerifiable = aiVerifiable.filter((d) => d.checked).length;
+      expect(
+        checkedAiVerifiable,
+        `Expected some AI-verifiable DoR criteria to be checked.\nDoR status:\n${result.dorStatus.map((d) => `  [${d.checked ? 'x' : ' '}] ${d.criterion}`).join('\n')}`,
+      ).toBeGreaterThan(0);
+    },
+  );
 });
 
 describe.skipIf(!SKIP)('E2E — skipped (no API key)', () => {

@@ -1,0 +1,308 @@
+/* ═══════════════════════════════════════════════════════════════
+   SpecKit README — PDF Stylesheet
+   Professional, comfortable reading, minimal page-break issues
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Base Reset & Typography ───────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --brand:        #2563eb;
+  --brand-soft:   #dbeafe;
+  --brand-dark:   #1e40af;
+  --text:         #1e293b;
+  --text-muted:   #64748b;
+  --surface:      #f8fafc;
+  --border:       #e2e8f0;
+  --code-bg:      #f1f5f9;
+  --accent-green: #059669;
+  --accent-amber: #d97706;
+}
+
+body.speckit-doc {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 10.5pt;
+  line-height: 1.7;
+  color: var(--text);
+  max-width: 100%;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ── Page-Break Control (anti-orphan) ──────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+h2, h3, h4 {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* Keep headings with their next content */
+h1 + *, h2 + *, h3 + *, h4 + * {
+  page-break-before: avoid;
+  break-before: avoid;
+}
+
+p, li, blockquote {
+  orphans: 3;
+  widows: 3;
+}
+
+table, pre, blockquote {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* Big code blocks that MUST break */
+pre {
+  page-break-inside: auto;
+  break-inside: auto;
+}
+
+/* Small pre (< ~20 lines) avoid break */
+pre:not(.long-code) {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* Force page-break before major H2 sections for clarity */
+h2 {
+  page-break-before: auto;
+  break-before: auto;
+}
+
+/* ── Title / H1 ────────────────────────────────────────────── */
+h1 {
+  font-size: 22pt;
+  font-weight: 700;
+  color: var(--brand-dark);
+  border-bottom: 3px solid var(--brand);
+  padding-bottom: 10px;
+  margin-top: 0;
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+}
+
+/* ── Section Headings ──────────────────────────────────────── */
+h2 {
+  font-size: 15pt;
+  font-weight: 700;
+  color: var(--brand-dark);
+  margin-top: 28px;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--brand-soft);
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-size: 12pt;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 20px;
+  margin-bottom: 8px;
+}
+
+h4 {
+  font-size: 10.5pt;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 16px;
+  margin-bottom: 6px;
+}
+
+/* ── Paragraphs ────────────────────────────────────────────── */
+p {
+  margin-bottom: 10px;
+}
+
+/* ── Horizontal Rules ──────────────────────────────────────── */
+hr {
+  border: none;
+  border-top: 1.5px solid var(--border);
+  margin: 24px 0;
+}
+
+/* ── Links ─────────────────────────────────────────────────── */
+a {
+  color: var(--brand);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+a:hover {
+  border-bottom-color: var(--brand);
+}
+
+/* ── Lists ─────────────────────────────────────────────────── */
+ul, ol {
+  padding-left: 22px;
+  margin-bottom: 12px;
+}
+
+li {
+  margin-bottom: 4px;
+}
+
+li > ul, li > ol {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+/* ── Tables ────────────────────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5pt;
+  margin: 14px 0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+thead {
+  display: table-header-group;
+}
+
+th {
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+tbody tr:nth-child(even) {
+  background-color: var(--surface);
+}
+
+tbody tr:hover {
+  background-color: var(--brand-soft);
+}
+
+/* ── Inline Code ───────────────────────────────────────────── */
+code {
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 9pt;
+  background-color: var(--code-bg);
+  color: #be185d;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  font-weight: 500;
+}
+
+/* ── Code Blocks ───────────────────────────────────────────── */
+pre {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 16px 18px;
+  font-size: 8.5pt;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin: 14px 0;
+  border: 1px solid #334155;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  border: none;
+  font-size: inherit;
+  font-weight: 400;
+}
+
+/* ── Blockquotes (agent/user dialogue styling) ─────────────── */
+blockquote {
+  margin: 14px 0;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-left: 4px solid var(--brand);
+  border-radius: 0 6px 6px 0;
+  color: var(--text);
+  font-size: 10pt;
+}
+
+blockquote blockquote {
+  border-left-color: var(--accent-green);
+  background: #f0fdf4;
+}
+
+blockquote p {
+  margin-bottom: 6px;
+}
+
+blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Strong / Bold ─────────────────────────────────────────── */
+strong {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* ── Emphasis ──────────────────────────────────────────────── */
+em {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+/* ── Checkboxes in DoR/DoD ─────────────────────────────────── */
+input[type="checkbox"] {
+  margin-right: 6px;
+  accent-color: var(--brand);
+}
+
+/* ── Images ────────────────────────────────────────────────── */
+img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 10px 0;
+}
+
+/* ── Print-specific tweaks ─────────────────────────────────── */
+@media print {
+  body.speckit-doc {
+    font-size: 10pt;
+  }
+
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  /* Avoid widowed headings at page bottoms */
+  h2, h3, h4 {
+    page-break-after: avoid;
+  }
+
+  /* Keep tables together when possible */
+  table {
+    page-break-inside: avoid;
+  }
+
+  /* Keep blockquotes (dialogue) together */
+  blockquote {
+    page-break-inside: avoid;
+  }
+
+  /* Force page-break before big sections */
+  .page-break-before {
+    page-break-before: always;
+  }
+}

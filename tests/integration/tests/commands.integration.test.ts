@@ -6,15 +6,13 @@
  * then asserts both stream output and disk state.
  */
 import * as assert from 'assert';
+import { readFileSync } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { readFileSync } from 'fs';
 
-import { handleValidateCommand } from '../../../src/participant/commands/validateCommand';
-import { handleApplyCommand } from '../../../src/participant/commands/applyCommand';
-import { handleStatusCommand } from '../../../src/participant/commands/statusCommand';
-import { handleReviewCommand } from '../../../src/participant/commands/reviewCommand';
 import { handleNewCommand } from '../../../src/participant/commands/newCommand';
+import { handleStatusCommand } from '../../../src/participant/commands/statusCommand';
+import { handleValidateCommand } from '../../../src/participant/commands/validateCommand';
 
 // __dirname when compiled: <project>/out/integration/tests/integration/tests
 const fixturesDir = path.resolve(__dirname, '../../../../../tests/fixtures');
@@ -28,7 +26,9 @@ const partialStoryMd = readFileSync(path.join(fixturesDir, 'story-partial.md'), 
 function createStream() {
   const parts: string[] = [];
   return {
-    markdown: (t: string) => { parts.push(t); },
+    markdown: (t: string) => {
+      parts.push(t);
+    },
     getAll: () => parts.join(''),
   };
 }
@@ -124,27 +124,6 @@ suite('Commands integration — história completa', () => {
     assert.strictEqual(entries.length, 3, 'Deveria haver exatamente 3 prompts');
   });
 
-  // --- /apply ---
-
-  test('/apply: stream confirma arquivos gerados e instrui modo Agente', async () => {
-    const stream = createStream();
-    await handleApplyCommand({} as any, stream as any, {} as any);
-
-    const out = stream.getAll();
-    assert.ok(out.includes('arquivo(s) gerado(s)'), 'Deveria confirmar arquivos gerados');
-    assert.ok(out.includes('/implement'), 'Deveria mencionar /implement');
-    assert.ok(out.includes('Agente'), 'Deveria mencionar modo Agente');
-  });
-
-  test('/apply: cria .github/ no disco', async () => {
-    await handleApplyCommand({} as any, createStream() as any, {} as any);
-
-    assert.ok(
-      await dirExists(path.join(root, '.github')),
-      '.github deveria ter sido criado',
-    );
-  });
-
   // --- /status ---
 
   test('/status: exibe título, linguagem, framework e arquitetura', async () => {
@@ -163,16 +142,6 @@ suite('Commands integration — história completa', () => {
     await handleStatusCommand({} as any, stream as any, {} as any);
 
     assert.ok(stream.getAll().includes('✅'), 'Status deveria exibir ✅ para story válida');
-  });
-
-  // --- /review ---
-
-  test('/review: instrui o usuário a usar /review no modo Agente', async () => {
-    const stream = createStream();
-    await handleReviewCommand({} as any, stream as any, {} as any);
-
-    assert.ok(stream.getAll().includes('/review'), 'Stream deveria mencionar /review');
-    assert.ok(stream.getAll().includes('Agente'), 'Stream deveria mencionar modo Agente');
   });
 });
 
@@ -220,30 +189,7 @@ suite('Commands integration — história incompleta', () => {
     const stream = createStream();
     await handleValidateCommand({} as any, stream as any, {} as any);
 
-    assert.ok(
-      stream.getAll().length > 100,
-      'Stream deveria conter prompt de gap-filling',
-    );
-  });
-
-  // --- /apply ---
-
-  test('/apply: stream lista as lacunas', async () => {
-    const stream = createStream();
-    await handleApplyCommand({} as any, stream as any, {} as any);
-
-    const out = stream.getAll();
-    assert.ok(out.includes('incompleta'), 'Deveria indicar story incompleta');
-    assert.ok(out.includes('['), 'Deveria listar seções com lacunas');
-  });
-
-  test('/apply: NÃO cria .github/', async () => {
-    await handleApplyCommand({} as any, createStream() as any, {} as any);
-
-    assert.ok(
-      !(await dirExists(path.join(root, '.github'))),
-      '.github NÃO deveria ser criado para story incompleta',
-    );
+    assert.ok(stream.getAll().length > 100, 'Stream deveria conter prompt de gap-filling');
   });
 
   // --- /status ---
@@ -252,20 +198,14 @@ suite('Commands integration — história incompleta', () => {
     const stream = createStream();
     await handleStatusCommand({} as any, stream as any, {} as any);
 
-    assert.ok(
-      stream.getAll().includes('lacuna'),
-      'Status deveria indicar lacunas com ⚠️',
-    );
+    assert.ok(stream.getAll().includes('lacuna'), 'Status deveria indicar lacunas com ⚠️');
   });
 
   test('/status: exibe número de lacunas', async () => {
     const stream = createStream();
     await handleStatusCommand({} as any, stream as any, {} as any);
 
-    assert.ok(
-      stream.getAll().includes('lacuna'),
-      'Status deveria indicar quantas lacunas há',
-    );
+    assert.ok(stream.getAll().includes('lacuna'), 'Status deveria indicar quantas lacunas há');
   });
 });
 

@@ -1,8 +1,10 @@
-import { Language, Framework, Story } from '../../story/Story';
+import { Language, Story } from '../../story/Story';
 
 const testCommands: Record<Language, string> = {
-  typescript: 'npx vitest run --coverage --coverage.thresholds.statements=80 --coverage.thresholds.lines=80',
-  javascript: 'npx vitest run --coverage --coverage.thresholds.statements=80 --coverage.thresholds.lines=80',
+  typescript:
+    'npx vitest run --coverage --coverage.thresholds.statements=80 --coverage.thresholds.lines=80',
+  javascript:
+    'npx vitest run --coverage --coverage.thresholds.statements=80 --coverage.thresholds.lines=80',
   java: './mvnw verify -Djacoco.haltOnFailure=true -Djacoco.minimum.coverage=0.80',
   csharp: 'dotnet test --collect:"XPlat Code Coverage" /p:CoverageThreshold=80',
   python: 'pytest --cov=src --cov-fail-under=80 --cov-report=xml',

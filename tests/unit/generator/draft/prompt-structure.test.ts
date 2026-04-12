@@ -90,7 +90,7 @@ const STOP_MARKERS = [
 ];
 
 function hasStopMarker(text: string): boolean {
-  return STOP_MARKERS.some(marker => text.includes(marker));
+  return STOP_MARKERS.some((marker) => text.includes(marker));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -114,7 +114,7 @@ describe('StoryElicitPrompt — structural anti-loop properties', () => {
 
     it('does not have a phase that instructs to apply defaults before asking any question', () => {
       const phases = extractAllPhases(prompt);
-      const fasePhases = phases.filter(p => p.header.startsWith('## FASE'));
+      const fasePhases = phases.filter((p) => p.header.startsWith('## FASE'));
 
       for (const phase of fasePhases) {
         const hasApplyWithoutQuestion =
@@ -123,7 +123,10 @@ describe('StoryElicitPrompt — structural anti-loop properties', () => {
           !phase.content.includes('Pergunta:') &&
           phase.content.includes('sem perguntar');
 
-        expect(hasApplyWithoutQuestion, `Phase "${phase.header}" applies defaults without asking`).toBe(false);
+        expect(
+          hasApplyWithoutQuestion,
+          `Phase "${phase.header}" applies defaults without asking`,
+        ).toBe(false);
       }
     });
 
@@ -237,16 +240,16 @@ describe('StoryElicitPrompt — structural anti-loop properties', () => {
       //   - "Default de fallback" — already conditional by name
       //   - "Default obrigatório" — always-required rule
       const lines = prompt.split('\n');
-      const fieldDefaultLines = lines.filter(line => {
+      const fieldDefaultLines = lines.filter((line) => {
         const trimmed = line.trim();
         return (
           trimmed.startsWith('Default') &&
-          !trimmed.startsWith('**Default**') &&          // definition in Convenções
-          !trimmed.startsWith('Default base') &&          // always-include baseline
+          !trimmed.startsWith('**Default**') && // definition in Convenções
+          !trimmed.startsWith('Default base') && // always-include baseline
           !trimmed.startsWith('Default por linguagem') && // cross-reference
           !trimmed.startsWith('Default para serviços') && // contextual
-          !trimmed.startsWith('Default de fallback') &&   // already conditional
-          !trimmed.startsWith('Default obrigatório')      // always-required
+          !trimmed.startsWith('Default de fallback') && // already conditional
+          !trimmed.startsWith('Default obrigatório') // always-required
         );
       });
 
@@ -255,12 +258,9 @@ describe('StoryElicitPrompt — structural anti-loop properties', () => {
           line.includes('somente após perguntar') ||
           line.includes('aplique somente') ||
           line.includes('se não informado') ||
-          line.includes('se não informad');              // partial matches for plurals
+          line.includes('se não informad'); // partial matches for plurals
 
-        expect(
-          isConditional,
-          `Unconditional default found: "${line.trim()}"`,
-        ).toBe(true);
+        expect(isConditional, `Unconditional default found: "${line.trim()}"`).toBe(true);
       }
     });
 
@@ -348,7 +348,9 @@ describe('StoryElicitPrompt — structural anti-loop properties', () => {
 
     it('human DoR criteria are never pre-checked in the template', () => {
       // These must always be [ ] never [x]
-      expect(prompt).toContain('- [ ] Requisito de negócio documentado e aprovado pelo stakeholder responsável');
+      expect(prompt).toContain(
+        '- [ ] Requisito de negócio documentado e aprovado pelo stakeholder responsável',
+      );
       expect(prompt).toContain('- [ ] DoD acordado com o time de desenvolvimento');
     });
   });
@@ -375,7 +377,7 @@ describe('FixElicitPrompt — structural anti-loop properties', () => {
 
     it('does not have a phase that applies without asking', () => {
       const phases = extractAllPhases(prompt);
-      const fasePhases = phases.filter(p => p.header.startsWith('## FASE'));
+      const fasePhases = phases.filter((p) => p.header.startsWith('## FASE'));
 
       for (const phase of fasePhases) {
         const hasApplyWithoutQuestion =
@@ -384,7 +386,10 @@ describe('FixElicitPrompt — structural anti-loop properties', () => {
           !phase.content.includes('Pergunta:') &&
           phase.content.includes('sem perguntar');
 
-        expect(hasApplyWithoutQuestion, `Phase "${phase.header}" applies defaults without asking`).toBe(false);
+        expect(
+          hasApplyWithoutQuestion,
+          `Phase "${phase.header}" applies defaults without asking`,
+        ).toBe(false);
       }
     });
   });
@@ -560,7 +565,9 @@ describe('prompt consistency — story vs fix', () => {
 
   it('neither prompt contains known loop-inducing anti-patterns', () => {
     for (const pattern of ANTI_PATTERNS) {
-      expect(storyPrompt, `Story prompt contains anti-pattern: "${pattern}"`).not.toContain(pattern);
+      expect(storyPrompt, `Story prompt contains anti-pattern: "${pattern}"`).not.toContain(
+        pattern,
+      );
       expect(fixPrompt, `Fix prompt contains anti-pattern: "${pattern}"`).not.toContain(pattern);
     }
   });

@@ -21,11 +21,11 @@ const fixturesDir = resolve(__dirname, '../../fixtures');
 // what line endings the fixture files have on disk (Git autocrlf, OS, editor).
 const normalize = (s: string) => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-const storyLF  = normalize(readFileSync(resolve(fixturesDir, 'story-complete-h4.md'), 'utf-8'));
-const fixLF    = normalize(readFileSync(resolve(fixturesDir, 'fix-complete-h4.md'),   'utf-8'));
+const storyLF = normalize(readFileSync(resolve(fixturesDir, 'story-complete-h4.md'), 'utf-8'));
+const fixLF = normalize(readFileSync(resolve(fixturesDir, 'fix-complete-h4.md'), 'utf-8'));
 
-const toCRLF  = (s: string) => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
-const toCR    = (s: string) => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r');
+const toCRLF = (s: string) => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
+const toCR = (s: string) => s.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r');
 /** Alternates \r\n and \n every other line — simulates copy-paste mixed content. */
 const toMixed = (s: string) => {
   const lines = s.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
@@ -45,9 +45,13 @@ describe('parseStory — line ending robustness', () => {
     expect(story.metadata.id).toBe(baseline.metadata.id);
     expect(story.metadata.title).toBe(baseline.metadata.title);
     expect(story.businessRequirement.problem).toBe(baseline.businessRequirement.problem);
-    expect(story.businessRequirement.stakeholders).toEqual(baseline.businessRequirement.stakeholders);
+    expect(story.businessRequirement.stakeholders).toEqual(
+      baseline.businessRequirement.stakeholders,
+    );
     expect(story.functionalSpec.userStories).toEqual(baseline.functionalSpec.userStories);
-    expect(story.functionalSpec.acceptanceCriteria).toEqual(baseline.functionalSpec.acceptanceCriteria);
+    expect(story.functionalSpec.acceptanceCriteria).toEqual(
+      baseline.functionalSpec.acceptanceCriteria,
+    );
     expect(story.nonFunctionalSpec.performance).toBe(baseline.nonFunctionalSpec.performance);
     expect(story.technicalSpec.language).toBe(baseline.technicalSpec.language);
     expect(story.technicalSpec.framework).toBe(baseline.technicalSpec.framework);
@@ -63,7 +67,9 @@ describe('parseStory — line ending robustness', () => {
     expect(story.metadata.id).toBe(baseline.metadata.id);
     expect(story.metadata.title).toBe(baseline.metadata.title);
     expect(story.businessRequirement.problem).toBe(baseline.businessRequirement.problem);
-    expect(story.businessRequirement.stakeholders).toEqual(baseline.businessRequirement.stakeholders);
+    expect(story.businessRequirement.stakeholders).toEqual(
+      baseline.businessRequirement.stakeholders,
+    );
     expect(story.functionalSpec.userStories).toEqual(baseline.functionalSpec.userStories);
     expect(story.technicalSpec.language).toBe(baseline.technicalSpec.language);
     expect(story.dor.checked).toEqual(baseline.dor.checked);
@@ -74,7 +80,9 @@ describe('parseStory — line ending robustness', () => {
 
     expect(story.metadata.title).toBe(baseline.metadata.title);
     expect(story.businessRequirement.problem).toBe(baseline.businessRequirement.problem);
-    expect(story.businessRequirement.stakeholders).toEqual(baseline.businessRequirement.stakeholders);
+    expect(story.businessRequirement.stakeholders).toEqual(
+      baseline.businessRequirement.stakeholders,
+    );
     expect(story.functionalSpec.userStories).toEqual(baseline.functionalSpec.userStories);
     expect(story.technicalSpec.language).toBe(baseline.technicalSpec.language);
     expect(story.dor.checked).toEqual(baseline.dor.checked);

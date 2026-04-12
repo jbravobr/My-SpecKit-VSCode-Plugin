@@ -1,7 +1,7 @@
 import { Story } from '../../story/Story';
 
 export function generateBusinessContext(story: Story): string {
-  const stakeholders = story.businessRequirement.stakeholders.map(s => `- ${s}`).join('\n');
+  const stakeholders = story.businessRequirement.stakeholders.map((s) => `- ${s}`).join('\n');
   return `---
 applyTo: "**"
 ---

@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { describe, expect, it } from 'vitest';
+import { generateCopilotConfig } from '../../../src/generator/CopilotConfigGenerator';
 import { parseStory } from '../../../src/story/StoryParser';
 import { validateStory } from '../../../src/story/StoryValidator';
-import { generateCopilotConfig } from '../../../src/generator/CopilotConfigGenerator';
 import { InMemoryFileSystem } from '../../support/fakes';
 
 const fixturesDir = resolve(__dirname, '../../fixtures');
@@ -31,30 +31,31 @@ describe('story → validate → generate (E2E)', () => {
       expect(result.gaps).toHaveLength(0);
     });
 
-    it('generates correct files and omits unrelated ones', async () => {
+    it('generates correct skills and agents, omits unrelated content', async () => {
       const story = parseStory(loadFixture('story-java-kafka-aws.md'));
       const fs = new InMemoryFileSystem();
       await generateCopilotConfig('/workspace', story, fs);
 
-      // Required
+      // Required structure
       expect(fs.hasFile('copilot-instructions.md')).toBe(true);
-      expect(fs.hasFile('lang-java.instructions.md')).toBe(true);
-      expect(fs.hasFile('fw-springboot.instructions.md')).toBe(true);
-      expect(fs.hasFile('infra-kafka.instructions.md')).toBe(true);
-      expect(fs.hasFile('infra-aws.instructions.md')).toBe(true);
-      expect(fs.hasFile('pattern-crud.instructions.md')).toBe(true);
-      expect(fs.hasFile('implement.prompt.md')).toBe(true);
-      expect(fs.hasFile('review.prompt.md')).toBe(true);
+      expect(fs.hasFile('speckit-baseline/SKILL.md')).toBe(true);
+      expect(fs.hasFile('speckit-stack/SKILL.md')).toBe(true);
+      expect(fs.hasFile('speckit-context-STORY-002/SKILL.md')).toBe(true);
+      expect(fs.hasFile('speckit-implementador.agent.md')).toBe(true);
+      expect(fs.hasFile('speckit-revisor.agent.md')).toBe(true);
 
-      // New baseline files always written
-      expect(fs.hasFile('06-credential-security.instructions.md')).toBe(true);
-      expect(fs.hasFile('07-observability.instructions.md')).toBe(true);
-      expect(fs.hasFile('08-security-tests.instructions.md')).toBe(true);
+      // Stack skill contains Java, Spring Boot, Kafka, AWS
+      const stackContent = fs.contentFor('speckit-stack/SKILL.md')!;
+      expect(stackContent).toContain('Java');
+      expect(stackContent).toContain('Spring Boot');
+      expect(stackContent).toContain('Kafka');
+      expect(stackContent).toContain('AWS');
+      expect(stackContent).toContain('CRUD');
 
-      // Must NOT be generated
-      expect(fs.hasFile('pattern-bff.instructions.md')).toBe(false);
-      expect(fs.hasFile('infra-glue.instructions.md')).toBe(false);
-      expect(fs.hasFile('pattern-contract-testing.instructions.md')).toBe(false);
+      // Must NOT contain BFF/Glue/Contract content
+      expect(stackContent).not.toContain('Backend for Frontend');
+      expect(stackContent).not.toContain('GlueJob');
+      expect(stackContent).not.toContain('Pact');
     });
   });
 
@@ -72,25 +73,29 @@ describe('story → validate → generate (E2E)', () => {
       expect(result.gaps).toHaveLength(0);
     });
 
-    it('generates BFF and CRUD patterns but not kafka, aws or glue', async () => {
+    it('generates BFF and CRUD patterns in stack skill but not kafka, aws or glue', async () => {
       const story = parseStory(loadFixture('story-bff.md'));
       const fs = new InMemoryFileSystem();
       await generateCopilotConfig('/workspace', story, fs);
 
-      expect(fs.hasFile('pattern-bff.instructions.md')).toBe(true);
-      expect(fs.hasFile('pattern-crud.instructions.md')).toBe(true);
-      expect(fs.hasFile('pattern-contract-testing.instructions.md')).toBe(true);
-      expect(fs.hasFile('lang-java.instructions.md')).toBe(true);
-      expect(fs.hasFile('fw-springboot.instructions.md')).toBe(true);
+      const stackContent = fs.contentFor('speckit-stack/SKILL.md')!;
+      expect(stackContent).toContain('BFF');
+      expect(stackContent).toContain('CRUD');
+      expect(stackContent).toContain('Contract');
+      expect(stackContent).toContain('Java');
+      expect(stackContent).toContain('Spring Boot');
 
-      // New baseline files always written
-      expect(fs.hasFile('06-credential-security.instructions.md')).toBe(true);
-      expect(fs.hasFile('07-observability.instructions.md')).toBe(true);
-      expect(fs.hasFile('08-security-tests.instructions.md')).toBe(true);
+      // Baseline skill always written
+      expect(fs.hasFile('speckit-baseline/SKILL.md')).toBe(true);
+      const baselineContent = fs.contentFor('speckit-baseline/SKILL.md')!;
+      expect(baselineContent).toContain('IAM roles');
+      expect(baselineContent).toContain('traceId');
+      expect(baselineContent).toContain('401');
 
-      expect(fs.hasFile('infra-kafka.instructions.md')).toBe(false);
-      expect(fs.hasFile('infra-aws.instructions.md')).toBe(false);
-      expect(fs.hasFile('infra-glue.instructions.md')).toBe(false);
+      // Must NOT contain dedicated Kafka/AWS/Glue sections
+      expect(stackContent).not.toContain('# Kafka — Boas Práticas');
+      expect(stackContent).not.toContain('## DynamoDB');
+      expect(stackContent).not.toContain('GlueJob');
     });
   });
 
@@ -109,24 +114,24 @@ describe('story → validate → generate (E2E)', () => {
       expect(result.gaps).toHaveLength(0);
     });
 
-    it('generates glue and python but not kafka, aws, bff or crud patterns', async () => {
+    it('generates glue and python in stack skill but not kafka, aws, bff or crud patterns', async () => {
       const story = parseStory(loadFixture('story-glue.md'));
       const fs = new InMemoryFileSystem();
       await generateCopilotConfig('/workspace', story, fs);
 
-      expect(fs.hasFile('infra-glue.instructions.md')).toBe(true);
-      expect(fs.hasFile('lang-python.instructions.md')).toBe(true);
+      const stackContent = fs.contentFor('speckit-stack/SKILL.md')!;
+      expect(stackContent).toContain('Glue');
+      expect(stackContent).toContain('Python');
 
-      // New baseline files always written
-      expect(fs.hasFile('06-credential-security.instructions.md')).toBe(true);
-      expect(fs.hasFile('07-observability.instructions.md')).toBe(true);
-      expect(fs.hasFile('08-security-tests.instructions.md')).toBe(true);
+      // Baseline skill always written
+      expect(fs.hasFile('speckit-baseline/SKILL.md')).toBe(true);
 
-      expect(fs.hasFile('infra-kafka.instructions.md')).toBe(false);
-      expect(fs.hasFile('infra-aws.instructions.md')).toBe(false);
-      expect(fs.hasFile('pattern-bff.instructions.md')).toBe(false);
-      expect(fs.hasFile('pattern-crud.instructions.md')).toBe(false);
-      expect(fs.hasFile('pattern-contract-testing.instructions.md')).toBe(false);
+      // Must NOT contain dedicated Kafka/AWS/BFF/CRUD sections
+      expect(stackContent).not.toContain('# Kafka — Boas Práticas');
+      expect(stackContent).not.toContain('## DynamoDB');
+      expect(stackContent).not.toContain('Backend for Frontend');
+      expect(stackContent).not.toContain('CRUD');
+      expect(stackContent).not.toContain('Pact');
     });
   });
 });

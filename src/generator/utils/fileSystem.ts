@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
 import * as path from 'path';
+import * as vscode from 'vscode';
 
 export async function ensureDir(dirPath: string): Promise<void> {
   const uri = vscode.Uri.file(dirPath);
@@ -33,4 +33,32 @@ export async function fileExists(filePath: string): Promise<boolean> {
 
 export function joinPath(...parts: string[]): string {
   return path.join(...parts);
+}
+
+export async function listDir(dirPath: string): Promise<string[]> {
+  const uri = vscode.Uri.file(dirPath);
+  try {
+    const entries = await vscode.workspace.fs.readDirectory(uri);
+    return entries.map(([name]) => name);
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteFile(filePath: string): Promise<void> {
+  const uri = vscode.Uri.file(filePath);
+  try {
+    await vscode.workspace.fs.delete(uri);
+  } catch {
+    // file may not exist
+  }
+}
+
+export async function deleteDir(dirPath: string): Promise<void> {
+  const uri = vscode.Uri.file(dirPath);
+  try {
+    await vscode.workspace.fs.delete(uri, { recursive: true });
+  } catch {
+    // directory may not exist
+  }
 }

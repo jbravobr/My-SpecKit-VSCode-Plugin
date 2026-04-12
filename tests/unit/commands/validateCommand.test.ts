@@ -1,7 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { handleValidateCommand } from '../../../src/participant/commands/validateCommand';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  handleValidateCommand,
+  warnIfSpecLarge,
+} from '../../../src/participant/commands/validateCommand';
 import { InMemoryFileSystem, WorkspaceStub } from '../../support/fakes';
 
 const fixturesDir = resolve(__dirname, '../../fixtures');
@@ -13,7 +16,9 @@ const partialFixMd = readFileSync(resolve(fixturesDir, 'fix-partial.md'), 'utf-8
 function createMockStream() {
   const calls: string[] = [];
   return {
-    markdown: vi.fn((t: string) => { calls.push(t); }),
+    markdown: vi.fn((t: string) => {
+      calls.push(t);
+    }),
     getAllMarkdown: () => calls.join(''),
   };
 }
@@ -29,7 +34,13 @@ describe('handleValidateCommand', () => {
     // Override getWorkspaceRoot to return undefined
     workspace.getWorkspaceRoot = () => undefined;
 
-    await handleValidateCommand({} as any, stream as any, {} as any, new InMemoryFileSystem(), workspace);
+    await handleValidateCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      new InMemoryFileSystem(),
+      workspace,
+    );
 
     expect(stream.getAllMarkdown()).toContain('workspace');
   });
@@ -39,7 +50,13 @@ describe('handleValidateCommand', () => {
     const workspace = new WorkspaceStub({ activeSpecPath: undefined as unknown as string });
     workspace.getActiveSpecPath = async () => undefined;
 
-    await handleValidateCommand({} as any, stream as any, {} as any, new InMemoryFileSystem(), workspace);
+    await handleValidateCommand(
+      {} as any,
+      stream as any,
+      {} as any,
+      new InMemoryFileSystem(),
+      workspace,
+    );
 
     expect(stream.getAllMarkdown()).toContain('Nenhuma spec');
   });
@@ -69,7 +86,7 @@ describe('handleValidateCommand', () => {
     expect(fs.writtenPaths().length).toBeGreaterThan(0);
   });
 
-  it('shows DoR success and /implement instruction for valid story', async () => {
+  it('shows DoR success and speckit-implementador instruction for valid story', async () => {
     const stream = createMockStream();
     const fs = new InMemoryFileSystem();
     fs.readFile = async () => completeStoryMd;
@@ -78,10 +95,10 @@ describe('handleValidateCommand', () => {
     await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('DoR atingido');
-    expect(stream.getAllMarkdown()).toContain('/implement');
+    expect(stream.getAllMarkdown()).toContain('speckit-implementador');
   });
 
-  it('shows Session B / review instruction for valid story', async () => {
+  it('shows Session B / speckit-revisor instruction for valid story', async () => {
     const stream = createMockStream();
     const fs = new InMemoryFileSystem();
     fs.readFile = async () => completeStoryMd;
@@ -89,7 +106,7 @@ describe('handleValidateCommand', () => {
 
     await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
 
-    expect(stream.getAllMarkdown()).toContain('/review');
+    expect(stream.getAllMarkdown()).toContain('speckit-revisor');
     expect(stream.getAllMarkdown()).toContain('Sessão B');
   });
 
@@ -122,7 +139,7 @@ describe('handleValidateCommand', () => {
     expect(fs.writtenPaths().length).toBeGreaterThan(0);
   });
 
-  it('shows /fix-implement and Session B instruction for a valid fix', async () => {
+  it('shows speckit-fix-implementador and Session B instruction for a valid fix', async () => {
     const stream = createMockStream();
     const fs = new InMemoryFileSystem();
     fs.readFile = async () => completeFixMd;
@@ -130,7 +147,7 @@ describe('handleValidateCommand', () => {
 
     await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
 
-    expect(stream.getAllMarkdown()).toContain('/fix-implement');
+    expect(stream.getAllMarkdown()).toContain('speckit-fix-implementador');
     expect(stream.getAllMarkdown()).toContain('Sessão B');
   });
 
@@ -139,12 +156,295 @@ describe('handleValidateCommand', () => {
     const fs = new InMemoryFileSystem();
     fs.readFile = async () => completeFixMd;
     const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-001.md' });
-    workspace.detectTechStack = async () => { throw new Error('stack detection failed'); };
+    workspace.detectTechStack = async () => {
+      throw new Error('stack detection failed');
+    };
 
     await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('Erro ao detectar stack');
     expect(stream.getAllMarkdown()).toContain('stack detection failed');
     expect(stream.getAllMarkdown()).not.toContain('/fix-implement');
+  });
+
+  // ── Backup integration ────────────────────────────────────────────────────
+
+  it('shows backup message when copilot-instructions.md already exists before validating story', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    // Pre-populate existing copilot-instructions.md
+    await fs.writeFile('C:/workspace/.github/copilot-instructions.md', '# Old config');
+    fs.readFile = async (p: string) => {
+      if (p.replace(/\\/g, '/').includes('copilot-instructions.md')) {
+        return '# Old config';
+      }
+      return completeStoryMd;
+    };
+    fs.fileExists = async (p: string) => {
+      return p.replace(/\\/g, '/').includes('copilot-instructions.md');
+    };
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Backup');
+  });
+
+  it('does not show backup message when no existing copilot-instructions.md', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).not.toContain('Backup');
+  });
+
+  // ── DevTools offer ────────────────────────────────────────────────────────
+
+  it('shows devtools offer when no lint tooling exists in workspace (story)', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Tooling de qualidade');
+    expect(stream.getAllMarkdown()).toContain('ESLint');
+    expect(stream.getAllMarkdown()).toContain('Prettier');
+  });
+
+  it('shows all-present message when all devtools exist in workspace (story)', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    // Pre-populate devtools files
+    await fs.writeFile('C:/workspace/eslint.config.mjs', 'export default [];');
+    await fs.writeFile('C:/workspace/.prettierrc', '{}');
+    await fs.writeFile('C:/workspace/.husky/pre-commit', 'npx lint-staged');
+    await fs.writeFile(
+      'C:/workspace/package.json',
+      JSON.stringify({ 'lint-staged': { '*.ts': ['eslint --fix'] } }),
+    );
+    fs.readFile = async (p: string) => {
+      const norm = p.replace(/\\/g, '/');
+      if (norm.includes('package.json')) {
+        return JSON.stringify({ 'lint-staged': { '*.ts': ['eslint --fix'] } });
+      }
+      if (norm.includes('eslint.config')) return 'export default [];';
+      if (norm.includes('.prettierrc')) return '{}';
+      if (norm.includes('pre-commit')) return 'npx lint-staged';
+      return completeStoryMd;
+    };
+    fs.fileExists = async (p: string) => {
+      const norm = p.replace(/\\/g, '/');
+      return (
+        norm.includes('eslint.config.mjs') ||
+        norm.includes('.prettierrc') ||
+        norm.includes('.husky/pre-commit') ||
+        norm.includes('package.json')
+      );
+    };
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('já configurados');
+    expect(stream.getAllMarkdown()).not.toContain('incluir skill');
+  });
+
+  it('generates devtools skill when --devtools flag is present (story)', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand(
+      { prompt: '--devtools' } as any,
+      stream as any,
+      {} as any,
+      fs,
+      workspace,
+    );
+
+    expect(stream.getAllMarkdown()).toContain('Skill de DevTools incluído');
+    expect(fs.hasFile('speckit-devtools/SKILL.md')).toBe(true);
+  });
+
+  it('shows devtools offer for valid fix when no lint tooling exists', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeFixMd;
+    const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-001.md' });
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Tooling de qualidade');
+    expect(stream.getAllMarkdown()).toContain('ESLint');
+  });
+
+  it('generates devtools skill when --devtools flag is present (fix)', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeFixMd;
+    const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-001.md' });
+
+    await handleValidateCommand(
+      { prompt: '--devtools' } as any,
+      stream as any,
+      {} as any,
+      fs,
+      workspace,
+    );
+
+    expect(stream.getAllMarkdown()).toContain('Skill de DevTools incluído');
+    expect(fs.hasFile('speckit-devtools/SKILL.md')).toBe(true);
+  });
+
+  it('devtools offer never breaks validate flow — normal files always generated', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    // Normal flow outputs must still be present
+    expect(stream.getAllMarkdown()).toContain('DoR atingido');
+    expect(stream.getAllMarkdown()).toContain('arquivo(s) gerado(s)');
+    expect(stream.getAllMarkdown()).toContain('speckit-implementador');
+    // DevTools offer must appear
+    expect(stream.getAllMarkdown()).toContain('Tooling de qualidade');
+  });
+
+  // ── Filesystem resilience ─────────────────────────────────────────────────
+
+  it('shows error when spec file cannot be read', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => {
+      throw new Error('EACCES: permission denied');
+    };
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Erro ao ler a spec');
+    expect(stream.getAllMarkdown()).toContain('permission denied');
+  });
+
+  it('shows error when gap-fill.prompt.md cannot be written (story)', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => {
+      return partialStoryMd;
+    };
+    fs.writeFile = async () => {
+      throw new Error('ENOSPC: no space left on device');
+    };
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Erro ao salvar gap-fill.prompt.md');
+    expect(stream.getAllMarkdown()).toContain('no space left');
+  });
+
+  it('shows error when config generation fails completely (story)', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    // ensureDir works, but writeFile always fails
+    fs.writeFile = async () => {
+      throw new Error('disk write error');
+    };
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Erro ao gerar arquivos de configuração');
+  });
+
+  it('respects cancellation token — returns early when cancelled', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    const workspace = new WorkspaceStub();
+    const cancelledToken = { isCancellationRequested: true, onCancellationRequested: vi.fn() };
+
+    await handleValidateCommand({} as any, stream as any, cancelledToken as any, fs, workspace);
+
+    // Should not proceed to generate files
+    expect(stream.getAllMarkdown()).not.toContain('arquivo(s) gerado(s)');
+    expect(stream.getAllMarkdown()).not.toContain('speckit-implementador');
+  });
+
+  // ── Spec size warning ─────────────────────────────────────────────────────
+
+  it('shows warning for large spec but continues normally', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    // Create a spec that's > 50KB by padding the complete story
+    const largeContent = completeStoryMd + '\n' + 'x'.repeat(55_000);
+    fs.readFile = async () => largeContent;
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Spec grande detectada');
+    expect(stream.getAllMarkdown()).toContain('Dicas para reduzir');
+    // Flow continues — should still validate and generate
+    expect(stream.getAllMarkdown()).toContain('DoR atingido');
+    expect(stream.getAllMarkdown()).toContain('arquivo(s) gerado(s)');
+  });
+
+  it('does not show warning for small spec', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).not.toContain('Spec grande detectada');
+  });
+});
+
+// ── warnIfSpecLarge unit tests ────────────────────────────────────────────────
+
+describe('warnIfSpecLarge', () => {
+  it('returns false and emits nothing for small content', () => {
+    const calls: string[] = [];
+    const stream = { markdown: (t: string) => calls.push(t) };
+
+    const warned = warnIfSpecLarge('small content', stream);
+
+    expect(warned).toBe(false);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('returns true and emits warning for content > 50KB', () => {
+    const calls: string[] = [];
+    const stream = { markdown: (t: string) => calls.push(t) };
+    const bigContent = 'x'.repeat(51_000);
+
+    const warned = warnIfSpecLarge(bigContent, stream);
+
+    expect(warned).toBe(true);
+    expect(calls.join('')).toContain('Spec grande detectada');
+    expect(calls.join('')).toContain('Dicas para reduzir');
+  });
+
+  it('includes actionable tips in the warning', () => {
+    const calls: string[] = [];
+    const stream = { markdown: (t: string) => calls.push(t) };
+
+    warnIfSpecLarge('x'.repeat(51_000), stream);
+
+    const output = calls.join('');
+    expect(output).toContain('Requisito de Negócio');
+    expect(output).toContain('Given/When/Then');
+    expect(output).toContain('processo continua normalmente');
   });
 });

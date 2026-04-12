@@ -1,6 +1,6 @@
+import { TechStackDetection } from '../../src/fix/Fix';
 import { IFileSystem } from '../../src/generator/utils/IFileSystem';
 import { IWorkspace } from '../../src/generator/utils/IWorkspace';
-import { TechStackDetection } from '../../src/fix/Fix';
 
 // ---------------------------------------------------------------------------
 // InMemoryFileSystem — Fake implementation of IFileSystem.
@@ -23,6 +23,32 @@ export class InMemoryFileSystem implements IFileSystem {
     return this.files.has(this.normalize(filePath));
   }
 
+  async listDir(dirPath: string): Promise<string[]> {
+    const normalizedDir = this.normalize(dirPath).replace(/\/$/, '') + '/';
+    const entries = new Set<string>();
+    for (const p of this.files.keys()) {
+      if (p.startsWith(normalizedDir)) {
+        const relative = p.slice(normalizedDir.length);
+        const firstSegment = relative.split('/')[0];
+        entries.add(firstSegment);
+      }
+    }
+    return [...entries];
+  }
+
+  async deleteFile(filePath: string): Promise<void> {
+    this.files.delete(this.normalize(filePath));
+  }
+
+  async deleteDir(dirPath: string): Promise<void> {
+    const normalizedDir = this.normalize(dirPath).replace(/\/$/, '') + '/';
+    for (const p of this.files.keys()) {
+      if (p.startsWith(normalizedDir) || p === this.normalize(dirPath)) {
+        this.files.delete(p);
+      }
+    }
+  }
+
   /** Returns paths of all written files (normalized, forward-slash). */
   writtenPaths(): string[] {
     return [...this.files.keys()];
@@ -42,7 +68,7 @@ export class InMemoryFileSystem implements IFileSystem {
   /** Returns true if any written path includes `fragment`. */
   hasFile(fragment: string): boolean {
     const f = fragment.replace(/\\/g, '/');
-    return [...this.files.keys()].some(p => p.includes(f));
+    return [...this.files.keys()].some((p) => p.includes(f));
   }
 
   private normalize(p: string): string {
@@ -66,6 +92,7 @@ const DEFAULT_STACK: TechStackDetection = {
   language: 'typescript',
   framework: 'react',
   target: 'frontend',
+  projectStage: 'brownfield',
   confidence: 'high',
   source: 'package.json',
 };

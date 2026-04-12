@@ -2,7 +2,7 @@
   "name": "vscode-plugin-speckit",
   "displayName": "SpecKit — Spec Driven Development",
   "description": "Defina sua história e configure o Copilot para desenvolvimento orientado a spec",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "icon": "assets/speckit_icon.png",
   "publisher": "local",
   "engines": {
@@ -32,19 +32,11 @@
           },
           {
             "name": "validate",
-            "description": "Validar a spec ativa (Story ou Fix) e identificar lacunas"
-          },
-          {
-            "name": "apply",
-            "description": "Gerar configuração Copilot a partir da história"
+            "description": "Validar a spec ativa (Story ou Fix), identificar lacunas e gerar configuração Copilot"
           },
           {
             "name": "status",
             "description": "Exibir resumo de todas as specs abertas (Stories e Fixes)"
-          },
-          {
-            "name": "review",
-            "description": "Iniciar revisão independente e entrega"
           },
           {
             "name": "draft",
@@ -67,16 +59,8 @@
         "title": "SpecKit: Validar Spec"
       },
       {
-        "command": "speckit.applyStory",
-        "title": "SpecKit: Aplicar História"
-      },
-      {
         "command": "speckit.status",
         "title": "SpecKit: Status"
-      },
-      {
-        "command": "speckit.review",
-        "title": "SpecKit: Revisão Independente"
       }
     ]
   },
@@ -84,25 +68,43 @@
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
     "package": "node esbuild.js --production",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:unit:coverage": "vitest run --coverage",
     "build:integration": "tsc -p tsconfig.integration.json",
     "test:integration": "npm run build:integration && node ./out/integration/tests/integration/runTests.js",
     "test:behavioral": "vitest run --config vitest.behavioral.config.ts",
-    "test": "npm run test:unit && npm run test:integration"
+    "test": "npm run test:unit && npm run test:integration",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.80.0",
+    "@eslint/js": "^10.0.1",
     "@types/mocha": "^10.0.0",
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.93.0",
     "@vitest/coverage-v8": "^2.0.0",
     "@vscode/test-electron": "^2.4.0",
     "esbuild": "^0.21.0",
+    "eslint": "^10.2.0",
+    "eslint-config-prettier": "^10.1.8",
     "glob": "^10.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "mocha": "^10.0.0",
+    "prettier": "^3.8.2",
     "typescript": "^5.4.0",
+    "typescript-eslint": "^8.58.1",
     "vitest": "^2.0.0"
   }
 }

@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleFixCommand } from '../../../src/participant/commands/fixCommand';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IFileSystem } from '../../../src/generator/utils/IFileSystem';
 import { IWorkspace } from '../../../src/generator/utils/IWorkspace';
+import { handleFixCommand } from '../../../src/participant/commands/fixCommand';
 
 vi.mock('vscode', () => ({
   workspace: { openTextDocument: vi.fn().mockResolvedValue({}) },
@@ -11,7 +11,9 @@ vi.mock('vscode', () => ({
 function createMockStream() {
   const calls: string[] = [];
   return {
-    markdown: vi.fn((t: string) => { calls.push(t); }),
+    markdown: vi.fn((t: string) => {
+      calls.push(t);
+    }),
     getCalls: () => calls,
     getAllMarkdown: () => calls.join(''),
   };
@@ -23,6 +25,9 @@ function createMockFs(): IFileSystem {
     writeFile: vi.fn().mockResolvedValue(undefined),
     readFile: vi.fn().mockResolvedValue(''),
     fileExists: vi.fn().mockResolvedValue(false),
+    listDir: vi.fn().mockResolvedValue([]),
+    deleteFile: vi.fn().mockResolvedValue(undefined),
+    deleteDir: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -33,7 +38,14 @@ function createMockWorkspace(overrides: Partial<IWorkspace> = {}): IWorkspace {
     listFixFiles: vi.fn().mockResolvedValue([]),
     getActiveStoryPath: vi.fn().mockResolvedValue(undefined),
     getActiveSpecPath: vi.fn().mockResolvedValue(undefined),
-    detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
+    detectTechStack: vi.fn().mockResolvedValue({
+      language: 'typescript',
+      framework: 'react',
+      target: 'frontend',
+      projectStage: 'brownfield',
+      confidence: 'high',
+      source: 'package.json',
+    }),
     ...overrides,
   };
 }
@@ -112,5 +124,19 @@ describe('handleFixCommand', () => {
     await handleFixCommand({} as any, stream as any, {} as any, fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('/validate');
+  });
+
+  it('shows error when writeFile fails', async () => {
+    const stream = createMockStream();
+    const workspace = createMockWorkspace();
+    const fs = createMockFs();
+    (fs.writeFile as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('EACCES: permission denied'),
+    );
+
+    await handleFixCommand({} as any, stream as any, {} as any, fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Erro ao salvar o fix');
+    expect(stream.getAllMarkdown()).toContain('permission denied');
   });
 });

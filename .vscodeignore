@@ -1,13 +1,33 @@
 .vscode/**
 .vscode-test/**
 src/**
-.gitignore
-.yarnrc
-esbuild.js
-tsconfig.json
 out/**
 **/node_modules/**
 speckit-agent/**
 tests/**
-vitest.config.ts
+
+# Build & config files
+.gitignore
+.yarnrc
+esbuild.js
+tsconfig.json
 tsconfig.integration.json
+vitest.config.ts
+vitest.behavioral.config.ts
+eslint.config.mjs
+.prettierignore
+.prettierrc*
+CLAUDE.md
+
+# Dev tooling
+.husky/**
+.claude/**
+
+# Source maps (debug only)
+**/*.js.map
+
+# PDF / docs artifacts
+markdown-to-pdf/**
+
+# Publish archives
+publish/**

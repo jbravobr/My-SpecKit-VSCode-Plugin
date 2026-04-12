@@ -1,13 +1,13 @@
-import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { parseFix } from '../../../../src/fix/FixParser';
+import { describe, expect, it } from 'vitest';
 import { Fix, TechStackDetection } from '../../../../src/fix/Fix';
+import { parseFix } from '../../../../src/fix/FixParser';
 import {
+  generateFixGapFillingPrompt,
   generateFixImplementPrompt,
   generateFixReviewPrompt,
   generateFixRunPrompt,
-  generateFixGapFillingPrompt,
 } from '../../../../src/generator/fix/FixPromptsGenerator';
 
 const fixturesDir = resolve(__dirname, '../../../fixtures');
@@ -19,14 +19,29 @@ const mockStack: TechStackDetection = {
   framework: 'react',
   architecture: 'hexagonal',
   target: 'frontend',
+  projectStage: 'brownfield',
   confidence: 'high',
   source: 'package.json',
 };
 
 function emptyFix(): Fix {
   return {
-    metadata: { id: '', title: '', createdAt: '', version: 1, type: 'fix', status: 'open' },
-    bugDescription: { title: '', symptoms: '', stepsToReproduce: [], environment: '', frequency: '' },
+    metadata: {
+      id: '',
+      title: '',
+      createdAt: '',
+      version: 1,
+      type: 'fix',
+      status: 'open',
+      gate: 0,
+    },
+    bugDescription: {
+      title: '',
+      symptoms: '',
+      stepsToReproduce: [],
+      environment: '',
+      frequency: '',
+    },
     rootCauseHypothesis: { hypothesis: '', suspectedFiles: [], suspectedComponents: [] },
     impactAssessment: { severity: '', affectedUsers: '', affectedSystems: [], regressionRisk: '' },
     regressionPrevention: { testsToAdd: [] },
@@ -185,7 +200,9 @@ describe('FixPromptsGenerator', () => {
     });
 
     it('mentions field name when gap is symptoms', () => {
-      const gaps = [{ section: 'Bug Description', field: 'symptoms', message: 'Sintomas obrigatórios' }];
+      const gaps = [
+        { section: 'Bug Description', field: 'symptoms', message: 'Sintomas obrigatórios' },
+      ];
       const result = generateFixGapFillingPrompt(completeFix, gaps);
       expect(result).toContain('symptoms');
     });

@@ -1,5 +1,15 @@
-export function generateStoryTemplate(id: string): string {
+import { WorkspaceDefaults } from '../config/WorkspaceDefaults';
+
+export function generateStoryTemplate(id: string, defaults?: WorkspaceDefaults): string {
   const now = new Date().toISOString().split('T')[0];
+  const d = defaults ?? {};
+  const lang = d.language ?? '';
+  const fw = d.framework ?? '';
+  const arch = d.architecture ?? '';
+  const tgt = d.target ?? '';
+  const db = d.database ?? '';
+  const infra = d.infrastructure ?? '';
+  const stage = d.projectStage ?? '';
   return `# História ${id}
 
 <!-- metadata
@@ -9,6 +19,7 @@ createdAt: ${now}
 version: 1
 type: story
 status: open
+gate: 0
 -->
 
 ---
@@ -95,24 +106,38 @@ status: open
 ## Especificação Técnica
 
 ### Linguagem
-<!-- TODO: Escolha exatamente um: typescript | javascript | java | csharp | python -->
+${lang || '<!-- TODO: Escolha exatamente um: typescript | javascript | java | csharp | python -->'}
 
 ### Framework
-<!-- TODO: Escolha exatamente um: dotnet | springboot | angular | react | fastapi | other -->
+${fw || '<!-- TODO: Escolha exatamente um: dotnet | springboot | angular | react | fastapi | other -->'}
 
 ### Arquitetura
-<!-- TODO: Escolha exatamente um: hexagonal | layered | microservices | monolith | serverless -->
+${arch || '<!-- TODO: Escolha exatamente um: hexagonal | layered | microservices | monolith | serverless -->'}
 
 ### Target
-<!-- TODO: Escolha exatamente um: backend | frontend | bff | script | library
-     bff = serviço que atua como Backend for Frontend (orquestração, auth relay, transformação de resposta para o cliente) -->
+${
+  tgt ||
+  `<!-- TODO: Escolha exatamente um: backend | frontend | bff | script | library
+     bff = serviço que atua como Backend for Frontend (orquestração, auth relay, transformação de resposta para o cliente) -->`
+}
 
 ### Banco de Dados
-<!-- TODO: Tecnologia e versão. Ex: "PostgreSQL 15 (tabela comissoes); tabelas de configuração já existentes." -->
+${db || '<!-- TODO: Tecnologia e versão. Ex: "PostgreSQL 15 (tabela comissoes); tabelas de configuração já existentes." -->'}
 
 ### Infraestrutura
-<!-- TODO: Onde e como o serviço roda. Ex: "Apache Kafka (AWS MSK), Docker, Kubernetes (EKS),
-     CI/CD via GitHub Actions." -->
+${
+  infra ||
+  `<!-- TODO: Onde e como o serviço roda. Ex: "Apache Kafka (AWS MSK), Docker, Kubernetes (EKS),
+     CI/CD via GitHub Actions." -->`
+}
+
+### Estágio do Projeto
+${
+  stage ||
+  `<!-- TODO: Escolha exatamente um: greenfield | brownfield
+     greenfield = projeto novo, sem código existente
+     brownfield = projeto existente, com código e convenções já estabelecidos -->`
+}
 
 ---
 

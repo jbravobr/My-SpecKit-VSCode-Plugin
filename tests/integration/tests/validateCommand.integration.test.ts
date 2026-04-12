@@ -16,10 +16,9 @@ suite('generateCopilotConfig integration', () => {
 
   teardown(async () => {
     try {
-      await vscode.workspace.fs.delete(
-        vscode.Uri.file(path.join(root, '.github')),
-        { recursive: true },
-      );
+      await vscode.workspace.fs.delete(vscode.Uri.file(path.join(root, '.github')), {
+        recursive: true,
+      });
     } catch {
       // directory may not exist
     }
@@ -29,10 +28,7 @@ suite('generateCopilotConfig integration', () => {
     const files = await generateCopilotConfig(root, completeStory, vscodeFileSystem);
 
     assert.ok(files.length >= 18, `Expected >= 18 files, got ${files.length}`);
-    assert.ok(
-      files.includes('.github/copilot-instructions.md'),
-      'Missing copilot-instructions.md',
-    );
+    assert.ok(files.includes('.github/copilot-instructions.md'), 'Missing copilot-instructions.md');
   });
 
   test('copilot-instructions.md has content on disk', async () => {

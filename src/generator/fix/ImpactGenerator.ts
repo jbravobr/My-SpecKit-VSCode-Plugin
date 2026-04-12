@@ -1,7 +1,8 @@
 import { Fix } from '../../fix/Fix';
 
 export function generateImpact(fix: Fix): string {
-  const systems = fix.impactAssessment.affectedSystems.map(s => `- ${s}`).join('\n') || '- (não especificado)';
+  const systems =
+    fix.impactAssessment.affectedSystems.map((s) => `- ${s}`).join('\n') || '- (não especificado)';
 
   return `---
 applyTo: '**'

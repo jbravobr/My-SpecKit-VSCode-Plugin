@@ -20,7 +20,9 @@ import { handleSpeckitRequest } from '../../../src/participant/speckitParticipan
 function createStream() {
   const parts: string[] = [];
   return {
-    markdown: (t: string) => { parts.push(t); },
+    markdown: (t: string) => {
+      parts.push(t);
+    },
     getAll: () => parts.join(''),
   };
 }
@@ -80,14 +82,14 @@ suite('Participant routing — /draft story intent', () => {
     await removeDir(specDir);
   });
 
-  test('/draft: cria elicit-story.prompt.md para ideia de feature', async () => {
+  test('/draft: cria elicit-story-001.prompt.md para ideia de feature', async () => {
     const stream = createStream();
     const request = createRequest('draft', 'Quero calcular comissão de vendedores via Kafka');
 
     await handleSpeckitRequest(request, {} as any, stream as any, {} as any);
 
-    const filePath = path.join(specDir, 'elicit-story.prompt.md');
-    assert.ok(await fileExists(filePath), 'elicit-story.prompt.md deveria ter sido criado');
+    const filePath = path.join(specDir, 'elicit-story-001.prompt.md');
+    assert.ok(await fileExists(filePath), 'elicit-story-001.prompt.md deveria ter sido criado');
   });
 
   test('/draft: stream instrui usar Novo Chat para elicitação', async () => {
@@ -98,7 +100,10 @@ suite('Participant routing — /draft story intent', () => {
 
     const out = stream.getAll();
     assert.ok(out.includes('Novo Chat'), 'Stream deveria instruir usar Novo Chat');
-    assert.ok(out.includes('elicit-story.prompt.md'), 'Stream deveria mencionar o arquivo gerado');
+    assert.ok(
+      out.includes('elicit-story-001.prompt.md'),
+      'Stream deveria mencionar o arquivo gerado',
+    );
   });
 });
 
@@ -119,19 +124,25 @@ suite('Participant routing — /draft fix intent', () => {
     await removeDir(specDir);
   });
 
-  test('/draft --fix: cria elicit-fix.prompt.md', async () => {
+  test('/draft --fix: cria elicit-fix-001.prompt.md', async () => {
     const stream = createStream();
-    const request = createRequest('draft', 'O login OAuth2 retorna 500 após expiração do token --fix');
+    const request = createRequest(
+      'draft',
+      'O login OAuth2 retorna 500 após expiração do token --fix',
+    );
 
     await handleSpeckitRequest(request, {} as any, stream as any, {} as any);
 
-    const filePath = path.join(specDir, 'elicit-fix.prompt.md');
-    assert.ok(await fileExists(filePath), 'elicit-fix.prompt.md deveria ter sido criado');
+    const filePath = path.join(specDir, 'elicit-fix-001.prompt.md');
+    assert.ok(await fileExists(filePath), 'elicit-fix-001.prompt.md deveria ter sido criado');
   });
 
   test('/draft --fix: stream menciona FIX-001', async () => {
     const stream = createStream();
-    const request = createRequest('draft', 'O login OAuth2 retorna 500 após expiração do token --fix');
+    const request = createRequest(
+      'draft',
+      'O login OAuth2 retorna 500 após expiração do token --fix',
+    );
 
     await handleSpeckitRequest(request, {} as any, stream as any, {} as any);
 
@@ -184,7 +195,7 @@ suite('Participant routing — smoke (todos os comandos)', () => {
   setup(async () => {
     root = vscode.workspace.workspaceFolders![0].uri.fsPath;
     specDir = path.join(root, '.speckit');
-    // Garante que o workspace tem ao menos uma story para /validate, /apply, /status, /review
+    // Garante que o workspace tem ao menos uma story para /validate, /status
     await vscode.workspace.fs.createDirectory(vscode.Uri.file(specDir));
   });
 
@@ -193,14 +204,20 @@ suite('Participant routing — smoke (todos os comandos)', () => {
     await removeDir(path.join(root, '.github'));
   });
 
-  const commands = ['new', 'fix', 'validate', 'apply', 'review', 'status', 'draft'];
+  const commands = ['new', 'fix', 'validate', 'status', 'draft'];
 
   for (const cmd of commands) {
     test(`/${cmd}: não lança exceção com workspace vazio`, async () => {
       const stream = createStream();
       // Não deve lançar — pode retornar erro no stream, mas não throw
       await assert.doesNotReject(
-        () => handleSpeckitRequest(createRequest(cmd, 'smoke test'), {} as any, stream as any, {} as any),
+        () =>
+          handleSpeckitRequest(
+            createRequest(cmd, 'smoke test'),
+            {} as any,
+            stream as any,
+            {} as any,
+          ),
         `/${cmd} não deveria lançar exceção`,
       );
     });

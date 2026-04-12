@@ -21,7 +21,7 @@ describe('validateStory', () => {
     const story = parseStory(completeStoryMd);
     const result = validateStory(story);
     expect(result.dorStatus).toHaveLength(7);
-    expect(result.dorStatus.every(d => d.checked)).toBe(true);
+    expect(result.dorStatus.every((d) => d.checked)).toBe(true);
   });
 
   it('generates gap for missing title', () => {
@@ -41,7 +41,7 @@ describe('validateStory', () => {
     story.dor.checked = [true];
 
     const result = validateStory(story);
-    const titleGap = result.gaps.find(g => g.field === 'title');
+    const titleGap = result.gaps.find((g) => g.field === 'title');
     expect(titleGap).toBeDefined();
     expect(titleGap?.section).toBe('Metadata');
   });
@@ -50,40 +50,40 @@ describe('validateStory', () => {
     const story = parseStory(completeStoryMd);
     story.businessRequirement.problem = '';
     const result = validateStory(story);
-    expect(result.gaps.some(g => g.field === 'problem')).toBe(true);
+    expect(result.gaps.some((g) => g.field === 'problem')).toBe(true);
   });
 
   it('generates gap for missing acceptanceCriteria', () => {
     const story = parseStory(partialStoryMd);
     const result = validateStory(story);
-    expect(result.gaps.some(g => g.field === 'acceptanceCriteria')).toBe(true);
+    expect(result.gaps.some((g) => g.field === 'acceptanceCriteria')).toBe(true);
   });
 
   it('generates gap for missing language', () => {
     const story = parseStory(completeStoryMd);
     story.technicalSpec.language = '';
     const result = validateStory(story);
-    expect(result.gaps.some(g => g.field === 'language')).toBe(true);
+    expect(result.gaps.some((g) => g.field === 'language')).toBe(true);
   });
 
   it('generates gap for missing framework', () => {
     const story = parseStory(completeStoryMd);
     story.technicalSpec.framework = '';
     const result = validateStory(story);
-    expect(result.gaps.some(g => g.field === 'framework')).toBe(true);
+    expect(result.gaps.some((g) => g.field === 'framework')).toBe(true);
   });
 
   it('generates gap for missing architecture', () => {
     const story = parseStory(completeStoryMd);
     story.technicalSpec.architecture = '';
     const result = validateStory(story);
-    expect(result.gaps.some(g => g.field === 'architecture')).toBe(true);
+    expect(result.gaps.some((g) => g.field === 'architecture')).toBe(true);
   });
 
   it('generates gap for unchecked DoR items', () => {
     const story = parseStory(partialStoryMd);
     const result = validateStory(story);
-    expect(result.gaps.some(g => g.field === 'checked' && g.section === 'DoR')).toBe(true);
+    expect(result.gaps.some((g) => g.field === 'checked' && g.section === 'DoR')).toBe(true);
   });
 
   it('returns invalid for partial story', () => {

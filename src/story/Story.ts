@@ -1,12 +1,16 @@
-export type SpecStatus = 'open' | 'done';
+export type SpecStatus = 'open' | 'in-progress' | 'review' | 'blocked' | 'done' | 'cancelled';
+export type Gate = 0 | 1 | 2 | 3 | 4;
+export type ProjectStage = 'greenfield' | 'brownfield';
+export type SpecType = 'story' | 'refactoring' | 'spike';
 
 export interface StoryMetadata {
   id: string;
   title: string;
   createdAt: string;
   version: number;
-  type: 'story';
+  type: SpecType;
   status: SpecStatus;
+  gate: Gate;
 }
 
 export interface BusinessRequirement {
@@ -41,6 +45,7 @@ export interface TechnicalSpec {
   target: Target | '';
   database: string;
   infrastructure: string;
+  projectStage: ProjectStage | '';
 }
 
 export interface DoR {
@@ -81,11 +86,33 @@ export interface ValidationResult {
 
 export function emptyStory(): Story {
   return {
-    metadata: { id: '', title: '', createdAt: '', version: 1, type: 'story', status: 'open' },
+    metadata: {
+      id: '',
+      title: '',
+      createdAt: '',
+      version: 1,
+      type: 'story',
+      status: 'open',
+      gate: 0,
+    },
     businessRequirement: { problem: '', value: '', stakeholders: [] },
     functionalSpec: { userStories: [], acceptanceCriteria: [], outOfScope: [] },
-    nonFunctionalSpec: { performance: '', security: '', scalability: '', usability: '', availability: '' },
-    technicalSpec: { language: '', framework: '', architecture: '', target: '', database: '', infrastructure: '' },
+    nonFunctionalSpec: {
+      performance: '',
+      security: '',
+      scalability: '',
+      usability: '',
+      availability: '',
+    },
+    technicalSpec: {
+      language: '',
+      framework: '',
+      architecture: '',
+      target: '',
+      database: '',
+      infrastructure: '',
+      projectStage: '',
+    },
     dor: { criteria: [], checked: [] },
     dod: { criteria: [] },
   };

@@ -22,9 +22,7 @@ function dateStamp(): string {
 }
 
 function formatEntry(entry: LogEntry): string {
-  const lines: string[] = [
-    `## ${timestamp()} — @speckit ${entry.command}`,
-  ];
+  const lines: string[] = [`## ${timestamp()} — @speckit ${entry.command}`];
   if (entry.specId || entry.specTitle) {
     const parts = [entry.specId, entry.specTitle].filter(Boolean);
     lines.push(`**Spec:** ${parts.join(' — ')}`);
