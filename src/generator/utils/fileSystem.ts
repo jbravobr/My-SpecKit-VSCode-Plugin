@@ -5,8 +5,14 @@ export async function ensureDir(dirPath: string): Promise<void> {
   const uri = vscode.Uri.file(dirPath);
   try {
     await vscode.workspace.fs.createDirectory(uri);
-  } catch {
-    // directory already exists
+  } catch (err: unknown) {
+    // vscode.FileSystemError.FileExists is expected — swallow it.
+    // All other errors (permissions, disk full) must propagate.
+    if (err instanceof vscode.FileSystemError && err.code === 'FileExists') return;
+    // Also handle Node-style EEXIST for compatibility
+    if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'EEXIST')
+      return;
+    throw err;
   }
 }
 

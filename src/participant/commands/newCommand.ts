@@ -3,9 +3,13 @@ import * as vscode from 'vscode';
 import { loadWorkspaceDefaults } from '../../config/WorkspaceDefaults';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
+import { appendLog } from '../../generator/utils/SessionLogger';
+import { generateStoryId } from '../../generator/utils/SpecIdGenerator';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { generateStoryTemplate } from '../../story/StoryTemplate';
+import { TraceabilityManager } from '../../workflow/TraceabilityManager';
+import { handleCommandError, requireWorkspace } from './CommandHelpers';
 
 export async function handleNewCommand(
   _request: vscode.ChatRequest,
@@ -14,32 +18,49 @@ export async function handleNewCommand(
   fs: IFileSystem = vscodeFileSystem,
   workspace: IWorkspace = vscodeWorkspace,
 ): Promise<void> {
-  const workspaceRoot = workspace.getWorkspaceRoot();
-  if (!workspaceRoot) {
-    stream.markdown('❌ Nenhum workspace aberto. Abra uma pasta antes de criar uma história.');
-    return;
-  }
+  const workspaceRoot = requireWorkspace(workspace, stream);
+  if (!workspaceRoot) return;
 
   const specDir = path.join(workspaceRoot, '.speckit');
   await fs.ensureDir(specDir);
 
   const existing = await workspace.listStoryFiles(specDir);
-  const nextId = String(existing.length + 1).padStart(3, '0');
-  const fileName = `STORY-${nextId}.md`;
+  const specId = generateStoryId(workspaceRoot, existing);
+  const fileName = `${specId}.md`;
   const filePath = path.join(specDir, fileName);
 
   const defaults = await loadWorkspaceDefaults(workspaceRoot, fs);
-  const template = generateStoryTemplate(nextId, defaults);
+  const template = generateStoryTemplate(specId, defaults);
   try {
     await fs.writeFile(filePath, template);
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    stream.markdown(`❌ **Erro ao salvar a história:** ${msg}\n`);
+    handleCommandError(err, stream, 'Erro ao salvar a história');
     return;
   }
 
   const doc = await vscode.workspace.openTextDocument(filePath);
   await vscode.window.showTextDocument(doc);
+
+  try {
+    const tracer = new TraceabilityManager(workspaceRoot, fs);
+    await tracer.record(specId, 'story', {
+      type: 'file',
+      description: 'spec created',
+      data: { specId, fileName },
+    });
+  } catch {
+    // Traceability should never break the main flow
+  }
+
+  await appendLog(
+    workspaceRoot,
+    {
+      command: '/new',
+      specId,
+      outcome: `✅ História criada — ${specId}`,
+    },
+    fs,
+  );
 
   const defaultsNote =
     Object.keys(defaults).length > 0

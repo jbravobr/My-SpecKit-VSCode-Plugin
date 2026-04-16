@@ -422,8 +422,8 @@ describe('generateCopilotConfig — content correctness', () => {
   });
 });
 
-describe('generateCopilotConfig — graceful degradation', () => {
-  it('continues writing remaining files when one writeFile fails', async () => {
+describe('generateCopilotConfig — transactional write with rollback', () => {
+  it('rolls back all written files when any single write fails', async () => {
     const fs = new InMemoryFileSystem();
     let callCount = 0;
     const originalWrite = fs.writeFile.bind(fs);
@@ -436,11 +436,13 @@ describe('generateCopilotConfig — graceful degradation', () => {
       return originalWrite(filePath, content);
     };
 
-    const files = await generateCopilotConfig(root, loadStory('story-complete.md'), fs);
+    await expect(generateCopilotConfig(root, loadStory('story-complete.md'), fs)).rejects.toThrow(
+      'rollback executado',
+    );
 
-    // Should have written all files except the one that failed
-    expect(files.length).toBeGreaterThan(0);
-    expect(files.length).toBeLessThan(9);
+    // After rollback, no generated files should remain (first file was rolled back)
+    const remaining = fs.writtenPaths().filter((p) => p.includes('.github/'));
+    expect(remaining.length).toBe(0);
   });
 
   it('throws when ALL writes fail', async () => {
@@ -450,7 +452,7 @@ describe('generateCopilotConfig — graceful degradation', () => {
     };
 
     await expect(generateCopilotConfig(root, loadStory('story-complete.md'), fs)).rejects.toThrow(
-      'Falha ao gravar todos os arquivos',
+      'Falha ao gravar arquivos',
     );
   });
 });

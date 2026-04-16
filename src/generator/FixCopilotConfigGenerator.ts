@@ -11,6 +11,7 @@ import { IFileSystem } from './utils/IFileSystem';
 import { IWorkspace } from './utils/IWorkspace';
 import { vscodeFileSystem } from './utils/VscodeFileSystem';
 import { vscodeWorkspace } from './utils/VscodeWorkspace';
+import { WriteTransaction } from './utils/WriteTransaction';
 
 export async function generateFixCopilotConfig(
   workspaceRoot: string,
@@ -40,28 +41,17 @@ export async function generateFixCopilotConfig(
     fs.ensureDir(contextSkillDir),
   ]);
 
-  const written: string[] = [];
-  const errors: string[] = [];
-
-  async function write(filePath: string, content: string): Promise<void> {
-    try {
-      await fs.writeFile(filePath, content);
-      written.push(filePath.replace(workspaceRoot + path.sep, '').replace(/\\/g, '/'));
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      errors.push(`${filePath}: ${msg}`);
-    }
-  }
+  const tx = new WriteTransaction(fs, workspaceRoot);
 
   // Minimal copilot-instructions.md (always-on, ~400 tokens)
-  await write(
+  await tx.write(
     path.join(githubDir, 'copilot-instructions.md'),
     generateFixIndex(fix, stack, contextSkillName),
   );
 
   // Skills — on-demand
-  await write(path.join(baselineSkillDir, 'SKILL.md'), generateBaselineSkill());
-  await write(
+  await tx.write(path.join(baselineSkillDir, 'SKILL.md'), generateBaselineSkill());
+  await tx.write(
     path.join(stackSkillDir, 'SKILL.md'),
     generateStackSkill({
       language: stack.language,
@@ -71,24 +61,20 @@ export async function generateFixCopilotConfig(
       target: stack.target,
     }),
   );
-  await write(path.join(contextSkillDir, 'SKILL.md'), generateFixContextSkill(fix, stack));
+  await tx.write(path.join(contextSkillDir, 'SKILL.md'), generateFixContextSkill(fix, stack));
 
   // Agents — on-select
-  await write(
+  await tx.write(
     path.join(agentsDir, 'speckit-fix-implementador.agent.md'),
     generateFixImplementadorAgent(fix, stack),
   );
-  await write(
+  await tx.write(
     path.join(agentsDir, 'speckit-fix-revisor.agent.md'),
     generateFixRevisorAgent(fix, stack),
   );
 
   // Run prompt — monolithic mode
-  await write(path.join(promptsDir, 'fix-run.prompt.md'), generateFixRunPrompt(fix, stack));
+  await tx.write(path.join(promptsDir, 'fix-run.prompt.md'), generateFixRunPrompt(fix, stack));
 
-  if (errors.length > 0 && written.length === 0) {
-    throw new Error(`Falha ao gravar todos os arquivos:\n${errors.join('\n')}`);
-  }
-
-  return written;
+  return tx.commit();
 }

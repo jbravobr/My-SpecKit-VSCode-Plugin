@@ -38,11 +38,13 @@ ${criteriaSection}
 - Python: \`test_<arquivo>.py\` (pytest)
 ${perfSection}
 ## O que NÃO é aceitável
+- **"Build passou, então funciona"** — build com transpiladores (esbuild, swc, tsc emit) NÃO verifica tipos. Execute \`tsc --noEmit\` (TS), \`mypy\` (Python), \`dotnet build\` (C#) como gate separado
 - Testes que cobrem apenas o happy path — edge e error cases são obrigatórios
 - Testes sem assertivas (\`expect\`, \`assert\`, \`verify\`)
 - Mocks que ocultam comportamento real de lógica de domínio
 - \`skip\`, \`xtest\`, \`@Ignore\`, \`xit\` sem comentário explicando o motivo e issue de rastreamento
 - Cobertura abaixo de 80% — nenhuma exceção sem aprovação explícita do time
+- Mocks não-tipados (\`vi.fn()\` retornando \`any\`, \`{} as any\`) — use stubs tipados que implementam a interface real
 `;
 }
 

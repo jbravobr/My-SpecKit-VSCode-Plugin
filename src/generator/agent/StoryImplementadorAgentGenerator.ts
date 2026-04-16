@@ -107,6 +107,15 @@ ${stageSection}
 > Aceite: "confirmar", "pode ir", "sim", "s", "ok" ou equivalente.
 > Se o usuário pedir ajustes: incorpore, reapresente o plano e aguarde nova confirmação.
 
+### 0.5 Pré-requisitos antes de implementar
+
+Antes de criar qualquer arquivo de produção, execute e garanta que passam:
+- **Lint**: \`npm run lint\` (ou equivalente da stack)
+- **Type-check**: \`npx tsc --noEmit\` (TypeScript) | \`mypy\` (Python) | \`dotnet build\` (C#)
+- **Testes existentes**: \`npm test\` (ou equivalente)
+
+Se qualquer validação falhar no estado atual do repositório, corrija ANTES de começar a implementação.
+
 ---
 
 ## Gate 1 — Implementação

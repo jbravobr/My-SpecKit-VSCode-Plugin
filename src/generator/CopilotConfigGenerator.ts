@@ -10,6 +10,7 @@ import { generateIndex } from './story/IndexGenerator';
 import { generateRunPrompt } from './story/PromptsGenerator';
 import { IFileSystem } from './utils/IFileSystem';
 import { vscodeFileSystem } from './utils/VscodeFileSystem';
+import { WriteTransaction } from './utils/WriteTransaction';
 
 export async function generateCopilotConfig(
   workspaceRoot: string,
@@ -38,28 +39,17 @@ export async function generateCopilotConfig(
     fs.ensureDir(contextSkillDir),
   ]);
 
-  const written: string[] = [];
-  const errors: string[] = [];
-
-  async function write(filePath: string, content: string): Promise<void> {
-    try {
-      await fs.writeFile(filePath, content);
-      written.push(filePath.replace(workspaceRoot + path.sep, '').replace(/\\/g, '/'));
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      errors.push(`${filePath}: ${msg}`);
-    }
-  }
+  const tx = new WriteTransaction(fs, workspaceRoot);
 
   // Minimal copilot-instructions.md (always-on, ~400 tokens)
-  await write(
+  await tx.write(
     path.join(githubDir, 'copilot-instructions.md'),
     generateIndex(story, contextSkillName),
   );
 
   // Skills — on-demand (loaded by description keyword match)
-  await write(path.join(baselineSkillDir, 'SKILL.md'), generateBaselineSkill(story));
-  await write(
+  await tx.write(path.join(baselineSkillDir, 'SKILL.md'), generateBaselineSkill(story));
+  await tx.write(
     path.join(stackSkillDir, 'SKILL.md'),
     generateStackSkill(
       {
@@ -72,25 +62,21 @@ export async function generateCopilotConfig(
       story,
     ),
   );
-  await write(path.join(contextSkillDir, 'SKILL.md'), generateStoryContextSkill(story));
+  await tx.write(path.join(contextSkillDir, 'SKILL.md'), generateStoryContextSkill(story));
 
   // Agents — on-select (loaded when user selects from dropdown)
-  await write(
+  await tx.write(
     path.join(agentsDir, 'speckit-implementador.agent.md'),
     generateImplementadorAgent(story),
   );
-  await write(path.join(agentsDir, 'speckit-revisor.agent.md'), generateRevisorAgent(story));
+  await tx.write(path.join(agentsDir, 'speckit-revisor.agent.md'), generateRevisorAgent(story));
 
   // Run prompt — monolithic mode (kept as prompt)
-  await write(path.join(promptsDir, 'run.prompt.md'), generateRunPrompt(story));
+  await tx.write(path.join(promptsDir, 'run.prompt.md'), generateRunPrompt(story));
 
   // CI workflows
-  await write(path.join(workflowsDir, 'quality-gate.yml'), generateCiQualityGate(story));
-  await write(path.join(workflowsDir, 'security-scan.yml'), generateCiSecurityScan());
+  await tx.write(path.join(workflowsDir, 'quality-gate.yml'), generateCiQualityGate(story));
+  await tx.write(path.join(workflowsDir, 'security-scan.yml'), generateCiSecurityScan());
 
-  if (errors.length > 0 && written.length === 0) {
-    throw new Error(`Falha ao gravar todos os arquivos:\n${errors.join('\n')}`);
-  }
-
-  return written;
+  return tx.commit();
 }

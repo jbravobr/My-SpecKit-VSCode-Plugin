@@ -8,15 +8,21 @@ O Copilot passa a conhecer o requisito de negócio, critérios de aceite, restri
 
 ## Guia de leitura
 
-| Ordem | Seção                         | Quando ler                                   |
-| ----- | ----------------------------- | -------------------------------------------- |
-| 1     | **Como usar**                 | Fluxo essencial de ponta a ponta             |
-| 2     | **Comandos**                  | Referência objetiva de cada comando          |
-| 3     | **Paleta de comandos**        | Atalhos via `Ctrl+Shift+P`                   |
-| 4     | **Configuração do workspace** | Defaults, detecção de stack, backup, logging |
-| 5     | **Arquivos gerados**          | O que o plugin cria e para que serve         |
-| 6     | **Gates de implementação**    | Como os agents conduzem a implementação      |
-| 7     | **Exemplos práticos**         | Cenários completos (Story e Fix)             |
+| Ordem | Seção                                | Quando ler                                        |
+| ----- | ------------------------------------ | ------------------------------------------------- |
+| 1     | **Como usar**                        | Fluxo essencial de ponta a ponta                  |
+| 2     | **Comandos**                         | Referência objetiva de cada comando (13 comandos) |
+| 3     | **Paleta de comandos**               | Atalhos via `Ctrl+Shift+P`                        |
+| 4     | **Configuração do workspace**        | Defaults, detecção de stack, backup, logging      |
+| 5     | **Arquivos gerados**                 | O que o plugin cria e para que serve              |
+| 6     | **Gates de implementação**           | Como os agents conduzem a implementação           |
+| 7     | **Modos de agente**                  | 5 modos com exemplos (debugger, refactor, etc.)   |
+| 8     | **Guia prático — do zero à entrega** | Passo a passo numerado do fluxo completo          |
+| 9     | **Exemplos práticos**                | Cenários completos (Story e Fix)                  |
+| 10    | **Rastreabilidade e auditoria**      | Como auditar e rastrear o histórico de specs      |
+| 11    | **Referência rápida**                | Tabelas "o que dizer ao agente" por cenário       |
+| 12    | **FAQ**                              | Perguntas frequentes e troubleshooting            |
+| 13    | **Limitações conhecidas**            | Restrições atuais e roadmap                       |
 
 **Resumo do fluxo em 4 passos:**
 
@@ -314,6 +320,376 @@ Stories abertas (2):
 Fixes abertos (1):
 - 🐛 FIX-001.md — Login OAuth2 500 [high]  | 🚪 Gate 2 — Testes
 ```
+
+---
+
+### `@speckit /agent`
+
+Alterna o modo operacional do agente. Cada modo injeta guardrails e protocolos diferentes na sessão.
+
+**Uso:**
+
+```
+@speckit /agent                → Exibe modo ativo e modos disponíveis
+@speckit /agent debugger       → Ativa modo debugger
+@speckit /agent refactor       → Ativa modo refactor
+@speckit /agent implementador  → Ativa modo implementador (Gates 0-2)
+@speckit /agent revisor        → Ativa modo revisor (Gates 3-4)
+@speckit /agent default        → Volta ao modo conversacional
+```
+
+**Modos disponíveis:**
+
+| Modo            | Descrição                                                         |
+| --------------- | ----------------------------------------------------------------- |
+| `default`       | Conversacional — ajuda geral sem protocolo de gate                |
+| `implementador` | Gates 0-2: spec → plan → implement → test                         |
+| `revisor`       | Gates 3-4: checklist de qualidade → segurança → entrega           |
+| `debugger`      | Hipótese → evidência → fix mínimo → verificação → documentação    |
+| `refactor`      | Snapshot → refatorar → validar continuamente → rollback se falhar |
+
+**Exemplo de output (sem argumento):**
+
+```
+Modo ativo: Default (conversacional)
+
+Modos disponíveis:
+- default — Default (conversacional)
+- implementador — Implementador (Gates 0-2: spec → plan → implement → test)
+- revisor — Revisor (Gates 3-4: checklist de qualidade → segurança → entrega)
+- debugger — Debugger (hipótese → evidência → fix → verificação)
+- refactor — Refactor (snapshot → refatorar → validar → rollback se falhar)
+
+Uso: @speckit /agent debugger
+```
+
+**Exemplo de output (modo ativado):**
+
+```
+✅ Modo alterado para Debugger (hipótese → evidência → fix → verificação)
+
+---
+
+AGENT MODE: Debugger
+Stack detectada: typescript / react
+
+1. Captura — Capture mensagem de erro, stack trace e passos para reprodução
+2. Hipótese — Formule uma hipótese sobre a causa raiz
+3. Evidência — Leia código, verifique logs, isole a falha
+4. Fix Mínimo — Correção cirúrgica atacando a causa raiz
+5. Verificação — Teste que reproduz a falha original
+6. Documentação — Causa raiz e recomendações de prevenção
+```
+
+> O modo persiste durante toda a sessão da extensão. Ao fechar e reabrir o VS Code, volta para `default`.
+
+> Para protocolos completos de Gates, selecione os agents no dropdown do Copilot Chat (ver **Modos de agente**).
+
+---
+
+### `@speckit /gate`
+
+Exibe regras de transição de gate e status, ou valida se uma transição específica é permitida.
+
+**Uso:**
+
+```
+@speckit /gate                              → Mostra todas as regras
+@speckit /gate rules                        → Mostra todas as regras
+@speckit /gate check gate 0 1               → Valida transição Gate 0 → Gate 1
+@speckit /gate check gate 2 0               → Valida regressão Gate 2 → Gate 0
+@speckit /gate check status open in-progress → Valida transição de status
+```
+
+**Regras de transição de gate:**
+
+| De                     | Para                   | Regra                    |
+| ---------------------- | ---------------------- | ------------------------ |
+| Gate 0 — Alinhamento   | Gate 1 — Implementação | ✅ Avanço +1             |
+| Gate 1 — Implementação | Gate 0 ou Gate 2       | ✅ +1 ou -1 (retrabalho) |
+| Gate 2 — Testes        | Gate 1 ou Gate 3       | ✅ +1 ou -1              |
+| Gate 3 — Revisão       | Gate 2 ou Gate 4       | ✅ +1 ou -1              |
+| Gate 4 — Entrega       | Gate 3                 | ✅ Apenas regressão -1   |
+
+> Avanço máximo: +1. Regressão máxima: -1 (retrabalho). Saltos como Gate 0 → Gate 3 são **bloqueados**.
+
+**Regras de transição de status:**
+
+| De            | Próximos válidos                   |
+| ------------- | ---------------------------------- |
+| `open`        | `in-progress`, `cancelled`         |
+| `in-progress` | `review`, `blocked`, `cancelled`   |
+| `review`      | `in-progress`, `done`, `cancelled` |
+| `blocked`     | `in-progress`, `cancelled`         |
+| `done`        | 🔒 terminal                        |
+| `cancelled`   | 🔒 terminal                        |
+
+**Exemplo de validação:**
+
+```
+@speckit /gate check gate 1 2
+```
+
+```
+✅ Gate 1 → Gate 2 — Transição permitida
+Próximos gates válidos a partir de Gate 1: Gate 0, Gate 2
+```
+
+```
+@speckit /gate check gate 0 3
+```
+
+```
+❌ Gate 0 → Gate 3 — Transição bloqueada
+Motivo: Salto de +3 não permitido (máximo: +1)
+Próximos gates válidos a partir de Gate 0: Gate 1
+```
+
+---
+
+### `@speckit /audit`
+
+Exibe o log de auditoria do workspace — todas as ações executadas pelo plugin com timestamp.
+
+**Uso:**
+
+```
+@speckit /audit       → Últimas 20 entradas (padrão)
+@speckit /audit 50    → Últimas 50 entradas
+@speckit /audit 5     → Últimas 5 entradas
+```
+
+O limite aceita valores de 1 a 100.
+
+**Exemplo de output:**
+
+```
+📋 Audit Log — últimas 5 de 23 entradas
+
+2026-03-19T10:15:00Z [command] /new
+2026-03-19T10:15:01Z [command] /new — ok
+2026-03-19T10:22:30Z [command] /validate
+2026-03-19T10:22:31Z [command] /validate — ok
+2026-03-19T10:30:00Z [command] /agent
+```
+
+> O log é gravado automaticamente em `.speckit/audit.log`. Cada comando registra entrada e resultado.
+
+---
+
+### `@speckit /trace`
+
+Visualiza registros de rastreabilidade — histórico completo de cada spec com todas as transições de gate, status e validações.
+
+**Uso:**
+
+```
+@speckit /trace                → Lista todas as specs rastreadas
+@speckit /trace list           → Lista todas as specs rastreadas
+@speckit /trace STORY-001      → Detalhes de uma spec específica
+@speckit /trace FIX-001        → Detalhes de um fix específico
+```
+
+**Exemplo de output (lista):**
+
+```
+🔗 Rastreabilidade — 3 spec(s)
+
+| Spec ID    | Tipo  | Entradas | Última atualização       |
+|------------|-------|----------|--------------------------|
+| STORY-001  | story | 8        | 2026-03-19T14:30:00Z     |
+| STORY-002  | story | 3        | 2026-03-19T11:00:00Z     |
+| FIX-001    | fix   | 5        | 2026-03-19T16:00:00Z     |
+
+> Use @speckit /trace <spec-id> para ver detalhes.
+```
+
+**Exemplo de output (detalhe):**
+
+```
+🔗 Trace — STORY-001
+
+| Campo      | Valor                    |
+|------------|--------------------------|
+| Tipo       | story                    |
+| Criado     | 2026-03-19T10:00:00Z     |
+| Atualizado | 2026-03-19T14:30:00Z     |
+| Entradas   | 8                        |
+
+Histórico:
+- 2026-03-19T10:00:00Z — created: Spec criada via /new
+- 2026-03-19T10:05:00Z — validated: DoR atingido, 9 arquivos gerados
+- 2026-03-19T10:30:00Z — gate-transition: Gate 0 → Gate 1
+- 2026-03-19T12:00:00Z — gate-transition: Gate 1 → Gate 2
+- 2026-03-19T14:00:00Z — gate-transition: Gate 2 → Gate 3
+- 2026-03-19T14:30:00Z — status-change: in-progress → review
+```
+
+---
+
+### `@speckit /diff`
+
+Mostra o git diff no chat — útil para revisar alterações sem sair da conversa.
+
+**Uso:**
+
+```
+@speckit /diff          → Diff resumido (stat)
+@speckit /diff --full   → Diff completo (todas as alterações)
+@speckit /diff -f       → Alias para --full
+```
+
+**Exemplo de output (resumo):**
+
+```
+Git Diff (resumo):
+
+ src/middleware/auth.ts | 15 +++++++++------
+ src/routes/auth.ts     |  3 ++-
+ 2 files changed, 11 insertions(+), 7 deletions(-)
+```
+
+**Exemplo de output (completo):**
+
+````
+Git Diff (completo):
+
+```diff
+diff --git a/src/middleware/auth.ts b/src/middleware/auth.ts
+--- a/src/middleware/auth.ts
++++ b/src/middleware/auth.ts
+@@ -12,6 +12,10 @@ export function authMiddleware(req, res, next) {
+     jwt.verify(token, secret, (err, decoded) => {
+-      if (err) throw err;
++      if (err instanceof jwt.TokenExpiredError) {
++        return res.status(401).json({ error: 'token_expired' });
++      }
++      if (err) return res.status(401).json({ error: 'invalid_token' });
+       req.user = decoded;
+```
+````
+
+> Se não houver alterações pendentes: `✅ Nenhuma alteração pendente.`
+
+---
+
+### `@speckit /commit`
+
+Faz auto-stage de todas as alterações e commit com prefixo `speckit:`.
+
+**Uso:**
+
+```
+@speckit /commit <mensagem>
+```
+
+**Exemplos:**
+
+```
+@speckit /commit feat(STORY-001): implementar cálculo de comissão
+@speckit /commit fix(FIX-001): tratar TokenExpiredError no middleware
+@speckit /commit refactor: extrair validação de gate
+@speckit /commit test: adicionar cenários de edge case
+```
+
+**Exemplo de output:**
+
+```
+✅ Commit realizado:
+
+[feature/001-calculo-comissao 3a1b2c3] speckit: feat(STORY-001): implementar cálculo de comissão
+ 4 files changed, 120 insertions(+), 15 deletions(-)
+```
+
+> O commit só executa se houver alterações pendentes. Caso contrário: `✅ Nada para commitar — working tree limpa.`
+
+> Todos os commits são registrados no audit log automaticamente.
+
+---
+
+### `@speckit /context`
+
+Gerencia arquivos de contexto adicionais que o agente deve considerar durante a implementação.
+
+**Uso:**
+
+```
+@speckit /context                              → Listar arquivos de contexto
+@speckit /context list                         → Listar arquivos de contexto
+@speckit /context add src/auth/service.ts      → Adicionar arquivo
+@speckit /context add src/middleware/auth.ts    → Adicionar outro arquivo
+@speckit /context remove src/auth/service.ts   → Remover arquivo
+@speckit /context clear                        → Limpar todos
+```
+
+**Exemplo de output (listar):**
+
+```
+📂 Contexto ativo — 3 arquivo(s)
+
+- src/auth/service.ts
+- src/middleware/auth.ts
+- src/config/oauth.ts
+```
+
+**Validações automáticas:**
+
+| Situação                    | Resultado                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| Arquivo existe no workspace | ✅ `Adicionado: src/auth/service.ts`                                           |
+| Arquivo já no contexto      | ℹ️ `Já está no contexto: src/auth/service.ts`                                  |
+| Arquivo não encontrado      | ❌ `Arquivo não encontrado: src/xxx.ts`                                        |
+| Caminho fora do workspace   | ❌ `Caminho inválido — não é permitido referenciar arquivos fora do workspace` |
+
+> Útil para apontar ao agente arquivos que não são detectados automaticamente, como configurações ou contratos.
+
+---
+
+### `@speckit /doctor`
+
+Diagnóstico de saúde do workspace — verifica se os diretórios, specs e configurações estão corretos.
+
+**Uso:**
+
+```
+@speckit /doctor
+```
+
+**Exemplo de output:**
+
+```
+🩺 Diagnóstico do Workspace
+
+| Status | Item                                          |
+|--------|-----------------------------------------------|
+| ✅     | .speckit/                                     |
+| ✅     | .github/                                      |
+| ✅     | defaults.yml                                  |
+| ✅     | Stories — 2 encontrada(s)                     |
+| ✅     | Fixes — 1 encontrado(s)                       |
+| ✅     | Tech Stack — typescript / react (high)        |
+
+Resultado: 6/6 verificações OK
+```
+
+**Exemplo com problemas:**
+
+```
+🩺 Diagnóstico do Workspace
+
+| Status | Item                                          |
+|--------|-----------------------------------------------|
+| ❌     | .speckit/                                     |
+| ❌     | .github/                                      |
+| ❌     | defaults.yml                                  |
+| ❌     | Stories                                       |
+| ❌     | Fixes                                         |
+| ✅     | Tech Stack — java / springboot (high)         |
+
+Resultado: 1/6 verificações OK
+```
+
+> Execute `/doctor` antes de começar a trabalhar para garantir que o workspace está preparado. Ideal como primeiro passo após clonar um repositório.
 
 ---
 
@@ -662,6 +1038,235 @@ Sem layering, cada interação carregaria spec + regras + gates + exemplos (~10.
 
 ---
 
+## Modos de agente
+
+O SpecKit oferece **5 modos de operação** que alteram o comportamento, os guardrails e os protocolos do agente. Use `/agent <modo>` para alternar.
+
+```mermaid
+flowchart TB
+    subgraph modos [Modos de Agente]
+        direction LR
+        D[default] --- I[implementador]
+        I --- R[revisor]
+        R --- DB[debugger]
+        DB --- RF[refactor]
+    end
+
+    D -->|"@speckit /agent implementador"| I
+    I -->|"@speckit /agent revisor"| R
+    R -->|"@speckit /agent debugger"| DB
+    DB -->|"@speckit /agent refactor"| RF
+    RF -->|"@speckit /agent default"| D
+```
+
+### Mode: Default
+
+Modo conversacional sem protocolo de gate. Útil para perguntas gerais, testes de conceito e exploração livre.
+
+**Quando usar:**
+
+- Perguntas gerais sobre o projeto
+- Testes rápidos de conceito
+- Exploração de código sem story/fix ativa
+
+**Exemplo de interação:**
+
+```
+Você:    @speckit /agent default
+SpecKit: ✅ Modo alterado para Default (conversacional)
+
+Você:    Como devo organizar os testes de integração neste projeto?
+Agente:  Com base na stack detectada (TypeScript / React), recomendo...
+```
+
+### Mode: Implementador (Gates 0-2)
+
+Protocolo completo de implementação: leitura de spec → plano → implementação → testes. Para features e fixes.
+
+**Quando usar:**
+
+- Ao iniciar a implementação de uma Story (Gates 0-2)
+- Ao iniciar a implementação de um Fix (Gates 0-2)
+
+**Protocolo injetado:**
+
+1. NUNCA comece a codificar sem ler a spec ativa primeiro
+2. Se surgir ambiguidade → pare e pergunte
+3. Se o escopo mudar → replaneje antes de continuar
+4. Exija aprovação explícita do usuário antes de escrever código
+
+**Exemplo de interação:**
+
+```
+Você:    @speckit /agent implementador
+SpecKit: ✅ Modo alterado para Implementador (Gates 0-2)
+
+Você:    Implementar STORY-001 — cálculo de comissão Kafka
+Agente:  Lendo spec .speckit/STORY-001.md...
+
+         📋 Plano de implementação:
+         TASK-1: Criar consumer Kafka para movimentacoes.v1
+         TASK-2: Implementar engine de regras (4 tipos)
+         TASK-3: Persistir comissão em PostgreSQL
+         TASK-4: Emitir evento comissoes.calculadas.v1
+         TASK-5: DLQ para eventos inválidos
+
+         Confirma o plano? (sim/não)
+Você:    sim
+Agente:  Iniciando TASK-1...
+```
+
+> Para protocolo completo, selecione o agent **speckit-implementador** (Story) ou **speckit-fix-implementador** (Fix) no dropdown do Copilot Chat.
+
+### Mode: Revisor (Gates 3-4)
+
+Revisão independente com checklist de 11 dimensões. Nova sessão obrigatória — sem memória da implementação.
+
+**Quando usar:**
+
+- Após completar Gates 0-2 (testes passando)
+- Obrigatoriamente em **nova sessão** do Copilot Chat
+
+**Protocolo injetado:**
+
+1. Leia a spec completa ANTES de iniciar qualquer avaliação
+2. Ao encontrar decisão questionável: pergunte a razão antes de marcar como bloqueante
+3. Todos os 11 itens do checklist devem ser verificados — não pule nenhum
+
+**Exemplo de interação:**
+
+```
+Você:    @speckit /agent revisor
+SpecKit: ✅ Modo alterado para Revisor (Gates 3-4)
+
+Você:    Revisar STORY-001
+Agente:  Lendo spec .speckit/STORY-001.md...
+
+         📋 Checklist de Revisão — STORY-001
+         1. ✅ Funcionalidade — 6/6 critérios de aceite verificados
+         2. ✅ Arquitetura — Hexagonal, direção respeitada
+         3. ✅ Qualidade de código — Sem dead code
+         4. ✅ Testes — 22 testes, cobertura 87%
+         5. ⚠️ Segurança — Logger inclui vendedorId nos logs (é PII?)
+         6. ✅ Observabilidade — Health check presente
+         ...
+
+         VEREDITO: ALTERAÇÕES SOLICITADAS
+         Blockers: 1 (segurança — PII em logs)
+         Suggestions: 0
+```
+
+> Para protocolo completo, selecione o agent **speckit-revisor** (Story) ou **speckit-fix-revisor** (Fix) no dropdown do Copilot Chat.
+
+### Mode: Debugger
+
+Protocolo de investigação: captura → hipótese → evidência → fix mínimo → verificação → documentação. Stack-aware.
+
+**Quando usar:**
+
+- Bugs que precisam de investigação além de um fix simples
+- Problemas sem causa raiz clara
+- Issues de runtime/performance
+
+**Protocolo injetado (adaptado à stack detectada):**
+
+```
+1. Captura    — Mensagem de erro, stack trace e passos para reprodução
+2. Hipótese   — Formular hipótese sobre a causa raiz
+3. Evidência  — Ler código, verificar logs, isolar a falha
+4. Fix Mínimo — Correção cirúrgica atacando a causa raiz
+5. Verificação — Teste que reproduz falha + validação:
+   → TypeScript: npx vitest run --coverage --coverage.thresholds.lines=80
+   → Java:       ./mvnw verify -Djacoco.haltOnFailure=true
+   → C#:         dotnet test --collect:"XPlat Code Coverage"
+   → Python:     pytest --cov=src --cov-fail-under=80
+6. Documentação — Causa raiz e recomendações de prevenção
+```
+
+**Exemplo de interação:**
+
+```
+Você:    @speckit /agent debugger
+SpecKit: ✅ Modo alterado para Debugger
+         Stack detectada: typescript / react
+
+Você:    O dashboard trava quando o array de vendas é vazio
+Agente:  📋 Etapa 1 — Captura
+         Erro: TypeError: Cannot read properties of undefined (reading 'map')
+         Local: src/components/SalesDashboard.tsx:47
+
+         📋 Etapa 2 — Hipótese
+         O hook useQuery retorna undefined antes do fetch resolver.
+         O componente não trata o estado de loading.
+
+         📋 Etapa 3 — Evidência
+         Confirmado: SalesDashboard.tsx:47 → sales.map() sem guard
+         sales é undefined durante o loading, não array vazio.
+
+         📋 Etapa 4 — Fix Mínimo
+         + const items = sales ?? [];
+         + return items.length === 0 ? <EmptyState /> : items.map(...)
+
+         📋 Etapa 5 — Verificação
+         npx vitest run --coverage → 14 passed, 0 failed
+
+         📋 Etapa 6 — Documentação
+         Causa raiz: useQuery retorna undefined antes da resolução.
+         Prevenção: Sempre inicializar com fallback em hooks de data fetching.
+```
+
+> **Regra cardinal:** NÃO corrija sintomas. NÃO adivinhe — verifique com evidência.
+
+### Mode: Refactor
+
+Protocolo de refatoração segura: snapshot → refatorar → validar continuamente → rollback se falhar.
+
+**Quando usar:**
+
+- Refatorações estruturais que não alteram comportamento externo
+- Extração de módulos, consolidação de duplicação
+- Migração de padrões (class → function, callback → async/await)
+
+**Protocolo injetado (adaptado à stack detectada):**
+
+```
+1. Snapshot     — Documentar comportamento atual e cobertura de testes
+2. Verificação  — Garantir que todos os testes passam ANTES de qualquer mudança
+3. Refatoração  — Mudanças estruturais SEM alterar comportamento externo
+4. Validação    — Após CADA mudança, executar todos os testes existentes
+5. Rollback     — Se algum teste falhar, reverter imediatamente
+```
+
+**Exemplo de interação:**
+
+```
+Você:    @speckit /agent refactor
+SpecKit: ✅ Modo alterado para Refactor
+         Stack detectada: java / springboot
+
+Você:    Extrair as regras de comissão para um engine separado
+Agente:  📋 Etapa 1 — Snapshot
+         Comportamento atual: ComissaoService.calcular() com 4 if/else
+         Cobertura: 87% (22 testes)
+
+         📋 Etapa 2 — Verificação Prévia
+         ./mvnw verify → BUILD SUCCESS (22 tests passed)
+
+         📋 Etapa 3 — Refatoração
+         - Criar interface RegraComissao com método calcular()
+         - Implementar TaxaFixaRegra, EscalonadaRegra, ComTetoRegra, BonusCategoriaRegra
+         - Criar RegraComissaoEngine com Strategy pattern
+         - Refatorar ComissaoService para usar engine
+
+         📋 Etapa 4 — Validação
+         ./mvnw verify → BUILD SUCCESS (22 tests passed) ✅
+         Comportamento externo inalterado.
+```
+
+> **Regra cardinal:** NÃO adicione features durante a refatoração. NÃO altere contratos externos.
+
+---
+
 ## Garantias de qualidade por gate
 
 Cada gate impõe verificações específicas. Nenhum gate pode ser pulado.
@@ -715,6 +1320,214 @@ Checklist de 11 dimensões verificadas pelo agent revisor:
 - Re-execução de todos os testes com report de cobertura
 - Verificação item por item de DoD (Story) ou DoF (Fix)
 - Commit de encerramento
+
+---
+
+## Guia prático — do zero à entrega
+
+Passo a passo completo: da instalação até o commit de entrega. Aplicável a qualquer Story.
+
+### Visão geral do fluxo
+
+```mermaid
+flowchart LR
+    subgraph sessao1 [Sessão 1 — SpecKit Chat]
+        A1[1. Instalar plugin] --> A2[2. Criar spec]
+        A2 --> A3[3. Validar spec]
+    end
+    subgraph sessao2 [Sessão 2 — Agent Implementador]
+        B1[4. Gate 0 — Alinhar] --> B2[5. Gate 1 — Implementar]
+        B2 --> B3[6. Gate 2 — Testar]
+    end
+    subgraph sessao3 [Sessão 3 — Agent Revisor]
+        C1[7. Gate 3 — Revisar] --> C2[8. Gate 4 — Entregar]
+    end
+    A3 --> B1
+    B3 --> C1
+```
+
+### Passo 1 — Instalar o plugin
+
+```
+Ctrl+Shift+P → Extensions: Install from VSIX → selecionar arquivo .vsix
+```
+
+### Passo 2 — Criar a spec
+
+Abra o Copilot Chat e escolha um dos caminhos:
+
+| Cenário                    | Comando                                                  | Para quem                                 |
+| -------------------------- | -------------------------------------------------------- | ----------------------------------------- |
+| Já tenho a ideia clara     | `@speckit /draft Calcular comissão via Kafka`            | Quem prefere texto livre + entrevista     |
+| Quero template e preencher | `@speckit /new`                                          | Quem prefere preencher campos manualmente |
+| Bug para corrigir          | `@speckit /fix` ou `@speckit /draft "Login retorna 500"` | Ambos caminhos                            |
+
+**Via /draft — o agente entrevista você:**
+
+```
+Você:    @speckit /draft Quero calcular comissão de vendedores a partir de eventos Kafka
+SpecKit: ✅ Criado elicit-story-001.prompt.md — abra em novo chat no modo agente
+
+[Novo Chat → Modo Agente]
+Agente:  📋 Fase 1 — Requisito de Negócio
+         Qual é a dor que esta feature resolve?
+Você:    Cálculo de comissão é batch noturno, visibilidade apenas em D+1
+Agente:  ✓ Registrado. Qual o valor que vai gerar?
+Você:    Cálculo em tempo real, dashboards ao vivo, fechamento financeiro faster
+Agente:  ✓ Fase 1 completa.
+
+         📋 Fase 2 — Especificação Funcional...
+         [continua por 6 fases]
+
+Agente:  ✅ STORY-001.md criado em .speckit/
+         Execute @speckit /validate para gerar os arquivos do Copilot.
+```
+
+**Via /new — preencha o template:**
+
+```
+Você:    @speckit /new
+SpecKit: ✅ Criado .speckit/STORY-002.md — preencha e execute /validate
+```
+
+### Passo 3 — Validar a spec
+
+```
+Você:    @speckit /validate
+```
+
+**Se a spec estiver completa:**
+
+```
+SpecKit: ✅ DoR atingido — Story completa
+         📁 9 arquivos gerados em .github/
+         ├── copilot-instructions.md
+         ├── workflows/ quality-gate.yml · security-scan.yml
+         ├── prompts/   run.prompt.md
+         ├── skills/    speckit-baseline · speckit-stack · speckit-context-STORY-001
+         └── agents/    speckit-implementador · speckit-revisor
+
+         🔧 DevTools: ESLint, Prettier e husky não detectados. Deseja gerar skill?
+```
+
+**Se a spec tiver lacunas:**
+
+```
+SpecKit: ⚠️ 3 lacunas encontradas — responda cada pergunta:
+
+         1. Qual o valor de negócio?
+Você:    Eliminar lag D+1, dashboards ao vivo
+SpecKit: ✓ Atualizado.
+
+         2. Quais requisitos não-funcionais?
+Você:    P99 < 300ms, 1k eventos/min
+SpecKit: ✓ Atualizado.
+
+         3. Qual a arquitetura?
+Você:    Hexagonal
+SpecKit: ✓ Todas as lacunas preenchidas. Execute /validate novamente.
+```
+
+### Passo 4 — Gate 0: Alinhamento
+
+Abra um **novo chat** → selecione o agent **speckit-implementador** no dropdown.
+
+```
+Você:    Implementar STORY-001
+Agente:  Lendo spec .speckit/STORY-001.md...
+
+         📋 Plano de implementação:
+         TASK-1: Criar consumer Kafka para movimentacoes.v1
+         TASK-2: Implementar engine de regras (4 tipos)
+         TASK-3: Persistir comissão em PostgreSQL
+         TASK-4: Emitir evento comissoes.calculadas.v1
+         TASK-5: Testes e DLQ
+
+         Riscos identificados:
+         - Regras escalonadas podem ter edge cases nos limites de faixa
+         - Dedup por movimentacaoId precisa de constraint no banco
+
+         Confirma o plano? (sim/não)
+Você:    sim
+Agente:  ✅ Gate 0 concluído. Iniciando Gate 1...
+```
+
+### Passo 5 — Gate 1: Implementação
+
+O agente implementa task por task com commits atômicos:
+
+```
+Agente:  📋 TASK-1 — Criar consumer Kafka
+         feat(STORY-001): TASK-1 — consumer movimentacoes.v1 ✅
+
+         📋 TASK-2 — Implementar engine de regras
+         feat(STORY-001): TASK-2 — engine com 4 tipos de regra ✅
+
+         📋 TASK-3 — Persistir comissão
+         feat(STORY-001): TASK-3 — repository + migration ✅
+
+         📋 TASK-4 — Emitir evento
+         feat(STORY-001): TASK-4 — producer comissoes.calculadas.v1 ✅
+
+         📋 TASK-5 — DLQ
+         feat(STORY-001): TASK-5 — DLQ com causa no header ✅
+
+         ✅ Gate 1 concluído. Iniciando Gate 2...
+```
+
+### Passo 6 — Gate 2: Testes
+
+```
+Agente:  📋 Testes — STORY-001
+         Happy path: 6 critérios de aceite → 12 testes
+         Edge cases: limites de faixa, valor zero, categoria inexistente → 8 testes
+         Error cases: evento inválido, DLQ, timeout → 6 testes
+
+         ./mvnw verify → BUILD SUCCESS
+         Cobertura: 91% (mínimo: 80%) ✅
+         26 testes passando, 0 falhas ✅
+
+         ✅ Gate 2 concluído. Próximo: Gate 3 (abra nova sessão → agent revisor).
+```
+
+### Passo 7 — Gate 3: Revisão
+
+Abra **novo chat** → selecione o agent **speckit-revisor** no dropdown. O revisor não participou da implementação.
+
+```
+Você:    Revisar STORY-001
+Agente:  📋 Checklist de Revisão (11 dimensões)
+
+         1. ✅ Funcionalidade — 6/6 critérios de aceite verificados
+         2. ✅ Arquitetura — Hexagonal, sem imports cross-layer
+         3. ✅ Qualidade de código — Nomeação consistente, sem dead code
+         4. ✅ Testes — 26 testes, cobertura 91%
+         5. ✅ Segurança — Sem PII em logs, credenciais via env vars
+         6. ✅ Observabilidade — Health check, logs JSON com traceId
+         7. ✅ NFRs — P99 validado via benchmark
+         8. ✅ Git — Branch naming ok, Conventional Commits ok
+         9. ✅ DoD — Todos os itens verificados
+         10. ✅ VEREDITO: APROVADO
+         11. — Revalidação: N/A (aprovado na primeira revisão)
+
+         ✅ Gate 3 concluído. Prosseguir para Gate 4.
+```
+
+### Passo 8 — Gate 4: Entrega
+
+```
+Agente:  📋 Gate 4 — Entrega
+
+         1. Rebase na main... ✅ (sem conflitos)
+         2. Re-execução de testes... 26 passed, 0 failed ✅
+         3. Verificação DoD item por item... 7/7 ✅
+         4. Commit de encerramento:
+            feat(STORY-001): entrega — cálculo de comissão a partir de eventos Kafka
+
+         ✅ Story STORY-001 entregue. Status: done.
+```
+
+> **Dica:** Para features pequenas, use `run.prompt.md` (Stories) ou `fix-run.prompt.md` (Fixes) via ▶ Run in Copilot Chat para executar todos os gates em uma sessão única.
 
 ---
 
@@ -1175,9 +1988,281 @@ sequenceDiagram
 
 ---
 
+## Rastreabilidade e auditoria
+
+O SpecKit mantém dois mecanismos de rastreio persistentes no workspace:
+
+### Audit Log
+
+Todo comando executado é registrado automaticamente em `.speckit/audit.log` com timestamp, comando e resultado.
+
+```
+.speckit/
+└── audit.log
+```
+
+**Acessar:** `@speckit /audit` ou `@speckit /audit 50`
+
+**Formato de cada linha:**
+
+```
+2026-03-19T10:15:00Z [command] /validate
+2026-03-19T10:15:01Z [command] /validate — ok
+```
+
+**Casos de uso:**
+
+- Auditoria de compliance — "quem fez o quê e quando"
+- Debugging de problemas — "o último comando executado antes do erro"
+- Métricas de uso — quantos /validate vs /new por sessão
+
+### Trace (Rastreabilidade por Spec)
+
+Cada spec tem seu próprio registro de rastreabilidade com todas as transições de estado.
+
+```
+.speckit/
+└── traces/
+    ├── STORY-001.trace.json
+    ├── STORY-002.trace.json
+    └── FIX-001.trace.json
+```
+
+**Acessar:** `@speckit /trace` (lista) ou `@speckit /trace STORY-001` (detalhe)
+
+**O que é rastreado:**
+| Evento | Descrição | Exemplo |
+|---|---|---|
+| `created` | Spec criada | `/new` ou `/draft` |
+| `validated` | Validação executada | `/validate` — DoR atingido |
+| `gate-transition` | Mudança de gate | Gate 1 → Gate 2 |
+| `status-change` | Mudança de status | `in-progress` → `review` |
+| `agent-change` | Modo de agente alterado | `default` → `implementador` |
+
+### Session Logging
+
+Além do audit log e traces, o plugin grava logs de sessão em Markdown:
+
+```
+.speckit/
+└── logs/
+    └── session-2026-03-19.md
+```
+
+Cada entrada contém o comando executado, o resultado e metadados relevantes. Útil para revisão pós-sessão.
+
+---
+
+## Referência rápida — o que dizer ao agente
+
+### Criando specs
+
+| Você quer...                | Diga                                                   |
+| --------------------------- | ------------------------------------------------------ |
+| Criar story por texto livre | `@speckit /draft Quero calcular comissão via Kafka`    |
+| Criar story por template    | `@speckit /new`                                        |
+| Criar fix por texto livre   | `@speckit /draft Login retorna 500 após expirar token` |
+| Criar fix por template      | `@speckit /fix`                                        |
+| Validar e gerar arquivos    | `@speckit /validate`                                   |
+| Ver todas as specs abertas  | `@speckit /status`                                     |
+
+### Trabalhando com gates
+
+| Você quer...              | Diga                                           |
+| ------------------------- | ---------------------------------------------- |
+| Ver regras de gate        | `@speckit /gate`                               |
+| Validar se pode avançar   | `@speckit /gate check gate 1 2`                |
+| Validar mudança de status | `@speckit /gate check status open in-progress` |
+
+### Controlando o agente
+
+| Você quer...                 | Diga                            |
+| ---------------------------- | ------------------------------- |
+| Entrar em modo debugger      | `@speckit /agent debugger`      |
+| Entrar em modo refactor      | `@speckit /agent refactor`      |
+| Entrar em modo implementador | `@speckit /agent implementador` |
+| Entrar em modo revisor       | `@speckit /agent revisor`       |
+| Voltar ao modo padrão        | `@speckit /agent default`       |
+| Ver modo ativo               | `@speckit /agent`               |
+
+### Git e contexto
+
+| Você quer...             | Diga                                                   |
+| ------------------------ | ------------------------------------------------------ |
+| Ver alterações pendentes | `@speckit /diff`                                       |
+| Ver diff completo        | `@speckit /diff --full`                                |
+| Commitar com prefixo     | `@speckit /commit feat(STORY-001): implementar engine` |
+| Adicionar contexto       | `@speckit /context add src/auth/service.ts`            |
+| Listar contexto ativo    | `@speckit /context`                                    |
+| Limpar contexto          | `@speckit /context clear`                              |
+
+### Diagnóstico e rastreio
+
+| Você quer...                 | Diga                        |
+| ---------------------------- | --------------------------- |
+| Verificar saúde do workspace | `@speckit /doctor`          |
+| Ver log de auditoria         | `@speckit /audit`           |
+| Ver últimas N entradas       | `@speckit /audit 50`        |
+| Ver rastreabilidade          | `@speckit /trace`           |
+| Detalhes de uma spec         | `@speckit /trace STORY-001` |
+
+---
+
+## FAQ
+
+<details>
+<summary><strong>Posso usar o SpecKit sem GitHub Copilot?</strong></summary>
+
+Não. O SpecKit é um Chat Participant do GitHub Copilot Chat. Requer a extensão **GitHub Copilot Chat** instalada e ativa no VS Code `^1.93.0`.
+
+</details>
+
+<details>
+<summary><strong>Preciso de workspace aberto?</strong></summary>
+
+Sim. O SpecKit requer ao menos uma pasta aberta no VS Code. Sem workspace carregado, todos os comandos retornam erro informando que é necessário abrir uma pasta.
+
+</details>
+
+<details>
+<summary><strong>Posso ter múltiplas stories/fixes abertas ao mesmo tempo?</strong></summary>
+
+Sim. O plugin rastreia múltiplas specs no diretório `.speckit/`. Use `@speckit /status` para ver todas. A validação (`/validate`) atua sobre a spec ativa (a mais recente, ou a última referenciada).
+
+</details>
+
+<details>
+<summary><strong>O /draft detecta automaticamente se é story ou fix?</strong></summary>
+
+Sim. O `/draft` analisa o texto fornecido e detecta intent:
+
+- Keywords de bug (500, erro, falha, crash, timeout, regressão) → roteia para **fix**
+- Demais textos → roteia para **story**
+- Se houver ambiguidade, você pode forçar com `--fix` ou `--story`
+
+</details>
+
+<details>
+<summary><strong>Como o plugin detecta a stack técnica?</strong></summary>
+
+Automaticamente via análise de arquivos no workspace:
+
+| Arquivo detectado                     | Stack inferida |
+| ------------------------------------- | -------------- |
+| `package.json` + `tsconfig.json`      | TypeScript     |
+| `package.json` (sem tsconfig)         | JavaScript     |
+| `pom.xml`                             | Java           |
+| `*.csproj` / `*.sln`                  | C#             |
+| `pyproject.toml` / `requirements.txt` | Python         |
+
+Framework e banco de dados são inferidos a partir de dependências no manifesto.
+
+</details>
+
+<details>
+<summary><strong>Os arquivos gerados sobrescrevem meus .github/ existentes?</strong></summary>
+
+Sim — o plugin gera os arquivos dentro de `.github/` e sobrescreve os existentes para manter consistência com a spec validada. Antes de cada geração, é criado um backup em `.speckit/backups/` com timestamp.
+
+O backup inclui:
+
+- Diretório `.github/` completo
+- Arquivo spec (`.speckit/STORY-*.md` ou `.speckit/FIX-*.md`)
+- Retenção: até **20 backups** ou **60 dias** (o que vier primeiro)
+
+</details>
+
+<details>
+<summary><strong>O que é o DevTools skill?</strong></summary>
+
+Quando o `/validate` detecta que o workspace não possui ESLint, Prettier, husky ou lint-staged configurados, ele oferece gerar um skill adicional:
+
+```
+🔧 DevTools: ferramentas não detectadas. Gerar skill speckit-devtools?
+```
+
+O skill `speckit-devtools` instrui o agente a configurar essas ferramentas adaptadas à stack do projeto.
+
+</details>
+
+<details>
+<summary><strong>Qual a diferença entre /agent implementador e o agent no dropdown?</strong></summary>
+
+| Mecanismo                                  | O que faz                                                                               |
+| ------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `@speckit /agent implementador`            | Injeta guardrails resumidos e protocolos na sessão do Chat Participant                  |
+| Agent **speckit-implementador** (dropdown) | Carrega o protocolo completo de Gates 0-2 como .agent.md com todas as regras detalhadas |
+
+Para implementação real, use o **dropdown** (protocolo completo). O `/agent` é útil para ativar rapidamente guardrails em sessões informais.
+
+</details>
+
+<details>
+<summary><strong>Posso pular gates?</strong></summary>
+
+Não. As transições de gate são controladas e cada avanço é no máximo +1. Use `@speckit /gate check gate 0 3` para verificar — retornará `❌ Transição bloqueada`.
+
+Para validar transições permitidas: `@speckit /gate`
+
+</details>
+
+<details>
+<summary><strong>O que acontece se eu fechar o VS Code no meio de um gate?</strong></summary>
+
+O estado da spec (gate atual, status) é persistido no arquivo `.speckit/STORY-*.md` ou `FIX-*.md` e nos traces. Ao reabrir, continue de onde parou.
+
+O modo do agente (`/agent`) volta para `default` ao reiniciar o VS Code, pois é mantido em memória da sessão.
+
+</details>
+
+<details>
+<summary><strong>Como reverto para uma versão anterior da spec?</strong></summary>
+
+Os backups ficam em `.speckit/backups/` com timestamp. Copie o arquivo desejado de volta para `.speckit/` e execute `/validate` novamente.
+
+</details>
+
+<details>
+<summary><strong>O plugin funciona com múltiplos workspaces (multi-root)?</strong></summary>
+
+Atualmente o plugin opera sobre o **primeiro workspace carregado**. Suporte completo a multi-root com SQLite está planejado para uma versão futura.
+
+</details>
+
+<details>
+<summary><strong>O `/commit` faz push automaticamente?</strong></summary>
+
+Não. O `/commit` apenas executa `git add . && git commit -m "speckit: <mensagem>"`. O push é deliberadamente manual para permitir revisão antes de enviar ao remote.
+
+</details>
+
+<details>
+<summary><strong>Como debugar problemas com o plugin?</strong></summary>
+
+1. Execute `@speckit /doctor` para verificar a saúde do workspace
+2. Consulte `@speckit /audit` para ver o histórico de comandos e erros
+3. Verifique os logs de sessão em `.speckit/logs/session-*.md`
+4. Se necessário, verifique o Output Channel do VS Code (View → Output → selecione "SpecKit")
+
+</details>
+
+---
+
+## Limitações conhecidas
+
+| Limitação                                                                | Status             | Workaround                             |
+| ------------------------------------------------------------------------ | ------------------ | -------------------------------------- |
+| Multi-root workspace: opera apenas no primeiro workspace carregado       | Planejado (SQLite) | Abrir um workspace por vez             |
+| Modo do agente (`/agent`) não persiste entre reinicializações do VS Code | By design          | Re-executar `/agent <modo>` ao reabrir |
+| Sem telemetria interna do plugin (métricas de uso)                       | Planejado (opt-in) | Usar audit log para rastreio manual    |
+| Sem `CONTRIBUTING.md` para contribuições externas                        | Planejado          | —                                      |
+| Sem CI/CD own pipeline (GitHub Actions para o repo do plugin)            | Planejado          | Build e lint locais                    |
+
+---
+
 ## Matriz de maturidade
 
-Avaliação baseada na versão **0.2.1** do plugin com evidências verificáveis do código-fonte.
+Avaliação baseada na versão **0.3.1** do plugin com evidências verificáveis do código-fonte.
 
 ### Visão geral
 
@@ -1228,7 +2313,7 @@ Avaliação baseada na versão **0.2.1** do plugin com evidências verificáveis
 
 | Critério                          | Status       | Evidência                                                               |
 | --------------------------------- | ------------ | ----------------------------------------------------------------------- |
-| Testes unitarios                  | 611 passando | 33 arquivos de teste cobrindo parsers, validators, generators, commands |
+| Testes unitarios                  | 794 passando | 53 arquivos de teste cobrindo parsers, validators, generators, commands |
 | Testes de integracao              | OK           | @vscode/test-electron com workspace isolado                             |
 | Testes comportamentais            | OK           | E2E com Anthropic API real; valida pipeline completo                    |
 | Fixtures reutilizaveis            | OK           | 11 fixtures em tests/fixtures/ (completo, parcial, vazio, H4)           |

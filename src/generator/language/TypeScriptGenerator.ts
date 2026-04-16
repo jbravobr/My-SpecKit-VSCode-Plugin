@@ -22,6 +22,8 @@ applyTo: "**/*.ts,**/*.tsx"
 - \`satisfies\` operator para validar literais sem perder tipo concreto
 
 ## Qualidade
+- **Validação obrigatória**: execute \`npx tsc --noEmit\` além do build — esbuild e similares transpilam sem verificar tipos
+- Build passar NÃO significa que o código está correto: \`tsc --noEmit\` é o único gate de type-safety real
 - Nunca use \`@ts-ignore\` — prefira \`@ts-expect-error\` com comentário explicativo
 - \`eslint-plugin-@typescript-eslint\`: regras \`no-explicit-any\`, \`no-unsafe-*\` habilitadas
 - Prefira \`readonly\` em propriedades de interfaces que não devem ser mutadas

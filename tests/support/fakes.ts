@@ -1,6 +1,76 @@
+import { vi } from 'vitest';
+import type { CancellationToken, ChatContext, ChatRequest, ChatResponseStream } from 'vscode';
 import { TechStackDetection } from '../../src/fix/Fix';
 import { IFileSystem } from '../../src/generator/utils/IFileSystem';
 import { IWorkspace } from '../../src/generator/utils/IWorkspace';
+
+// ---------------------------------------------------------------------------
+// Typed stubs for vscode Chat API — no `as any` needed at call sites
+// ---------------------------------------------------------------------------
+
+export interface FakeStream extends ChatResponseStream {
+  getCalls(): string[];
+  getAllMarkdown(): string;
+  anchor: ReturnType<typeof vi.fn>;
+  button: ReturnType<typeof vi.fn>;
+  filetree: ReturnType<typeof vi.fn>;
+  progress: ReturnType<typeof vi.fn>;
+  reference: ReturnType<typeof vi.fn>;
+  push: ReturnType<typeof vi.fn>;
+}
+
+/** Creates a typed ChatResponseStream that captures markdown() calls. */
+export function createMockStream(): FakeStream {
+  const calls: string[] = [];
+  return {
+    markdown: vi.fn((t: string) => {
+      calls.push(t);
+    }),
+    anchor: vi.fn(),
+    button: vi.fn(),
+    filetree: vi.fn(),
+    progress: vi.fn(),
+    reference: vi.fn(),
+    push: vi.fn(),
+    getCalls: () => calls,
+    getAllMarkdown: () => calls.join(''),
+  };
+}
+
+/** Creates a typed CancellationToken that is never cancelled. */
+export function createMockToken(): CancellationToken {
+  return { isCancellationRequested: false, onCancellationRequested: vi.fn() };
+}
+
+/** Creates a typed empty ChatContext. */
+export function createMockContext(): ChatContext {
+  return { history: [] };
+}
+
+/** Creates a typed ChatRequest with the given prompt. */
+export function createMockRequest(prompt: string, command?: string): ChatRequest {
+  return {
+    prompt,
+    command,
+    references: [],
+    toolReferences: [],
+    toolInvocationToken: undefined as unknown as import('vscode').ChatParticipantToolToken,
+    model: undefined as unknown as import('vscode').LanguageModelChat,
+  };
+}
+
+/** @deprecated Use InMemoryFileSystem instead — typed and deterministic. */
+export function createMockFs(): IFileSystem {
+  return {
+    ensureDir: vi.fn().mockResolvedValue(undefined),
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    readFile: vi.fn().mockResolvedValue(''),
+    fileExists: vi.fn().mockResolvedValue(false),
+    listDir: vi.fn().mockResolvedValue([]),
+    deleteFile: vi.fn().mockResolvedValue(undefined),
+    deleteDir: vi.fn().mockResolvedValue(undefined),
+  };
+}
 
 // ---------------------------------------------------------------------------
 // InMemoryFileSystem — Fake implementation of IFileSystem.

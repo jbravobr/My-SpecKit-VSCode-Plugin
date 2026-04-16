@@ -1,82 +1,98 @@
-import { Story, ValidationResult, Gap, DorStatus } from './Story';
+import { checkRequired, checkRequiredArray } from '../validator/ValidationUtils';
+import { DorStatus, Gap, Story, ValidationResult } from './Story';
 
 export function validateStory(story: Story): ValidationResult {
   const gaps: Gap[] = [];
 
-  if (!story.metadata.title)
-    gaps.push({ section: 'Metadata', field: 'title', message: 'Título da história é obrigatório' });
+  checkRequired(
+    gaps,
+    story.metadata.title,
+    'Metadata',
+    'title',
+    'Título da história é obrigatório',
+  );
 
-  if (!story.businessRequirement.problem)
-    gaps.push({
-      section: 'Requisito de Negócio',
-      field: 'problem',
-      message: 'Descrição do problema é obrigatória',
-    });
-  if (!story.businessRequirement.value)
-    gaps.push({
-      section: 'Requisito de Negócio',
-      field: 'value',
-      message: 'Valor de negócio é obrigatório',
-    });
-  if (story.businessRequirement.stakeholders.length === 0)
-    gaps.push({
-      section: 'Requisito de Negócio',
-      field: 'stakeholders',
-      message: 'Pelo menos um stakeholder deve ser listado',
-    });
+  checkRequired(
+    gaps,
+    story.businessRequirement.problem,
+    'Requisito de Negócio',
+    'problem',
+    'Descrição do problema é obrigatória',
+  );
+  checkRequired(
+    gaps,
+    story.businessRequirement.value,
+    'Requisito de Negócio',
+    'value',
+    'Valor de negócio é obrigatório',
+  );
+  checkRequiredArray(
+    gaps,
+    story.businessRequirement.stakeholders,
+    'Requisito de Negócio',
+    'stakeholders',
+    'Pelo menos um stakeholder deve ser listado',
+  );
 
-  if (story.functionalSpec.userStories.length === 0)
-    gaps.push({
-      section: 'Especificação Funcional',
-      field: 'userStories',
-      message: 'Pelo menos uma user story é obrigatória',
-    });
-  if (story.functionalSpec.acceptanceCriteria.length === 0)
-    gaps.push({
-      section: 'Especificação Funcional',
-      field: 'acceptanceCriteria',
-      message: 'Pelo menos um critério de aceite é obrigatório',
-    });
+  checkRequiredArray(
+    gaps,
+    story.functionalSpec.userStories,
+    'Especificação Funcional',
+    'userStories',
+    'Pelo menos uma user story é obrigatória',
+  );
+  checkRequiredArray(
+    gaps,
+    story.functionalSpec.acceptanceCriteria,
+    'Especificação Funcional',
+    'acceptanceCriteria',
+    'Pelo menos um critério de aceite é obrigatório',
+  );
 
-  if (!story.nonFunctionalSpec.performance)
-    gaps.push({
-      section: 'Especificação Não-Funcional',
-      field: 'performance',
-      message: 'Requisito de performance é obrigatório',
-    });
-  if (!story.nonFunctionalSpec.security)
-    gaps.push({
-      section: 'Especificação Não-Funcional',
-      field: 'security',
-      message: 'Requisito de segurança é obrigatório',
-    });
+  checkRequired(
+    gaps,
+    story.nonFunctionalSpec.performance,
+    'Especificação Não-Funcional',
+    'performance',
+    'Requisito de performance é obrigatório',
+  );
+  checkRequired(
+    gaps,
+    story.nonFunctionalSpec.security,
+    'Especificação Não-Funcional',
+    'security',
+    'Requisito de segurança é obrigatório',
+  );
 
-  if (!story.technicalSpec.language)
-    gaps.push({
-      section: 'Especificação Técnica',
-      field: 'language',
-      message: 'Linguagem é obrigatória (typescript | javascript | java | csharp | python)',
-    });
-  if (!story.technicalSpec.framework)
-    gaps.push({
-      section: 'Especificação Técnica',
-      field: 'framework',
-      message: 'Framework é obrigatório (dotnet | springboot | angular | react | fastapi | other)',
-    });
-  if (!story.technicalSpec.architecture)
-    gaps.push({
-      section: 'Especificação Técnica',
-      field: 'architecture',
-      message:
-        'Arquitetura é obrigatória (hexagonal | layered | microservices | monolith | serverless)',
-    });
+  checkRequired(
+    gaps,
+    story.technicalSpec.language,
+    'Especificação Técnica',
+    'language',
+    'Linguagem é obrigatória (typescript | javascript | java | csharp | python)',
+  );
+  checkRequired(
+    gaps,
+    story.technicalSpec.framework,
+    'Especificação Técnica',
+    'framework',
+    'Framework é obrigatório (dotnet | springboot | angular | react | fastapi | other)',
+  );
+  checkRequired(
+    gaps,
+    story.technicalSpec.architecture,
+    'Especificação Técnica',
+    'architecture',
+    'Arquitetura é obrigatória (hexagonal | layered | microservices | monolith | serverless)',
+  );
 
-  if (story.dod.criteria.length === 0)
-    gaps.push({
-      section: 'DoD',
-      field: 'criteria',
-      message: 'Pelo menos um critério de DoD é obrigatório',
-    });
+  checkRequiredArray(
+    gaps,
+    story.dod.criteria,
+    'DoD',
+    'criteria',
+    'Pelo menos um critério de DoD é obrigatório',
+  );
 
   const dorStatus: DorStatus[] = story.dor.criteria.map((criterion, i) => ({
     criterion,

@@ -45,6 +45,7 @@ function emptyFix(): Fix {
     rootCauseHypothesis: { hypothesis: '', suspectedFiles: [], suspectedComponents: [] },
     impactAssessment: { severity: '', affectedUsers: '', affectedSystems: [], regressionRisk: '' },
     regressionPrevention: { testsToAdd: [] },
+    technicalContext: { messaging: '', database: '' },
     dof: { criteria: [] },
   };
 }

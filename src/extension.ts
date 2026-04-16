@@ -4,9 +4,11 @@ import { DevToolsAssessment } from './generator/utils/DevToolsAssessor';
 import { vscodeFileSystem } from './generator/utils/VscodeFileSystem';
 import { registerSpeckitParticipant } from './participant/speckitParticipant';
 import { Framework, Language } from './story/Story';
+import { createSpecFileWatcher } from './workflow/SpecFileWatcher';
 
 export function activate(context: vscode.ExtensionContext): void {
   registerSpeckitParticipant(context);
+  createSpecFileWatcher(context);
 
   context.subscriptions.push(
     vscode.commands.registerCommand('speckit.newStory', async () => {

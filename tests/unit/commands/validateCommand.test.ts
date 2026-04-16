@@ -5,23 +5,19 @@ import {
   handleValidateCommand,
   warnIfSpecLarge,
 } from '../../../src/participant/commands/validateCommand';
-import { InMemoryFileSystem, WorkspaceStub } from '../../support/fakes';
+import {
+  createMockRequest,
+  createMockStream,
+  createMockToken,
+  InMemoryFileSystem,
+  WorkspaceStub,
+} from '../../support/fakes';
 
 const fixturesDir = resolve(__dirname, '../../fixtures');
 const completeStoryMd = readFileSync(resolve(fixturesDir, 'story-complete.md'), 'utf-8');
 const partialStoryMd = readFileSync(resolve(fixturesDir, 'story-partial.md'), 'utf-8');
 const completeFixMd = readFileSync(resolve(fixturesDir, 'fix-complete.md'), 'utf-8');
 const partialFixMd = readFileSync(resolve(fixturesDir, 'fix-partial.md'), 'utf-8');
-
-function createMockStream() {
-  const calls: string[] = [];
-  return {
-    markdown: vi.fn((t: string) => {
-      calls.push(t);
-    }),
-    getAllMarkdown: () => calls.join(''),
-  };
-}
 
 describe('handleValidateCommand', () => {
   beforeEach(() => {
@@ -35,9 +31,9 @@ describe('handleValidateCommand', () => {
     workspace.getWorkspaceRoot = () => undefined;
 
     await handleValidateCommand(
-      {} as any,
-      stream as any,
-      {} as any,
+      createMockRequest(''),
+      stream,
+      createMockToken(),
       new InMemoryFileSystem(),
       workspace,
     );
@@ -51,9 +47,9 @@ describe('handleValidateCommand', () => {
     workspace.getActiveSpecPath = async () => undefined;
 
     await handleValidateCommand(
-      {} as any,
-      stream as any,
-      {} as any,
+      createMockRequest(''),
+      stream,
+      createMockToken(),
       new InMemoryFileSystem(),
       workspace,
     );
@@ -67,7 +63,7 @@ describe('handleValidateCommand', () => {
     fs.readFile = async () => partialStoryMd;
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('incompleta');
     expect(fs.hasFile('gap-fill.prompt.md')).toBe(true);
@@ -81,7 +77,7 @@ describe('handleValidateCommand', () => {
     fs.readFile = async () => completeStoryMd;
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(fs.writtenPaths().length).toBeGreaterThan(0);
   });
@@ -92,7 +88,7 @@ describe('handleValidateCommand', () => {
     fs.readFile = async () => completeStoryMd;
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('DoR atingido');
     expect(stream.getAllMarkdown()).toContain('speckit-implementador');
@@ -104,7 +100,7 @@ describe('handleValidateCommand', () => {
     fs.readFile = async () => completeStoryMd;
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('speckit-revisor');
     expect(stream.getAllMarkdown()).toContain('Sessão B');
@@ -118,7 +114,7 @@ describe('handleValidateCommand', () => {
     fs.readFile = async () => partialFixMd;
     const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-002.md' });
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('Fix incompleto');
     expect(fs.hasFile('gap-fill.prompt.md')).toBe(true);
@@ -132,7 +128,7 @@ describe('handleValidateCommand', () => {
     fs.readFile = async () => completeFixMd;
     const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-001.md' });
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('Fix válido');
     expect(stream.getAllMarkdown()).toContain('arquivo(s) gerado(s)');
@@ -145,7 +141,7 @@ describe('handleValidateCommand', () => {
     fs.readFile = async () => completeFixMd;
     const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-001.md' });
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('speckit-fix-implementador');
     expect(stream.getAllMarkdown()).toContain('Sessão B');
@@ -160,7 +156,7 @@ describe('handleValidateCommand', () => {
       throw new Error('stack detection failed');
     };
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('Erro ao detectar stack');
     expect(stream.getAllMarkdown()).toContain('stack detection failed');
@@ -185,7 +181,7 @@ describe('handleValidateCommand', () => {
     };
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('Backup');
   });
@@ -196,7 +192,7 @@ describe('handleValidateCommand', () => {
     fs.readFile = async () => completeStoryMd;
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).not.toContain('Backup');
   });
@@ -209,7 +205,7 @@ describe('handleValidateCommand', () => {
     fs.readFile = async () => completeStoryMd;
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('Tooling de qualidade');
     expect(stream.getAllMarkdown()).toContain('ESLint');
@@ -248,7 +244,7 @@ describe('handleValidateCommand', () => {
     };
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('já configurados');
     expect(stream.getAllMarkdown()).not.toContain('incluir skill');
@@ -261,9 +257,9 @@ describe('handleValidateCommand', () => {
     const workspace = new WorkspaceStub();
 
     await handleValidateCommand(
-      { prompt: '--devtools' } as any,
-      stream as any,
-      {} as any,
+      createMockRequest('--devtools'),
+      stream,
+      createMockToken(),
       fs,
       workspace,
     );
@@ -278,7 +274,7 @@ describe('handleValidateCommand', () => {
     fs.readFile = async () => completeFixMd;
     const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-001.md' });
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('Tooling de qualidade');
     expect(stream.getAllMarkdown()).toContain('ESLint');
@@ -291,9 +287,9 @@ describe('handleValidateCommand', () => {
     const workspace = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/FIX-001.md' });
 
     await handleValidateCommand(
-      { prompt: '--devtools' } as any,
-      stream as any,
-      {} as any,
+      createMockRequest('--devtools'),
+      stream,
+      createMockToken(),
       fs,
       workspace,
     );
@@ -308,7 +304,7 @@ describe('handleValidateCommand', () => {
     fs.readFile = async () => completeStoryMd;
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     // Normal flow outputs must still be present
     expect(stream.getAllMarkdown()).toContain('DoR atingido');
@@ -328,7 +324,7 @@ describe('handleValidateCommand', () => {
     };
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('Erro ao ler a spec');
     expect(stream.getAllMarkdown()).toContain('permission denied');
@@ -345,7 +341,7 @@ describe('handleValidateCommand', () => {
     };
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('Erro ao salvar gap-fill.prompt.md');
     expect(stream.getAllMarkdown()).toContain('no space left');
@@ -361,7 +357,7 @@ describe('handleValidateCommand', () => {
     };
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('Erro ao gerar arquivos de configuração');
   });
@@ -373,7 +369,7 @@ describe('handleValidateCommand', () => {
     const workspace = new WorkspaceStub();
     const cancelledToken = { isCancellationRequested: true, onCancellationRequested: vi.fn() };
 
-    await handleValidateCommand({} as any, stream as any, cancelledToken as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, cancelledToken, fs, workspace);
 
     // Should not proceed to generate files
     expect(stream.getAllMarkdown()).not.toContain('arquivo(s) gerado(s)');
@@ -390,7 +386,7 @@ describe('handleValidateCommand', () => {
     fs.readFile = async () => largeContent;
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('Spec grande detectada');
     expect(stream.getAllMarkdown()).toContain('Dicas para reduzir');
@@ -405,7 +401,7 @@ describe('handleValidateCommand', () => {
     fs.readFile = async () => completeStoryMd;
     const workspace = new WorkspaceStub();
 
-    await handleValidateCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).not.toContain('Spec grande detectada');
   });

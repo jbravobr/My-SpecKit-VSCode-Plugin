@@ -3,6 +3,13 @@ import * as vscode from 'vscode';
 import { TechStackDetection } from '../../fix/Fix';
 import { SpecStatus } from '../../story/Story';
 
+function isFileNotFound(err: unknown): boolean {
+  if (err instanceof vscode.FileSystemError && err.code === 'FileNotFound') return true;
+  if (err instanceof Error && 'code' in err && (err as NodeJS.ErrnoException).code === 'ENOENT')
+    return true;
+  return false;
+}
+
 export function getWorkspaceRoot(): string | undefined {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 }
@@ -14,11 +21,14 @@ export async function listStoryFiles(dirPath: string): Promise<string[]> {
     return entries
       .filter(
         ([name, type]) =>
-          type === vscode.FileType.File && name.startsWith('STORY-') && name.endsWith('.md'),
+          type === vscode.FileType.File &&
+          (name.startsWith('US-') || name.startsWith('STORY-')) &&
+          name.endsWith('.md'),
       )
       .map(([name]) => name);
-  } catch {
-    return [];
+  } catch (err: unknown) {
+    if (isFileNotFound(err)) return [];
+    throw err;
   }
 }
 
@@ -32,8 +42,9 @@ export async function listFixFiles(dirPath: string): Promise<string[]> {
           type === vscode.FileType.File && name.startsWith('FIX-') && name.endsWith('.md'),
       )
       .map(([name]) => name);
-  } catch {
-    return [];
+  } catch (err: unknown) {
+    if (isFileNotFound(err)) return [];
+    throw err;
   }
 }
 
@@ -217,15 +228,23 @@ async function readSpecStatus(filePath: string): Promise<SpecStatus> {
       'cancelled',
     ]);
     return valid.has(s) ? s : 'open';
-  } catch {
-    return 'open';
+  } catch (err: unknown) {
+    if (isFileNotFound(err)) return 'open';
+    throw err;
   }
 }
 
 function specSortKey(filename: string): number {
-  const match = /(\d+)\.md$/.exec(filename);
-  const id = match ? parseInt(match[1], 10) : 0;
-  // FIX files at same ID are considered newer than STORY files
+  // Timestamp-based IDs: extract YYYYMMDD-HHMM for sorting
+  const tsMatch = /(\d{8})-(\d{4})\.md$/.exec(filename);
+  if (tsMatch) {
+    const sortable = parseInt(tsMatch[1] + tsMatch[2], 10);
+    const isFix = filename.startsWith('FIX-') ? 0.5 : 0;
+    return sortable + isFix;
+  }
+  // Legacy sequential IDs: STORY-001, FIX-001
+  const seqMatch = /(\d+)\.md$/.exec(filename);
+  const id = seqMatch ? parseInt(seqMatch[1], 10) : 0;
   const isFix = filename.startsWith('FIX-') ? 0.5 : 0;
   return id + isFix;
 }
@@ -234,8 +253,9 @@ async function fileExistsAt(filePath: string): Promise<boolean> {
   try {
     await vscode.workspace.fs.stat(vscode.Uri.file(filePath));
     return true;
-  } catch {
-    return false;
+  } catch (err: unknown) {
+    if (isFileNotFound(err)) return false;
+    throw err;
   }
 }
 

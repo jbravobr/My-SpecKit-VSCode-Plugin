@@ -14,9 +14,14 @@ import { appendLog } from '../../generator/utils/SessionLogger';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { extractSpecType } from '../../parser/BaseParser';
+import type { Gate } from '../../story/Story';
 import { Framework, Language } from '../../story/Story';
 import { parseStory } from '../../story/StoryParser';
 import { validateStory } from '../../story/StoryValidator';
+import { getValidNextGates } from '../../workflow/GateEnforcer';
+import { TraceabilityManager } from '../../workflow/TraceabilityManager';
+
+import { handleCommandError, requireWorkspace } from './CommandHelpers';
 
 /** Threshold in bytes above which a spec size warning is emitted. ~50 KB ≈ 12k tokens. */
 const SPEC_SIZE_WARN_BYTES = 50_000;
@@ -28,11 +33,8 @@ export async function handleValidateCommand(
   fs: IFileSystem = vscodeFileSystem,
   workspace: IWorkspace = vscodeWorkspace,
 ): Promise<void> {
-  const workspaceRoot = workspace.getWorkspaceRoot();
-  if (!workspaceRoot) {
-    stream.markdown('❌ Nenhum workspace aberto.');
-    return;
-  }
+  const workspaceRoot = requireWorkspace(workspace, stream);
+  if (!workspaceRoot) return;
 
   const specPath = await workspace.getActiveSpecPath();
   if (!specPath) {
@@ -49,8 +51,7 @@ export async function handleValidateCommand(
   try {
     content = await fs.readFile(specPath);
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    stream.markdown(`❌ **Erro ao ler a spec** (\`${specPath}\`): ${msg}\n`);
+    handleCommandError(err, stream, `Erro ao ler a spec (\`${specPath}\`)`);
     return;
   }
 
@@ -98,8 +99,7 @@ async function validateStory_(
     try {
       await fs.writeFile(gapPromptPath, gapPromptContent);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      stream.markdown(`❌ **Erro ao salvar gap-fill.prompt.md:** ${msg}\n`);
+      handleCommandError(err, stream, 'Erro ao salvar gap-fill.prompt.md');
       return;
     }
     const doc = await vscode.workspace.openTextDocument(gapPromptPath);
@@ -127,6 +127,15 @@ async function validateStory_(
         `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#gap-fill.prompt.md\` no campo de mensagem\n\n` +
         `Após preencher todas as lacunas, volte ao chat do **@speckit** e execute \`@speckit /validate\` para revalidar.\n`,
     );
+    await recordTrace(
+      workspaceRoot,
+      story.metadata.id,
+      'story',
+      story.metadata.gate,
+      false,
+      result.gaps.length,
+      fs,
+    );
     return;
   }
 
@@ -144,8 +153,7 @@ async function validateStory_(
   try {
     files = await generateCopilotConfig(workspaceRoot, story, fs);
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    stream.markdown(`❌ **Erro ao gerar arquivos de configuração:** ${msg}\n`);
+    handleCommandError(err, stream, 'Erro ao gerar arquivos de configuração');
     return;
   }
   const fileList = files.map((f) => `- \`${f}\``).join('\n');
@@ -164,10 +172,23 @@ async function validateStory_(
 
   stream.markdown(`✅ **${files.length} arquivo(s) gerado(s):**\n\n${fileList}\n\n---\n\n`);
 
+  emitGateInfo(story.metadata.gate, stream);
+  await recordTrace(
+    workspaceRoot,
+    story.metadata.id,
+    'story',
+    story.metadata.gate,
+    result.valid,
+    0,
+    fs,
+  );
+
+  const lang = story.technicalSpec.language || 'typescript';
+  const fw = story.technicalSpec.framework || 'other';
   await offerDevTools(
     workspaceRoot,
-    story.technicalSpec.language,
-    story.technicalSpec.framework,
+    lang as Language,
+    fw as Framework,
     stream,
     fs,
     includeDevTools,
@@ -205,8 +226,7 @@ async function validateFix_(
     try {
       await fs.writeFile(gapPromptPath, gapPromptContent);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      stream.markdown(`❌ **Erro ao salvar gap-fill.prompt.md:** ${msg}\n`);
+      handleCommandError(err, stream, 'Erro ao salvar gap-fill.prompt.md');
       return;
     }
     const doc = await vscode.workspace.openTextDocument(gapPromptPath);
@@ -231,6 +251,15 @@ async function validateFix_(
         `- **Opção A (recomendada):** Com o arquivo aberto no editor, clique no ícone **▶ Run in Copilot Chat** na barra de título → selecione **Novo Chat**\n` +
         `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#gap-fill.prompt.md\` no campo de mensagem\n\n` +
         `Após preencher todas as lacunas, volte ao chat do **@speckit** e execute \`@speckit /validate\` para revalidar.\n`,
+    );
+    await recordTrace(
+      workspaceRoot,
+      fix.metadata.id,
+      'fix',
+      fix.metadata.gate,
+      false,
+      result.gaps.length,
+      fs,
     );
     return;
   }
@@ -264,6 +293,9 @@ async function validateFix_(
 
     stream.markdown(`✅ **${files.length} arquivo(s) gerado(s):**\n\n${fileList}\n\n---\n\n`);
 
+    emitGateInfo(fix.metadata.gate, stream);
+    await recordTrace(workspaceRoot, fix.metadata.id, 'fix', fix.metadata.gate, true, 0, fs);
+
     await offerDevTools(
       workspaceRoot,
       stack.language,
@@ -273,8 +305,7 @@ async function validateFix_(
       includeDevTools,
     );
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    stream.markdown(`❌ **Erro ao detectar stack:** ${msg}\n`);
+    handleCommandError(err, stream, 'Erro ao detectar stack');
     return;
   }
 
@@ -389,7 +420,7 @@ async function writeDevToolsSkill(
   assessment: DevToolsAssessment,
   fs: IFileSystem,
 ): Promise<void> {
-  const { generateDevToolsSkill } = await import('../../generator/skill/DevToolsSkillGenerator');
+  const { generateDevToolsSkill } = await import('../../generator/skill/DevToolsSkillGenerator.js');
   const skillDir = workspaceRoot + '/.github/skills/speckit-devtools';
   await fs.ensureDir(skillDir);
   await fs.writeFile(
@@ -419,4 +450,46 @@ export function warnIfSpecLarge(
       `> **Nota:** Isso é apenas um aviso — o processo continua normalmente.\n\n`,
   );
   return true;
+}
+
+// ─── Gate info & traceability helpers ────────────────────────────────────────
+
+const GATE_LABELS: Record<Gate, string> = {
+  0: 'Alinhamento',
+  1: 'Implementação',
+  2: 'Testes',
+  3: 'Revisão',
+  4: 'Entrega',
+};
+
+function emitGateInfo(gate: Gate, stream: vscode.ChatResponseStream): void {
+  const nextGates = getValidNextGates(gate);
+  const nextInfo =
+    nextGates.length > 0
+      ? nextGates.map((g) => `Gate ${g} (${GATE_LABELS[g]})`).join(', ')
+      : 'nenhum';
+  stream.markdown(
+    `🚪 **Gate atual:** ${gate} — ${GATE_LABELS[gate]} | **Próximo(s):** ${nextInfo}\n\n`,
+  );
+}
+
+async function recordTrace(
+  workspaceRoot: string,
+  specId: string,
+  specType: 'story' | 'fix',
+  gate: Gate,
+  valid: boolean,
+  gapCount: number,
+  fs: IFileSystem,
+): Promise<void> {
+  try {
+    const tracer = new TraceabilityManager(workspaceRoot, fs);
+    await tracer.record(specId, specType, {
+      type: 'gate',
+      description: `validated at gate ${gate}`,
+      data: { gate: String(gate), valid: String(valid), gaps: String(gapCount) },
+    });
+  } catch {
+    // Traceability should never break the main flow
+  }
 }

@@ -2,7 +2,7 @@
   "name": "vscode-plugin-speckit",
   "displayName": "SpecKit — Spec Driven Development",
   "description": "Defina sua história e configure o Copilot para desenvolvimento orientado a spec",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "icon": "assets/speckit_icon.png",
   "publisher": "local",
   "engines": {
@@ -41,6 +41,38 @@
           {
             "name": "draft",
             "description": "Rascunhar uma spec (story ou fix) a partir de texto livre"
+          },
+          {
+            "name": "agent",
+            "description": "Alternar modo do agente (debugger, refactor, implementador, revisor)"
+          },
+          {
+            "name": "gate",
+            "description": "Exibir regras de gate e validar transições"
+          },
+          {
+            "name": "audit",
+            "description": "Visualizar log de auditoria"
+          },
+          {
+            "name": "trace",
+            "description": "Visualizar rastreabilidade de specs"
+          },
+          {
+            "name": "diff",
+            "description": "Mostrar git diff no chat"
+          },
+          {
+            "name": "commit",
+            "description": "Auto-stage e commit com prefixo speckit:"
+          },
+          {
+            "name": "context",
+            "description": "Gerenciar arquivos de contexto"
+          },
+          {
+            "name": "doctor",
+            "description": "Diagnóstico de saúde do workspace"
           }
         ]
       }

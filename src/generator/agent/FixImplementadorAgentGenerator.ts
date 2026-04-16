@@ -59,6 +59,15 @@ Com base na leitura e inspeção:
 - [ ] Root cause confirmada e aceita pelo usuário
 - [ ] Escopo da mudança delimitado
 
+### 0.4 Pré-requisitos antes de implementar
+
+Antes de modificar qualquer arquivo de produção, execute e garanta que passam:
+- **Lint**: \`npm run lint\` (ou equivalente da stack)
+- **Type-check**: \`npx tsc --noEmit\` (TypeScript) | \`mypy\` (Python) | \`dotnet build\` (C#)
+- **Testes existentes**: \`npm test\` (ou equivalente)
+
+Se qualquer validação falhar no estado atual do repositório, corrija ANTES de começar o fix.
+
 ---
 
 ## Gate 1 — Implementação

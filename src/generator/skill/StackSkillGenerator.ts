@@ -1,23 +1,23 @@
 import { Story } from '../../story/Story';
-import { stripFrontmatter } from './stripFrontmatter';
-import { generateTypeScript } from '../language/TypeScriptGenerator';
-import { generateJavaScript } from '../language/JavaScriptGenerator';
-import { generateJava } from '../language/JavaGenerator';
-import { generateCSharp } from '../language/CSharpGenerator';
-import { generatePython } from '../language/PythonGenerator';
-import { generateDotNet } from '../framework/DotNetGenerator';
-import { generateSpringBoot } from '../framework/SpringBootGenerator';
+import { generateIdempotency } from '../baseline/IdempotencyGenerator';
 import { generateAngular } from '../framework/AngularGenerator';
-import { generateReact } from '../framework/ReactGenerator';
+import { generateDotNet } from '../framework/DotNetGenerator';
 import { generateFastApi } from '../framework/FastApiGenerator';
-import { generateKafka } from '../infra/KafkaGenerator';
+import { generateReact } from '../framework/ReactGenerator';
+import { generateSpringBoot } from '../framework/SpringBootGenerator';
 import { generateAws } from '../infra/AwsGenerator';
 import { generateGlueJob } from '../infra/GlueJobGenerator';
-import { generateCrudPattern } from '../pattern/CrudPatternGenerator';
+import { generateKafka } from '../infra/KafkaGenerator';
+import { generateCSharp } from '../language/CSharpGenerator';
+import { generateJava } from '../language/JavaGenerator';
+import { generateJavaScript } from '../language/JavaScriptGenerator';
+import { generatePython } from '../language/PythonGenerator';
+import { generateTypeScript } from '../language/TypeScriptGenerator';
 import { generateBffPattern } from '../pattern/BffPatternGenerator';
 import { generateContractTesting } from '../pattern/ContractTestingGenerator';
-import { generateIdempotency } from '../baseline/IdempotencyGenerator';
+import { generateCrudPattern } from '../pattern/CrudPatternGenerator';
 import { isNa } from '../utils/na';
+import { stripFrontmatter } from './stripFrontmatter';
 
 interface StackSkillOptions {
   language: string;
@@ -106,11 +106,64 @@ export function generateStackSkill(opts: StackSkillOptions, story?: Story): stri
 
   const stackLabel = stackParts.join(', ') || 'generic';
 
+  // Mock library recommendation per language
+  const mockSection = buildMockRecommendation(opts.language);
+
   return `---
 name: speckit-stack
 description: "SpecKit stack conventions — ${stackLabel}. Best practices for ${opts.language || 'general'} language, ${opts.framework || 'general'} framework, infrastructure, and architectural patterns. Activate when writing or reviewing code in a SpecKit-managed project."
 ---
 
 ${sections.join('\n---\n\n')}
+${mockSection}
 `;
+}
+
+function buildMockRecommendation(language: string): string {
+  switch (language) {
+    case 'typescript':
+    case 'javascript':
+      return `---
+
+# Mocks e Stubs — Recomendações
+
+- **Prefira stubs tipados** que implementam a interface real (ex: \`InMemoryFileSystem implements IFileSystem\`)
+- Evite \`vi.fn()\` / \`jest.fn()\` retornando \`any\` — crie factories tipadas: \`createMockStream(): ChatResponseStream\`
+- Evite \`{} as any\` para parâmetros — crie factories que retornam o tipo completo
+- Mocks não-tipados escondem erros de compilação — \`tsc --noEmit\` não detecta \`as any\`
+- Use \`vi.fn()\` apenas para verificar que um método foi chamado, nunca para retornar dados de domínio
+`;
+    case 'java':
+      return `---
+
+# Mocks e Stubs — Recomendações
+
+- **Prefira fakes in-memory** que implementam a interface real (ex: \`InMemoryRepository implements UserRepository\`)
+- Mockito: use \`@Mock\` + \`@InjectMocks\` com types reais — evite \`Mockito.any()\` em assertions
+- Evite mocks profundos (\`RETURNS_DEEP_STUBS\`) — indica design frágil
+- Use \`verify()\` para interações, \`assertThat()\` para resultados — nunca misture papéis
+`;
+    case 'python':
+      return `---
+
+# Mocks e Stubs — Recomendações
+
+- **Prefira fakes tipados** que implementam a mesma Protocol/ABC (ex: \`InMemoryRepo(UserRepository)\`)
+- \`unittest.mock.Mock\` sem \`spec\` aceita qualquer atributo — sempre use \`spec=InterfaceReal\`
+- Prefira \`create_autospec()\` sobre \`Mock()\` genérico para garantir conformidade com a interface
+- Use \`pytest.fixture\` para factories de stubs reutilizáveis
+`;
+    case 'csharp':
+      return `---
+
+# Mocks e Stubs — Recomendações
+
+- **Prefira fakes in-memory** que implementam a interface (ex: \`InMemoryRepository : IUserRepository\`)
+- Moq: use \`Mock<IService>()\` com tipo real — evite \`It.IsAny<object>()\` em assertions
+- Prefer \`Substitute.For<IService>()\` (NSubstitute) para setup mais limpo
+- Evite \`Mock.Of<>() \` com LINQ — difícil de debugar quando falha
+`;
+    default:
+      return '';
+  }
 }
