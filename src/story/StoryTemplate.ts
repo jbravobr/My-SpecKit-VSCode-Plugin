@@ -10,6 +10,7 @@ export function generateStoryTemplate(id: string, defaults?: WorkspaceDefaults):
   const db = d.database ?? '';
   const infra = d.infrastructure ?? '';
   const stage = d.projectStage ?? '';
+  const ci = d.ci ?? '';
   return `# História ${id}
 
 <!-- metadata
@@ -137,6 +138,14 @@ ${
   `<!-- TODO: Escolha exatamente um: greenfield | brownfield
      greenfield = projeto novo, sem código existente
      brownfield = projeto existente, com código e convenções já estabelecidos -->`
+}
+
+### CI
+${
+  ci ||
+  `<!-- TODO: Escolha exatamente um: github-actions | none
+     github-actions = gerar workflows de CI/CD para GitHub Actions
+     none = não gerar workflows de CI/CD -->`
 }
 
 ---

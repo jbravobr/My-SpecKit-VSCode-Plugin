@@ -318,6 +318,65 @@ describe.skipIf(SKIP)('Story Prompt — LLM behavioral compliance', () => {
       ).toBeLessThanOrEqual(2);
     },
   );
+
+  it(
+    'does not re-ask 1.3b after user already answered — advances to 1.4',
+    { timeout: 30_000 },
+    async () => {
+      // Simulate: user has answered 1.1, 1.2, 1.3a, and now 1.3b
+      const response = await chat(storyPrompt, [
+        { role: 'user', content: 'Iniciar' },
+        {
+          role: 'assistant',
+          content:
+            'Qual dor, ineficiência ou lacuna esta funcionalidade resolve? Quem sente essa dor hoje e com qual frequência?',
+        },
+        {
+          role: 'user',
+          content:
+            'Os vendedores não conseguem ver suas comissões em tempo real. Acontece diariamente.',
+        },
+        {
+          role: 'assistant',
+          content: 'O que torna esta entrega urgente ou relevante neste momento?',
+        },
+        {
+          role: 'user',
+          content:
+            'O time comercial cresceu 40% e o suporte triplicou reclamações sobre comissões.',
+        },
+        {
+          role: 'assistant',
+          content: 'O que muda — e para quem — quando isso for entregue?',
+        },
+        {
+          role: 'user',
+          content: 'Vendedores terão visibilidade em tempo real, reduzindo dúvidas e reclamações.',
+        },
+        {
+          role: 'assistant',
+          content: 'Como você vai saber que deu certo? Qual indicador ou métrica vai se mover?',
+        },
+        {
+          role: 'user',
+          content:
+            'Sistemas que hoje usam de conexões diretas com as bases dos sistemas ou usam camada de analytics para isto, sairem deste modelo e conseguirem consumir o Conduit com as transações desejadas corretamente',
+        },
+      ]);
+
+      // After answering 1.3b, the agent MUST advance to 1.4 (stakeholders)
+      // and NOT re-ask about metrics/indicators
+      expect(response).toMatch(/impactado|interesse|resultado|times|stakeholders/i);
+      expect(response).not.toMatch(/como voc[eê] vai saber que deu certo|indicador ou m[eé]trica/i);
+
+      // Should have exactly one question (1.4)
+      const questionCount = countQuestions(response);
+      expect(
+        questionCount,
+        `Expected 1 question (1.4), got ${questionCount}:\n${response}`,
+      ).toBeLessThanOrEqual(2);
+    },
+  );
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

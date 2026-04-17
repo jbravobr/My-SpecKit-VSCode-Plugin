@@ -1,6 +1,13 @@
 import * as path from 'path';
 import { IFileSystem } from '../generator/utils/IFileSystem';
-import { Architecture, Framework, Language, ProjectStage, Target } from '../story/Story';
+import {
+  Architecture,
+  CiProvider,
+  Framework,
+  Language,
+  ProjectStage,
+  Target,
+} from '../story/Story';
 
 export interface WorkspaceDefaults {
   language?: Language;
@@ -10,6 +17,7 @@ export interface WorkspaceDefaults {
   projectStage?: ProjectStage;
   database?: string;
   infrastructure?: string;
+  ci?: CiProvider;
 }
 
 const VALID_LANGUAGES = new Set<string>(['typescript', 'javascript', 'java', 'csharp', 'python']);
@@ -30,6 +38,7 @@ const VALID_ARCHITECTURES = new Set<string>([
 ]);
 const VALID_TARGETS = new Set<string>(['backend', 'frontend', 'bff', 'script', 'library']);
 const VALID_STAGES = new Set<string>(['greenfield', 'brownfield']);
+const VALID_CI_PROVIDERS = new Set<string>(['github-actions', 'none']);
 
 /**
  * Loads workspace defaults from `.speckit/defaults.yml`.
@@ -89,6 +98,9 @@ export function parseDefaultsYaml(content: string): WorkspaceDefaults {
         break;
       case 'infrastructure':
         defaults.infrastructure = value;
+        break;
+      case 'ci':
+        if (VALID_CI_PROVIDERS.has(value)) defaults.ci = value as CiProvider;
         break;
     }
   }

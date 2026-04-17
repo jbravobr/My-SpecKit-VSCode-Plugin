@@ -21,6 +21,7 @@ export function generateFixElicitPrompt(roughInput: string, nextId: string): str
 - Após escrever a pergunta, sua mensagem está COMPLETA. Não escreva mais nada.
 - Nunca responda sua própria pergunta — nem explicitamente ("Sim"), nem implicitamente (derivando uma resposta).
 - Nunca aplique um default sem ter feito a pergunta E recebido resposta do usuário.
+- **Se uma pergunta já foi respondida nesta conversa, NUNCA a repita.** Avance para a próxima pergunta da sequência. Isso vale para sub-perguntas (ex: 1.4, 1.5) — cada uma é respondida uma única vez.
 - **Exceção única:** se o usuário escrever "modo rápido", "preenche com defaults" ou equivalente → vá para a seção "Modo rápido" ao final deste prompt.
 
 **Sequência obrigatória para cada campo:**

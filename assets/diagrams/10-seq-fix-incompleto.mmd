@@ -1,0 +1,26 @@
+sequenceDiagram
+    autonumber
+    actor U as Você
+    participant SK as @speckit
+
+    U->>SK: /validate (fix com lacunas)
+    SK-->>U: ⚠️ 4 lacunas encontradas
+
+    SK-->>U: Lacuna 1 — Passos para reproduzir?
+    U->>SK: Relatório → Exportar PDF. Console: TypeError window.print
+    SK-->>U: ✓ Atualizado
+
+    SK-->>U: Lacuna 2 — Hipótese da causa raiz?
+    U->>SK: Firefox bloqueia window.print() em handler async
+    SK-->>U: ✓ Atualizado
+
+    SK-->>U: Lacuna 3 — Severidade?
+    U->>SK: High — usado diariamente pelo financeiro
+    SK-->>U: ✓ Atualizado
+
+    SK-->>U: Lacuna 4 — Testes de regressão?
+    U->>SK: Unitário: print síncrono. Integração: simula clique
+    SK-->>U: ✓ Todas preenchidas
+
+    U->>SK: /validate (novamente)
+    SK-->>U: ✅ Fix válido — 7 arquivos gerados

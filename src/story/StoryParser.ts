@@ -8,6 +8,7 @@ import {
 } from '../parser/BaseParser';
 import {
   Architecture,
+  CiProvider,
   emptyStory,
   Framework,
   Gate,
@@ -58,6 +59,7 @@ export function parseStory(markdown: string): Story {
   story.technicalSpec.database = cleanTodo(get('Banco de Dados'));
   story.technicalSpec.infrastructure = cleanTodo(get('Infraestrutura'));
   story.technicalSpec.projectStage = cleanTodo(get('Estágio do Projeto')) as ProjectStage | '';
+  story.technicalSpec.ci = cleanTodo(get('CI')) as CiProvider | '';
 
   const dorItems = parseDorItems(get('DoR - Definition of Ready'));
   story.dor.criteria = dorItems.map((d) => d.text);

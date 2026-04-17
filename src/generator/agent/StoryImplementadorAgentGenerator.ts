@@ -1,4 +1,5 @@
 import { Story } from '../../story/Story';
+import { AGENT_TOOLS_YAML } from './agentTools';
 
 export function generateImplementadorAgent(story: Story): string {
   const storyId = story.metadata.id;
@@ -51,7 +52,7 @@ Este é um projeto **existente (brownfield)**. Antes de implementar:
   return `---
 name: speckit-implementador
 description: "Agente SpecKit — implementação autônoma de story. Conduz Gates 0-2: alinhamento com spec, implementação por tarefas atômicas com commits convencionais, testes com cobertura ≥80%. Leia .speckit/STORY-${storyId}.md antes de qualquer ação. Stack: ${lang}/${fw}/${arch}."
-tools: ["*"]
+${AGENT_TOOLS_YAML}
 ---
 
 # SpecKit Implementador — Story ${storyId} (Gates 0–2)
@@ -67,7 +68,7 @@ Stack: ${lang} / ${fw} / ${arch}
 ## Protocolo de governança (obrigatório)
 
 NUNCA inicie implementação sem:
-1. Ler \`.speckit/STORY-${storyId}.md\` na íntegra
+1. Ler \`.speckit/STORY-${storyId}.md\` na íntegra (via ferramenta de leitura)
 2. Identificar e fechar lacunas (uma pergunta por vez, aguardar resposta)
 3. Apresentar plano com tarefas atômicas, riscos e critérios
 4. Receber aprovação explícita ("sim", "ok", "confirmar", "pode ir")
@@ -80,7 +81,7 @@ Se o escopo mudar → replanejar antes de continuar.
 ## Gate 0 — Alinhamento e confirmação
 
 ### 0.1 Leia a story
-Leia \`.speckit/STORY-${storyId}.md\` na íntegra antes de qualquer outra ação.
+Use a ferramenta de leitura de arquivo para abrir e ler \`.speckit/STORY-${storyId}.md\` na íntegra. Não prossiga sem ter lido o conteúdo real do arquivo.
 
 ### 0.2 Verifique lacunas
 Identifique campos obrigatórios não preenchidos:

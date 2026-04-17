@@ -39,12 +39,19 @@ async function removeDir(dirPath: string): Promise<void> {
   }
 }
 
-async function fileExists(filePath: string): Promise<boolean> {
+async function findGeneratedFile(
+  dirPath: string,
+  prefix: string,
+  suffix: string,
+): Promise<string | undefined> {
   try {
-    await vscode.workspace.fs.stat(vscode.Uri.file(filePath));
-    return true;
+    const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
+    return entries
+      .filter(([, type]) => type === vscode.FileType.File)
+      .map(([name]) => name)
+      .find((name) => name.startsWith(prefix) && name.endsWith(suffix));
   } catch {
-    return false;
+    return undefined;
   }
 }
 
@@ -88,8 +95,13 @@ suite('Participant routing — /draft story intent', () => {
 
     await handleSpeckitRequest(request, {} as any, stream as any, {} as any);
 
-    const filePath = path.join(specDir, 'elicit-story-001.prompt.md');
-    assert.ok(await fileExists(filePath), 'elicit-story-001.prompt.md deveria ter sido criado');
+    const generatedFile = await findGeneratedFile(specDir, 'elicit-story-', '.prompt.md');
+    assert.ok(generatedFile, 'Um prompt de elicitação de story deveria ter sido criado');
+    assert.match(
+      generatedFile!,
+      /^elicit-story-US-[A-Z0-9]{1,10}-\d{8}-\d{4}\.prompt\.md$/,
+      'O arquivo deveria usar o formato atual de ID',
+    );
   });
 
   test('/draft: stream instrui usar Novo Chat para elicitação', async () => {
@@ -98,12 +110,11 @@ suite('Participant routing — /draft story intent', () => {
 
     await handleSpeckitRequest(request, {} as any, stream as any, {} as any);
 
+    const generatedFile = await findGeneratedFile(specDir, 'elicit-story-', '.prompt.md');
     const out = stream.getAll();
     assert.ok(out.includes('Novo Chat'), 'Stream deveria instruir usar Novo Chat');
-    assert.ok(
-      out.includes('elicit-story-001.prompt.md'),
-      'Stream deveria mencionar o arquivo gerado',
-    );
+    assert.ok(generatedFile, 'O arquivo gerado deveria existir');
+    assert.ok(out.includes(generatedFile!), 'Stream deveria mencionar o arquivo gerado');
   });
 });
 
@@ -124,7 +135,7 @@ suite('Participant routing — /draft fix intent', () => {
     await removeDir(specDir);
   });
 
-  test('/draft --fix: cria elicit-fix-001.prompt.md', async () => {
+  test('/draft --fix: cria prompt de elicitação com ID atual', async () => {
     const stream = createStream();
     const request = createRequest(
       'draft',
@@ -133,11 +144,16 @@ suite('Participant routing — /draft fix intent', () => {
 
     await handleSpeckitRequest(request, {} as any, stream as any, {} as any);
 
-    const filePath = path.join(specDir, 'elicit-fix-001.prompt.md');
-    assert.ok(await fileExists(filePath), 'elicit-fix-001.prompt.md deveria ter sido criado');
+    const generatedFile = await findGeneratedFile(specDir, 'elicit-fix-', '.prompt.md');
+    assert.ok(generatedFile, 'Um prompt de elicitação de fix deveria ter sido criado');
+    assert.match(
+      generatedFile!,
+      /^elicit-fix-FIX-[A-Z0-9]{1,10}-\d{8}-\d{4}\.prompt\.md$/,
+      'O arquivo deveria usar o formato atual de ID',
+    );
   });
 
-  test('/draft --fix: stream menciona FIX-001', async () => {
+  test('/draft --fix: stream menciona o ID atual do fix', async () => {
     const stream = createStream();
     const request = createRequest(
       'draft',
@@ -146,7 +162,11 @@ suite('Participant routing — /draft fix intent', () => {
 
     await handleSpeckitRequest(request, {} as any, stream as any, {} as any);
 
-    assert.ok(stream.getAll().includes('FIX-001'), 'Stream deveria mencionar FIX-001');
+    assert.match(
+      stream.getAll(),
+      /FIX-[A-Z0-9]{1,10}-\d{8}-\d{4}/,
+      'Stream deveria mencionar o ID atual do fix',
+    );
   });
 });
 
@@ -167,20 +187,25 @@ suite('Participant routing — /fix', () => {
     await removeDir(specDir);
   });
 
-  test('/fix: cria FIX-001.md no .speckit/', async () => {
+  test('/fix: cria arquivo de fix com ID atual no .speckit/', async () => {
     const stream = createStream();
     await handleSpeckitRequest(createRequest('fix'), {} as any, stream as any, {} as any);
 
-    const filePath = path.join(specDir, 'FIX-001.md');
-    assert.ok(await fileExists(filePath), 'FIX-001.md deveria ter sido criado');
+    const generatedFile = await findGeneratedFile(specDir, 'FIX-', '.md');
+    assert.ok(generatedFile, 'Um fix deveria ter sido criado');
+    assert.match(
+      generatedFile!,
+      /^FIX-[A-Z0-9]{1,10}-\d{8}-\d{4}\.md$/,
+      'O arquivo deveria usar o formato atual de ID',
+    );
   });
 
-  test('/fix: stream confirma criação e instrui próximos passos', async () => {
+  test('/fix: stream confirma criação e menciona o ID atual', async () => {
     const stream = createStream();
     await handleSpeckitRequest(createRequest('fix'), {} as any, stream as any, {} as any);
 
     const out = stream.getAll();
-    assert.ok(out.includes('FIX-001'), 'Stream deveria mencionar FIX-001');
+    assert.match(out, /FIX-[A-Z0-9]{1,10}-\d{8}-\d{4}/, 'Stream deveria mencionar o ID atual');
   });
 });
 

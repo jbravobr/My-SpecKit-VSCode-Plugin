@@ -23,6 +23,21 @@ infrastructure: AWS ECS
     expect(result.infrastructure).toBe('AWS ECS');
   });
 
+  it('parses ci: github-actions correctly', () => {
+    const result = parseDefaultsYaml('ci: github-actions');
+    expect(result.ci).toBe('github-actions');
+  });
+
+  it('parses ci: none correctly', () => {
+    const result = parseDefaultsYaml('ci: none');
+    expect(result.ci).toBe('none');
+  });
+
+  it('rejects invalid ci values', () => {
+    const result = parseDefaultsYaml('ci: jenkins');
+    expect(result.ci).toBeUndefined();
+  });
+
   it('returns empty object for empty content', () => {
     expect(parseDefaultsYaml('')).toEqual({});
   });

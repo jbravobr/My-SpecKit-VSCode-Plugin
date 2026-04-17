@@ -14,12 +14,15 @@ status: open
 ## Requisito de Negócio
 
 ### Problema
+
 O app mobile faz múltiplas chamadas a serviços diferentes para montar a tela de pedidos.
 
 ### Valor
+
 BFF agrega e formata os dados, reduzindo o número de roundtrips do mobile.
 
 ### Stakeholders
+
 - Time Mobile (redução de roundtrips)
 - Time de Plataforma (simplificação do client)
 
@@ -28,14 +31,17 @@ BFF agrega e formata os dados, reduzindo o número de roundtrips do mobile.
 ## Especificação Funcional
 
 ### User Stories
+
 - Como BFF, quero agregar dados de pedidos, itens e status em uma única resposta
 
 ### Critérios de Aceite
+
 - Endpoint GET /api/pedidos/{id} retorna pedido completo
 - Chamadas aos serviços downstream em paralelo
 - Erros downstream normalizados para RFC 7807
 
 ### Fora de Escopo
+
 - Criação de pedidos
 - Cancelamento de pedidos
 
@@ -44,18 +50,23 @@ BFF agrega e formata os dados, reduzindo o número de roundtrips do mobile.
 ## Especificação Não-Funcional
 
 ### Performance
+
 P99 < 300ms incluindo fan-out aos serviços downstream.
 
 ### Segurança
+
 Token relay para todos os serviços downstream.
 
 ### Escalabilidade
+
 Stateless — escalonamento horizontal sem estado.
 
 ### Usabilidade
+
 N/A
 
 ### Disponibilidade
+
 99,9% uptime. Circuit breaker em cada integração downstream.
 
 ---
@@ -63,22 +74,32 @@ N/A
 ## Especificação Técnica
 
 ### Linguagem
+
 java
 
 ### Framework
+
 springboot
 
 ### Arquitetura
+
 hexagonal
 
 ### Target
+
 bff
 
 ### Banco de Dados
+
 NA
 
 ### Infraestrutura
+
 AWS ECS
+
+### CI
+
+github-actions
 
 ---
 

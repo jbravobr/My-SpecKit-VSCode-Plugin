@@ -2,7 +2,7 @@
   "name": "vscode-plugin-speckit",
   "displayName": "SpecKit — Spec Driven Development",
   "description": "Defina sua história e configure o Copilot para desenvolvimento orientado a spec",
-  "version": "0.3.1",
+  "version": "0.3.4",
   "icon": "assets/speckit_icon.png",
   "publisher": "local",
   "engines": {
@@ -99,7 +99,10 @@
   "scripts": {
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
-    "package": "node esbuild.js --production",
+    "build:prod": "node esbuild.js --production",
+    "package:vsix": "npm run build:prod && node ./scripts/package-vsix.mjs",
+    "package:verify": "node ./scripts/verify-vsix.mjs",
+    "package": "npm run package:vsix && npm run package:verify",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
@@ -126,6 +129,7 @@
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.93.0",
     "@vitest/coverage-v8": "^2.0.0",
+    "@vscode/vsce": "^3.6.2",
     "@vscode/test-electron": "^2.4.0",
     "esbuild": "^0.21.0",
     "eslint": "^10.2.0",

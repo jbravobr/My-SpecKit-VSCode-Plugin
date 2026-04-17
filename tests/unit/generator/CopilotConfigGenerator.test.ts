@@ -303,6 +303,30 @@ describe('generateCopilotConfig — CI workflows', () => {
     expect(content).toContain('trufflehog');
     expect(content).toContain('semgrep');
   });
+
+  it('skips quality-gate.yml when ci is none', async () => {
+    const fs = new InMemoryFileSystem();
+    const story = loadStory('story-complete.md');
+    story.technicalSpec.ci = 'none';
+    await generateCopilotConfig(root, story, fs);
+    expect(fs.hasFile('quality-gate.yml')).toBe(false);
+  });
+
+  it('skips security-scan.yml when ci is none', async () => {
+    const fs = new InMemoryFileSystem();
+    const story = loadStory('story-complete.md');
+    story.technicalSpec.ci = 'none';
+    await generateCopilotConfig(root, story, fs);
+    expect(fs.hasFile('security-scan.yml')).toBe(false);
+  });
+
+  it('generates CI workflows when ci is empty (backwards compat)', async () => {
+    const fs = new InMemoryFileSystem();
+    const story = loadStory('story-partial.md');
+    await generateCopilotConfig(root, story, fs);
+    expect(fs.hasFile('quality-gate.yml')).toBe(true);
+    expect(fs.hasFile('security-scan.yml')).toBe(true);
+  });
 });
 
 describe('generateCopilotConfig — pattern-idempotency trigger', () => {
@@ -419,6 +443,34 @@ describe('generateCopilotConfig — content correctness', () => {
     const content = fs.contentFor('speckit-implementador.agent.md')!;
     expect(content).toContain('greenfield');
     expect(content).toContain('Scaffolding');
+  });
+
+  it('agents do NOT contain tool-setup or tool-discovery instructions', async () => {
+    const fs = new InMemoryFileSystem();
+    await generateCopilotConfig(root, loadStory('story-complete.md'), fs);
+    const implContent = fs.contentFor('speckit-implementador.agent.md')!;
+    const revContent = fs.contentFor('speckit-revisor.agent.md')!;
+    for (const content of [implContent, revContent]) {
+      expect(content).not.toContain('PRÉ-REQUISITO OBRIGATÓRIO');
+      expect(content).not.toContain('REGRA ZERO');
+      expect(content).not.toContain('REGRA DE EXECUÇÃO');
+      expect(content).not.toContain('habilitar ferramentas');
+      expect(content).not.toContain('tool_search_tool_regex');
+      expect(content).not.toContain('carregadas sob demanda');
+      expect(content).not.toContain('tools: ["*"]');
+      expect(content).toContain('read/readFile');
+      expect(content).toContain('execute/runInTerminal');
+      expect(content).toContain('search/codebase');
+    }
+  });
+
+  it('revisor agent requires user confirmation before corrections', async () => {
+    const fs = new InMemoryFileSystem();
+    await generateCopilotConfig(root, loadStory('story-complete.md'), fs);
+    const revContent = fs.contentFor('speckit-revisor.agent.md')!;
+    expect(revContent).toContain('NUNCA implemente correções sem aprovação explícita do usuário');
+    expect(revContent).toContain('GATE DE CONFIRMAÇÃO');
+    expect(revContent).toContain('AGUARDE aprovação explícita do usuário');
   });
 });
 

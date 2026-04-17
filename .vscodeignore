@@ -5,6 +5,7 @@ out/**
 **/node_modules/**
 speckit-agent/**
 tests/**
+scripts/**
 
 # Build & config files
 .gitignore
@@ -22,6 +23,12 @@ CLAUDE.md
 # Dev tooling
 .husky/**
 .claude/**
+
+# Coverage reports
+coverage/**
+
+# Asset diagrams
+assets/diagrams/**
 
 # Source maps (debug only)
 **/*.js.map

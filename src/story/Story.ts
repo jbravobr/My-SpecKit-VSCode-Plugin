@@ -37,6 +37,7 @@ export type Language = 'typescript' | 'javascript' | 'java' | 'csharp' | 'python
 export type Framework = 'dotnet' | 'springboot' | 'angular' | 'react' | 'fastapi' | 'other';
 export type Architecture = 'hexagonal' | 'layered' | 'microservices' | 'monolith' | 'serverless';
 export type Target = 'backend' | 'frontend' | 'bff' | 'script' | 'library';
+export type CiProvider = 'github-actions' | 'none';
 
 export interface TechnicalSpec {
   language: Language | '';
@@ -46,6 +47,7 @@ export interface TechnicalSpec {
   database: string;
   infrastructure: string;
   projectStage: ProjectStage | '';
+  ci: CiProvider | '';
 }
 
 export interface DoR {
@@ -112,6 +114,7 @@ export function emptyStory(): Story {
       database: '',
       infrastructure: '',
       projectStage: '',
+      ci: '',
     },
     dor: { criteria: [], checked: [] },
     dod: { criteria: [] },

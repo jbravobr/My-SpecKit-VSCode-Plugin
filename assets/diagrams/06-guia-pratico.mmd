@@ -1,0 +1,14 @@
+flowchart LR
+    subgraph sessao1 [Sessão 1 — SpecKit Chat]
+        A1[1. Instalar plugin] --> A2[2. Criar spec]
+        A2 --> A3[3. Validar spec]
+    end
+    subgraph sessao2 [Sessão 2 — Agent Implementador]
+        B1[4. Gate 0 — Alinhar] --> B2[5. Gate 1 — Implementar]
+        B2 --> B3[6. Gate 2 — Testar]
+    end
+    subgraph sessao3 [Sessão 3 — Agent Revisor]
+        C1[7. Gate 3 — Revisar] --> C2[8. Gate 4 — Entregar]
+    end
+    A3 --> B1
+    B3 --> C1

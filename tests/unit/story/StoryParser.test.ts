@@ -163,7 +163,21 @@ describe('parseStory', () => {
       const story = parseStory(md);
       expect(story.technicalSpec.projectStage).toBe('greenfield');
     });
+    it('parses ci field as github-actions from fixture', () => {
+      const story = parseStory(completeStoryMd);
+      expect(story.technicalSpec.ci).toBe('github-actions');
+    });
 
+    it('parses ci field as none from section', () => {
+      const md = completeStoryMd + '\n### CI\nnone\n';
+      const story = parseStory(md);
+      expect(story.technicalSpec.ci).toBe('none');
+    });
+
+    it('defaults ci to empty when not present', () => {
+      const story = parseStory(emptyStoryMd);
+      expect(story.technicalSpec.ci).toBe('');
+    });
     it('clamps invalid gate values to 0', () => {
       const md = completeStoryMd.replace('version: 1', 'version: 1\ngate: 99');
       const story = parseStory(md);

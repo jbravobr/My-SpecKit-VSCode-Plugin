@@ -1,0 +1,23 @@
+flowchart TD
+    subgraph entrada [Criar a spec]
+        direction TB
+        A1["draft - Texto livre"] --> A2["elicit-story.prompt.md"]
+        A2 --> A3["Entrevista 6 fases"]
+        A3 --> A4["STORY-XXX.md"]
+
+        B1["new - Template direto"] --> B2["STORY-XXX.md no editor"]
+    end
+
+    subgraph validacao [Validar]
+        V1["validate"] --> V2{"Lacunas?"}
+        V2 -- Sim --> V3["gap-fill.prompt.md"] --> V1
+        V2 -- Nao --> V4["DoR atingido + 9 arquivos"]
+    end
+
+    subgraph impl [Implementar + Revisar]
+        I1["agent implementador - Gates 0 a 2"] --> I2["agent revisor - Gates 3 a 4"]
+    end
+
+    A4 --> V1
+    B2 --> V1
+    V4 --> I1

@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    actor U as Você
+    participant SK as @speckit
+    participant AG as Copilot Agente
+
+    U->>SK: /draft "Calcular comissão via Kafka"
+    SK-->>U: ✅ Criado elicit-story-001.prompt.md
+    Note over SK,U: Abra em Novo Chat modo Agente
+
+    U->>AG: Abre elicit-story-001.prompt.md
+    loop 6 Fases (uma pergunta por vez)
+        AG-->>U: Pergunta sobre Negócio / Funcional / NFR / Tech / DoR / DoD
+        U->>AG: Responde
+        AG-->>U: ✓ Registrado. Próxima pergunta...
+    end
+    AG-->>U: ✅ STORY-001.md criado
+
+    U->>SK: /validate
+    SK-->>U: ✅ DoR atingido — 9 arquivos gerados em .github/
+    Note over SK,U: Abra Novo Chat → dropdown agent implementador

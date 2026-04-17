@@ -28,16 +28,21 @@ export async function generateCopilotConfig(
   const contextSkillName = `speckit-context-STORY-${story.metadata.id}`;
   const contextSkillDir = path.join(skillsDir, contextSkillName);
 
-  await Promise.all([
+  const ciEnabled = story.technicalSpec.ci !== 'none';
+
+  const dirPromises = [
     fs.ensureDir(githubDir),
     fs.ensureDir(skillsDir),
     fs.ensureDir(agentsDir),
     fs.ensureDir(promptsDir),
-    fs.ensureDir(workflowsDir),
     fs.ensureDir(baselineSkillDir),
     fs.ensureDir(stackSkillDir),
     fs.ensureDir(contextSkillDir),
-  ]);
+  ];
+  if (ciEnabled) {
+    dirPromises.push(fs.ensureDir(workflowsDir));
+  }
+  await Promise.all(dirPromises);
 
   const tx = new WriteTransaction(fs, workspaceRoot);
 
@@ -74,9 +79,11 @@ export async function generateCopilotConfig(
   // Run prompt — monolithic mode (kept as prompt)
   await tx.write(path.join(promptsDir, 'run.prompt.md'), generateRunPrompt(story));
 
-  // CI workflows
-  await tx.write(path.join(workflowsDir, 'quality-gate.yml'), generateCiQualityGate(story));
-  await tx.write(path.join(workflowsDir, 'security-scan.yml'), generateCiSecurityScan());
+  // CI workflows (opt-in — skipped when ci === 'none')
+  if (ciEnabled) {
+    await tx.write(path.join(workflowsDir, 'quality-gate.yml'), generateCiQualityGate(story));
+    await tx.write(path.join(workflowsDir, 'security-scan.yml'), generateCiSecurityScan());
+  }
 
   return tx.commit();
 }

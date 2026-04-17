@@ -1,4 +1,5 @@
 import { Story } from '../../story/Story';
+import { AGENT_TOOLS_YAML } from './agentTools';
 
 export function generateRevisorAgent(story: Story): string {
   const storyId = story.metadata.id || '001';
@@ -15,7 +16,7 @@ export function generateRevisorAgent(story: Story): string {
   return `---
 name: speckit-revisor
 description: "Agente SpecKit — revisão independente de story. Conduz Gates 3-4: checklist de qualidade, segurança, testes, arquitetura e entrega. Leia .speckit/STORY-${storyId}.md antes de qualquer ação. Stack: ${story.technicalSpec.language}/${story.technicalSpec.framework}/${story.technicalSpec.architecture}."
-tools: ["*"]
+${AGENT_TOOLS_YAML}
 ---
 
 # SpecKit Revisor — Story ${storyId} (Gates 3–4)
@@ -34,6 +35,7 @@ Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${st
 - Ao encontrar decisão questionável: pergunte a razão ao usuário antes de marcar como bloqueante
 - Não assuma que foi intencional ou que foi erro
 - Todos os itens do checklist devem ser verificados — não pule nenhum
+- **NUNCA implemente correções sem aprovação explícita do usuário** — apresente o plano de correções e aguarde confirmação ("sim", "ok", "confirmar", "pode ir") antes de tocar em qualquer arquivo
 
 ---
 
@@ -121,8 +123,10 @@ Liste os bloqueantes e converta cada um em uma tarefa atômica de correção:
 [ ] FIX-2: ...
 \`\`\`
 
+**⚠️ GATE DE CONFIRMAÇÃO — Apresente o plano acima e AGUARDE aprovação explícita do usuário antes de iniciar qualquer correção.**
+
 ### Commit por tarefa de correção
-Ao concluir cada FIX:
+Após aprovação do usuário, execute cada FIX:
 \`\`\`bash
 git add <arquivos específicos do fix>
 git commit -m "fix(${storyId}): FIX-N — <descrição>"

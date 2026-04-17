@@ -54,7 +54,17 @@ describe('generateStoryTemplate', () => {
     expect(template).toContain('### Estágio do Projeto');
     expect(template).toContain('greenfield | brownfield');
   });
+  it('contains CI section with opt-in choices', () => {
+    const template = generateStoryTemplate('001');
+    expect(template).toContain('### CI');
+    expect(template).toContain('github-actions | none');
+  });
 
+  it('pre-fills ci when workspace default is provided', () => {
+    const template = generateStoryTemplate('001', { ci: 'none' });
+    const story = parseStory(template);
+    expect(story.technicalSpec.ci).toBe('none');
+  });
   it('parses gate as 0 from generated template', () => {
     const template = generateStoryTemplate('001');
     const story = parseStory(template);

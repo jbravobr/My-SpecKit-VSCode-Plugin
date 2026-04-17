@@ -1,4 +1,5 @@
 import { Fix, TechStackDetection } from '../../fix/Fix';
+import { AGENT_TOOLS_YAML } from './agentTools';
 
 const TEST_COMMANDS: Record<string, string> = {
   typescript: 'npx vitest run --coverage --coverage.thresholds.lines=80',
@@ -20,7 +21,7 @@ export function generateFixRevisorAgent(fix: Fix, stack: TechStackDetection): st
   return `---
 name: speckit-fix-revisor
 description: "Agente SpecKit — revisão independente de bug fix. Conduz Gates 3-4: verificação do fix, checklist de qualidade, segurança, regressão e entrega. Leia .speckit/FIX-${fixId}.md antes de qualquer ação. Stack: ${stack.language}/${stack.framework}."
-tools: ["*"]
+${AGENT_TOOLS_YAML}
 ---
 
 # SpecKit Fix Revisor — Fix ${fixId} (Gates 3–4)
@@ -38,6 +39,7 @@ Stack detectada: ${stack.language} / ${stack.framework}${stack.architecture ? ` 
 - Leia a spec completa ANTES de iniciar qualquer avaliação
 - Ao encontrar decisão questionável: pergunte a razão ao usuário antes de marcar como bloqueante
 - Todos os itens do checklist devem ser verificados — não pule nenhum
+- **NUNCA implemente correções sem aprovação explícita do usuário** — apresente o plano de correções e aguarde confirmação ("sim", "ok", "confirmar", "pode ir") antes de tocar em qualquer arquivo
 
 ---
 
@@ -94,7 +96,11 @@ ${dofList}
 **Se APROVADO:** avance para o Gate 4.
 
 **Se ALTERAÇÕES SOLICITADAS:**
-Liste bloqueantes, corrija cada um com commit atômico:
+Liste bloqueantes e converta cada um em tarefa atômica de correção.
+
+**⚠️ GATE DE CONFIRMAÇÃO — Apresente o plano de correções e AGUARDE aprovação explícita do usuário antes de iniciar qualquer correção.**
+
+Após aprovação do usuário, corrija cada um com commit atômico:
 \`\`\`bash
 git commit -m "fix(${fixId}): correção pós-revisão — <descrição>"
 \`\`\`

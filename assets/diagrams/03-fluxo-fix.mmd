@@ -1,0 +1,23 @@
+flowchart TD
+    subgraph entrada [Criar a spec - Fix]
+        direction TB
+        A1["draft --fix - Texto livre"] --> A2["elicit-fix.prompt.md"]
+        A2 --> A3["Entrevista 7 fases"]
+        A3 --> A4["FIX-XXX.md"]
+
+        B1["fix - Template direto"] --> B2["FIX-XXX.md + stack auto"]
+    end
+
+    subgraph validacao [Validar]
+        V1["validate"] --> V2{"Lacunas?"}
+        V2 -- Sim --> V3["gap-fill.prompt.md"] --> V1
+        V2 -- Nao --> V4["Fix valido + 7 arquivos"]
+    end
+
+    subgraph impl [Corrigir + Revisar]
+        I1["agent fix-implementador - Gates 0 a 2"] --> I2["agent fix-revisor - Gates 3 a 4"]
+    end
+
+    A4 --> V1
+    B2 --> V1
+    V4 --> I1

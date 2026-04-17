@@ -91,7 +91,7 @@ describe('generateStoryElicitPrompt', () => {
   });
 
   it('contains concrete example of combined problem output', () => {
-    expect(result).toContain('Exemplo de output combinado');
+    expect(result).toContain('Exemplo de Problema combinado');
     expect(result).toContain('ponto de atrito');
   });
 
@@ -111,7 +111,7 @@ describe('generateStoryElicitPrompt', () => {
 
   it('suggests domain-specific KPI candidate instead of deferring', () => {
     expect(result).toContain('não use "a definir após produção" como default');
-    expect(result).toContain('Domínio de cálculo/financeiro');
+    expect(result).toContain('métrica concreta derivada do domínio');
   });
 
   it('contains acceptance criteria quadrant guidance (limits, null, idempotency)', () => {
@@ -130,6 +130,12 @@ describe('generateStoryElicitPrompt', () => {
     expect(result).toContain('Requisitos de código');
     expect(result).toContain('Recomendações de infraestrutura');
     expect(result).toContain('Escalonamento horizontal habilitado');
+  });
+
+  it('includes projectStage question in Phase 4', () => {
+    expect(result).toContain('4.7 Estágio do Projeto');
+    expect(result).toContain('greenfield');
+    expect(result).toContain('brownfield');
   });
 
   it('DoR template uses conditional marking, not hardcoded [x]', () => {

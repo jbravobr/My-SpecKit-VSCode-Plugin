@@ -12,12 +12,15 @@ version: 1
 ## Requisito de Negócio
 
 ### Problema
+
 Os usuários precisam criar contas manualmente, causando fricção no onboarding.
 
 ### Valor
+
 Login social via GitHub elimina o cadastro manual, reduz o tempo de onboarding e aumenta a conversão.
 
 ### Stakeholders
+
 - Time de Produto (conversão de usuários)
 - Usuários finais (experiência de login simplificada)
 - Time de Segurança (autenticação padronizada)
@@ -27,16 +30,19 @@ Login social via GitHub elimina o cadastro manual, reduz o tempo de onboarding e
 ## Especificação Funcional
 
 ### User Stories
+
 - Como usuário, quero fazer login com minha conta GitHub para não precisar criar uma senha nova
 - Como sistema, quero validar o token OAuth2 para garantir a identidade do usuário
 
 ### Critérios de Aceite
+
 - Botão "Login com GitHub" presente na página de login
 - Redirecionamento correto para GitHub OAuth2
 - Token válido resulta em sessão autenticada
 - Token inválido retorna erro 401
 
 ### Fora de Escopo
+
 - Login com outros providers (Google, Microsoft)
 - Autenticação via senha local
 
@@ -45,18 +51,23 @@ Login social via GitHub elimina o cadastro manual, reduz o tempo de onboarding e
 ## Especificação Não-Funcional
 
 ### Performance
+
 P99 < 200ms para validação do token OAuth2.
 
 ### Segurança
+
 Tokens armazenados em memória apenas, nunca em localStorage. HTTPS obrigatório.
 
 ### Escalabilidade
+
 Stateless — cada requisição valida o token independentemente.
 
 ### Usabilidade
+
 Feedback visual imediato durante o fluxo de autenticação.
 
 ### Disponibilidade
+
 99,9% uptime. Falhas no provider redirecionam para página de erro amigável.
 
 ---
@@ -64,22 +75,32 @@ Feedback visual imediato durante o fluxo de autenticação.
 ## Especificação Técnica
 
 ### Linguagem
+
 typescript
 
 ### Framework
+
 react
 
 ### Arquitetura
+
 hexagonal
 
 ### Target
+
 frontend
 
 ### Banco de Dados
+
 PostgreSQL 15 (tabela users)
 
 ### Infraestrutura
+
 Vercel, GitHub OAuth2 App
+
+### CI
+
+github-actions
 
 ---
 

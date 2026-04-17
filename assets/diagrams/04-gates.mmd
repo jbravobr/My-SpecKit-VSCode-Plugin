@@ -1,0 +1,11 @@
+flowchart LR
+    subgraph sessaoA [Sessao A - agent implementador]
+        G0[Gate 0 - Alinhamento] --> G1[Gate 1 - Implementacao]
+        G1 --> G2[Gate 2 - Testes]
+    end
+
+    subgraph sessaoB [Sessao B - agent revisor]
+        G3[Gate 3 - Revisao] --> G4[Gate 4 - Entrega]
+    end
+
+    G2 -->|Novo Chat| G3

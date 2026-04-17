@@ -1,4 +1,5 @@
 import { Fix, TechStackDetection } from '../../fix/Fix';
+import { AGENT_TOOLS_YAML } from './agentTools';
 
 export function generateFixImplementadorAgent(fix: Fix, stack: TechStackDetection): string {
   const fixId = fix.metadata.id || '001';
@@ -8,7 +9,7 @@ export function generateFixImplementadorAgent(fix: Fix, stack: TechStackDetectio
   return `---
 name: speckit-fix-implementador
 description: "Agente SpecKit — implementação autônoma de bug fix. Conduz Gates 0-2: confirmação da root cause, correção cirúrgica, testes de regressão com cobertura ≥80%. Leia .speckit/FIX-${fixId}.md antes de qualquer ação. Stack: ${stack.language}/${stack.framework}."
-tools: ["*"]
+${AGENT_TOOLS_YAML}
 ---
 
 # SpecKit Fix Implementador — Fix ${fixId} (Gates 0–2)
@@ -24,7 +25,7 @@ Stack detectada: ${stack.language} / ${stack.framework}${stack.architecture ? ` 
 ## Protocolo de governança (obrigatório)
 
 NUNCA inicie implementação sem:
-1. Ler \`.speckit/FIX-${fixId}.md\` na íntegra
+1. Ler \`.speckit/FIX-${fixId}.md\` na íntegra (via ferramenta de leitura)
 2. Confirmar a root cause com evidência
 3. Apresentar escopo exato da mudança
 4. Receber aprovação explícita ("sim", "ok", "confirmar", "pode ir")
@@ -36,7 +37,7 @@ Se surgir ambiguidade durante execução → interromper e perguntar.
 ## Gate 0 — Investigação e Confirmação
 
 ### 0.1 Leia o fix
-Leia \`.speckit/FIX-${fixId}.md\` na íntegra antes de qualquer outra ação.
+Use a ferramenta de leitura de arquivo para abrir e ler \`.speckit/FIX-${fixId}.md\` na íntegra. Não prossiga sem ter lido o conteúdo real do arquivo.
 
 ### 0.2 Inspecione os arquivos suspeitos
 Para cada arquivo/componente listado em "Arquivos/Componentes Suspeitos":

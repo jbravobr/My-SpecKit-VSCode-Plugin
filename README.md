@@ -26,12 +26,11 @@ O Copilot passa a conhecer o requisito de negócio, critérios de aceite, restri
 
 **Resumo do fluxo em 4 passos:**
 
-```mermaid
-flowchart LR
-    A[Criar spec] -->|/draft /new /fix| B[Validar]
-    B -->|/validate| C[Implementar]
-    C -->|agent implementador| D[Revisar]
-    D -->|agent revisor| E((Done))
+```
+  +------------+    +----------+    +-------------+    +----------+    +======+
+  | Criar spec +--->| Validar  +--->| Implementar +--->| Revisar  +--->| Done |
+  +------------+    +----------+    +-------------+    +----------+    +======+
+   /draft /new /fix   /validate    agent implementador  agent revisor
 ```
 
 > **Criar** e **validar** acontecem no chat `@speckit`. **Implementar** e **revisar** acontecem em sessões separadas do Copilot Chat, selecionando os agents no dropdown.
@@ -52,6 +51,14 @@ flowchart LR
 3. Execute **"Extensions: Install from VSIX..."**
 4. Selecione o arquivo `.vsix`
 
+Para gerar um artefato local de release com o fluxo oficial do repositório:
+
+```bash
+npm run package
+```
+
+O comando gera o `.vsix` em `publish/<version>/` e falha se o artefato incluir conteúdo proibido como `coverage/`, `assets/diagrams/` ou `tests/`.
+
 ---
 
 ## Como usar
@@ -71,58 +78,64 @@ Ambos os caminhos convergem para o mesmo `.speckit/STORY-XXX.md` ou `FIX-XXX.md`
 
 ### Fluxo — Nova Feature (História)
 
-```mermaid
-flowchart TD
-    subgraph entrada [Criar a spec]
-        direction TB
-        A1["draft - Texto livre"] --> A2["elicit-story.prompt.md"]
-        A2 --> A3["Entrevista 6 fases"]
-        A3 --> A4["STORY-XXX.md"]
-
-        B1["new - Template direto"] --> B2["STORY-XXX.md no editor"]
-    end
-
-    subgraph validacao [Validar]
-        V1["validate"] --> V2{"Lacunas?"}
-        V2 -- Sim --> V3["gap-fill.prompt.md"] --> V1
-        V2 -- Nao --> V4["DoR atingido + 9 arquivos"]
-    end
-
-    subgraph impl [Implementar + Revisar]
-        I1["agent implementador - Gates 0 a 2"] --> I2["agent revisor - Gates 3 a 4"]
-    end
-
-    A4 --> V1
-    B2 --> V1
-    V4 --> I1
+```
+  +=================== Criar a spec ===================+
+  |                                                    |
+  |  /draft (texto livre)          /new (template)     |
+  |       |                             |              |
+  |       v                             v              |
+  |  elicit-story.prompt.md     STORY-XXX.md (editor)  |
+  |       |                             |              |
+  |       v                             |              |
+  |  Entrevista 6 fases                 |              |
+  |       |                             |              |
+  |       v                             |              |
+  |  STORY-XXX.md ----------------------+              |
+  +========================+===========================+
+                           v
+  +=================== Validar ========================+
+  |  /validate --> Lacunas? --Sim--> gap-fill --+     |
+  |                   |                         |     |
+  |                  Nao                  (volta)     |
+  |                   v                               |
+  |          DoR atingido + 9 arquivos                |
+  +========================+==========================+
+                           v
+  +============ Implementar + Revisar ================+
+  |  agent implementador --> agent revisor            |
+  |     (Gates 0-2)            (Gates 3-4)            |
+  +===================================================+
 ```
 
 ### Fluxo — Correção de Bug (Fix)
 
-```mermaid
-flowchart TD
-    subgraph entrada [Criar a spec - Fix]
-        direction TB
-        A1["draft --fix - Texto livre"] --> A2["elicit-fix.prompt.md"]
-        A2 --> A3["Entrevista 7 fases"]
-        A3 --> A4["FIX-XXX.md"]
-
-        B1["fix - Template direto"] --> B2["FIX-XXX.md + stack auto"]
-    end
-
-    subgraph validacao [Validar]
-        V1["validate"] --> V2{"Lacunas?"}
-        V2 -- Sim --> V3["gap-fill.prompt.md"] --> V1
-        V2 -- Nao --> V4["Fix valido + 7 arquivos"]
-    end
-
-    subgraph impl [Corrigir + Revisar]
-        I1["agent fix-implementador - Gates 0 a 2"] --> I2["agent fix-revisor - Gates 3 a 4"]
-    end
-
-    A4 --> V1
-    B2 --> V1
-    V4 --> I1
+```
+  +================== Criar a spec (Fix) ==============+
+  |                                                     |
+  |  /draft --fix (texto livre)     /fix (template)     |
+  |       |                              |              |
+  |       v                              v              |
+  |  elicit-fix.prompt.md       FIX-XXX.md + stack auto |
+  |       |                              |              |
+  |       v                              |              |
+  |  Entrevista 7 fases                  |              |
+  |       |                              |              |
+  |       v                              |              |
+  |  FIX-XXX.md -------------------------+              |
+  +=========================+===========================+
+                            v
+  +=================== Validar ========================+
+  |  /validate --> Lacunas? --Sim--> gap-fill --+     |
+  |                   |                         |     |
+  |                  Nao                  (volta)     |
+  |                   v                               |
+  |          Fix valido + 7 arquivos                  |
+  +========================+==========================+
+                           v
+  +============= Corrigir + Revisar ==================+
+  |  agent fix-implementador --> agent fix-revisor    |
+  |       (Gates 0-2)              (Gates 3-4)        |
+  +===================================================+
 ```
 
 ---
@@ -767,11 +780,11 @@ Antes de cada regeneração (`/validate` com spec válida), o plugin faz backup 
 
 ```
 .speckit/backups/
-├── 2026-03-19T10-30-00-000Z/
-│   └── copilot-instructions.md
-├── 2026-03-19T14-15-00-000Z/
-│   └── copilot-instructions.md
-└── ...
++-- 2026-03-19T10-30-00-000Z/
+|   +-- copilot-instructions.md
++-- 2026-03-19T14-15-00-000Z/
+|   +-- copilot-instructions.md
++-- ...
 ```
 
 - Máximo de **5 backups** — os mais antigos são podados automaticamente
@@ -784,7 +797,7 @@ Cada execução de `/validate` e `/draft` é registrada em log Markdown diário:
 
 ```
 .speckit/logs/
-└── session-2026-03-19.md
++-- session-2026-03-19.md
 ```
 
 Formato de cada entrada:
@@ -813,20 +826,20 @@ O conjunto exato varia conforme a stack declarada. Abaixo a estrutura completa c
 
 ```
 .github/
-├── copilot-instructions.md            ← Índice always-on (~400 tokens)
-├── workflows/
-│   ├── quality-gate.yml               ← Lint + Build + Testes ≥80%
-│   └── security-scan.yml              ← TruffleHog + Semgrep
-├── prompts/
-│   └── run.prompt.md                  ← Sessão única (Gates 0–4)
-├── skills/
-│   ├── speckit-baseline/SKILL.md      ← 10 seções NFR (keyword-activated)
-│   ├── speckit-stack/SKILL.md         ← Linguagem + framework + infra + patterns
-│   ├── speckit-context-STORY-{id}/SKILL.md ← Contexto específico da story
-│   └── speckit-devtools/SKILL.md      ← (opcional) DevTools: ESLint, Prettier, husky, lint-staged
-└── agents/
-    ├── speckit-implementador.agent.md ← Gates 0–2 (dropdown Copilot)
-    └── speckit-revisor.agent.md       ← Gates 3–4 (dropdown Copilot)
++-- copilot-instructions.md            ← Índice always-on (~400 tokens)
++-- workflows/
+|   +-- quality-gate.yml               ← Lint + Build + Testes ≥80%
+|   +-- security-scan.yml              ← TruffleHog + Semgrep
++-- prompts/
+|   +-- run.prompt.md                  ← Sessão única (Gates 0–4)
++-- skills/
+|   +-- speckit-baseline/SKILL.md      ← 10 seções NFR (keyword-activated)
+|   +-- speckit-stack/SKILL.md         ← Linguagem + framework + infra + patterns
+|   +-- speckit-context-STORY-{id}/SKILL.md ← Contexto específico da story
+|   +-- speckit-devtools/SKILL.md      ← (opcional) DevTools: ESLint, Prettier, husky, lint-staged
++-- agents/
+    +-- speckit-implementador.agent.md ← Gates 0–2 (dropdown Copilot)
+    +-- speckit-revisor.agent.md       ← Gates 3–4 (dropdown Copilot)
 ```
 
 > A sessão de implementação usa o **agent implementador** (dropdown) para Gates 0–2. A revisão usa o **agent revisor** em nova sessão. O `run.prompt.md` é uma alternativa monolítica (todos os gates em uma sessão).
@@ -839,17 +852,17 @@ O conjunto exato varia conforme a stack declarada. Abaixo a estrutura completa c
 
 ```
 .github/
-├── copilot-instructions.md            ← Índice always-on (~400 tokens)
-├── prompts/
-│   └── fix-run.prompt.md              ← Sessão única (Gates 0–4)
-├── skills/
-│   ├── speckit-baseline/SKILL.md      ← 10 seções NFR (keyword-activated)
-│   ├── speckit-stack/SKILL.md         ← Stack auto-detectada do workspace
-│   ├── speckit-context-FIX-{id}/SKILL.md ← Contexto específico do fix
-│   └── speckit-devtools/SKILL.md      ← (opcional) DevTools: ESLint, Prettier, husky, lint-staged
-└── agents/
-    ├── speckit-fix-implementador.agent.md ← Gates 0–2 (dropdown Copilot)
-    └── speckit-fix-revisor.agent.md       ← Gates 3–4 (dropdown Copilot)
++-- copilot-instructions.md            ← Índice always-on (~400 tokens)
++-- prompts/
+|   +-- fix-run.prompt.md              ← Sessão única (Gates 0–4)
++-- skills/
+|   +-- speckit-baseline/SKILL.md      ← 10 seções NFR (keyword-activated)
+|   +-- speckit-stack/SKILL.md         ← Stack auto-detectada do workspace
+|   +-- speckit-context-FIX-{id}/SKILL.md ← Contexto específico do fix
+|   +-- speckit-devtools/SKILL.md      ← (opcional) DevTools: ESLint, Prettier, husky, lint-staged
++-- agents/
+    +-- speckit-fix-implementador.agent.md ← Gates 0–2 (dropdown Copilot)
+    +-- speckit-fix-revisor.agent.md       ← Gates 3–4 (dropdown Copilot)
 ```
 
 > Fixes **não geram workflows CI** — a premissa é que os workflows do projeto já existem. A stack técnica é **detectada automaticamente** do workspace.
@@ -906,18 +919,13 @@ O conjunto exato varia conforme a stack declarada. Abaixo a estrutura completa c
 
 O SpecKit estrutura a implementação em **5 gates** distribuídos em duas sessões:
 
-```mermaid
-flowchart LR
-    subgraph sessaoA [Sessao A - agent implementador]
-        G0[Gate 0 - Alinhamento] --> G1[Gate 1 - Implementacao]
-        G1 --> G2[Gate 2 - Testes]
-    end
-
-    subgraph sessaoB [Sessao B - agent revisor]
-        G3[Gate 3 - Revisao] --> G4[Gate 4 - Entrega]
-    end
-
-    G2 -->|Novo Chat| G3
+```
+  +== Sessao A: agent implementador ===================+     +== Sessao B: agent revisor ==+
+  |                                                     |     |                              |
+  |  Gate 0 --> Gate 1 --> Gate 2 --- Novo Chat ---------->  Gate 3 --> Gate 4            |
+  |  Alinhamento  Implementacao  Testes                 |     |  Revisao       Entrega       |
+  |                                                     |     |                              |
+  +=====================================================+     +==============================+
 ```
 
 | Gate | Nome          | O que acontece                                                                                                                                        |
@@ -1042,21 +1050,13 @@ Sem layering, cada interação carregaria spec + regras + gates + exemplos (~10.
 
 O SpecKit oferece **5 modos de operação** que alteram o comportamento, os guardrails e os protocolos do agente. Use `/agent <modo>` para alternar.
 
-```mermaid
-flowchart TB
-    subgraph modos [Modos de Agente]
-        direction LR
-        D[default] --- I[implementador]
-        I --- R[revisor]
-        R --- DB[debugger]
-        DB --- RF[refactor]
-    end
-
-    D -->|"@speckit /agent implementador"| I
-    I -->|"@speckit /agent revisor"| R
-    R -->|"@speckit /agent debugger"| DB
-    DB -->|"@speckit /agent refactor"| RF
-    RF -->|"@speckit /agent default"| D
+```
+  +---------+   +---------------+   +---------+   +----------+   +----------+
+  | default |-->| implementador |-->| revisor |-->| debugger |-->| refactor |
+  +---------+   +---------------+   +---------+   +----------+   +----------+
+       ^                                                               |
+       +---------------------------------------------------------------+
+                            @speckit /agent <modo>
 ```
 
 ### Mode: Default
@@ -1329,21 +1329,14 @@ Passo a passo completo: da instalação até o commit de entrega. Aplicável a q
 
 ### Visão geral do fluxo
 
-```mermaid
-flowchart LR
-    subgraph sessao1 [Sessão 1 — SpecKit Chat]
-        A1[1. Instalar plugin] --> A2[2. Criar spec]
-        A2 --> A3[3. Validar spec]
-    end
-    subgraph sessao2 [Sessão 2 — Agent Implementador]
-        B1[4. Gate 0 — Alinhar] --> B2[5. Gate 1 — Implementar]
-        B2 --> B3[6. Gate 2 — Testar]
-    end
-    subgraph sessao3 [Sessão 3 — Agent Revisor]
-        C1[7. Gate 3 — Revisar] --> C2[8. Gate 4 — Entregar]
-    end
-    A3 --> B1
-    B3 --> C1
+```
+  +== Sessao 1: SpecKit Chat ===+   +== Sessao 2: Implementador ====+   +== Sessao 3: Revisor ==+
+  |                              |   |                               |   |                        |
+  |  1. Instalar plugin          |   |  4. Gate 0 -- Alinhar         |   |  7. Gate 3 -- Revisar  |
+  |  2. Criar spec               |-->|  5. Gate 1 -- Implementar     |-->|  8. Gate 4 -- Entregar |
+  |  3. Validar spec             |   |  6. Gate 2 -- Testar          |   |                        |
+  |                              |   |                               |   |                        |
+  +==============================+   +===============================+   +========================+
 ```
 
 ### Passo 1 — Instalar o plugin
@@ -1401,11 +1394,11 @@ Você:    @speckit /validate
 ```
 SpecKit: ✅ DoR atingido — Story completa
          📁 9 arquivos gerados em .github/
-         ├── copilot-instructions.md
-         ├── workflows/ quality-gate.yml · security-scan.yml
-         ├── prompts/   run.prompt.md
-         ├── skills/    speckit-baseline · speckit-stack · speckit-context-STORY-001
-         └── agents/    speckit-implementador · speckit-revisor
+         +-- copilot-instructions.md
+         +-- workflows/ quality-gate.yml · security-scan.yml
+         +-- prompts/   run.prompt.md
+         +-- skills/    speckit-baseline · speckit-stack · speckit-context-STORY-001
+         +-- agents/    speckit-implementador · speckit-revisor
 
          🔧 DevTools: ESLint, Prettier e husky não detectados. Deseja gerar skill?
 ```
@@ -1538,28 +1531,33 @@ Agente:  📋 Gate 4 — Entrega
 
 ### Sequência: /draft → elicitação → /validate
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor U as Você
-    participant SK as @speckit
-    participant AG as Copilot Agente
-
-    U->>SK: /draft "Calcular comissão via Kafka"
-    SK-->>U: ✅ Criado elicit-story-001.prompt.md
-    Note over SK,U: Abra em Novo Chat modo Agente
-
-    U->>AG: Abre elicit-story-001.prompt.md
-    loop 6 Fases (uma pergunta por vez)
-        AG-->>U: Pergunta sobre Negócio / Funcional / NFR / Tech / DoR / DoD
-        U->>AG: Responde
-        AG-->>U: ✓ Registrado. Próxima pergunta...
-    end
-    AG-->>U: ✅ STORY-001.md criado
-
-    U->>SK: /validate
-    SK-->>U: ✅ DoR atingido — 9 arquivos gerados em .github/
-    Note over SK,U: Abra Novo Chat → dropdown agent implementador
+```
+  Voce                        @speckit                    Copilot Agente
+   |                             |                             |
+   |  /draft "Calcular           |                             |
+   |   comissao via Kafka"       |                             |
+   |---------------------------->|                             |
+   |    elicit-story-001.prompt  |                             |
+   |<----------------------------|                             |
+   |                             |  Abra em Novo Chat Agente  |
+   |--------------------------------------------------------->|
+   |                             |                             |
+   |              +---- loop 6 Fases (1 pergunta por vez) ----+
+   |              |  Pergunta Negocio/Funcional/NFR/Tech/DoR  ||
+   |<---------------------------------------------------------|
+   |  Responde    |                                           ||
+   |--------------------------------------------------------->|
+   |              |  Registrado. Proxima...                   ||
+   |<---------------------------------------------------------|
+   |              +-------------------------------------------+
+   |                             |    STORY-001.md criado      |
+   |<---------------------------------------------------------|
+   |                             |                             |
+   |  /validate                  |                             |
+   |---------------------------->|                             |
+   |    DoR atingido — 9 arqs    |                             |
+   |<----------------------------|                             |
+   |                             |  Novo Chat → implementador  |
 ```
 
 **Input:**
@@ -1588,28 +1586,32 @@ sequenceDiagram
 
 ### Sequência: /draft → elicitação fix → /validate
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor U as Você
-    participant SK as @speckit
-    participant AG as Copilot Agente
-
-    U->>SK: /draft "Login OAuth2 retorna 500 após expiração do token"
-    Note over SK: Detecta keyword "500" → intent fix
-    SK-->>U: ✅ Criado elicit-fix-001.prompt.md
-    Note over SK,U: Abra em Novo Chat modo Agente
-
-    U->>AG: Abre elicit-fix-001.prompt.md
-    loop 7 Fases
-        AG-->>U: Pergunta sobre Bug / Hipótese / Impacto / Regressão / Contexto / DoF
-        U->>AG: Responde
-    end
-    AG-->>U: ✅ FIX-001.md criado
-
-    U->>SK: /validate
-    SK-->>U: ✅ Fix válido — 7 arquivos gerados em .github/
-    Note over SK,U: Abra Novo Chat → dropdown agent fix-implementador
+```
+  Voce                        @speckit                    Copilot Agente
+   |                             |                             |
+   |  /draft "Login OAuth2       |                             |
+   |   retorna 500 apos token"   |                             |
+   |---------------------------->|                             |
+   |                     Detecta keyword "500" → intent fix    |
+   |    elicit-fix-001.prompt    |                             |
+   |<----------------------------|                             |
+   |                             |  Abra em Novo Chat Agente  |
+   |--------------------------------------------------------->|
+   |                             |                             |
+   |              +---- loop 7 Fases -------------------------+
+   |              |  Bug/Hipotese/Impacto/Regressao/Ctx/DoF   ||
+   |<---------------------------------------------------------|
+   |  Responde    |                                           ||
+   |--------------------------------------------------------->|
+   |              +-------------------------------------------+
+   |                             |    FIX-001.md criado        |
+   |<---------------------------------------------------------|
+   |                             |                             |
+   |  /validate                  |                             |
+   |---------------------------->|                             |
+   |    Fix valido — 7 arqs      |                             |
+   |<----------------------------|                             |
+   |                             |  Novo Chat → fix-implem.    |
 ```
 
 **Input:**
@@ -1793,52 +1795,60 @@ Apache Kafka (AWS MSK), Docker, Kubernetes (EKS), GitHub Actions
 
 ```
 .github/  (9 arquivos)
-├── copilot-instructions.md
-├── workflows/  quality-gate.yml · security-scan.yml
-├── prompts/    run.prompt.md
-├── skills/     speckit-baseline · speckit-stack · speckit-context-STORY-001
-└── agents/     speckit-implementador · speckit-revisor
++-- copilot-instructions.md
++-- workflows/  quality-gate.yml · security-scan.yml
++-- prompts/    run.prompt.md
++-- skills/     speckit-baseline · speckit-stack · speckit-context-STORY-001
++-- agents/     speckit-implementador · speckit-revisor
 ```
 
 ---
 
 ### Story incompleta — fluxo de alinhamento
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor U as Você
-    participant SK as @speckit
-
-    U->>SK: /validate (story com lacunas)
-    SK-->>U: ⚠️ 6 lacunas encontradas
-
-    SK-->>U: Lacuna 1 — Qual o valor de negócio?
-    U->>SK: Eliminar lag D+1, dashboards ao vivo
-    SK-->>U: ✓ Atualizado
-
-    SK-->>U: Lacuna 2 — Quais tipos de regra de comissão?
-    U->>SK: Taxa fixa, escalonada, com teto, bônus por categoria
-    SK-->>U: ✓ Atualizado
-
-    SK-->>U: Lacuna 3 — O que está fora de escopo?
-    U->>SK: Pagamento, API REST, recálculo, config de regras
-    SK-->>U: ✓ Atualizado
-
-    SK-->>U: Lacuna 4 — SLA de performance?
-    U->>SK: P99 < 300ms, 1k eventos/min
-    SK-->>U: ✓ Atualizado
-
-    SK-->>U: Lacuna 5 — Arquitetura?
-    U->>SK: Hexagonal
-    SK-->>U: ✓ Atualizado
-
-    SK-->>U: Lacuna 6 — DoD?
-    U->>SK: Idempotência, DLQ, sem PII, branch feature/001-...
-    SK-->>U: ✓ Todas as lacunas preenchidas
-
-    U->>SK: /validate (novamente)
-    SK-->>U: ✅ DoR atingido — 9 arquivos gerados
+```
+  Voce                                           @speckit
+   |                                                |
+   |  /validate (story com lacunas)                 |
+   |----------------------------------------------->|
+   |                          6 lacunas encontradas |
+   |<-----------------------------------------------|
+   |                                                |
+   |  Lacuna 1 — Valor de negocio?                  |
+   |<-----------------------------------------------|
+   |  "Eliminar lag D+1, dashboards ao vivo"        |
+   |----------------------------------------------->|
+   |                                                |
+   |  Lacuna 2 — Tipos de regra de comissao?        |
+   |<-----------------------------------------------|
+   |  "Taxa fixa, escalonada, teto, bonus"          |
+   |----------------------------------------------->|
+   |                                                |
+   |  Lacuna 3 — Fora de escopo?                    |
+   |<-----------------------------------------------|
+   |  "Pagamento, API REST, recalculo"              |
+   |----------------------------------------------->|
+   |                                                |
+   |  Lacuna 4 — SLA de performance?                |
+   |<-----------------------------------------------|
+   |  "P99 < 300ms, 1k eventos/min"                 |
+   |----------------------------------------------->|
+   |                                                |
+   |  Lacuna 5 — Arquitetura?                       |
+   |<-----------------------------------------------|
+   |  "Hexagonal"                                   |
+   |----------------------------------------------->|
+   |                                                |
+   |  Lacuna 6 — DoD?                               |
+   |<-----------------------------------------------|
+   |  "Idempotencia, DLQ, sem PII, branch"          |
+   |----------------------------------------------->|
+   |                  Todas as lacunas preenchidas   |
+   |                                                |
+   |  /validate (novamente)                         |
+   |----------------------------------------------->|
+   |               DoR atingido — 9 arquivos gerados|
+   |<-----------------------------------------------|
 ```
 
 </details>
@@ -1955,33 +1965,39 @@ Middleware impacta: refresh token, API key auth, rotas públicas opcionais.
 
 ### Fix incompleto — fluxo de alinhamento
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor U as Você
-    participant SK as @speckit
-
-    U->>SK: /validate (fix com lacunas)
-    SK-->>U: ⚠️ 4 lacunas encontradas
-
-    SK-->>U: Lacuna 1 — Passos para reproduzir?
-    U->>SK: Relatório → Exportar PDF. Console: TypeError window.print
-    SK-->>U: ✓ Atualizado
-
-    SK-->>U: Lacuna 2 — Hipótese da causa raiz?
-    U->>SK: Firefox bloqueia window.print() em handler async
-    SK-->>U: ✓ Atualizado
-
-    SK-->>U: Lacuna 3 — Severidade?
-    U->>SK: High — usado diariamente pelo financeiro
-    SK-->>U: ✓ Atualizado
-
-    SK-->>U: Lacuna 4 — Testes de regressão?
-    U->>SK: Unitário: print síncrono. Integração: simula clique
-    SK-->>U: ✓ Todas preenchidas
-
-    U->>SK: /validate (novamente)
-    SK-->>U: ✅ Fix válido — 7 arquivos gerados
+```
+  Voce                                           @speckit
+   |                                                |
+   |  /validate (fix com lacunas)                   |
+   |----------------------------------------------->|
+   |                          4 lacunas encontradas |
+   |<-----------------------------------------------|
+   |                                                |
+   |  Lacuna 1 — Passos para reproduzir?            |
+   |<-----------------------------------------------|
+   |  "Relatorio > Exportar PDF. TypeError"         |
+   |----------------------------------------------->|
+   |                                                |
+   |  Lacuna 2 — Hipotese da causa raiz?            |
+   |<-----------------------------------------------|
+   |  "Firefox bloqueia window.print() em async"    |
+   |----------------------------------------------->|
+   |                                                |
+   |  Lacuna 3 — Severidade?                        |
+   |<-----------------------------------------------|
+   |  "High — usado diariamente pelo financeiro"    |
+   |----------------------------------------------->|
+   |                                                |
+   |  Lacuna 4 — Testes de regressao?               |
+   |<-----------------------------------------------|
+   |  "Unitario: print sincrono. Integracao: cliq" |
+   |----------------------------------------------->|
+   |                       Todas as lacunas preench. |
+   |                                                |
+   |  /validate (novamente)                         |
+   |----------------------------------------------->|
+   |                Fix valido — 7 arquivos gerados |
+   |<-----------------------------------------------|
 ```
 
 </details>
@@ -1998,7 +2014,7 @@ Todo comando executado é registrado automaticamente em `.speckit/audit.log` com
 
 ```
 .speckit/
-└── audit.log
++-- audit.log
 ```
 
 **Acessar:** `@speckit /audit` ou `@speckit /audit 50`
@@ -2022,10 +2038,10 @@ Cada spec tem seu próprio registro de rastreabilidade com todas as transições
 
 ```
 .speckit/
-└── traces/
-    ├── STORY-001.trace.json
-    ├── STORY-002.trace.json
-    └── FIX-001.trace.json
++-- traces/
+    +-- STORY-001.trace.json
+    +-- STORY-002.trace.json
+    +-- FIX-001.trace.json
 ```
 
 **Acessar:** `@speckit /trace` (lista) ou `@speckit /trace STORY-001` (detalhe)
@@ -2045,8 +2061,8 @@ Além do audit log e traces, o plugin grava logs de sessão em Markdown:
 
 ```
 .speckit/
-└── logs/
-    └── session-2026-03-19.md
++-- logs/
+    +-- session-2026-03-19.md
 ```
 
 Cada entrada contém o comando executado, o resultado e metadados relevantes. Útil para revisão pós-sessão.
