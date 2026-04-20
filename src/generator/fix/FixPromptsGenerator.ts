@@ -14,7 +14,8 @@ function testCommandForStack(language: string): string {
 
 export function generateFixImplementPrompt(fix: Fix, stack: TechStackDetection): string {
   const fixId = fix.metadata.id || '001';
-  const dofList = fix.dof.criteria.map(c => `- [ ] ${c}`).join('\n') || '- [ ] (não especificado)';
+  const dofList =
+    fix.dof.criteria.map((c) => `- [ ] ${c}`).join('\n') || '- [ ] (não especificado)';
 
   return `# Fix Implement — Sessão A (Gates 0–2)
 
@@ -120,7 +121,7 @@ ${dofList}
 
 Gates 0–2 completos. **Encerre esta sessão.**
 
-Para iniciar a revisão independente, o usuário deve abrir um novo Copilot Chat em modo Agente e executar \`@speckit /review\`.
+Para iniciar a revisão independente, o usuário deve abrir um novo Copilot Chat em modo Agente e digitar \`/fix-review\`.
 
 Não faça mais alterações de código nesta sessão.
 `;
@@ -128,7 +129,8 @@ Não faça mais alterações de código nesta sessão.
 
 export function generateFixReviewPrompt(fix: Fix, stack: TechStackDetection): string {
   const fixId = fix.metadata.id || '001';
-  const dofList = fix.dof.criteria.map(c => `- [ ] ${c}`).join('\n') || '- [ ] (não especificado)';
+  const dofList =
+    fix.dof.criteria.map((c) => `- [ ] ${c}`).join('\n') || '- [ ] (não especificado)';
 
   return `# Fix Review — Sessão B (Gates 3–4)
 
@@ -244,7 +246,8 @@ git commit -m "chore(${fixId}): encerra fix no speckit"
 
 export function generateFixRunPrompt(fix: Fix, stack: TechStackDetection): string {
   const fixId = fix.metadata.id || '001';
-  const dofList = fix.dof.criteria.map(c => `- [ ] ${c}`).join('\n') || '- [ ] (não especificado)';
+  const dofList =
+    fix.dof.criteria.map((c) => `- [ ] ${c}`).join('\n') || '- [ ] (não especificado)';
 
   return `# Fix Run — Modo Monolítico
 
@@ -333,9 +336,7 @@ ${dofList}
 
 export function generateFixGapFillingPrompt(fix: Fix, gaps: FixGap[]): string {
   const fixId = fix.metadata.id || '001';
-  const gapList = gaps
-    .map(g => `- **[${g.section}]** \`${g.field}\`: ${g.message}`)
-    .join('\n');
+  const gapList = gaps.map((g) => `- **[${g.section}]** \`${g.field}\`: ${g.message}`).join('\n');
 
   return `# Fix Alignment — Preenchimento de Lacunas
 

@@ -122,7 +122,9 @@ describe('TestingStandardsGenerator', () => {
       ...story,
       functionalSpec: { ...story.functionalSpec, acceptanceCriteria: [] },
     };
-    expect(generateTestingStandards(noCriteria)).not.toContain('Cenários mínimos obrigatórios derivados');
+    expect(generateTestingStandards(noCriteria)).not.toContain(
+      'Cenários mínimos obrigatórios derivados',
+    );
   });
 });
 

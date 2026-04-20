@@ -1,7 +1,8 @@
 import { Fix } from '../../fix/Fix';
 
 export function generateFixDof(fix: Fix): string {
-  const criteria = fix.dof.criteria.map(c => `- [ ] ${c}`).join('\n') || '- [ ] (critérios não definidos)';
+  const criteria =
+    fix.dof.criteria.map((c) => `- [ ] ${c}`).join('\n') || '- [ ] (critérios não definidos)';
 
   return `---
 applyTo: '**'

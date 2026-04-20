@@ -1,8 +1,69 @@
-export function generateStoryElicitPrompt(roughInput: string, nextId: string): string {
-  return `# Elicit Story — STORY-${nextId}
+import { WorkspaceDefaults } from '../../config/WorkspaceDefaults';
+import { SpecType } from '../../story/Story';
+
+const TYPE_LABELS: Record<SpecType, string> = {
+  story: 'História',
+  refactoring: 'Refactoring',
+  spike: 'Spike / PoC',
+};
+
+function buildDefaultsContext(defaults: WorkspaceDefaults | undefined): string {
+  if (!defaults || Object.keys(defaults).length === 0) return '';
+  const lines: string[] = ['## Defaults do workspace (pré-carregados)', ''];
+  if (defaults.language) lines.push(`- **Linguagem:** ${defaults.language}`);
+  if (defaults.framework) lines.push(`- **Framework:** ${defaults.framework}`);
+  if (defaults.architecture) lines.push(`- **Arquitetura:** ${defaults.architecture}`);
+  if (defaults.target) lines.push(`- **Target:** ${defaults.target}`);
+  if (defaults.projectStage) lines.push(`- **Estágio:** ${defaults.projectStage}`);
+  if (defaults.database) lines.push(`- **Database:** ${defaults.database}`);
+  if (defaults.infrastructure) lines.push(`- **Infraestrutura:** ${defaults.infrastructure}`);
+  if (defaults.ci) lines.push(`- **CI:** ${defaults.ci}`);
+  lines.push(
+    '',
+    '> Use estes valores como default na Fase 4 (Especificação Técnica). Se o usuário confirmar ou omitir, aplique-os diretamente.',
+    '',
+  );
+  return lines.join('\n');
+}
+
+function buildTypeContext(specType: SpecType): string {
+  if (specType === 'refactoring') {
+    return `## Tipo: Refactoring
+
+> Esta spec é um **refactoring** — melhoria interna sem mudança de comportamento externo.
+> Adapte as perguntas: foco em debt técnico, métricas de qualidade, área de impacto.
+> User stories não se aplicam — use "Escopo da Refatoração" no lugar.
+> Critérios de aceite focam em: mesmos testes passando, métricas melhoradas, zero regressão.
+
+`;
+  }
+  if (specType === 'spike') {
+    return `## Tipo: Spike / PoC
+
+> Esta spec é um **spike** — investigação técnica com deliverable de conhecimento.
+> Adapte as perguntas: foco em hipótese, critérios de viabilidade, timebox.
+> O output não é software de produção — é um documento de decisão.
+> Critérios de aceite focam em: hipótese validada/invalidada, recomendação documentada.
+
+`;
+  }
+  return '';
+}
+
+export function generateStoryElicitPrompt(
+  roughInput: string,
+  nextId: string,
+  specType: SpecType = 'story',
+  defaults?: WorkspaceDefaults,
+): string {
+  const typeLabel = TYPE_LABELS[specType];
+  const defaultsCtx = buildDefaultsContext(defaults);
+  const typeCtx = buildTypeContext(specType);
+
+  return `# Elicit ${typeLabel} — STORY-${nextId}
 
 > Você é um analista de produto e arquiteto de software sênior.
-> Seu objetivo é transformar a ideia abaixo em uma história SDD completa,
+> Seu objetivo é transformar a ideia abaixo em uma ${typeLabel.toLowerCase()} SDD completa,
 > salva em \`.speckit/STORY-${nextId}.md\`.
 >
 > **Não escreva código. Não implemente nada. Apenas elicite e documente a spec.**
@@ -11,7 +72,7 @@ export function generateStoryElicitPrompt(roughInput: string, nextId: string): s
 
 > ${roughInput}
 
----
+${typeCtx}${defaultsCtx}---
 
 ## ⚠️ REGRA MESTRE — LEIA ANTES DE QUALQUER AÇÃO
 
@@ -21,6 +82,7 @@ export function generateStoryElicitPrompt(roughInput: string, nextId: string): s
 - Após escrever a pergunta, sua mensagem está COMPLETA. Não escreva mais nada.
 - Nunca responda sua própria pergunta — nem explicitamente ("Sim"), nem implicitamente (derivando uma resposta).
 - Nunca aplique um default sem ter feito a pergunta E recebido resposta do usuário.
+- **Se uma pergunta já foi respondida nesta conversa, NUNCA a repita.** Avance para a próxima pergunta da sequência. Isso vale para sub-perguntas (ex: 1.3a, 1.3b) — cada uma é respondida uma única vez.
 - **Exceção única:** se o usuário escrever "modo rápido", "preenche com defaults" ou equivalente → vá para a seção "Modo rápido" ao final deste prompt.
 
 **Sequência obrigatória para cada campo:**
@@ -36,6 +98,7 @@ export function generateStoryElicitPrompt(roughInput: string, nextId: string): s
 
 - **"Não sei"** → registre como "A definir com o time". Não aplique default.
 - **"N/A"** → registre como "N/A" e siga em frente.
+- **"Pular"** → registre o campo como "<!-- TODO: A ser preenchido -->" e avance para a próxima pergunta. O campo ficará como lacuna para o \`/validate\` detectar.
 - **Default** → aplicado somente quando o usuário foi perguntado e omitiu a resposta. Informe que está usando um default.
 - Ao final de cada fase, apresente um resumo de 2–3 linhas do que foi capturado e pergunte se está correto. Sua mensagem termina aí — aguarde confirmação antes de avançar.
 
@@ -66,24 +129,14 @@ Pergunta para o usuário:
 
 Default (aplique somente após perguntar e o usuário omitir): derive da ideia inicial descrevendo o benefício operacional.
 
-> **Instrução de montagem**: combine 1.1 e 1.2 em um único parágrafo coeso no campo \`Problema\`.
-> Exemplo de output combinado: *"O cálculo de comissões é feito em batch noturno, gerando visibilidade defasada de D+1 para os vendedores — um ponto de atrito recorrente no fechamento mensal. A entrega é urgente porque o time comercial cresceu 40% este trimestre e o volume de reclamações no suporte sobre comissões incorretas triplicou desde janeiro."*
-
 ### 1.3b Valor — métrica \`(value)\`
 
 Pergunta para o usuário:
 *"Como você vai saber que deu certo? Qual indicador ou métrica vai se mover?"*
 
-**Importante:** não use "a definir após produção" como default — sugira um candidato de métrica com base no domínio:
+**Importante:** não use "a definir após produção" como default.
 
-Default (aplique somente após perguntar e o usuário omitir): sugira um candidato de métrica com base no domínio:
-- Domínio de cálculo/financeiro → "Redução de divergências entre valor calculado e esperado"
-- API/integração → "Latência P99 abaixo do SLA e taxa de erro < 0,1%"
-- Eventos/streaming → "Lag de fila < threshold e taxa de DLQ < 1%"
-- Frontend/UX → "Taxa de conclusão do fluxo principal > X% e tempo médio de tarefa"
-- Genérico → "Redução mensurável da dor descrita — proxy metric a confirmar com o time"
-
-> **Instrução de montagem**: combine 1.3a e 1.3b em um único parágrafo no campo \`Valor\`.
+Default (aplique somente após perguntar e o usuário omitir): sugira UMA métrica concreta derivada do domínio descrito pelo usuário nas respostas anteriores. A métrica deve ser mensurável e específica ao contexto — não use templates genéricos.
 
 ### 1.4 Stakeholders \`(stakeholders)\`
 
@@ -96,6 +149,11 @@ Default (aplique somente após perguntar e o usuário omitir): ["Time de Produto
 
 **→ Resumo da Fase 1:** após receber a resposta de 1.4, apresente um resumo de 2–3 linhas do requisito de negócio capturado e pergunte: *"Está correto? Posso avançar para as user stories?"*
 Sua mensagem termina aqui. Aguarde a confirmação do usuário.
+
+> **Instruções de montagem da Fase 1** (aplique ao montar o arquivo final, NÃO durante a entrevista):
+> - Combine 1.1 e 1.2 em um único parágrafo coeso no campo \`Problema\`.
+> - Combine 1.3a e 1.3b em um único parágrafo no campo \`Valor\`.
+> - Exemplo de Problema combinado: *"O cálculo de comissões é feito em batch noturno, gerando visibilidade defasada de D+1 para os vendedores — um ponto de atrito recorrente no fechamento mensal. A entrega é urgente porque o time comercial cresceu 40% este trimestre e o volume de reclamações no suporte sobre comissões incorretas triplicou desde janeiro."*
 
 ---
 
@@ -274,9 +332,23 @@ Se o usuário disser "não sei": registre "Não definida."
 
 **Regra**: ao não mencionar infraestrutura na ideia inicial, não assuma que não existe — sempre confirme explicitamente.
 
+### 4.7 Estágio do Projeto \`(projectStage)\`
+
+Pergunta para o usuário:
+*"Este projeto é greenfield (novo, sem código existente) ou brownfield (projeto existente, com código e convenções já estabelecidas)?"*
+
+Default (aplique somente após perguntar e o usuário omitir): "brownfield"
+
+### 4.8 CI \`(ci)\`
+
+Pergunta para o usuário:
+*"Deseja gerar workflows de CI/CD para GitHub Actions? (github-actions | none)"*
+
+Default (aplique somente após perguntar e o usuário omitir): "github-actions"
+
 ---
 
-**→ Resumo de fase:** após receber a resposta de 4.6, apresente um resumo com a stack definida (linguagem + framework + arquitetura + target) e pergunte: *"Está correto? Posso avançar para dependências e critérios de pronto?"*
+**→ Resumo de fase:** após receber a resposta de 4.8, apresente um resumo com a stack definida (linguagem + framework + arquitetura + target + estágio + CI) e pergunte: *"Está correto? Posso avançar para dependências e critérios de pronto?"*
 Sua mensagem termina aqui. Aguarde a confirmação do usuário.
 
 ---
@@ -327,8 +399,8 @@ Após coletar todas as respostas (ou aplicar os defaults onde aplicável e infor
 5. **DoR**: avalie cada critério individualmente:
    - **Critérios verificáveis pelo AI**: marque \`[x]\` somente se o dado foi efetivamente coletado (resposta do usuário ou default aplicado e informado)
    - **Critérios que requerem ação humana** (aprovação de stakeholder, alinhamento com o time): mantenha sempre \`[ ]\`
-6. Exiba o conteúdo completo como um bloco de código markdown — **não execute código, não use terminal, não crie arquivos**
-7. Após exibir o bloco, confirme: "✅ Copie o conteúdo acima para \`.speckit/STORY-${nextId}.md\`. Depois use \`@speckit /validate\` para verificar completude e gerar a configuração do Copilot."
+6. Crie o arquivo \`.speckit/STORY-${nextId}.md\` com o conteúdo completo usando a ferramenta de criação de arquivo
+7. Após criar o arquivo, confirme: "✅ Arquivo \`.speckit/STORY-${nextId}.md\` criado com sucesso. Use \`@speckit /validate\` para verificar completude e gerar a configuração do Copilot."
 
 ### Template de saída
 
@@ -338,7 +410,7 @@ id: ${nextId}
 title: {título derivado da ideia inicial — conciso, orientado ao valor de negócio}
 createdAt: {data de hoje no formato YYYY-MM-DD}
 version: 1
-type: story
+type: ${specType}
 status: open
 -->
 
@@ -410,6 +482,12 @@ status: open
 
 #### Infraestrutura
 {valor de 4.6}
+
+#### Estágio do Projeto
+{valor de 4.7: greenfield | brownfield}
+
+#### CI
+{valor de 4.8: github-actions | none}
 
 ---
 

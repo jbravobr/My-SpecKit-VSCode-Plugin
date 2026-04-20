@@ -14,12 +14,15 @@ status: open
 ## Requisito de Negócio
 
 ### Problema
+
 Eventos de pagamento são processados em batch com latência de D+1.
 
 ### Valor
+
 Processamento em tempo real reduz latência para segundos e habilita dashboards ao vivo.
 
 ### Stakeholders
+
 - Time Financeiro (fechamento em tempo real)
 - Plataforma de Dados (consumo dos eventos processados)
 
@@ -28,14 +31,17 @@ Processamento em tempo real reduz latência para segundos e habilita dashboards 
 ## Especificação Funcional
 
 ### User Stories
+
 - Como sistema, ao receber um evento Kafka de pagamento, quero processar e persistir o resultado
 
 ### Critérios de Aceite
+
 - Consumir eventos do tópico pagamentos.v1
 - Persistir resultado na tabela pagamentos do Aurora MySQL
 - Evento inválido encaminhado à DLQ com header de causa
 
 ### Fora de Escopo
+
 - Dashboard de visualização
 - Estorno de pagamentos
 
@@ -44,18 +50,23 @@ Processamento em tempo real reduz latência para segundos e habilita dashboards 
 ## Especificação Não-Funcional
 
 ### Performance
+
 P99 < 500ms por evento.
 
 ### Segurança
+
 Nenhum PII nos logs.
 
 ### Escalabilidade
+
 Escalonamento horizontal via consumer group.
 
 ### Usabilidade
+
 N/A
 
 ### Disponibilidade
+
 99,5% uptime. Retry com backoff exponencial antes de DLQ.
 
 ---
@@ -63,22 +74,32 @@ N/A
 ## Especificação Técnica
 
 ### Linguagem
+
 java
 
 ### Framework
+
 springboot
 
 ### Arquitetura
+
 hexagonal
 
 ### Target
+
 backend
 
 ### Banco de Dados
+
 Aurora MySQL 8.0
 
 ### Infraestrutura
+
 Apache Kafka (AWS MSK), AWS ECS
+
+### CI
+
+github-actions
 
 ---
 

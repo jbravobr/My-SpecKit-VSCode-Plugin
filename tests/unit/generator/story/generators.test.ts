@@ -74,7 +74,9 @@ describe('PromptsGenerator', () => {
 
     it('contains test task planning section in PORTÃO 2', () => {
       const result = generateImplementPrompt(completeStory);
-      expect(result).toContain('Planejamento das tarefas de teste (faça ANTES de escrever qualquer teste)');
+      expect(result).toContain(
+        'Planejamento das tarefas de teste (faça ANTES de escrever qualquer teste)',
+      );
       expect(result).toContain('TEST-1');
     });
 
@@ -106,7 +108,9 @@ describe('PromptsGenerator', () => {
 
     it('contains atomic fix planning section in Gate 3', () => {
       const result = generateReviewPrompt(completeStory);
-      expect(result).toContain('Planejamento das tarefas de correção (faça ANTES de escrever qualquer fix)');
+      expect(result).toContain(
+        'Planejamento das tarefas de correção (faça ANTES de escrever qualquer fix)',
+      );
       expect(result).toContain('FIX-1');
     });
 
@@ -164,7 +168,9 @@ describe('PromptsGenerator', () => {
 
     it('contains atomic fix planning section in Gate 3', () => {
       const result = generateRunPrompt(completeStory);
-      expect(result).toContain('Planejamento das tarefas de correção (faça ANTES de escrever qualquer fix)');
+      expect(result).toContain(
+        'Planejamento das tarefas de correção (faça ANTES de escrever qualquer fix)',
+      );
       expect(result).toContain('FIX-1');
     });
 
@@ -204,7 +210,9 @@ describe('PromptsGenerator', () => {
 
     it('contains test task planning section in PORTÃO 2', () => {
       const result = generateRunPrompt(completeStory);
-      expect(result).toContain('Planejamento das tarefas de teste (faça ANTES de escrever qualquer teste)');
+      expect(result).toContain(
+        'Planejamento das tarefas de teste (faça ANTES de escrever qualquer teste)',
+      );
       expect(result).toContain('TEST-1');
     });
 
@@ -234,13 +242,17 @@ describe('PromptsGenerator', () => {
     });
 
     it('mentions field name when gap is language', () => {
-      const gaps = [{ section: 'TechnicalSpec', field: 'language', message: 'Linguagem obrigatória' }];
+      const gaps = [
+        { section: 'TechnicalSpec', field: 'language', message: 'Linguagem obrigatória' },
+      ];
       const result = generateGapFillingPrompt(completeStory, gaps);
       expect(result).toContain('language');
     });
 
     it('mentions field name when gap is problem', () => {
-      const gaps = [{ section: 'BusinessRequirement', field: 'problem', message: 'Problema obrigatório' }];
+      const gaps = [
+        { section: 'BusinessRequirement', field: 'problem', message: 'Problema obrigatório' },
+      ];
       const result = generateGapFillingPrompt(completeStory, gaps);
       expect(result).toContain('problem');
     });

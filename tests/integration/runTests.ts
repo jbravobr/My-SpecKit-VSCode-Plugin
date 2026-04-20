@@ -5,7 +5,7 @@ async function main() {
   try {
     // __dirname when compiled: <project>/out/integration/tests/integration
     const extensionDevelopmentPath = path.resolve(__dirname, '../../../..'); // → <project>/
-    const extensionTestsPath = path.resolve(__dirname, './suite/index');     // → .../suite/index
+    const extensionTestsPath = path.resolve(__dirname, './suite/index'); // → .../suite/index
 
     await runTests({
       extensionDevelopmentPath,

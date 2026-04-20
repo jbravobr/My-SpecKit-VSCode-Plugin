@@ -1,42 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { parseFix } from '../../../src/fix/FixParser';
 import { handleFixCommand } from '../../../src/participant/commands/fixCommand';
-import { IFileSystem } from '../../../src/generator/utils/IFileSystem';
-import { IWorkspace } from '../../../src/generator/utils/IWorkspace';
+import {
+  createMockFs,
+  createMockRequest,
+  createMockStream,
+  createMockToken,
+  InMemoryFileSystem,
+  WorkspaceStub,
+} from '../../support/fakes';
 
 vi.mock('vscode', () => ({
   workspace: { openTextDocument: vi.fn().mockResolvedValue({}) },
   window: { showTextDocument: vi.fn().mockResolvedValue(undefined) },
 }));
-
-function createMockStream() {
-  const calls: string[] = [];
-  return {
-    markdown: vi.fn((t: string) => { calls.push(t); }),
-    getCalls: () => calls,
-    getAllMarkdown: () => calls.join(''),
-  };
-}
-
-function createMockFs(): IFileSystem {
-  return {
-    ensureDir: vi.fn().mockResolvedValue(undefined),
-    writeFile: vi.fn().mockResolvedValue(undefined),
-    readFile: vi.fn().mockResolvedValue(''),
-    fileExists: vi.fn().mockResolvedValue(false),
-  };
-}
-
-function createMockWorkspace(overrides: Partial<IWorkspace> = {}): IWorkspace {
-  return {
-    getWorkspaceRoot: vi.fn().mockReturnValue('C:\\workspace'),
-    listStoryFiles: vi.fn().mockResolvedValue([]),
-    listFixFiles: vi.fn().mockResolvedValue([]),
-    getActiveStoryPath: vi.fn().mockResolvedValue(undefined),
-    getActiveSpecPath: vi.fn().mockResolvedValue(undefined),
-    detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
-    ...overrides,
-  };
-}
 
 describe('handleFixCommand', () => {
   beforeEach(() => {
@@ -45,72 +22,149 @@ describe('handleFixCommand', () => {
 
   it('shows error when no workspace is open', async () => {
     const stream = createMockStream();
-    const workspace = createMockWorkspace({ getWorkspaceRoot: vi.fn().mockReturnValue(undefined) });
-    const fs = createMockFs();
+    const workspace = new WorkspaceStub({ workspaceRoot: undefined as unknown as string });
+    workspace.getWorkspaceRoot = () => undefined;
+    const fs = new InMemoryFileSystem();
 
-    await handleFixCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleFixCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('Nenhum workspace');
-    expect(fs.writeFile).not.toHaveBeenCalled();
+    expect(fs.writtenPaths().length).toBe(0);
   });
 
-  it('creates FIX-001.md when no fixes exist', async () => {
+  it('creates FIX-{AAA}-{timestamp}.md when no fixes exist', async () => {
     const stream = createMockStream();
-    const workspace = createMockWorkspace({ listFixFiles: vi.fn().mockResolvedValue([]) });
-    const fs = createMockFs();
+    const workspace = new WorkspaceStub({ fixFiles: [] });
+    const fs = new InMemoryFileSystem();
 
-    await handleFixCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleFixCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
-    expect(fs.writeFile).toHaveBeenCalledWith(
-      expect.stringContaining('FIX-001.md'),
-      expect.any(String),
-    );
-    expect(stream.getAllMarkdown()).toContain('FIX-001');
+    expect(fs.hasFile('FIX-')).toBe(true);
+    const path = fs.writtenPaths().find((p) => p.includes('FIX-'));
+    expect(path).toMatch(/FIX-WORKSPACE-\d{8}-\d{4}\.md$/);
+    expect(stream.getAllMarkdown()).toMatch(/FIX-WORKSPACE-\d{8}-\d{4}/);
   });
 
-  it('creates FIX-002.md when FIX-001.md already exists', async () => {
+  it('avoids collision with existing fix files by advancing minute', async () => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const existingId = `FIX-WORKSPACE-${yyyy}${mm}${dd}-${hh}${min}.md`;
+    const workspace = new WorkspaceStub({ fixFiles: [existingId] });
+    const fs = new InMemoryFileSystem();
     const stream = createMockStream();
-    const workspace = createMockWorkspace({
-      listFixFiles: vi.fn().mockResolvedValue(['FIX-001.md']),
-    });
-    const fs = createMockFs();
 
-    await handleFixCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleFixCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
-    expect(fs.writeFile).toHaveBeenCalledWith(
-      expect.stringContaining('FIX-002.md'),
-      expect.any(String),
-    );
+    const writtenPath = fs.writtenPaths().find((p) => p.includes('FIX-'))!;
+    expect(writtenPath).not.toContain(existingId.replace('.md', ''));
+    expect(writtenPath).toMatch(/FIX-WORKSPACE-\d{8}-\d{4}\.md$/);
   });
 
-  it('calls ensureDir for the .speckit directory', async () => {
+  it('creates file inside .speckit directory', async () => {
+    const workspace = new WorkspaceStub();
+    const fs = new InMemoryFileSystem();
     const stream = createMockStream();
-    const workspace = createMockWorkspace();
-    const fs = createMockFs();
 
-    await handleFixCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleFixCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
-    expect(fs.ensureDir).toHaveBeenCalledWith(expect.stringContaining('.speckit'));
+    const writtenPath = fs.writtenPaths().find((p) => p.includes('FIX-'))!;
+    expect(writtenPath).toContain('.speckit');
   });
 
   it('writes a template with type: fix in metadata', async () => {
+    const workspace = new WorkspaceStub();
+    const fs = new InMemoryFileSystem();
     const stream = createMockStream();
-    const workspace = createMockWorkspace();
-    const fs = createMockFs();
 
-    await handleFixCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleFixCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
-    const writtenContent = (fs.writeFile as ReturnType<typeof vi.fn>).mock.calls[0][1] as string;
-    expect(writtenContent).toContain('type: fix');
+    const content = fs.contentFor('FIX-')!;
+    expect(content).toContain('type: fix');
   });
 
   it('success message includes /validate instruction', async () => {
+    const workspace = new WorkspaceStub({ fixFiles: [] });
+    const fs = new InMemoryFileSystem();
     const stream = createMockStream();
-    const workspace = createMockWorkspace({ listFixFiles: vi.fn().mockResolvedValue([]) });
-    const fs = createMockFs();
 
-    await handleFixCommand({} as any, stream as any, {} as any, fs, workspace);
+    await handleFixCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('/validate');
+  });
+
+  it('shows error when writeFile fails', async () => {
+    const stream = createMockStream();
+    const ws = new WorkspaceStub();
+    const fs = createMockFs();
+    (fs.writeFile as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error('EACCES: permission denied'),
+    );
+
+    await handleFixCommand(createMockRequest(''), stream, createMockToken(), fs, ws);
+
+    expect(stream.getAllMarkdown()).toContain('Erro ao salvar o fix');
+    expect(stream.getAllMarkdown()).toContain('permission denied');
+  });
+
+  // ── Contract test: template → parser ──────────────────────────────────
+  it('generated template is parseable by FixParser with correct metadata', async () => {
+    const fs = new InMemoryFileSystem();
+    const workspace = new WorkspaceStub({ fixFiles: [] });
+    const stream = createMockStream();
+
+    await handleFixCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
+
+    const content = fs.contentFor('FIX-');
+    expect(content).toBeDefined();
+    const fix = parseFix(content!);
+    expect(fix.metadata.type).toBe('fix');
+    expect(fix.metadata.id).toMatch(/^FIX-WORKSPACE-\d{8}-\d{4}$/);
+  });
+
+  it('generated template contains all mandatory sections', async () => {
+    const fs = new InMemoryFileSystem();
+    const workspace = new WorkspaceStub({ fixFiles: [] });
+    const stream = createMockStream();
+
+    await handleFixCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
+
+    const content = fs.contentFor('FIX-')!;
+    expect(content).toContain('## Bug Description');
+    expect(content).toContain('## Root Cause Hypothesis');
+    expect(content).toContain('## Impact Assessment');
+    expect(content).toContain('## Regression Prevention');
+    expect(content).toContain('DoF');
+  });
+
+  // ── Audit & Trace coverage ────────────────────────────────────────────
+  it('writes traceability entry for new fix', async () => {
+    const fs = new InMemoryFileSystem();
+    const workspace = new WorkspaceStub({ fixFiles: [] });
+    const stream = createMockStream();
+
+    await handleFixCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
+
+    const traceContent = fs.contentFor('traceability/');
+    expect(traceContent).toBeDefined();
+    const trace = JSON.parse(traceContent!);
+    expect(trace.specType).toBe('fix');
+    expect(trace.entries[0].description).toBe('fix created');
+  });
+
+  it('writes session log entry for new fix', async () => {
+    const fs = new InMemoryFileSystem();
+    const workspace = new WorkspaceStub({ fixFiles: [] });
+    const stream = createMockStream();
+
+    await handleFixCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
+
+    const sessionContent = fs.contentFor('session-');
+    expect(sessionContent).toBeDefined();
+    expect(sessionContent).toContain('/fix');
+    expect(sessionContent).toContain('Fix criado');
   });
 });

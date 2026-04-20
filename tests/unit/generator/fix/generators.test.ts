@@ -1,13 +1,15 @@
-import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { parseFix } from '../../../../src/fix/FixParser';
+import { describe, expect, it } from 'vitest';
 import { Fix, TechStackDetection } from '../../../../src/fix/Fix';
+import { parseFix } from '../../../../src/fix/FixParser';
+import { generateFixImplementadorAgent } from '../../../../src/generator/agent/FixImplementadorAgentGenerator';
+import { generateFixRevisorAgent } from '../../../../src/generator/agent/FixRevisorAgentGenerator';
 import {
+  generateFixGapFillingPrompt,
   generateFixImplementPrompt,
   generateFixReviewPrompt,
   generateFixRunPrompt,
-  generateFixGapFillingPrompt,
 } from '../../../../src/generator/fix/FixPromptsGenerator';
 
 const fixturesDir = resolve(__dirname, '../../../fixtures');
@@ -19,17 +21,33 @@ const mockStack: TechStackDetection = {
   framework: 'react',
   architecture: 'hexagonal',
   target: 'frontend',
+  projectStage: 'brownfield',
   confidence: 'high',
   source: 'package.json',
 };
 
 function emptyFix(): Fix {
   return {
-    metadata: { id: '', title: '', createdAt: '', version: 1, type: 'fix', status: 'open' },
-    bugDescription: { title: '', symptoms: '', stepsToReproduce: [], environment: '', frequency: '' },
+    metadata: {
+      id: '',
+      title: '',
+      createdAt: '',
+      version: 1,
+      type: 'fix',
+      status: 'open',
+      gate: 0,
+    },
+    bugDescription: {
+      title: '',
+      symptoms: '',
+      stepsToReproduce: [],
+      environment: '',
+      frequency: '',
+    },
     rootCauseHypothesis: { hypothesis: '', suspectedFiles: [], suspectedComponents: [] },
     impactAssessment: { severity: '', affectedUsers: '', affectedSystems: [], regressionRisk: '' },
     regressionPrevention: { testsToAdd: [] },
+    technicalContext: { messaging: '', database: '' },
     dof: { criteria: [] },
   };
 }
@@ -185,7 +203,9 @@ describe('FixPromptsGenerator', () => {
     });
 
     it('mentions field name when gap is symptoms', () => {
-      const gaps = [{ section: 'Bug Description', field: 'symptoms', message: 'Sintomas obrigatórios' }];
+      const gaps = [
+        { section: 'Bug Description', field: 'symptoms', message: 'Sintomas obrigatórios' },
+      ];
       const result = generateFixGapFillingPrompt(completeFix, gaps);
       expect(result).toContain('symptoms');
     });
@@ -200,5 +220,38 @@ describe('FixPromptsGenerator', () => {
       expect(result).toContain('severity');
       expect(result).toContain('Lacunas identificadas (2)');
     });
+  });
+});
+
+describe('Fix Agent Generators — no tool-setup instructions', () => {
+  it('fix-implementador agent does NOT contain tool-setup instructions', () => {
+    const result = generateFixImplementadorAgent(completeFix, mockStack);
+    expect(result).not.toContain('PRÉ-REQUISITO OBRIGATÓRIO');
+    expect(result).not.toContain('REGRA ZERO');
+    expect(result).not.toContain('REGRA DE EXECUÇÃO');
+    expect(result).not.toContain('habilitar ferramentas');
+    expect(result).not.toContain('tool_search_tool_regex');
+    expect(result).not.toContain('tools: ["*"]');
+    expect(result).toContain('read/readFile');
+    expect(result).toContain('execute/runInTerminal');
+    expect(result).toContain('Protocolo de governança');
+  });
+
+  it('fix-revisor agent does NOT contain tool-setup instructions', () => {
+    const result = generateFixRevisorAgent(completeFix, mockStack);
+    expect(result).not.toContain('PRÉ-REQUISITO OBRIGATÓRIO');
+    expect(result).not.toContain('REGRA ZERO');
+    expect(result).not.toContain('tool_search_tool_regex');
+    expect(result).not.toContain('tools: ["*"]');
+    expect(result).toContain('read/readFile');
+    expect(result).toContain('execute/runInTerminal');
+    expect(result).toContain('Protocolo de governança');
+  });
+
+  it('fix-revisor agent requires user confirmation before corrections', () => {
+    const result = generateFixRevisorAgent(completeFix, mockStack);
+    expect(result).toContain('NUNCA implemente correções sem aprovação explícita do usuário');
+    expect(result).toContain('GATE DE CONFIRMAÇÃO');
+    expect(result).toContain('AGUARDE aprovação explícita do usuário');
   });
 });

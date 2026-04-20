@@ -1,0 +1,14 @@
+flowchart TB
+    subgraph modos [Modos de Agente]
+        direction LR
+        D[default] --- I[implementador]
+        I --- R[revisor]
+        R --- DB[debugger]
+        DB --- RF[refactor]
+    end
+
+    D -->|"@speckit /agent implementador"| I
+    I -->|"@speckit /agent revisor"| R
+    R -->|"@speckit /agent debugger"| DB
+    DB -->|"@speckit /agent refactor"| RF
+    RF -->|"@speckit /agent default"| D

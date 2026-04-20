@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { describe, expect, it } from 'vitest';
 import { parseStory } from '../../../src/story/StoryParser';
 
 const fixturesDir = resolve(__dirname, '../../fixtures');
@@ -36,7 +36,7 @@ describe('parseStory', () => {
 
     expect(story.dor.criteria).toHaveLength(7);
     expect(story.dor.checked).toHaveLength(7);
-    expect(story.dor.checked.every(c => c)).toBe(true);
+    expect(story.dor.checked.every((c) => c)).toBe(true);
 
     expect(story.dod.criteria).toHaveLength(5);
   });
@@ -51,7 +51,7 @@ describe('parseStory', () => {
     expect(story.functionalSpec.acceptanceCriteria).toHaveLength(0);
     expect(story.technicalSpec.language).toBe('');
     expect(story.technicalSpec.framework).toBe('');
-    expect(story.dor.checked.every(c => !c)).toBe(true);
+    expect(story.dor.checked.every((c) => !c)).toBe(true);
   });
 
   it('cleanTodo removes TODO comments from section fields', () => {
@@ -64,11 +64,11 @@ describe('parseStory', () => {
 
   it('parses DoR checked/unchecked items correctly', () => {
     const story = parseStory(completeStoryMd);
-    expect(story.dor.checked.every(c => c)).toBe(true);
+    expect(story.dor.checked.every((c) => c)).toBe(true);
 
     const partialMd = readFileSync(resolve(fixturesDir, 'story-partial.md'), 'utf-8');
     const partial = parseStory(partialMd);
-    expect(partial.dor.checked.every(c => !c)).toBe(true);
+    expect(partial.dor.checked.every((c) => !c)).toBe(true);
   });
 
   it('extracts metadata fields correctly', () => {
@@ -110,8 +110,84 @@ describe('parseStory', () => {
       expect(story.dor.criteria).toHaveLength(7);
       expect(story.dor.checked).toHaveLength(7);
       // first 5 checked, last 2 unchecked (human-only criteria)
-      expect(story.dor.checked.slice(0, 5).every(c => c)).toBe(true);
-      expect(story.dor.checked.slice(5).every(c => !c)).toBe(true);
+      expect(story.dor.checked.slice(0, 5).every((c) => c)).toBe(true);
+      expect(story.dor.checked.slice(5).every((c) => !c)).toBe(true);
+    });
+  });
+
+  describe('expanded metadata fields (gate, status, type, projectStage)', () => {
+    it('defaults gate to 0 when not present in metadata', () => {
+      const story = parseStory(completeStoryMd);
+      expect(story.metadata.gate).toBe(0);
+    });
+
+    it('defaults status to open when not present', () => {
+      const story = parseStory(completeStoryMd);
+      expect(story.metadata.status).toBe('open');
+    });
+
+    it('defaults type to story when not present', () => {
+      const story = parseStory(emptyStoryMd);
+      expect(story.metadata.type).toBe('story');
+    });
+
+    it('defaults projectStage to empty when not present', () => {
+      const story = parseStory(completeStoryMd);
+      expect(story.technicalSpec.projectStage).toBe('');
+    });
+
+    it('parses gate from metadata block', () => {
+      const md = completeStoryMd.replace('version: 1', 'version: 1\ngate: 2');
+      const story = parseStory(md);
+      expect(story.metadata.gate).toBe(2);
+    });
+
+    it('parses expanded status values', () => {
+      for (const status of ['in-progress', 'review', 'blocked', 'cancelled'] as const) {
+        const md = completeStoryMd.replace('version: 1', `version: 1\nstatus: ${status}`);
+        const story = parseStory(md);
+        expect(story.metadata.status).toBe(status);
+      }
+    });
+
+    it('parses spec type refactoring and spike', () => {
+      for (const type of ['refactoring', 'spike'] as const) {
+        const md = completeStoryMd.replace('version: 1', `version: 1\ntype: ${type}`);
+        const story = parseStory(md);
+        expect(story.metadata.type).toBe(type);
+      }
+    });
+
+    it('parses projectStage from section', () => {
+      const md = completeStoryMd + '\n### Estágio do Projeto\ngreenfield\n';
+      const story = parseStory(md);
+      expect(story.technicalSpec.projectStage).toBe('greenfield');
+    });
+    it('parses ci field as github-actions from fixture', () => {
+      const story = parseStory(completeStoryMd);
+      expect(story.technicalSpec.ci).toBe('github-actions');
+    });
+
+    it('parses ci field as none from section', () => {
+      const md = completeStoryMd + '\n### CI\nnone\n';
+      const story = parseStory(md);
+      expect(story.technicalSpec.ci).toBe('none');
+    });
+
+    it('defaults ci to empty when not present', () => {
+      const story = parseStory(emptyStoryMd);
+      expect(story.technicalSpec.ci).toBe('');
+    });
+    it('clamps invalid gate values to 0', () => {
+      const md = completeStoryMd.replace('version: 1', 'version: 1\ngate: 99');
+      const story = parseStory(md);
+      expect(story.metadata.gate).toBe(0);
+    });
+
+    it('treats unknown status as open', () => {
+      const md = completeStoryMd.replace('version: 1', 'version: 1\nstatus: invalidvalue');
+      const story = parseStory(md);
+      expect(story.metadata.status).toBe('open');
     });
   });
 });

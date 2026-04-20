@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    actor U as Você
+    participant SK as @speckit
+    participant AG as Copilot Agente
+
+    U->>SK: /draft "Login OAuth2 retorna 500 após expiração do token"
+    Note over SK: Detecta keyword "500" → intent fix
+    SK-->>U: ✅ Criado elicit-fix-001.prompt.md
+    Note over SK,U: Abra em Novo Chat modo Agente
+
+    U->>AG: Abre elicit-fix-001.prompt.md
+    loop 7 Fases
+        AG-->>U: Pergunta sobre Bug / Hipótese / Impacto / Regressão / Contexto / DoF
+        U->>AG: Responde
+    end
+    AG-->>U: ✅ FIX-001.md criado
+
+    U->>SK: /validate
+    SK-->>U: ✅ Fix válido — 7 arquivos gerados em .github/
+    Note over SK,U: Abra Novo Chat → dropdown agent fix-implementador

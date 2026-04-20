@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+import { describe, expect, it } from 'vitest';
 import { parseFix } from '../../../src/fix/FixParser';
 
 const fixturesDir = resolve(__dirname, '../../fixtures');
@@ -102,6 +102,39 @@ describe('parseFix', () => {
       expect(fix.regressionPrevention.testsToAdd[0]).toContain('401');
 
       expect(fix.dof.criteria).toHaveLength(5);
+    });
+  });
+
+  describe('expanded metadata fields (gate, status)', () => {
+    it('defaults gate to 0 when not present in metadata', () => {
+      const fix = parseFix(completeFixMd);
+      expect(fix.metadata.gate).toBe(0);
+    });
+
+    it('parses gate from metadata block', () => {
+      const md = completeFixMd.replace('status: open', 'status: open\ngate: 3');
+      const fix = parseFix(md);
+      expect(fix.metadata.gate).toBe(3);
+    });
+
+    it('parses expanded status values', () => {
+      for (const status of ['in-progress', 'review', 'blocked', 'cancelled'] as const) {
+        const md = completeFixMd.replace('status: open', `status: ${status}`);
+        const fix = parseFix(md);
+        expect(fix.metadata.status).toBe(status);
+      }
+    });
+
+    it('clamps invalid gate values to 0', () => {
+      const md = completeFixMd.replace('status: open', 'status: open\ngate: -1');
+      const fix = parseFix(md);
+      expect(fix.metadata.gate).toBe(0);
+    });
+
+    it('treats unknown status as open', () => {
+      const md = completeFixMd.replace('status: open', 'status: xyz');
+      const fix = parseFix(md);
+      expect(fix.metadata.status).toBe('open');
     });
   });
 });

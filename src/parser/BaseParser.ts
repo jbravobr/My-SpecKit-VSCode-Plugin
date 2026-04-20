@@ -1,14 +1,14 @@
 // Shared parsing utilities for StoryParser and FixParser
 
 // --- Module-level static regexes (compiled once at load time) ---
-export const RE_BULLET       = /^-\s+\S/;
-export const RE_DOR_ITEM     = /^-\s+\[/;
-export const RE_DOR_CHECKED  = /\[x\]/i;
-export const RE_DOR_PREFIX   = /^-\s+\[.\]\s+/;
-export const RE_BULLET_PFX   = /^-\s+/;
-export const RE_TODO         = /<!--\s*TODO[^>]*-->/g;
+export const RE_BULLET = /^-\s+\S/;
+export const RE_DOR_ITEM = /^-\s+\[/;
+export const RE_DOR_CHECKED = /\[x\]/i;
+export const RE_DOR_PREFIX = /^-\s+\[.\]\s+/;
+export const RE_BULLET_PFX = /^-\s+/;
+export const RE_TODO = /<!--\s*TODO[^>]*-->/g;
 export const RE_HTML_COMMENT = /<!--.*?-->/gs;
-export const RE_META_BLOCK   = /<!--\s*metadata\s*([\s\S]*?)-->/;
+export const RE_META_BLOCK = /<!--\s*metadata\s*([\s\S]*?)-->/;
 
 /** Single-pass: splits markdown on heading lines, strips HTML comments once per block. */
 export function buildSectionMap(markdown: string): Map<string, string> {
@@ -57,17 +57,17 @@ export function parseMetaFields(meta: string): Record<string, string> {
 export function extractBulletList(section: string): string[] {
   return section
     .split('\n')
-    .filter(line => RE_BULLET.test(line))
-    .map(line => line.replace(RE_BULLET_PFX, '').trim())
-    .filter(line => line.length > 0);
+    .filter((line) => RE_BULLET.test(line))
+    .map((line) => line.replace(RE_BULLET_PFX, '').trim())
+    .filter((line) => line.length > 0);
 }
 
 /** Parses DoR-style checkbox items preserving checked state (Story). */
 export function parseDorItems(section: string): { text: string; checked: boolean }[] {
   return section
     .split('\n')
-    .filter(line => RE_DOR_ITEM.test(line))
-    .map(line => ({
+    .filter((line) => RE_DOR_ITEM.test(line))
+    .map((line) => ({
       checked: RE_DOR_CHECKED.test(line),
       text: line.replace(RE_DOR_PREFIX, '').trim(),
     }));
@@ -77,14 +77,24 @@ export function parseDorItems(section: string): { text: string; checked: boolean
 export function parseDofItems(section: string): string[] {
   return section
     .split('\n')
-    .filter(line => RE_BULLET.test(line))
-    .map(line => RE_DOR_ITEM.test(line)
-      ? line.replace(RE_DOR_PREFIX, '').trim()
-      : line.replace(RE_BULLET_PFX, '').trim())
-    .filter(line => line.length > 0);
+    .filter((line) => RE_DOR_ITEM.test(line))
+    .map((line) => line.replace(RE_DOR_PREFIX, '').trim())
+    .filter((line) => line.length > 0);
 }
 
 export function cleanTodo(value: string): string {
   if (!value) return '';
   return value.replace(RE_TODO, '').trim();
+}
+
+/** Extracts spec type (story, refactoring, spike, or fix) from markdown metadata block. */
+export function extractSpecType(content: string): 'story' | 'fix' | 'refactoring' | 'spike' {
+  const metaMatch = RE_META_BLOCK.exec(content);
+  if (!metaMatch) return 'story';
+  const typeMatch = /^type:\s*(.+)$/m.exec(metaMatch[1]);
+  const t = typeMatch?.[1]?.trim();
+  if (t === 'fix') return 'fix';
+  if (t === 'refactoring') return 'refactoring';
+  if (t === 'spike') return 'spike';
+  return 'story';
 }

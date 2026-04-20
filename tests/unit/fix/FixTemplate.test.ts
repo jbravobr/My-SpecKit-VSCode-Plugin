@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { vi } from 'vitest';
-import { generateFixTemplate } from '../../../src/fix/FixTemplate';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { parseFix } from '../../../src/fix/FixParser';
+import { generateFixTemplate } from '../../../src/fix/FixTemplate';
 
 describe('generateFixTemplate', () => {
   beforeEach(() => {
@@ -19,7 +18,7 @@ describe('generateFixTemplate', () => {
     expect(template).toContain('# Fix 001');
   });
 
-  it('contains today\'s date', () => {
+  it("contains today's date", () => {
     const template = generateFixTemplate('042');
     expect(template).toContain('createdAt: 2026-03-20');
   });
@@ -59,5 +58,16 @@ describe('generateFixTemplate', () => {
     const template = generateFixTemplate('001');
     const fix = parseFix(template);
     expect(fix.dof.criteria).toHaveLength(5);
+  });
+
+  it('contains gate field in metadata', () => {
+    const template = generateFixTemplate('001');
+    expect(template).toContain('gate: 0');
+  });
+
+  it('parses gate as 0 from generated template', () => {
+    const template = generateFixTemplate('001');
+    const fix = parseFix(template);
+    expect(fix.metadata.gate).toBe(0);
   });
 });

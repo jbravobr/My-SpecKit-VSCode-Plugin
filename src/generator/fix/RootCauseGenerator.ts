@@ -1,7 +1,9 @@
 import { Fix } from '../../fix/Fix';
 
 export function generateRootCause(fix: Fix): string {
-  const suspectedFiles = fix.rootCauseHypothesis.suspectedFiles.map(f => `- ${f}`).join('\n') || '- (não especificado)';
+  const suspectedFiles =
+    fix.rootCauseHypothesis.suspectedFiles.map((f) => `- ${f}`).join('\n') ||
+    '- (não especificado)';
 
   return `---
 applyTo: '**'

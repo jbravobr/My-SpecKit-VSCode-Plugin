@@ -14,12 +14,15 @@ status: open
 ## Requisito de Negócio
 
 ### Problema
+
 O relatório financeiro mensal é gerado manualmente com alto risco de erro.
 
 ### Valor
+
 ETL automatizado elimina erros manuais e reduz o tempo de geração de 4h para 15min.
 
 ### Stakeholders
+
 - Time Financeiro (precisão e velocidade do relatório)
 
 ---
@@ -27,14 +30,17 @@ ETL automatizado elimina erros manuais e reduz o tempo de geração de 4h para 1
 ## Especificação Funcional
 
 ### User Stories
+
 - Como sistema, quero processar os dados financeiros do mês e gerar o relatório em S3
 
 ### Critérios de Aceite
+
 - Ler dados particionados por mês do Glue Catalog
 - Aplicar regras de agregação e transformação
 - Escrever resultado em S3 particionado por ano/mês
 
 ### Fora de Escopo
+
 - Envio automático do relatório por email
 - Visualização interativa
 
@@ -43,18 +49,23 @@ ETL automatizado elimina erros manuais e reduz o tempo de geração de 4h para 1
 ## Especificação Não-Funcional
 
 ### Performance
+
 Processamento completo em menos de 15 minutos.
 
 ### Segurança
+
 Nenhuma credencial no script. IAM role do job.
 
 ### Escalabilidade
+
 Spark distribui o processamento automaticamente.
 
 ### Usabilidade
+
 N/A
 
 ### Disponibilidade
+
 Execução agendada mensal. Falhas alertam via CloudWatch.
 
 ---
@@ -62,22 +73,32 @@ Execução agendada mensal. Falhas alertam via CloudWatch.
 ## Especificação Técnica
 
 ### Linguagem
+
 python
 
 ### Framework
+
 other
 
 ### Arquitetura
+
 serverless
 
 ### Target
+
 script
 
 ### Banco de Dados
+
 NA
 
 ### Infraestrutura
+
 AWS GlueJob, S3, Glue Catalog
+
+### CI
+
+github-actions
 
 ---
 

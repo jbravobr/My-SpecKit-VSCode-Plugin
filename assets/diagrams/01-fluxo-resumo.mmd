@@ -1,0 +1,5 @@
+flowchart LR
+    A[Criar spec] -->|/draft /new /fix| B[Validar]
+    B -->|/validate| C[Implementar]
+    C -->|agent implementador| D[Revisar]
+    D -->|agent revisor| E((Done))

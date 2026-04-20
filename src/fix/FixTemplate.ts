@@ -9,6 +9,7 @@ createdAt: ${now}
 version: 1
 type: fix
 status: open
+gate: 0
 -->
 
 ## Bug Description

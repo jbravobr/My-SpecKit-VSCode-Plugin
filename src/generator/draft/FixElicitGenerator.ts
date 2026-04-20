@@ -21,6 +21,7 @@ export function generateFixElicitPrompt(roughInput: string, nextId: string): str
 - Após escrever a pergunta, sua mensagem está COMPLETA. Não escreva mais nada.
 - Nunca responda sua própria pergunta — nem explicitamente ("Sim"), nem implicitamente (derivando uma resposta).
 - Nunca aplique um default sem ter feito a pergunta E recebido resposta do usuário.
+- **Se uma pergunta já foi respondida nesta conversa, NUNCA a repita.** Avance para a próxima pergunta da sequência. Isso vale para sub-perguntas (ex: 1.4, 1.5) — cada uma é respondida uma única vez.
 - **Exceção única:** se o usuário escrever "modo rápido", "preenche com defaults" ou equivalente → vá para a seção "Modo rápido" ao final deste prompt.
 
 **Sequência obrigatória para cada campo:**
@@ -34,6 +35,7 @@ export function generateFixElicitPrompt(roughInput: string, nextId: string): str
 
 - **"Não sei"** → registre como "A investigar". Não aplique default genérico.
 - **"N/A"** → registre como "N/A".
+- **"Pular"** → registre o campo como "<!-- TODO: A ser preenchido -->" e avance para a próxima pergunta. O campo ficará como lacuna para o \`/validate\` detectar.
 - **Passos de reprodução** não têm default aceitável — um fix sem passos de reprodução é especulativo. Aceite passos parciais com incertezas marcadas.
 - Ao final de cada fase, apresente um resumo de 2–3 linhas do que foi capturado e pergunte se está correto. Sua mensagem termina aí — aguarde confirmação antes de avançar.
 
@@ -299,8 +301,8 @@ Após coletar todas as respostas (ou aplicar os defaults onde aplicável e infor
 4. Combine 1.4 + 1.5 no campo \`Ambiente Afetado\`
 5. Posicione o título aprovado em 1.8 no metadata e no cabeçalho
 6. Se houver urgência/prazo (1.7), adicione ao final do campo \`Sintomas\`
-7. Exiba o conteúdo completo como um bloco de código markdown — **não execute código, não use terminal, não crie arquivos**
-8. Após exibir o bloco, confirme: "✅ Copie o conteúdo acima para \`.speckit/FIX-${nextId}.md\`. Depois use \`@speckit /validate\` para verificar completude e gerar a configuração do Copilot."
+7. Crie o arquivo \`.speckit/FIX-${nextId}.md\` com o conteúdo completo usando a ferramenta de criação de arquivo
+8. Após criar o arquivo, confirme: "✅ Arquivo \`.speckit/FIX-${nextId}.md\` criado com sucesso. Use \`@speckit /validate\` para verificar completude e gerar a configuração do Copilot."
 
 ### Template de saída
 

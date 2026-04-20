@@ -34,7 +34,19 @@ export const chat = {
   createChatParticipant: vi.fn(),
 };
 
-export type ChatRequest = Record<string, unknown>;
-export type ChatResponseStream = { markdown(text: string): void };
-export type CancellationToken = Record<string, unknown>;
+export interface ChatRequest {
+  prompt: string;
+  command?: string;
+}
+
+export interface ChatResponseStream {
+  markdown(text: string): void;
+  button?(options: { title: string; command: string; arguments?: unknown[] }): void;
+}
+
+export interface CancellationToken {
+  isCancellationRequested: boolean;
+  onCancellationRequested: (...args: unknown[]) => void;
+}
+
 export type ExtensionContext = Record<string, unknown>;

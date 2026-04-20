@@ -1,5 +1,5 @@
-import { defineConfig } from 'vitest/config';
 import { resolve } from 'path';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
@@ -11,13 +11,18 @@ export default defineConfig({
       include: ['src/**/*.ts'],
       exclude: [
         'src/extension.ts',
-        'src/participant/**',
         'src/generator/utils/fileSystem.ts',
         'src/generator/utils/workspace.ts',
         'src/generator/utils/VscodeFileSystem.ts',
         'src/generator/utils/VscodeWorkspace.ts',
       ],
       reporter: ['text', 'lcov'],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 75,
+        statements: 80,
+      },
     },
   },
 });

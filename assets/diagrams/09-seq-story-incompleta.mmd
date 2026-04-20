@@ -1,0 +1,34 @@
+sequenceDiagram
+    autonumber
+    actor U as Você
+    participant SK as @speckit
+
+    U->>SK: /validate (story com lacunas)
+    SK-->>U: ⚠️ 6 lacunas encontradas
+
+    SK-->>U: Lacuna 1 — Qual o valor de negócio?
+    U->>SK: Eliminar lag D+1, dashboards ao vivo
+    SK-->>U: ✓ Atualizado
+
+    SK-->>U: Lacuna 2 — Quais tipos de regra de comissão?
+    U->>SK: Taxa fixa, escalonada, com teto, bônus por categoria
+    SK-->>U: ✓ Atualizado
+
+    SK-->>U: Lacuna 3 — O que está fora de escopo?
+    U->>SK: Pagamento, API REST, recálculo, config de regras
+    SK-->>U: ✓ Atualizado
+
+    SK-->>U: Lacuna 4 — SLA de performance?
+    U->>SK: P99 < 300ms, 1k eventos/min
+    SK-->>U: ✓ Atualizado
+
+    SK-->>U: Lacuna 5 — Arquitetura?
+    U->>SK: Hexagonal
+    SK-->>U: ✓ Atualizado
+
+    SK-->>U: Lacuna 6 — DoD?
+    U->>SK: Idempotência, DLQ, sem PII, branch feature/001-...
+    SK-->>U: ✓ Todas as lacunas preenchidas
+
+    U->>SK: /validate (novamente)
+    SK-->>U: ✅ DoR atingido — 9 arquivos gerados

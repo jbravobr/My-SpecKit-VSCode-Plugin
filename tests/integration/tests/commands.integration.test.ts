@@ -6,15 +6,13 @@
  * then asserts both stream output and disk state.
  */
 import * as assert from 'assert';
+import { readFileSync } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { readFileSync } from 'fs';
 
-import { handleValidateCommand } from '../../../src/participant/commands/validateCommand';
-import { handleApplyCommand } from '../../../src/participant/commands/applyCommand';
-import { handleStatusCommand } from '../../../src/participant/commands/statusCommand';
-import { handleReviewCommand } from '../../../src/participant/commands/reviewCommand';
 import { handleNewCommand } from '../../../src/participant/commands/newCommand';
+import { handleStatusCommand } from '../../../src/participant/commands/statusCommand';
+import { handleValidateCommand } from '../../../src/participant/commands/validateCommand';
 
 // __dirname when compiled: <project>/out/integration/tests/integration/tests
 const fixturesDir = path.resolve(__dirname, '../../../../../tests/fixtures');
@@ -28,7 +26,9 @@ const partialStoryMd = readFileSync(path.join(fixturesDir, 'story-partial.md'), 
 function createStream() {
   const parts: string[] = [];
   return {
-    markdown: (t: string) => { parts.push(t); },
+    markdown: (t: string) => {
+      parts.push(t);
+    },
     getAll: () => parts.join(''),
   };
 }
@@ -54,6 +54,20 @@ async function dirExists(dirPath: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function listFileNames(dirPath: string): Promise<string[]> {
+  const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
+  return entries.filter(([, type]) => type === vscode.FileType.File).map(([name]) => name);
+}
+
+async function findGeneratedFile(
+  dirPath: string,
+  prefix: string,
+  suffix: string,
+): Promise<string | undefined> {
+  const fileNames = await listFileNames(dirPath);
+  return fileNames.find((name) => name.startsWith(prefix) && name.endsWith(suffix));
 }
 
 // ---------------------------------------------------------------------------
@@ -87,12 +101,15 @@ suite('Commands integration — história completa', () => {
     );
   });
 
-  test('/validate: stream instrui o usuário a usar /implement no modo Agente', async () => {
+  test('/validate: stream instrui o usuário a abrir o agente implementador', async () => {
     const stream = createStream();
     await handleValidateCommand({} as any, stream as any, {} as any);
 
-    assert.ok(stream.getAll().includes('/implement'), 'Stream deveria mencionar /implement');
-    assert.ok(stream.getAll().includes('Agente'), 'Stream deveria mencionar modo Agente');
+    assert.ok(
+      stream.getAll().includes('speckit-implementador'),
+      'Stream deveria mencionar o agente implementador',
+    );
+    assert.ok(stream.getAll().includes('Copilot Chat'), 'Stream deveria mencionar o Copilot Chat');
   });
 
   test('/validate: cria copilot-instructions.md no disco', async () => {
@@ -103,46 +120,37 @@ suite('Commands integration — história completa', () => {
     assert.ok(stat.size > 0, 'copilot-instructions.md deveria ter conteúdo');
   });
 
-  test('/validate: cria todos os arquivos de instrução (.github/instructions/)', async () => {
+  test('/validate: cria a estrutura atual de configuração em .github/', async () => {
     const stream = createStream();
     await handleValidateCommand({} as any, stream as any, {} as any);
 
-    const instructionsUri = vscode.Uri.file(path.join(root, '.github', 'instructions'));
-    const entries = await vscode.workspace.fs.readDirectory(instructionsUri);
-    const mdFiles = entries.filter(([name]) => name.endsWith('.md'));
-    assert.ok(
-      mdFiles.length >= 14,
-      `Esperado >= 14 arquivos em instructions/, encontrado ${mdFiles.length}`,
+    assert.ok(await dirExists(path.join(root, '.github', 'skills')), 'skills/ deveria existir');
+    assert.ok(await dirExists(path.join(root, '.github', 'agents')), 'agents/ deveria existir');
+    assert.ok(await dirExists(path.join(root, '.github', 'prompts')), 'prompts/ deveria existir');
+
+    const skillFiles = await listFileNames(
+      path.join(root, '.github', 'skills', 'speckit-baseline'),
     );
+    assert.ok(skillFiles.includes('SKILL.md'), 'speckit-baseline/SKILL.md deveria existir');
+
+    const stackSkillFiles = await listFileNames(
+      path.join(root, '.github', 'skills', 'speckit-stack'),
+    );
+    assert.ok(stackSkillFiles.includes('SKILL.md'), 'speckit-stack/SKILL.md deveria existir');
+
+    const agentFiles = await listFileNames(path.join(root, '.github', 'agents'));
+    assert.ok(
+      agentFiles.includes('speckit-implementador.agent.md'),
+      'Agente implementador deveria existir',
+    );
+    assert.ok(agentFiles.includes('speckit-revisor.agent.md'), 'Agente revisor deveria existir');
   });
 
   test('/validate: cria prompts em .github/prompts/', async () => {
     await handleValidateCommand({} as any, createStream() as any, {} as any);
 
-    const promptsUri = vscode.Uri.file(path.join(root, '.github', 'prompts'));
-    const entries = await vscode.workspace.fs.readDirectory(promptsUri);
-    assert.strictEqual(entries.length, 3, 'Deveria haver exatamente 3 prompts');
-  });
-
-  // --- /apply ---
-
-  test('/apply: stream confirma arquivos gerados e instrui modo Agente', async () => {
-    const stream = createStream();
-    await handleApplyCommand({} as any, stream as any, {} as any);
-
-    const out = stream.getAll();
-    assert.ok(out.includes('arquivo(s) gerado(s)'), 'Deveria confirmar arquivos gerados');
-    assert.ok(out.includes('/implement'), 'Deveria mencionar /implement');
-    assert.ok(out.includes('Agente'), 'Deveria mencionar modo Agente');
-  });
-
-  test('/apply: cria .github/ no disco', async () => {
-    await handleApplyCommand({} as any, createStream() as any, {} as any);
-
-    assert.ok(
-      await dirExists(path.join(root, '.github')),
-      '.github deveria ter sido criado',
-    );
+    const entries = await listFileNames(path.join(root, '.github', 'prompts'));
+    assert.deepStrictEqual(entries, ['run.prompt.md'], 'Deveria haver apenas o prompt principal');
   });
 
   // --- /status ---
@@ -163,16 +171,6 @@ suite('Commands integration — história completa', () => {
     await handleStatusCommand({} as any, stream as any, {} as any);
 
     assert.ok(stream.getAll().includes('✅'), 'Status deveria exibir ✅ para story válida');
-  });
-
-  // --- /review ---
-
-  test('/review: instrui o usuário a usar /review no modo Agente', async () => {
-    const stream = createStream();
-    await handleReviewCommand({} as any, stream as any, {} as any);
-
-    assert.ok(stream.getAll().includes('/review'), 'Stream deveria mencionar /review');
-    assert.ok(stream.getAll().includes('Agente'), 'Stream deveria mencionar modo Agente');
   });
 });
 
@@ -220,30 +218,7 @@ suite('Commands integration — história incompleta', () => {
     const stream = createStream();
     await handleValidateCommand({} as any, stream as any, {} as any);
 
-    assert.ok(
-      stream.getAll().length > 100,
-      'Stream deveria conter prompt de gap-filling',
-    );
-  });
-
-  // --- /apply ---
-
-  test('/apply: stream lista as lacunas', async () => {
-    const stream = createStream();
-    await handleApplyCommand({} as any, stream as any, {} as any);
-
-    const out = stream.getAll();
-    assert.ok(out.includes('incompleta'), 'Deveria indicar story incompleta');
-    assert.ok(out.includes('['), 'Deveria listar seções com lacunas');
-  });
-
-  test('/apply: NÃO cria .github/', async () => {
-    await handleApplyCommand({} as any, createStream() as any, {} as any);
-
-    assert.ok(
-      !(await dirExists(path.join(root, '.github'))),
-      '.github NÃO deveria ser criado para story incompleta',
-    );
+    assert.ok(stream.getAll().length > 100, 'Stream deveria conter prompt de gap-filling');
   });
 
   // --- /status ---
@@ -252,20 +227,14 @@ suite('Commands integration — história incompleta', () => {
     const stream = createStream();
     await handleStatusCommand({} as any, stream as any, {} as any);
 
-    assert.ok(
-      stream.getAll().includes('lacuna'),
-      'Status deveria indicar lacunas com ⚠️',
-    );
+    assert.ok(stream.getAll().includes('lacuna'), 'Status deveria indicar lacunas com ⚠️');
   });
 
   test('/status: exibe número de lacunas', async () => {
     const stream = createStream();
     await handleStatusCommand({} as any, stream as any, {} as any);
 
-    assert.ok(
-      stream.getAll().includes('lacuna'),
-      'Status deveria indicar quantas lacunas há',
-    );
+    assert.ok(stream.getAll().includes('lacuna'), 'Status deveria indicar quantas lacunas há');
   });
 });
 
@@ -286,14 +255,21 @@ suite('Commands integration — /new', () => {
     await removeDir(specDir);
   });
 
-  test('/new: cria STORY-001.md quando não há stories', async () => {
+  test('/new: cria spec com ID timestampado quando não há stories', async () => {
     const stream = createStream();
     await handleNewCommand({} as any, stream as any, {} as any);
 
-    const storyUri = vscode.Uri.file(path.join(specDir, 'STORY-001.md'));
+    const generatedFile = await findGeneratedFile(specDir, 'US-', '.md');
+    assert.ok(generatedFile, 'A story deveria ter sido criada');
+    assert.match(generatedFile!, /^US-[A-Z0-9]{1,10}-\d{8}-\d{4}\.md$/);
+
+    const storyUri = vscode.Uri.file(path.join(specDir, generatedFile!));
     const stat = await vscode.workspace.fs.stat(storyUri);
-    assert.ok(stat.size > 0, 'STORY-001.md deveria ter conteúdo');
-    assert.ok(stream.getAll().includes('STORY-001'), 'Stream deveria mencionar STORY-001');
+    assert.ok(stat.size > 0, `${generatedFile} deveria ter conteúdo`);
+    assert.ok(
+      stream.getAll().includes(generatedFile!.replace('.md', '')),
+      'Stream deveria mencionar o ID gerado',
+    );
   });
 
   test('/new: o arquivo criado é parseável pelo StoryParser', async () => {
@@ -301,24 +277,38 @@ suite('Commands integration — /new', () => {
 
     await handleNewCommand({} as any, createStream() as any, {} as any);
 
-    const storyUri = vscode.Uri.file(path.join(specDir, 'STORY-001.md'));
+    const generatedFile = await findGeneratedFile(specDir, 'US-', '.md');
+    assert.ok(generatedFile, 'A story deveria ter sido criada');
+
+    const storyUri = vscode.Uri.file(path.join(specDir, generatedFile!));
     const bytes = await vscode.workspace.fs.readFile(storyUri);
     const content = new TextDecoder().decode(bytes);
     const story = parseStory(content);
 
-    assert.strictEqual(story.metadata.id, '001', 'Story ID deveria ser 001');
+    assert.match(
+      story.metadata.id,
+      /^US-[A-Z0-9]{1,10}-\d{8}-\d{4}$/,
+      'Story ID deveria usar o formato atual',
+    );
   });
 
-  test('/new: cria STORY-002.md quando STORY-001.md já existe', async () => {
-    // Cria a primeira story manualmente
-    await writeStoryFile(specDir, 'STORY-001.md', completeStoryMd);
+  test('/new: evita colisão quando já existe story com timestamp atual', async () => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const existingId = `US-WORKSPACE-${yyyy}${mm}${dd}-${hh}${min}.md`;
+    await writeStoryFile(specDir, existingId, completeStoryMd);
 
     const stream = createStream();
     await handleNewCommand({} as any, stream as any, {} as any);
 
-    const story2Uri = vscode.Uri.file(path.join(specDir, 'STORY-002.md'));
-    const stat = await vscode.workspace.fs.stat(story2Uri);
-    assert.ok(stat.size > 0, 'STORY-002.md deveria ter conteúdo');
-    assert.ok(stream.getAll().includes('STORY-002'));
+    const generatedFile = (await listFileNames(specDir)).find((name) => name !== existingId);
+    assert.ok(generatedFile, 'Uma nova story deveria ter sido criada');
+    assert.notStrictEqual(generatedFile, existingId, 'O ID gerado não deveria colidir');
+    assert.match(generatedFile!, /^US-[A-Z0-9]{1,10}-\d{8}-\d{4}\.md$/);
+    assert.ok(stream.getAll().includes(generatedFile!.replace('.md', '')));
   });
 });
