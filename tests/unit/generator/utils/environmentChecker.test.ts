@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { checkEnvironment, probe, formatEnvCheckInline, EnvironmentReport } from '../../../../src/generator/utils/EnvironmentChecker';
+import {
+  checkEnvironment,
+  probe,
+  formatEnvCheckInline,
+  EnvironmentReport,
+} from '../../../../src/generator/utils/EnvironmentChecker';
 
 vi.mock('child_process', () => ({
   execSync: vi.fn(),
@@ -7,10 +12,38 @@ vi.mock('child_process', () => ({
 
 import { execSync } from 'child_process';
 
-const tsStack = { language: 'typescript' as const, framework: 'react' as const, target: 'frontend' as const, confidence: 'high' as const, source: 'package.json' };
-const pythonStack = { language: 'python' as const, framework: 'other' as const, target: 'backend' as const, confidence: 'high' as const, source: 'requirements.txt' };
-const javaStack = { language: 'java' as const, framework: 'springboot' as const, target: 'backend' as const, confidence: 'high' as const, source: 'pom.xml' };
-const csharpStack = { language: 'csharp' as const, framework: 'dotnet' as const, target: 'backend' as const, confidence: 'high' as const, source: 'App.csproj' };
+const tsStack = {
+  language: 'typescript' as const,
+  framework: 'react' as const,
+  target: 'frontend' as const,
+  projectStage: 'brownfield' as const,
+  confidence: 'high' as const,
+  source: 'package.json',
+};
+const pythonStack = {
+  language: 'python' as const,
+  framework: 'other' as const,
+  target: 'backend' as const,
+  projectStage: 'brownfield' as const,
+  confidence: 'high' as const,
+  source: 'requirements.txt',
+};
+const javaStack = {
+  language: 'java' as const,
+  framework: 'springboot' as const,
+  target: 'backend' as const,
+  projectStage: 'brownfield' as const,
+  confidence: 'high' as const,
+  source: 'pom.xml',
+};
+const csharpStack = {
+  language: 'csharp' as const,
+  framework: 'dotnet' as const,
+  target: 'backend' as const,
+  projectStage: 'brownfield' as const,
+  confidence: 'high' as const,
+  source: 'App.csproj',
+};
 
 describe('probe', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -23,7 +56,9 @@ describe('probe', () => {
   });
 
   it('returns available=false when command throws', () => {
-    vi.mocked(execSync).mockImplementation(() => { throw new Error('not found'); });
+    vi.mocked(execSync).mockImplementation(() => {
+      throw new Error('not found');
+    });
     const result = probe('git --version');
     expect(result.available).toBe(false);
     expect(result.version).toBeUndefined();
@@ -43,7 +78,7 @@ describe('checkEnvironment', () => {
   it('always includes Git in results', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('git version 2.43.0'));
     const report = checkEnvironment(tsStack);
-    const git = report.tools.find(t => t.name === 'Git');
+    const git = report.tools.find((t) => t.name === 'Git');
     expect(git).toBeDefined();
     expect(git?.required).toBe(true);
   });
@@ -51,7 +86,7 @@ describe('checkEnvironment', () => {
   it('includes Node.js and npm for TypeScript stack', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('v20.11.0'));
     const report = checkEnvironment(tsStack);
-    const names = report.tools.map(t => t.name);
+    const names = report.tools.map((t) => t.name);
     expect(names).toContain('Node.js');
     expect(names).toContain('npm');
   });
@@ -59,14 +94,14 @@ describe('checkEnvironment', () => {
   it('marks Node.js tools as required for TypeScript stack', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('v20.11.0'));
     const report = checkEnvironment(tsStack);
-    const node = report.tools.find(t => t.name === 'Node.js');
+    const node = report.tools.find((t) => t.name === 'Node.js');
     expect(node?.required).toBe(true);
   });
 
   it('does not include Python tools for TypeScript stack', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('v20.11.0'));
     const report = checkEnvironment(tsStack);
-    const names = report.tools.map(t => t.name);
+    const names = report.tools.map((t) => t.name);
     expect(names).not.toContain('Python');
     expect(names).not.toContain('pip');
   });
@@ -74,7 +109,7 @@ describe('checkEnvironment', () => {
   it('includes Python tools for Python stack', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('Python 3.12.0'));
     const report = checkEnvironment(pythonStack);
-    const names = report.tools.map(t => t.name);
+    const names = report.tools.map((t) => t.name);
     expect(names).toContain('Python');
     expect(names).toContain('pip');
   });
@@ -82,14 +117,14 @@ describe('checkEnvironment', () => {
   it('marks Python tools as required for Python stack', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('Python 3.12.0'));
     const report = checkEnvironment(pythonStack);
-    const python = report.tools.find(t => t.name === 'Python');
+    const python = report.tools.find((t) => t.name === 'Python');
     expect(python?.required).toBe(true);
   });
 
   it('does not include Node.js tools for Python stack', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('Python 3.12.0'));
     const report = checkEnvironment(pythonStack);
-    const names = report.tools.map(t => t.name);
+    const names = report.tools.map((t) => t.name);
     expect(names).not.toContain('Node.js');
   });
 
@@ -98,7 +133,10 @@ describe('checkEnvironment', () => {
     const report = checkEnvironment(undefined);
     const notRequired = ['Node.js', 'Python', 'Java', 'Maven', '.NET'];
     for (const name of notRequired) {
-      expect(report.tools.find(t => t.name === name)?.required, `${name} should not be required`).toBe(false);
+      expect(
+        report.tools.find((t) => t.name === name)?.required,
+        `${name} should not be required`,
+      ).toBe(false);
     }
   });
 
@@ -117,7 +155,7 @@ describe('checkEnvironment', () => {
   it('includes Java and Maven for Java stack', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('openjdk version 21.0.0'));
     const report = checkEnvironment(javaStack);
-    const names = report.tools.map(t => t.name);
+    const names = report.tools.map((t) => t.name);
     expect(names).toContain('Java');
     expect(names).toContain('Maven');
   });
@@ -125,14 +163,14 @@ describe('checkEnvironment', () => {
   it('marks Java and Maven as required for Java stack', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('openjdk version 21.0.0'));
     const report = checkEnvironment(javaStack);
-    expect(report.tools.find(t => t.name === 'Java')?.required).toBe(true);
-    expect(report.tools.find(t => t.name === 'Maven')?.required).toBe(true);
+    expect(report.tools.find((t) => t.name === 'Java')?.required).toBe(true);
+    expect(report.tools.find((t) => t.name === 'Maven')?.required).toBe(true);
   });
 
   it('does not include Node.js or Python tools for Java stack', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('openjdk version 21.0.0'));
     const report = checkEnvironment(javaStack);
-    const names = report.tools.map(t => t.name);
+    const names = report.tools.map((t) => t.name);
     expect(names).not.toContain('Node.js');
     expect(names).not.toContain('Python');
   });
@@ -140,20 +178,20 @@ describe('checkEnvironment', () => {
   it('includes .NET for C# stack', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('8.0.100'));
     const report = checkEnvironment(csharpStack);
-    const names = report.tools.map(t => t.name);
+    const names = report.tools.map((t) => t.name);
     expect(names).toContain('.NET');
   });
 
   it('marks .NET as required for C# stack', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('8.0.100'));
     const report = checkEnvironment(csharpStack);
-    expect(report.tools.find(t => t.name === '.NET')?.required).toBe(true);
+    expect(report.tools.find((t) => t.name === '.NET')?.required).toBe(true);
   });
 
   it('does not include Java or Python tools for C# stack', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('8.0.100'));
     const report = checkEnvironment(csharpStack);
-    const names = report.tools.map(t => t.name);
+    const names = report.tools.map((t) => t.name);
     expect(names).not.toContain('Java');
     expect(names).not.toContain('Python');
   });
@@ -161,7 +199,7 @@ describe('checkEnvironment', () => {
   it('checks all tool groups when no stack provided', () => {
     vi.mocked(execSync).mockReturnValue(Buffer.from('some version 1.0.0'));
     const report = checkEnvironment(undefined);
-    const names = report.tools.map(t => t.name);
+    const names = report.tools.map((t) => t.name);
     expect(names).toContain('Java');
     expect(names).toContain('Maven');
     expect(names).toContain('.NET');
@@ -169,22 +207,36 @@ describe('checkEnvironment', () => {
 
   it('uses fallback command when primary Python command fails', () => {
     vi.mocked(execSync)
-      .mockImplementationOnce(() => Buffer.from('git version 2.43.0'))  // git
-      .mockImplementationOnce(() => { throw new Error('python3 not found'); })  // python3
-      .mockImplementationOnce(() => Buffer.from('Python 3.11.0'))  // python (fallback)
-      .mockImplementationOnce(() => { throw new Error('pip3 not found'); })  // pip3
-      .mockImplementationOnce(() => Buffer.from('pip 23.0'));  // pip (fallback)
+      .mockImplementationOnce(() => Buffer.from('git version 2.43.0')) // git
+      .mockImplementationOnce(() => {
+        throw new Error('python3 not found');
+      }) // python3
+      .mockImplementationOnce(() => Buffer.from('Python 3.11.0')) // python (fallback)
+      .mockImplementationOnce(() => {
+        throw new Error('pip3 not found');
+      }) // pip3
+      .mockImplementationOnce(() => Buffer.from('pip 23.0')); // pip (fallback)
 
     const report = checkEnvironment(pythonStack);
-    const python = report.tools.find(t => t.name === 'Python');
+    const python = report.tools.find((t) => t.name === 'Python');
     expect(python?.available).toBe(true);
     expect(python?.version).toBe('3.11.0');
   });
 });
 
 describe('formatEnvCheckInline', () => {
-  const tool = (name: string, available: boolean, required: boolean, version?: string): EnvironmentReport['tools'][0] =>
-    ({ name, cmd: `${name} --version`, available, required, version });
+  const tool = (
+    name: string,
+    available: boolean,
+    required: boolean,
+    version?: string,
+  ): EnvironmentReport['tools'][0] => ({
+    name,
+    cmd: `${name} --version`,
+    available,
+    required,
+    version,
+  });
 
   it('returns empty string when no required tools', () => {
     const report: EnvironmentReport = { tools: [tool('Node.js', true, false, '20.0.0')] };
@@ -193,10 +245,7 @@ describe('formatEnvCheckInline', () => {
 
   it('returns OK message when all required tools are available', () => {
     const report: EnvironmentReport = {
-      tools: [
-        tool('Git', true, true, '2.43.0'),
-        tool('Node.js', true, true, '20.0.0'),
-      ],
+      tools: [tool('Git', true, true, '2.43.0'), tool('Node.js', true, true, '20.0.0')],
     };
     const result = formatEnvCheckInline(report);
     expect(result).toContain('✅ **Ambiente verificado**');
@@ -226,10 +275,7 @@ describe('formatEnvCheckInline', () => {
 
   it('returns warning message when required tools are missing', () => {
     const report: EnvironmentReport = {
-      tools: [
-        tool('Git', false, true),
-        tool('Node.js', true, true, '20.0.0'),
-      ],
+      tools: [tool('Git', false, true), tool('Node.js', true, true, '20.0.0')],
     };
     const result = formatEnvCheckInline(report);
     expect(result).toContain('⚠️ **Ferramentas ausentes para implementação:**');
@@ -253,7 +299,7 @@ describe('formatEnvCheckInline', () => {
     const report: EnvironmentReport = {
       tools: [
         tool('Git', true, true, '2.43.0'),
-        tool('Python', false, false),  // optional, missing
+        tool('Python', false, false), // optional, missing
       ],
     };
     const result = formatEnvCheckInline(report);

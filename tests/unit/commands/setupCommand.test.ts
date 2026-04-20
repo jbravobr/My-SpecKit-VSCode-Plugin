@@ -5,7 +5,8 @@ import { IWorkspace } from '../../../src/generator/utils/IWorkspace';
 import type { EnvironmentReport } from '../../../src/generator/utils/EnvironmentChecker';
 
 vi.mock('../../../src/generator/utils/EnvironmentChecker', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../src/generator/utils/EnvironmentChecker')>();
+  const actual =
+    await importOriginal<typeof import('../../../src/generator/utils/EnvironmentChecker')>();
   return { ...actual, checkEnvironment: vi.fn() };
 });
 
@@ -18,7 +19,9 @@ import { checkEnvironment } from '../../../src/generator/utils/EnvironmentChecke
 function createMockStream() {
   const calls: string[] = [];
   return {
-    markdown: vi.fn((t: string) => { calls.push(t); }),
+    markdown: vi.fn((t: string) => {
+      calls.push(t);
+    }),
     getAllMarkdown: () => calls.join(''),
   };
 }
@@ -29,6 +32,9 @@ function createMockFs(): IFileSystem {
     writeFile: vi.fn().mockResolvedValue(undefined),
     readFile: vi.fn().mockResolvedValue(''),
     fileExists: vi.fn().mockResolvedValue(false),
+    listDir: vi.fn().mockResolvedValue([]),
+    deleteFile: vi.fn().mockResolvedValue(undefined),
+    deleteDir: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -39,7 +45,15 @@ function createMockWorkspace(overrides: Partial<IWorkspace> = {}): IWorkspace {
     listFixFiles: vi.fn().mockResolvedValue([]),
     getActiveStoryPath: vi.fn().mockResolvedValue(undefined),
     getActiveSpecPath: vi.fn().mockResolvedValue(undefined),
-    detectTechStack: vi.fn().mockResolvedValue({ language: 'typescript', framework: 'react', target: 'frontend', confidence: 'high', source: 'package.json' }),
+    detectTechStack: vi
+      .fn()
+      .mockResolvedValue({
+        language: 'typescript',
+        framework: 'react',
+        target: 'frontend',
+        confidence: 'high',
+        source: 'package.json',
+      }),
     ...overrides,
   };
 }
@@ -66,7 +80,13 @@ const pythonReport: EnvironmentReport = {
   stackLanguage: 'python',
   tools: [
     { name: 'Git', cmd: 'git --version', available: true, version: '2.43.0', required: true },
-    { name: 'Python', cmd: 'python3 --version', available: true, version: '3.12.0', required: true },
+    {
+      name: 'Python',
+      cmd: 'python3 --version',
+      available: true,
+      version: '3.12.0',
+      required: true,
+    },
     { name: 'pip', cmd: 'pip3 --version', available: true, version: '24.0', required: true },
   ],
 };
@@ -95,7 +115,9 @@ describe('handleSetupCommand', () => {
 
     await handleSetupCommand({} as any, stream as any, {} as any, createMockFs(), workspace);
 
-    expect(checkEnvironment).toHaveBeenCalledWith(expect.objectContaining({ language: 'typescript' }));
+    expect(checkEnvironment).toHaveBeenCalledWith(
+      expect.objectContaining({ language: 'typescript' }),
+    );
   });
 
   it('calls checkEnvironment with undefined when stack detection fails', async () => {

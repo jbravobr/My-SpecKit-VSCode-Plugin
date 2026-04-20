@@ -18,6 +18,7 @@ const tsReactFrontend: TechStackDetection = {
   language: 'typescript',
   framework: 'react',
   target: 'frontend',
+  projectStage: 'brownfield',
   confidence: 'high',
   source: 'package.json',
 };
@@ -26,6 +27,7 @@ const javaSpringBackend: TechStackDetection = {
   language: 'java',
   framework: 'springboot',
   target: 'backend',
+  projectStage: 'brownfield',
   confidence: 'high',
   source: 'pom.xml',
 };
@@ -34,6 +36,7 @@ const tsBffStack: TechStackDetection = {
   language: 'typescript',
   framework: 'react',
   target: 'bff',
+  projectStage: 'brownfield',
   confidence: 'high',
   source: 'package.json',
 };
@@ -61,23 +64,27 @@ describe('generateFixCopilotConfig — baseline output', () => {
       '07-observability',
       '08-security-tests',
     ];
-    baselineFiles.forEach(name => expect(fs.hasFile(name)).toBe(true));
+    baselineFiles.forEach((name) => expect(fs.hasFile(name)).toBe(true));
   });
 
   it('always writes all 5 fix-context instruction files', async () => {
     const fs = new InMemoryFileSystem();
     const ws = new WorkspaceStub({ techStack: tsReactFrontend });
     await generateFixCopilotConfig(root, loadFix('fix-complete.md'), fs, ws);
-    ['10-fix-context', '11-root-cause', '12-fix-impact', '13-regression-prevention', '14-fix-dof'].forEach(name =>
-      expect(fs.hasFile(name)).toBe(true),
-    );
+    [
+      '10-fix-context',
+      '11-root-cause',
+      '12-fix-impact',
+      '13-regression-prevention',
+      '14-fix-dof',
+    ].forEach((name) => expect(fs.hasFile(name)).toBe(true));
   });
 
   it('always writes 3 fix prompt files', async () => {
     const fs = new InMemoryFileSystem();
     const ws = new WorkspaceStub({ techStack: tsReactFrontend });
     await generateFixCopilotConfig(root, loadFix('fix-complete.md'), fs, ws);
-    ['fix-run.prompt', 'fix-implement.prompt', 'fix-review.prompt'].forEach(name =>
+    ['fix-run.prompt', 'fix-implement.prompt', 'fix-review.prompt'].forEach((name) =>
       expect(fs.hasFile(name)).toBe(true),
     );
   });
@@ -94,7 +101,7 @@ describe('generateFixCopilotConfig — baseline output', () => {
     const fs = new InMemoryFileSystem();
     const ws = new WorkspaceStub({ techStack: tsReactFrontend });
     const files = await generateFixCopilotConfig(root, loadFix('fix-complete.md'), fs, ws);
-    expect(files.every(f => !f.includes('\\'))).toBe(true);
+    expect(files.every((f) => !f.includes('\\'))).toBe(true);
   });
 });
 
@@ -273,7 +280,9 @@ describe('generateFixCopilotConfig — content correctness', () => {
     const fs = new InMemoryFileSystem();
     const ws = new WorkspaceStub({ techStack: tsReactFrontend });
     await generateFixCopilotConfig(root, loadFix('fix-complete.md'), fs, ws);
-    expect(fs.contentFor('copilot-instructions.md')).toContain('Login OAuth2 retorna 500 após expiração do token');
+    expect(fs.contentFor('copilot-instructions.md')).toContain(
+      'Login OAuth2 retorna 500 após expiração do token',
+    );
   });
 
   it('10-fix-context includes the bug symptoms', async () => {
