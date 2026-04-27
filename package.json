@@ -97,9 +97,14 @@
     ]
   },
   "scripts": {
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "prebuild": "npm run clean",
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
+    "prebuild:prod": "npm run clean",
     "build:prod": "node esbuild.js --production",
+    "check:changelog": "node ./scripts/check-changelog.mjs",
+    "prepackage:vsix": "npm run check:changelog",
     "package:vsix": "npm run build:prod && node ./scripts/package-vsix.mjs",
     "package:verify": "node ./scripts/verify-vsix.mjs",
     "package": "npm run package:vsix && npm run package:verify",
