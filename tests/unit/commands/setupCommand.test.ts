@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleSetupCommand, formatReport } from '../../../src/participant/commands/setupCommand';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { EnvironmentReport } from '../../../src/generator/utils/EnvironmentChecker';
 import { IFileSystem } from '../../../src/generator/utils/IFileSystem';
 import { IWorkspace } from '../../../src/generator/utils/IWorkspace';
-import type { EnvironmentReport } from '../../../src/generator/utils/EnvironmentChecker';
+import { formatReport, handleSetupCommand } from '../../../src/participant/commands/setupCommand';
 
 vi.mock('../../../src/generator/utils/EnvironmentChecker', async (importOriginal) => {
   const actual =
@@ -45,15 +45,22 @@ function createMockWorkspace(overrides: Partial<IWorkspace> = {}): IWorkspace {
     listFixFiles: vi.fn().mockResolvedValue([]),
     getActiveStoryPath: vi.fn().mockResolvedValue(undefined),
     getActiveSpecPath: vi.fn().mockResolvedValue(undefined),
-    detectTechStack: vi
-      .fn()
-      .mockResolvedValue({
+    detectTechStack: vi.fn().mockResolvedValue({
+      language: 'typescript',
+      framework: 'react',
+      target: 'frontend',
+      confidence: 'high',
+      source: 'package.json',
+    }),
+    detectAllTechStacks: vi.fn().mockResolvedValue([
+      {
         language: 'typescript',
         framework: 'react',
         target: 'frontend',
         confidence: 'high',
         source: 'package.json',
-      }),
+      },
+    ]),
     ...overrides,
   };
 }
