@@ -53,12 +53,12 @@ framework: springboot`;
   });
 
   it('rejects invalid language values', () => {
-    const result = parseDefaultsYaml('language: rust');
+    const result = parseDefaultsYaml('language: cobol');
     expect(result.language).toBeUndefined();
   });
 
   it('rejects invalid framework values', () => {
-    const result = parseDefaultsYaml('framework: express');
+    const result = parseDefaultsYaml('framework: cobolrt');
     expect(result.framework).toBeUndefined();
   });
 

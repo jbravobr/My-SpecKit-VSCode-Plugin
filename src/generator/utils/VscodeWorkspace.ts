@@ -6,6 +6,7 @@ import {
   getActiveStoryPath,
   getActiveSpecPath,
   detectTechStack,
+  detectAllTechStacks,
 } from './workspace';
 
 export const vscodeWorkspace: IWorkspace = {
@@ -15,4 +16,5 @@ export const vscodeWorkspace: IWorkspace = {
   getActiveStoryPath,
   getActiveSpecPath,
   detectTechStack,
+  detectAllTechStacks,
 };

@@ -1,6 +1,6 @@
 import { Language, Story } from '../../story/Story';
 
-const testCommands: Record<Language, string> = {
+const testCommands: Partial<Record<Language, string>> = {
   typescript:
     'npx vitest run --coverage --coverage.thresholds.statements=80 --coverage.thresholds.lines=80',
   javascript:
@@ -10,7 +10,7 @@ const testCommands: Record<Language, string> = {
   python: 'pytest --cov=src --cov-fail-under=80 --cov-report=xml',
 };
 
-const lintCommands: Record<Language, string> = {
+const lintCommands: Partial<Record<Language, string>> = {
   typescript: 'npx eslint . --max-warnings=0',
   javascript: 'npx eslint . --max-warnings=0',
   java: './mvnw checkstyle:check',
@@ -18,7 +18,7 @@ const lintCommands: Record<Language, string> = {
   python: 'ruff check . && mypy src',
 };
 
-const buildCommands: Record<Language, string> = {
+const buildCommands: Partial<Record<Language, string>> = {
   typescript: 'npm run build',
   javascript: 'npm run build',
   java: './mvnw package -DskipTests',

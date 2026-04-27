@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { TechStackDetection } from '../../fix/Fix';
 import { SpecStatus } from '../../story/Story';
+import { detectAllStacks, StackDetectorEntry, StackDetectorFs } from './stackDetector';
 
 function isFileNotFound(err: unknown): boolean {
   if (err instanceof vscode.FileSystemError && err.code === 'FileNotFound') return true;
@@ -90,123 +91,53 @@ export async function getActiveSpecPath(): Promise<string | undefined> {
 }
 
 export async function detectTechStack(): Promise<TechStackDetection> {
+  const all = await detectAllTechStacks();
+  if (all.length === 0) {
+    throw new Error(
+      'Stack não detectada automaticamente. Nenhum manifesto reconhecido (package.json, pom.xml, build.gradle, *.csproj, requirements.txt, pyproject.toml, go.mod, Cargo.toml, composer.json, Gemfile, build.sbt, Package.swift) foi encontrado nos primeiros 7 níveis do workspace. ' +
+        'Adicione um arquivo de dependências ou use /new (STORY) para especificar a stack manualmente.',
+    );
+  }
+  return all[0];
+}
+
+/**
+ * Detects every tech stack present in the workspace, walking BFS up to 7 levels deep.
+ * Results are sorted by depth (shallowest first), then alphabetically by `source`.
+ *
+ * Use this when the workspace is a monorepo or contains multiple ecosystems
+ * (e.g. backend in `services/api/pom.xml` + frontend in `apps/web/package.json`).
+ */
+export async function detectAllTechStacks(): Promise<TechStackDetection[]> {
   const workspaceRoot = getWorkspaceRoot();
   if (!workspaceRoot) {
     throw new Error(
       'Nenhum workspace aberto. Abra uma pasta antes de executar /validate em um fix.',
     );
   }
-
-  // 1. package.json
-  try {
-    const pkgUri = vscode.Uri.file(path.join(workspaceRoot, 'package.json'));
-    const bytes = await vscode.workspace.fs.readFile(pkgUri);
-    const pkg = JSON.parse(Buffer.from(bytes).toString('utf-8'));
-    const deps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
-
-    const hasTsConfig = await fileExistsAt(path.join(workspaceRoot, 'tsconfig.json'));
-    const language = hasTsConfig ? 'typescript' : 'javascript';
-
-    let framework: import('../../story/Story').Framework = 'other';
-    if (deps['react'] || deps['next'] || deps['next.js']) framework = 'react';
-    else if (deps['@angular/core']) framework = 'angular';
-
-    const architecture = await inferArchitecture(workspaceRoot);
-    const target = await inferTarget(workspaceRoot, deps);
-
-    return {
-      language,
-      framework,
-      architecture,
-      target,
-      projectStage: 'brownfield',
-      confidence: framework !== 'other' ? 'high' : 'low',
-      source: 'package.json',
-    };
-  } catch {
-    // fall through
-  }
-
-  // 2. pom.xml
-  try {
-    const pomUri = vscode.Uri.file(path.join(workspaceRoot, 'pom.xml'));
-    const bytes = await vscode.workspace.fs.readFile(pomUri);
-    const content = Buffer.from(bytes).toString('utf-8');
-    const framework: import('../../story/Story').Framework = content.includes('spring-boot')
-      ? 'springboot'
-      : 'other';
-    const architecture = await inferArchitecture(workspaceRoot);
-    const messaging =
-      content.includes('spring-kafka') || content.includes('kafka-clients')
-        ? ('kafka' as const)
-        : undefined;
-    return {
-      language: 'java',
-      framework,
-      architecture,
-      target: 'backend',
-      ...(messaging ? { messaging } : {}),
-      projectStage: 'brownfield',
-      confidence: 'high',
-      source: 'pom.xml',
-    };
-  } catch {
-    // fall through
-  }
-
-  // 3. *.csproj
-  try {
-    const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(workspaceRoot));
-    const csproj = entries.find(
-      ([name, type]) => type === vscode.FileType.File && name.endsWith('.csproj'),
-    );
-    if (csproj) {
-      const architecture = await inferArchitecture(workspaceRoot);
-      return {
-        language: 'csharp',
-        framework: 'dotnet',
-        architecture,
-        target: 'backend',
-        projectStage: 'brownfield',
-        confidence: 'high',
-        source: csproj[0],
-      };
-    }
-  } catch {
-    // fall through
-  }
-
-  // 4. requirements.txt / pyproject.toml
-  for (const pyFile of ['requirements.txt', 'pyproject.toml']) {
-    try {
-      const uri = vscode.Uri.file(path.join(workspaceRoot, pyFile));
-      const bytes = await vscode.workspace.fs.readFile(uri);
-      const content = Buffer.from(bytes).toString('utf-8');
-      const framework: import('../../story/Story').Framework = content
-        .toLowerCase()
-        .includes('fastapi')
-        ? 'fastapi'
-        : 'other';
-      const architecture = await inferArchitecture(workspaceRoot);
-      return {
-        language: 'python',
-        framework,
-        architecture,
-        target: 'backend',
-        projectStage: 'brownfield',
-        confidence: framework !== 'other' ? 'high' : 'low',
-        source: pyFile,
-      };
-    } catch {
-      // fall through
-    }
-  }
-
-  throw new Error(
-    'Stack não detectada automaticamente. Nenhum arquivo reconhecido (package.json, pom.xml, *.csproj, requirements.txt, pyproject.toml) foi encontrado no workspace. ' +
-      'Adicione um arquivo de dependências ou use /new (STORY) para especificar a stack manualmente.',
-  );
+  const all = await detectAllStacks(workspaceRoot, vscodeStackFs);
+  return all;
 }
+
+const vscodeStackFs: StackDetectorFs = {
+  async readDirectory(dirPath: string): Promise<StackDetectorEntry[]> {
+    const uri = vscode.Uri.file(dirPath);
+    const entries = await vscode.workspace.fs.readDirectory(uri);
+    return entries.map(([name, type]) => ({
+      name,
+      isDirectory: type === vscode.FileType.Directory,
+      isFile: type === vscode.FileType.File,
+    }));
+  },
+  async readFile(filePath: string): Promise<string> {
+    const uri = vscode.Uri.file(filePath);
+    const bytes = await vscode.workspace.fs.readFile(uri);
+    return Buffer.from(bytes).toString('utf-8');
+  },
+  joinPath(...segments: string[]): string {
+    return path.join(...segments);
+  },
+};
 
 // --- Helpers ---
 
@@ -247,55 +178,4 @@ function specSortKey(filename: string): number {
   const id = seqMatch ? parseInt(seqMatch[1], 10) : 0;
   const isFix = filename.startsWith('FIX-') ? 0.5 : 0;
   return id + isFix;
-}
-
-async function fileExistsAt(filePath: string): Promise<boolean> {
-  try {
-    await vscode.workspace.fs.stat(vscode.Uri.file(filePath));
-    return true;
-  } catch (err: unknown) {
-    if (isFileNotFound(err)) return false;
-    throw err;
-  }
-}
-
-async function inferArchitecture(workspaceRoot: string): Promise<string | undefined> {
-  try {
-    const srcUri = vscode.Uri.file(path.join(workspaceRoot, 'src'));
-    const entries = await vscode.workspace.fs.readDirectory(srcUri);
-    const dirs = entries
-      .filter(([, type]) => type === vscode.FileType.Directory)
-      .map(([name]) => name);
-    if (dirs.includes('domain') && dirs.includes('ports')) return 'hexagonal';
-    if (dirs.includes('controllers') && dirs.includes('services') && dirs.includes('repositories'))
-      return 'layered';
-  } catch {
-    // no src/ dir or can't read
-  }
-  return undefined;
-}
-
-async function inferTarget(
-  workspaceRoot: string,
-  deps: Record<string, unknown>,
-): Promise<'backend' | 'frontend' | 'bff' | 'script' | 'library'> {
-  const hasFrontendDep = Boolean(deps['react'] || deps['@angular/core'] || deps['vue']);
-  const hasBackendDep = Boolean(
-    deps['express'] || deps['fastify'] || deps['koa'] || deps['nestjs'],
-  );
-  if (hasFrontendDep && hasBackendDep) return 'bff';
-  if (hasFrontendDep) return 'frontend';
-  if (hasBackendDep) return 'backend';
-  try {
-    const srcUri = vscode.Uri.file(path.join(workspaceRoot, 'src'));
-    const entries = await vscode.workspace.fs.readDirectory(srcUri);
-    const dirs = entries
-      .filter(([, type]) => type === vscode.FileType.Directory)
-      .map(([name]) => name);
-    if (dirs.includes('components') || dirs.includes('pages')) return 'frontend';
-    if (dirs.includes('controllers') || dirs.includes('routes')) return 'backend';
-  } catch {
-    // ignore
-  }
-  return 'backend';
 }

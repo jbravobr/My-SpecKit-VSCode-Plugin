@@ -20,13 +20,46 @@ export interface WorkspaceDefaults {
   ci?: CiProvider;
 }
 
-const VALID_LANGUAGES = new Set<string>(['typescript', 'javascript', 'java', 'csharp', 'python']);
+const VALID_LANGUAGES = new Set<string>([
+  'typescript',
+  'javascript',
+  'java',
+  'kotlin',
+  'csharp',
+  'python',
+  'go',
+  'rust',
+  'php',
+  'ruby',
+  'scala',
+  'swift',
+  'unknown',
+]);
 const VALID_FRAMEWORKS = new Set<string>([
   'dotnet',
   'springboot',
+  'quarkus',
+  'micronaut',
   'angular',
   'react',
+  'vue',
+  'svelte',
+  'next',
+  'nuxt',
+  'nestjs',
+  'express',
+  'fastify',
   'fastapi',
+  'django',
+  'flask',
+  'rails',
+  'laravel',
+  'gin',
+  'actix',
+  'rocket',
+  'vapor',
+  'android',
+  'gradle',
   'other',
 ]);
 const VALID_ARCHITECTURES = new Set<string>([

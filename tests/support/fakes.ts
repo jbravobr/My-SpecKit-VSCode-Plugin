@@ -156,6 +156,7 @@ export interface WorkspaceStubConfig {
   storyFiles?: string[];
   fixFiles?: string[];
   techStack?: TechStackDetection;
+  allTechStacks?: TechStackDetection[];
 }
 
 const DEFAULT_STACK: TechStackDetection = {
@@ -177,6 +178,7 @@ export class WorkspaceStub implements IWorkspace {
       storyFiles: config.storyFiles ?? ['STORY-001.md'],
       fixFiles: config.fixFiles ?? [],
       techStack: config.techStack ?? DEFAULT_STACK,
+      allTechStacks: config.allTechStacks ?? [config.techStack ?? DEFAULT_STACK],
     };
   }
 
@@ -202,5 +204,9 @@ export class WorkspaceStub implements IWorkspace {
 
   async detectTechStack(): Promise<TechStackDetection> {
     return this.cfg.techStack;
+  }
+
+  async detectAllTechStacks(): Promise<TechStackDetection[]> {
+    return this.cfg.allTechStacks;
   }
 }
