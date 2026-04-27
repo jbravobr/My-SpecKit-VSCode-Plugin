@@ -7,4 +7,5 @@ export interface IWorkspace {
   getActiveStoryPath(): Promise<string | undefined>;
   getActiveSpecPath(): Promise<string | undefined>;
   detectTechStack(): Promise<TechStackDetection>;
+  detectAllTechStacks(): Promise<TechStackDetection[]>;
 }

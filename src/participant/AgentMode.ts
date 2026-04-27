@@ -46,8 +46,15 @@ const TEST_COMMANDS: Record<string, string> = {
   typescript: 'npx vitest run --coverage --coverage.thresholds.lines=80',
   javascript: 'npx vitest run --coverage --coverage.thresholds.lines=80',
   java: './mvnw verify -Djacoco.haltOnFailure=true -Djacoco.minimum.coverage=0.80',
+  kotlin: './gradlew test koverVerify',
   csharp: 'dotnet test --collect:"XPlat Code Coverage" /p:CoverageThreshold=80',
   python: 'pytest --cov=src --cov-fail-under=80 --cov-report=term-missing',
+  go: 'go test -coverprofile=coverage.out ./... && go tool cover -func=coverage.out',
+  rust: 'cargo test && cargo tarpaulin --fail-under 80',
+  php: 'vendor/bin/phpunit --coverage-text --coverage-clover=coverage.xml',
+  ruby: 'bundle exec rspec --format documentation',
+  scala: 'sbt test',
+  swift: 'swift test --enable-code-coverage',
 };
 
 function testCommandForStack(language: string): string {

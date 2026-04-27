@@ -33,8 +33,46 @@ export interface NonFunctionalSpec {
   availability: string;
 }
 
-export type Language = 'typescript' | 'javascript' | 'java' | 'csharp' | 'python';
-export type Framework = 'dotnet' | 'springboot' | 'angular' | 'react' | 'fastapi' | 'other';
+export type Language =
+  | 'typescript'
+  | 'javascript'
+  | 'java'
+  | 'kotlin'
+  | 'csharp'
+  | 'python'
+  | 'go'
+  | 'rust'
+  | 'php'
+  | 'ruby'
+  | 'scala'
+  | 'swift'
+  | 'unknown';
+export type Framework =
+  | 'dotnet'
+  | 'springboot'
+  | 'quarkus'
+  | 'micronaut'
+  | 'angular'
+  | 'react'
+  | 'vue'
+  | 'svelte'
+  | 'next'
+  | 'nuxt'
+  | 'nestjs'
+  | 'express'
+  | 'fastify'
+  | 'fastapi'
+  | 'django'
+  | 'flask'
+  | 'rails'
+  | 'laravel'
+  | 'gin'
+  | 'actix'
+  | 'rocket'
+  | 'vapor'
+  | 'android'
+  | 'gradle'
+  | 'other';
 export type Architecture = 'hexagonal' | 'layered' | 'microservices' | 'monolith' | 'serverless';
 export type Target = 'backend' | 'frontend' | 'bff' | 'script' | 'library';
 export type CiProvider = 'github-actions' | 'none';
