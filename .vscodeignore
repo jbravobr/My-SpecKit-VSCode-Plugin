@@ -38,3 +38,22 @@ markdown-to-pdf/**
 
 # Publish archives
 publish/**
+
+# Local run logs (vitest, tsc, lint, build, etc.)
+*.log
+**/*.log
+
+# Reports (mutation testing, coverage, etc.)
+reports/**
+
+# Memory/scratch
+.copilot/**
+.speckit/**
+
+# Dotfiles that should never ship
+.editorconfig
+.gitattributes
+.lintstagedrc*
+.commitlintrc*
+.releaserc*
+.npmrc

@@ -1,0 +1,102 @@
+SpecKit — Changelog 0.3.6
+==========================
+Data: 27/04/2026
+Branch base: main (merge de feat/draft-command)
+
+NOVA FEATURE — Detecção recursiva de stack até 7 níveis
+--------------------------------------------------------
+- O detector de stack do agente Refactor (e dos demais comandos que dependem
+  de detectTechStack) agora percorre o workspace em BFS até 7 níveis de
+  profundidade, encontrando manifestos em qualquer subpasta.
+- Antes desta versão, apenas a raiz do workspace era inspecionada — repositórios
+  Gradle, monorepos com backend/frontend em subpastas e projetos com manifest
+  aninhado simplesmente não eram detectados.
+
+Linguagens suportadas (13)
+--------------------------
+typescript, javascript, java, kotlin, csharp, python, go, rust, php, ruby,
+scala, swift, unknown
+
+Frameworks suportados (25)
+--------------------------
+dotnet, springboot, quarkus, micronaut, angular, react, vue, svelte, next,
+nuxt, nestjs, express, fastify, fastapi, django, flask, rails, laravel, gin,
+actix, rocket, vapor, android, gradle, other
+
+Manifestos reconhecidos
+-----------------------
+package.json, pom.xml, build.gradle, build.gradle.kts, settings.gradle(.kts),
+*.csproj, *.fsproj, *.vbproj, pyproject.toml, requirements.txt, Pipfile,
+go.mod, Cargo.toml, composer.json, Gemfile, build.sbt, Package.swift
+
+Pastas ignoradas durante a varredura
+------------------------------------
+node_modules, .git, dist, build, target, out, bin, obj, .venv, venv,
+__pycache__, .gradle, .idea, .vscode, coverage, .next, .nuxt, .svelte-kit,
+.parcel-cache, .cache, .turbo, .pytest_cache, .mypy_cache, .ruff_cache,
+.terraform, vendor, Pods, DerivedData
+
+Nova API pública (IWorkspace)
+-----------------------------
+- detectAllTechStacks(): Promise<TechStackDetection[]>
+  Retorna a lista completa de stacks detectadas, ordenada por profundidade
+  (raiz primeiro) e depois alfabeticamente pelo caminho do manifesto.
+  Útil para monorepos e repositórios poliglotas.
+- detectTechStack() continua funcionando — agora usa o BFS internamente e
+  retorna o primeiro item da lista (compatibilidade total com o código
+  existente).
+
+Robustez
+--------
+- JSON malformado em package.json não derruba o detector.
+- Diretórios sem permissão de leitura são tratados de forma fail-soft.
+- Se nenhum manifesto for encontrado em até 7 níveis, lança erro claro
+  pedindo manifest na raiz ou /new (STORY) para configuração manual.
+
+Comandos de teste por stack (AgentMode)
+---------------------------------------
+Adicionados aos modos debugger e refactor:
+- kotlin: ./gradlew test koverVerify
+- go:     go test -coverprofile=coverage.out ./...
+- rust:   cargo test && cargo tarpaulin --fail-under 80
+- php:    vendor/bin/phpunit --coverage-text
+- ruby:   bundle exec rspec --format documentation
+- scala:  sbt test
+- swift:  swift test --enable-code-coverage
+
+Arquivos novos
+--------------
+- src/generator/utils/stackDetector.ts
+- tests/unit/generator/utils/stackDetector.test.ts (37 cenários)
+
+Arquivos modificados
+--------------------
+- src/story/Story.ts
+- src/config/WorkspaceDefaults.ts
+- src/generator/utils/IWorkspace.ts
+- src/generator/utils/VscodeWorkspace.ts
+- src/generator/utils/workspace.ts
+- src/generator/ci/CiGenerator.ts
+- src/participant/AgentMode.ts
+- tests/support/fakes.ts
+- tests/unit/config/WorkspaceDefaults.test.ts
+- tests/unit/commands/setupCommand.test.ts
+
+Validação executada antes do release
+------------------------------------
+- npx tsc --noEmit  → 0 erros
+- npm run test:unit → 923 testes / 923 passando (53 arquivos)
+- npm run build     → esbuild ok
+
+Compatibilidade
+---------------
+- Sem breaking changes na API pública existente.
+- Stories antigas com language/framework legados continuam válidas.
+- Os tipos Language e Framework ganharam novos valores; código que faz
+  switch exaustivo precisa adicionar os novos casos (todos os switches
+  internos do plugin já foram atualizados).
+
+Próximos passos
+---------------
+- VSIX publicado em publish/0.3.6/vscode-plugin-speckit-0.3.6.vsix
+- git push origin main feat/draft-command (caso ainda não tenha sido feito)
