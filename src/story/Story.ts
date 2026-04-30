@@ -11,6 +11,7 @@ export interface StoryMetadata {
   type: SpecType;
   status: SpecStatus;
   gate: Gate;
+  dependsOn: string[];
 }
 
 export interface BusinessRequirement {
@@ -134,6 +135,7 @@ export function emptyStory(): Story {
       type: 'story',
       status: 'open',
       gate: 0,
+      dependsOn: [],
     },
     businessRequirement: { problem: '', value: '', stakeholders: [] },
     functionalSpec: { userStories: [], acceptanceCriteria: [], outOfScope: [] },

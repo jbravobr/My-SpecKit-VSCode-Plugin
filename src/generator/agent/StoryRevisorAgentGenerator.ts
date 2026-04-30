@@ -3,6 +3,22 @@ import { AGENT_TOOLS_YAML } from './agentTools';
 
 export function generateRevisorAgent(story: Story): string {
   const storyId = story.metadata.id || '001';
+
+  return `---
+name: speckit-revisor
+description: "Agente SpecKit — revisão independente de story. Conduz Gates 3-4: checklist de qualidade, segurança, testes, arquitetura e entrega. Leia .speckit/STORY-${storyId}.md antes de qualquer ação. Stack: ${story.technicalSpec.language}/${story.technicalSpec.framework}/${story.technicalSpec.architecture}."
+${AGENT_TOOLS_YAML}
+---
+
+${generateRevisorContent(story)}`;
+}
+
+/**
+ * Returns the revisor agent content WITHOUT frontmatter.
+ * Used by the unified agent generator to compose impl + revisor in one file.
+ */
+export function generateRevisorContent(story: Story): string {
+  const storyId = story.metadata.id || '001';
   const criteria = story.functionalSpec.acceptanceCriteria.map((c) => `- [ ] ${c}`).join('\n');
   const dodList = story.dod.criteria.map((c) => `- [ ] ${c}`).join('\n');
   const hasKafka = (story.technicalSpec.infrastructure ?? '').toLowerCase().includes('kafka');
@@ -13,13 +29,7 @@ export function generateRevisorAgent(story: Story): string {
     ? `\n- [ ] Escalabilidade (código): ${story.nonFunctionalSpec.scalability.trim()}`
     : '';
 
-  return `---
-name: speckit-revisor
-description: "Agente SpecKit — revisão independente de story. Conduz Gates 3-4: checklist de qualidade, segurança, testes, arquitetura e entrega. Leia .speckit/STORY-${storyId}.md antes de qualquer ação. Stack: ${story.technicalSpec.language}/${story.technicalSpec.framework}/${story.technicalSpec.architecture}."
-${AGENT_TOOLS_YAML}
----
-
-# SpecKit Revisor — Story ${storyId} (Gates 3–4)
+  return `# SpecKit Revisor — Story ${storyId} (Gates 3–4)
 
 Story: **${story.metadata.title || storyId}** | ID: ${storyId}
 Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${story.technicalSpec.architecture}

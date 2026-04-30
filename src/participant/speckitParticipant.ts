@@ -4,6 +4,7 @@ import { vscodeWorkspace } from '../generator/utils/VscodeWorkspace';
 import { AuditLogger } from '../workflow/AuditLogger';
 import { handleAgentCommand } from './commands/agentCommand';
 import { handleAuditCommand } from './commands/auditCommand';
+import { handleBatchCommand } from './commands/batchCommand';
 import { handleCommitCommand } from './commands/commitCommand';
 import { handleContextCommand } from './commands/contextCommand';
 import { handleDiffCommand } from './commands/diffCommand';
@@ -11,6 +12,7 @@ import { handleDoctorCommand } from './commands/doctorCommand';
 import { handleDraftCommand } from './commands/draftCommand';
 import { handleFixCommand } from './commands/fixCommand';
 import { handleGateCommand } from './commands/gateCommand';
+import { handleInitCommand } from './commands/initCommand';
 import { handleNewCommand } from './commands/newCommand';
 import { handleStatusCommand } from './commands/statusCommand';
 import { handleTraceCommand } from './commands/traceCommand';
@@ -71,6 +73,12 @@ export async function handleSpeckitRequest(
       case 'doctor':
         await handleDoctorCommand(request, stream, token);
         break;
+      case 'batch':
+        await handleBatchCommand(request, stream, token);
+        break;
+      case 'init':
+        await handleInitCommand(request, stream, token);
+        break;
       default:
         stream.markdown(
           '**SpecKit** — Spec Driven Development\n\n' +
@@ -87,7 +95,9 @@ export async function handleSpeckitRequest(
             '- `/diff` — Mostrar git diff no chat\n' +
             '- `/commit` — Auto-stage e commit com prefixo speckit:\n' +
             '- `/context` — Gerenciar arquivos de contexto\n' +
-            '- `/doctor` — Diagnóstico de saúde do workspace\n',
+            '- `/doctor` — Diagnóstico de saúde do workspace\n' +
+            '- `/batch` — Processar todas as specs em lote (validar + gerar config)\n' +
+            '- `/init` — Inicializar workspace e consolidar specs em .speckit/\n',
         );
     }
     if (audit && command) {

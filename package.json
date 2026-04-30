@@ -73,6 +73,14 @@
           {
             "name": "doctor",
             "description": "Diagnóstico de saúde do workspace"
+          },
+          {
+            "name": "batch",
+            "description": "Processar todas as specs em lote — validar e gerar configuração Copilot"
+          },
+          {
+            "name": "init",
+            "description": "Inicializar workspace e consolidar specs dispersas em .speckit/"
           }
         ]
       }

@@ -6,6 +6,25 @@ export function generateImplementadorAgent(story: Story): string {
   const lang = story.technicalSpec.language || '(não definida)';
   const fw = story.technicalSpec.framework || '(não definido)';
   const arch = story.technicalSpec.architecture || '(não definida)';
+
+  return `---
+name: speckit-implementador
+description: "Agente SpecKit — implementação autônoma de story. Conduz Gates 0-2: alinhamento com spec, implementação por tarefas atômicas com commits convencionais, testes com cobertura ≥80%. Leia .speckit/STORY-${storyId}.md antes de qualquer ação. Stack: ${lang}/${fw}/${arch}."
+${AGENT_TOOLS_YAML}
+---
+
+${generateImplementadorContent(story)}`;
+}
+
+/**
+ * Returns the implementador agent content WITHOUT frontmatter.
+ * Used by the unified agent generator to compose impl + revisor in one file.
+ */
+export function generateImplementadorContent(story: Story): string {
+  const storyId = story.metadata.id;
+  const lang = story.technicalSpec.language || '(não definida)';
+  const fw = story.technicalSpec.framework || '(não definido)';
+  const arch = story.technicalSpec.architecture || '(não definida)';
   const projectStage = story.technicalSpec.projectStage || 'brownfield';
 
   const criteria =
@@ -49,13 +68,7 @@ Este é um projeto **existente (brownfield)**. Antes de implementar:
 4. **Integração** — garanta compatibilidade com módulos e serviços existentes
 `;
 
-  return `---
-name: speckit-implementador
-description: "Agente SpecKit — implementação autônoma de story. Conduz Gates 0-2: alinhamento com spec, implementação por tarefas atômicas com commits convencionais, testes com cobertura ≥80%. Leia .speckit/STORY-${storyId}.md antes de qualquer ação. Stack: ${lang}/${fw}/${arch}."
-${AGENT_TOOLS_YAML}
----
-
-# SpecKit Implementador — Story ${storyId} (Gates 0–2)
+  return `# SpecKit Implementador — Story ${storyId} (Gates 0–2)
 
 Story: **${story.metadata.title || storyId}** | ID: ${storyId}
 Stack: ${lang} / ${fw} / ${arch}

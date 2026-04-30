@@ -11,7 +11,7 @@ O Copilot passa a conhecer o requisito de negócio, critérios de aceite, restri
 | Ordem | Seção                                | Quando ler                                        |
 | ----- | ------------------------------------ | ------------------------------------------------- |
 | 1     | **Como usar**                        | Fluxo essencial de ponta a ponta                  |
-| 2     | **Comandos**                         | Referência objetiva de cada comando (13 comandos) |
+| 2     | **Comandos**                         | Referência objetiva de cada comando (15 comandos) |
 | 3     | **Paleta de comandos**               | Atalhos via `Ctrl+Shift+P`                        |
 | 4     | **Configuração do workspace**        | Defaults, detecção de stack, backup, logging      |
 | 5     | **Arquivos gerados**                 | O que o plugin cria e para que serve              |
@@ -244,6 +244,7 @@ Cada spec contém um bloco `<!-- metadata -->` no markdown com campos gerenciado
 | `status`       | `open` · `in-progress` · `review` · `blocked` · `done` · `cancelled` | Ciclo de vida da spec                                                      |
 | `gate`         | `0` · `1` · `2` · `3` · `4`                                          | Gate atual de implementação                                                |
 | `projectStage` | `greenfield` · `brownfield`                                          | Maturidade do projeto (afeta profundidade das instruções)                  |
+| `depends-on`   | IDs separados por vírgula (ex: `US-002, BF-001`)                     | Dependências canônicas — story não inicia até que todas estejam `done`     |
 
 > `type`, `status` e `gate` são usados pelo `/status` para exibir o progresso. O `projectStage` influencia o nível de detalhe dos skills gerados (greenfield → mais guardrails).
 
@@ -706,6 +707,148 @@ Resultado: 1/6 verificações OK
 
 ---
 
+### `@speckit /batch`
+
+Processa **todas** as specs em `.speckit/` em lote — validação paralela + geração de configuração Copilot.
+
+**Uso:**
+
+```
+@speckit /batch                        → Valida todas as specs e mostra resumo
+@speckit /batch --generate             → Valida + gera config Copilot para cada spec válida
+@speckit /batch --generate --unified   → Gera agentes unificados (implementador + revisor por story)
+```
+
+**Resumo de validação:**
+
+O batch executa parse + validação de **todas** as specs em paralelo e exibe uma tabela:
+
+```
+Resultado do batch — 4 spec(s) encontrada(s):
+
+| Status             | Spec            | Tipo  | Título              | Gate              | Stack            |
+|--------------------|-----------------|-------|---------------------|-------------------|------------------|
+| ✅ Válida          | STORY-001.md    | story | Auth OAuth2         | 1 — Implementação | typescript/react |
+| ✅ Válida          | FIX-001.md      | fix   | Login 500           | 0 — Alinhamento   | java/springboot  |
+| ⚠️ 3 lacuna(s)    | STORY-002.md    | story | Dashboard vendas    | 0 — Alinhamento   | typescript/react |
+| ⏭️ done           | STORY-003.md    | story | Feature concluída   | 4 — Entrega       | —                |
+
+Totais: ✅ 2 válida(s) | ⚠️ 1 inválida(s) | ❌ 0 erro(s) | ⏭️ 1 finalizada(s)
+```
+
+**Flag `--generate` (modo clássico):**
+
+Gera config Copilot individualmente para cada spec válida — mesmo comportamento de `/validate` mas em lote. A última spec processada define o `copilot-instructions.md` ativo.
+
+**Flag `--generate --unified` (modo unificado):**
+
+Gera um **agente unificado por story** — cada agente contém o protocolo completo de implementação (Gates 0-2) + revisão (Gates 3-4) com ping-pong interno. Adicionalmente:
+
+1. **Análise de dependências** — identifica stories independentes (prontas) e bloqueadas (dependências pendentes)
+2. **Agentes por story** — cria `.github/agents/speckit-story-{id}.agent.md` com ambos os modos
+3. **Batch index** — gera `copilot-instructions.md` listando todas as stories ativas, skills e agents
+
+**Exemplo de output (modo unificado):**
+
+```
+⏳ Gerando agentes unificados + análise de dependências...
+
+💾 Backup do copilot-instructions.md anterior salvo.
+
+### ⚠️ Dependências pendentes
+
+- `002` bloqueada por: `001`
+
+### ✅ Stories independentes (prontas para execução)
+
+- `001`
+
+✅ Agente unificado: speckit-story-001.agent.md
+✅ Agente unificado: speckit-story-002.agent.md
+
+✅ copilot-instructions.md atualizado (modo batch).
+
+---
+
+Resumo (modo unificado):
+- 🤖 2 agente(s) unificado(s) gerado(s)
+- 🔗 1 independente(s), 1 bloqueada(s)
+- 📄 copilot-instructions.md gerado em modo batch
+
+Próximo passo: Abra o Copilot Chat e selecione o agente da story desejada no dropdown.
+```
+
+**Protocolo do agente unificado:**
+
+Cada agente unificado contém 4 protocolos embutidos:
+
+| Protocolo   | Quando ativa                           | O que faz                                                                            |
+| ----------- | -------------------------------------- | ------------------------------------------------------------------------------------ |
+| Dependência | Gate 0 (pré-condição)                  | Verifica canônica + semântica; bloqueia se pendentes                                 |
+| Transição   | Gate 2 → Gate 3                        | Muda postura de implementador para revisor independente                              |
+| Retorno     | Revisor emite "ALTERAÇÕES SOLICITADAS" | Documenta fixes, retorna ao implementador, aplica correções, re-executa revisão      |
+| Inviolável  | Sempre ativo no modo revisor           | Revisor **nunca** implementa — apenas documenta bloqueios e devolve ao implementador |
+
+> Stories independentes podem ser executadas em paralelo (abas de chat separadas). Stories bloqueadas aguardam conclusão das dependências.
+
+---
+
+### `@speckit /init`
+
+Inicializa o workspace e consolida specs dispersas em `.speckit/`.
+
+**Uso:**
+
+```
+@speckit /init
+```
+
+**O que faz:**
+
+1. **Garante `.speckit/` existe** — cria o diretório se ausente
+2. **Busca specs dispersas** — encontra recursivamente arquivos `STORY-*.md` e `US-*.md` fora de `.speckit/`
+3. **Consolida** — move cada arquivo encontrado para `.speckit/`, preservando o conteúdo
+4. **Detecta conflitos** — se já existe um arquivo com mesmo nome em `.speckit/`, não sobrescreve
+
+**Diretórios ignorados:** `node_modules`, `.git`, `dist`, `out`, `.venv`, `__pycache__`, `.next`, `.nuxt`, `coverage`, `build`
+
+**Exemplo de output (specs encontradas):**
+
+```
+✅ Workspace inicializado.
+
+📁 `.speckit/` — criado
+📄 2 arquivo(s) movido(s) para `.speckit/`:
+  - docs/STORY-001.md → .speckit/STORY-001.md
+  - US-AUTH-002.md → .speckit/US-AUTH-002.md
+```
+
+**Exemplo de output (com conflitos):**
+
+```
+✅ Workspace inicializado.
+
+📁 `.speckit/` — já existia
+📄 1 arquivo(s) movido(s) para `.speckit/`:
+  - src/STORY-002.md → .speckit/STORY-002.md
+
+⚠️ 1 conflito(s) — não movido(s) (já existem no destino):
+  - STORY-001.md
+```
+
+**Exemplo de output (nada a fazer):**
+
+```
+✅ Workspace inicializado.
+
+📁 `.speckit/` — já existia
+📄 Nenhum arquivo de estória encontrado fora de `.speckit/`.
+```
+
+> Execute `/init` logo após clonar um repositório para garantir que todas as specs estejam centralizadas. Complementa o `/doctor`.
+
+---
+
 ### Sem comando (help)
 
 Se chamar `@speckit` sem comando ou com comando desconhecido, exibe a lista de comandos disponíveis.
@@ -840,9 +983,11 @@ O conjunto exato varia conforme a stack declarada. Abaixo a estrutura completa c
 +-- agents/
     +-- speckit-implementador.agent.md ← Gates 0–2 (dropdown Copilot)
     +-- speckit-revisor.agent.md       ← Gates 3–4 (dropdown Copilot)
+    +-- speckit-story-{id}.agent.md    ← (batch) Gates 0–4 unificados
 ```
 
 > A sessão de implementação usa o **agent implementador** (dropdown) para Gates 0–2. A revisão usa o **agent revisor** em nova sessão. O `run.prompt.md` é uma alternativa monolítica (todos os gates em uma sessão).
+> Em modo **batch unificado** (`/batch --generate --unified`), cada story recebe um agente `speckit-story-{id}` que conduz o ciclo completo com transição interna entre modos.
 > O skill DevTools é gerado apenas quando o usuário aceita a oferta via botão ou `--devtools`.
 
 </details>
@@ -1031,6 +1176,7 @@ O skill `speckit-stack` é composto dinamicamente. Cada seção abaixo só é in
 | --------------------- | --------------------------------------------------- | -------------------------------------------- | ------------------------ |
 | **Implementador**     | `.github/agents/speckit-implementador.agent.md`     | 0–2 (alinhamento, implementação, testes)     | Dropdown no Copilot Chat |
 | **Revisor**           | `.github/agents/speckit-revisor.agent.md`           | 3–4 (revisão independente, entrega)          | Dropdown no Copilot Chat |
+| **Unificado (batch)** | `.github/agents/speckit-story-{id}.agent.md`        | 0–4 (ciclo completo com ping-pong interno)   | Dropdown no Copilot Chat |
 | **Fix Implementador** | `.github/agents/speckit-fix-implementador.agent.md` | 0–2 (investigação, fix cirúrgico, regressão) | Dropdown no Copilot Chat |
 | **Fix Revisor**       | `.github/agents/speckit-fix-revisor.agent.md`       | 3–4 (verificação, encerramento)              | Dropdown no Copilot Chat |
 
