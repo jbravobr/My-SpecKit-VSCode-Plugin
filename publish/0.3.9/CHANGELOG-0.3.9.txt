@@ -1,0 +1,69 @@
+SpecKit — Changelog 0.3.9
+==========================
+Data: 30/04/2026
+Branch base: feat/markdown-story-validator
+
+RELEASE — Batch mode, workspace init e changelog orientado ao usuário
+---------------------------------------------------------------------
+Esta versão empacota o estado atual do plugin com os comandos de operação em lote, inicialização do workspace, agentes unificados por story e uma nova regra de release que exige dois changelogs por versão.
+
+Novos comandos do chat participant
+----------------------------------
+- /batch: processa todas as specs encontradas no workspace, valida stories/fixes em lote e apresenta resumo consolidado.
+- /batch --generate: além da validação, gera configuração Copilot para cada spec válida.
+- /batch --generate --unified: gera agentes unificados por story, combinando modo implementador e modo revisor em um único arquivo de agente.
+- /init: inicializa a estrutura .speckit/ e consolida specs dispersas do workspace sem sobrescrever arquivos existentes.
+
+Dependências entre stories
+--------------------------
+- Adicionado suporte ao metadata field depends-on em stories.
+- O campo aceita IDs separados por vírgula e normaliza espaços/entradas vazias.
+- O modo batch identifica stories independentes e bloqueadas por dependências ainda não concluídas.
+
+Geração Copilot
+---------------
+- Adicionado gerador de índice batch para orientar execução multi-story.
+- Adicionado gerador de agente unificado por story com protocolos de dependência, transição interna implementador/revisor, retorno para correção e regra inviolável de revisão.
+- Adicionada busca recursiva de arquivos de spec com ignorados seguros (.speckit, node_modules, dist e equivalentes).
+
+Regra de changelog
+------------------
+- O script de validação de release agora exige dois arquivos por versão:
+  - CHANGELOG-<versão>.txt: changelog técnico/rastreável da release.
+  - CHANGELOG-USER-<versão>.txt: changelog orientado ao usuário do plugin, focado em novas features e fixes, sem detalhes internos de implementação.
+- A regra aceita pastas publish/<versão>, publish/<versão>-* e publish/<versão>_* desde que ambos os arquivos existam e tenham conteúdo mínimo.
+
+Higiene de empacotamento
+------------------------
+- Ambientes virtuais Python locais (.venv, venv, env e __pycache__) são excluídos do VSIX.
+- A verificação do pacote falha se qualquer ambiente virtual local for incluído acidentalmente no artefato.
+
+Documentação
+------------
+- README atualizado com documentação detalhada dos comandos /batch e /init.
+- Tabela de metadados atualizada com depends-on.
+- Tabela de agentes atualizada com o agente unificado de batch.
+- Árvore de arquivos gerados atualizada com o novo agente speckit-story-{id}.agent.md.
+
+Testes adicionados
+------------------
+- 63 testes comportamentais cobrindo DependencyGraph, BatchIndexGenerator, UnifiedAgentGenerator, findSpecFiles, initCommand, parsing de depends-on e flag --unified no batchCommand.
+- Testes de package adicionados para validar a nova regra de changelog técnico + changelog orientado ao usuário.
+- Teste de regressão mantém o VSIX livre de ambientes virtuais locais.
+
+Validação executada antes do release
+------------------------------------
+- npx vitest run tests/unit/package/changelog.test.ts tests/unit/package/vsix.test.ts -> 6 testes / 6 passando
+- npx tsc --noEmit      -> 0 erros
+- npm run lint          -> 0 erros, 6 warnings preexistentes
+- npm run test:unit     -> 999 testes / 999 passando (60 arquivos)
+- npm run test:unit:coverage -> cobertura global acima de 80%
+- npm run package       -> VSIX gerado e validado
+
+Observação
+----------
+- O teste de integração completo depende do Extension Host local do VS Code e, na execução anterior, apresentou instabilidade de runtime fora do escopo do empacotamento. O release foi validado com type-check, lint, testes unitários/comportamentais, cobertura e verificação do VSIX.
+
+Artefato esperado
+-----------------
+- publish/0.3.9/vscode-plugin-speckit-0.3.9.vsix

@@ -1,0 +1,37 @@
+SpecKit — Novidades para usuários — 0.3.9
+=========================================
+Data: 30/04/2026
+
+Resumo
+------
+Esta versão melhora o uso diário do SpecKit para quem trabalha com várias stories ou fixes ao mesmo tempo. O plugin agora ajuda a organizar specs espalhadas pelo workspace, validar várias specs em lote e preparar agentes do Copilot mais direcionados para execução completa de uma story.
+
+Novas features
+--------------
+- Novo comando /init para preparar o workspace e consolidar arquivos de spec na pasta .speckit/.
+- Novo comando /batch para validar todas as stories e fixes encontrados no workspace em uma única execução.
+- Novo modo /batch --generate para gerar automaticamente os arquivos de configuração do Copilot para specs válidas.
+- Novo modo /batch --generate --unified para criar um agente único por story, combinando implementação e revisão no mesmo fluxo guiado.
+- Stories agora podem declarar depends-on para indicar dependências entre entregas.
+
+Melhorias de experiência
+------------------------
+- O resumo do /batch mostra quais stories estão prontas para iniciar e quais ainda estão bloqueadas por dependências.
+- O /init evita sobrescrever arquivos existentes e avisa quando há conflito de nomes.
+- A documentação do README agora explica os novos comandos com exemplos práticos e cenários de uso.
+- O pacote final do plugin ficou mais limpo, sem incluir ambientes virtuais locais ou arquivos de desenvolvimento desnecessários.
+
+Correções e segurança de release
+--------------------------------
+- A verificação do pacote agora impede que arquivos locais de desenvolvimento sejam enviados dentro do VSIX.
+- O processo de release passa a exigir também este changelog para usuários, separado do changelog técnico, para facilitar a leitura das novidades por quem apenas usa o plugin.
+
+Como usar rapidamente
+---------------------
+1. Execute @speckit /init para organizar specs dispersas no workspace.
+2. Execute @speckit /batch para ver o estado geral das stories e fixes.
+3. Execute @speckit /batch --generate --unified para preparar agentes unificados para as stories válidas.
+
+Artefato
+--------
+- publish/0.3.9/vscode-plugin-speckit-0.3.9.vsix

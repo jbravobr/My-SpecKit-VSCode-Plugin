@@ -10,6 +10,10 @@ export const FORBIDDEN_VSIX_PATHS = [
   'extension/scripts/',
   'extension/publish/',
   'extension/markdown-to-pdf/',
+  'extension/.venv/',
+  'extension/venv/',
+  'extension/env/',
+  'extension/__pycache__/',
   'extension/.vscode/',
   'extension/.vscode-test/',
 ];

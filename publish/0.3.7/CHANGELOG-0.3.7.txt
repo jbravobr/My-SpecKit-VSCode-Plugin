@@ -1,0 +1,59 @@
+SpecKit — Changelog 0.3.7
+==========================
+Data: 30/04/2026
+Branch base: feat/markdown-story-validator
+
+RELEASE — Batch mode, workspace init e agentes unificados
+---------------------------------------------------------
+Esta versão empacota os novos comandos de operação em lote e inicialização do workspace, além da documentação e cobertura de testes comportamentais associadas.
+
+Novos comandos do chat participant
+----------------------------------
+- /batch: processa todas as specs encontradas no workspace, valida stories/fixes em lote e apresenta resumo consolidado.
+- /batch --generate: além da validação, gera configuração Copilot para cada spec válida.
+- /batch --generate --unified: gera agentes unificados por story, combinando modo implementador e modo revisor em um único arquivo de agente.
+- /init: inicializa a estrutura .speckit/ e consolida specs dispersas do workspace sem sobrescrever arquivos existentes.
+
+Dependências entre stories
+--------------------------
+- Adicionado suporte ao metadata field depends-on em stories.
+- O campo aceita IDs separados por vírgula e normaliza espaços/entradas vazias.
+- O modo batch identifica stories independentes e bloqueadas por dependências ainda não concluídas.
+
+Geração Copilot
+---------------
+- Adicionado gerador de índice batch para orientar execução multi-story.
+- Adicionado gerador de agente unificado por story com protocolos de dependência, transição interna implementador/revisor, retorno para correção e regra inviolável de revisão.
+- Adicionada busca recursiva de arquivos de spec com ignorados seguros (.speckit, node_modules, dist e equivalentes).
+
+Documentação
+------------
+- README atualizado com documentação detalhada dos comandos /batch e /init.
+- Tabela de metadados atualizada com depends-on.
+- Tabela de agentes atualizada com o agente unificado de batch.
+- Árvore de arquivos gerados atualizada com o novo agente speckit-story-{id}.agent.md.
+
+Higiene de empacotamento
+------------------------
+- Ambientes virtuais Python locais (.venv, venv, env e __pycache__) passaram a ser excluídos do VSIX.
+- A verificação do pacote agora falha se qualquer ambiente virtual local for incluído acidentalmente no artefato.
+
+Testes adicionados
+------------------
+- 63 testes comportamentais novos cobrindo DependencyGraph, BatchIndexGenerator, UnifiedAgentGenerator, findSpecFiles, initCommand, parsing de depends-on e flag --unified no batchCommand.
+- Testes focados em comportamento real usando InMemoryFileSystem e stubs tipados, evitando depender apenas de mocks superficiais.
+
+Validação executada antes do release
+------------------------------------
+- npx tsc --noEmit  -> 0 erros
+- npm run lint      -> 0 erros, 6 warnings preexistentes
+- npm run test:unit -> 996 testes / 996 passando (59 arquivos)
+- npm run build     -> esbuild ok
+
+Observação
+----------
+- npm run test:integration iniciou o build de integração e baixou o VS Code de teste, mas a execução ficou bloqueada por instabilidade do Extension Host local (mensagens alternando entre unresponsive/responsive). O terminal foi encerrado para evitar bloqueio indefinido do empacotamento.
+
+Artefato esperado
+-----------------
+- publish/0.3.7/vscode-plugin-speckit-0.3.7.vsix
