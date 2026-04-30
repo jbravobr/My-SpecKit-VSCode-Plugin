@@ -1,0 +1,40 @@
+SpecKit — Changelog 0.3.10
+===========================
+Data: 30/04/2026
+Branch base: release/0.3.10
+
+PATCH — Dependências canônicas entre stories
+--------------------------------------------
+Esta versão corrige o protocolo do agente unificado para alinhar a execução de stories ao contrato canônico de dependências do SpecKit. A partir desta release, dependências entre stories são reconhecidas exclusivamente pelo campo de metadata depends-on. Menções narrativas dentro do corpo da história, critérios de aceite, contexto, fora de escopo ou infraestrutura não bloqueiam a execução.
+
+Correção funcional
+------------------
+- Removida a instrução de descoberta de dependências semânticas no agente unificado speckit-story-{id}.agent.md.
+- O protocolo de Gate 0 agora orienta explicitamente a consultar apenas o metadata depends-on da story ativa.
+- Citações a outras stories ou fixes no corpo da especificação passam a ser tratadas como informação contextual, sem efeito de bloqueio.
+- O comportamento gerado fica consistente com StoryParser e DependencyGraph, que já usavam somente Story.metadata.dependsOn.
+
+Testes adicionados
+------------------
+- Teste do agente unificado garantindo que depends-on no metadata é a única fonte de dependência.
+- Teste de regressão garantindo ausência de instruções de descoberta semântica no corpo da story.
+- Teste do parser garantindo que uma menção narrativa como STORY-999 em critérios de aceite não popula metadata.dependsOn.
+
+Documentação
+------------
+- README atualizado para declarar depends-on como fonte canônica e exclusiva de dependências.
+- Seção de batch unificado atualizada para informar que referências narrativas não entram na análise de dependências.
+- Tabela de protocolo do agente unificado atualizada para remover a referência a verificação semântica.
+
+Validação executada antes do release
+------------------------------------
+- npx vitest run tests/unit/generator/agent/UnifiedAgentGenerator.test.ts tests/unit/story/StoryParser.test.ts tests/unit/generator/utils/DependencyGraph.test.ts -> 58 testes / 58 passando
+- npx tsc --noEmit -> 0 erros
+- npm run lint -> 0 erros, 6 warnings preexistentes
+- npm run test:unit -> 1002 testes / 1002 passando
+- npm run test:unit:coverage -> cobertura global acima de 80%
+- npm run build -> build concluído com sucesso
+
+Artefato esperado
+-----------------
+- publish/0.3.10/vscode-plugin-speckit-0.3.10.vsix

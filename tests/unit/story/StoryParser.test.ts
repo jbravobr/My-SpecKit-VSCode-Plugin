@@ -232,5 +232,17 @@ describe('parseStory', () => {
       const story = parseStory(md);
       expect(story.metadata.dependsOn).toEqual([]);
     });
+
+    it('ignores story IDs mentioned outside metadata depends-on', () => {
+      const md = completeStoryMd.replace(
+        '- Token válido resulta em sessão autenticada',
+        '- Token válido resulta em sessão autenticada após STORY-999 estar disponível',
+      );
+      const story = parseStory(md);
+      expect(story.metadata.dependsOn).toEqual([]);
+      expect(story.functionalSpec.acceptanceCriteria).toContain(
+        'Token válido resulta em sessão autenticada após STORY-999 estar disponível',
+      );
+    });
   });
 });

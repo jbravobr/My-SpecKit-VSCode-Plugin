@@ -72,18 +72,19 @@ Dependências declaradas: ${deps}
 
 ANTES de iniciar o Gate 0, execute **obrigatoriamente**:
 
-1. **Dependências canônicas:** Verifique o campo \`depends-on\` no metadata de \`.speckit/STORY-${story.metadata.id}.md\`.
-2. **Dependências semânticas:** Releia TODA a story e identifique referências a outras stories ou fixes (padrões \`US-*\`, \`BF-*\`, \`STORY-*\`, \`FIX-*\`). Considere menções em campos de texto, critérios de aceite, fora de escopo e infraestrutura.
-3. Para **CADA** dependência encontrada (canônica ou semântica):
+1. **Fonte única de dependência:** considere **somente** o campo \`depends-on\` no metadata de \`.speckit/STORY-${story.metadata.id}.md\`.
+2. **Não inferir dependências:** citações a outras stories/fixes no corpo da story, contexto, user stories, critérios de aceite, fora de escopo ou infraestrutura são apenas informativas e **NÃO** bloqueiam execução.
+3. Se não houver dependências declaradas no metadata \`depends-on\`, prossiga ao Gate 0.
+4. Para **CADA** dependência declarada no metadata \`depends-on\`:
    - Leia o arquivo \`.speckit/STORY-<dep-id>.md\` ou \`.speckit/<dep-id>.md\`
    - Verifique o campo \`status\` no metadata
    - Se \`status\` ≠ \`done\` → esta story está **BLOQUEADA**
-4. Se **BLOQUEADA**:
+5. Se **BLOQUEADA**:
    - Liste as dependências pendentes com status atual
    - Informe: "⏸️ Esta story não pode ser implementada até que as dependências estejam concluídas."
    - Sugira: "Execute \`@speckit /status\` para monitorar o progresso das dependências."
    - **ENCERRE a sessão. Não prossiga.**
-5. Se **TODAS** as dependências estão \`done\` (ou não há dependências): prossiga ao Gate 0.`;
+6. Se **TODAS** as dependências canônicas estão \`done\` (ou não há dependências canônicas): prossiga ao Gate 0.`;
 }
 
 function generateTransitionProtocol(storyId: string): string {

@@ -49,6 +49,23 @@ describe('StoryUnifiedAgentGenerator', () => {
       expect(result).toContain('PROTOCOLO DE DEPENDÊNCIA');
     });
 
+    it('treats metadata depends-on as the only dependency source', () => {
+      const result = generateUnifiedAgent(completeStory);
+      expect(result).toContain('somente** o campo `depends-on` no metadata');
+      expect(result).toContain('citações a outras stories/fixes no corpo da story');
+      expect(result).toContain('**NÃO** bloqueiam execução');
+    });
+
+    it('does not instruct semantic dependency discovery from story body', () => {
+      const result = generateUnifiedAgent(completeStory);
+      expect(result).not.toContain('Dependências semânticas');
+      expect(result).not.toContain('referências a outras stories ou fixes');
+      expect(result).not.toContain('padrões `US-*`, `BF-*`, `STORY-*`, `FIX-*`');
+      expect(result).not.toContain(
+        'campos de texto, critérios de aceite, fora de escopo e infraestrutura',
+      );
+    });
+
     it('contains transition protocol', () => {
       const result = generateUnifiedAgent(completeStory);
       expect(result).toContain('PROTOCOLO DE TRANSIÇÃO');
@@ -107,6 +124,13 @@ describe('generateImplementadorContent', () => {
   it('contains 80% coverage threshold', () => {
     const result = generateImplementadorContent(completeStory);
     expect(result).toContain('80%');
+  });
+
+  it('contains container runtime preflight for Testcontainers and Podman', () => {
+    const result = generateImplementadorContent(completeStory);
+    expect(result).toContain('Pré-flight para Testcontainers');
+    expect(result).toContain('docker info');
+    expect(result).toContain('podman machine start');
   });
 
   it('includes acceptance criteria from story', () => {

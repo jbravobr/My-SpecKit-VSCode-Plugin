@@ -1,4 +1,5 @@
 import { Fix, TechStackDetection } from '../../fix/Fix';
+import { generateContainerRuntimePreflightSection } from '../utils/ContainerRuntimePreflight';
 import { AGENT_TOOLS_YAML } from './agentTools';
 
 export function generateFixImplementadorAgent(fix: Fix, stack: TechStackDetection): string {
@@ -68,6 +69,7 @@ Antes de modificar qualquer arquivo de produção, execute e garanta que passam:
 - **Testes existentes**: \`npm test\` (ou equivalente)
 
 Se qualquer validação falhar no estado atual do repositório, corrija ANTES de começar o fix.
+${generateContainerRuntimePreflightSection()}
 
 ---
 

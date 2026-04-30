@@ -1,4 +1,5 @@
 import { Story } from '../../story/Story';
+import { generateContainerRuntimePreflightSection } from '../utils/ContainerRuntimePreflight';
 import { AGENT_TOOLS_YAML } from './agentTools';
 
 export function generateImplementadorAgent(story: Story): string {
@@ -129,6 +130,7 @@ Antes de criar qualquer arquivo de produção, execute e garanta que passam:
 - **Testes existentes**: \`npm test\` (ou equivalente)
 
 Se qualquer validação falhar no estado atual do repositório, corrija ANTES de começar a implementação.
+${generateContainerRuntimePreflightSection()}
 
 ---
 

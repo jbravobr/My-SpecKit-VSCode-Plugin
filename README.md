@@ -238,15 +238,16 @@ Cria o arquivo `.speckit/STORY-XXX.md` (numeração automática) e abre no edito
 
 Cada spec contém um bloco `<!-- metadata -->` no markdown com campos gerenciados automaticamente:
 
-| Campo          | Valores                                                              | Descrição                                                                  |
-| -------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `type`         | `story` · `refactoring` · `spike`                                    | Tipo da spec (story default, ou via `--refactoring`/`--spike` no `/draft`) |
-| `status`       | `open` · `in-progress` · `review` · `blocked` · `done` · `cancelled` | Ciclo de vida da spec                                                      |
-| `gate`         | `0` · `1` · `2` · `3` · `4`                                          | Gate atual de implementação                                                |
-| `projectStage` | `greenfield` · `brownfield`                                          | Maturidade do projeto (afeta profundidade das instruções)                  |
-| `depends-on`   | IDs separados por vírgula (ex: `US-002, BF-001`)                     | Dependências canônicas — story não inicia até que todas estejam `done`     |
+| Campo          | Valores                                                              | Descrição                                                                                  |
+| -------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `type`         | `story` · `refactoring` · `spike`                                    | Tipo da spec (story default, ou via `--refactoring`/`--spike` no `/draft`)                 |
+| `status`       | `open` · `in-progress` · `review` · `blocked` · `done` · `cancelled` | Ciclo de vida da spec                                                                      |
+| `gate`         | `0` · `1` · `2` · `3` · `4`                                          | Gate atual de implementação                                                                |
+| `projectStage` | `greenfield` · `brownfield`                                          | Maturidade do projeto (afeta profundidade das instruções)                                  |
+| `depends-on`   | IDs separados por vírgula (ex: `US-002, BF-001`)                     | Fonte canônica e exclusiva de dependências — story não inicia até que todas estejam `done` |
 
 > `type`, `status` e `gate` são usados pelo `/status` para exibir o progresso. O `projectStage` influencia o nível de detalhe dos skills gerados (greenfield → mais guardrails).
+> Dependências entre stories são consideradas **somente** quando declaradas no metadata `depends-on`. Menções no corpo da história, critérios de aceite, fora de escopo, infraestrutura ou contexto são ignoradas para bloqueio de dependência.
 
 </details>
 
@@ -617,6 +618,8 @@ Faz auto-stage de todas as alterações e commit com prefixo `speckit:`.
 
 > O commit só executa se houver alterações pendentes. Caso contrário: `✅ Nada para commitar — working tree limpa.`
 
+> Se o workspace ainda não for um repositório Git, o `/commit` executa `git init` automaticamente antes de verificar alterações e commitar.
+
 > Todos os commits são registrados no audit log automaticamente.
 
 ---
@@ -744,9 +747,11 @@ Gera config Copilot individualmente para cada spec válida — mesmo comportamen
 
 Gera um **agente unificado por story** — cada agente contém o protocolo completo de implementação (Gates 0-2) + revisão (Gates 3-4) com ping-pong interno. Adicionalmente:
 
-1. **Análise de dependências** — identifica stories independentes (prontas) e bloqueadas (dependências pendentes)
+1. **Análise de dependências** — identifica stories independentes (prontas) e bloqueadas (dependências pendentes) usando somente o metadata `depends-on`
 2. **Agentes por story** — cria `.github/agents/speckit-story-{id}.agent.md` com ambos os modos
 3. **Batch index** — gera `copilot-instructions.md` listando todas as stories ativas, skills e agents
+
+> Referências narrativas a outras stories ou fixes dentro do corpo da história não entram na análise de dependências. Para bloquear uma story, declare explicitamente o ID no campo `depends-on` do metadata.
 
 **Exemplo de output (modo unificado):**
 
@@ -784,7 +789,7 @@ Cada agente unificado contém 4 protocolos embutidos:
 
 | Protocolo   | Quando ativa                           | O que faz                                                                            |
 | ----------- | -------------------------------------- | ------------------------------------------------------------------------------------ |
-| Dependência | Gate 0 (pré-condição)                  | Verifica canônica + semântica; bloqueia se pendentes                                 |
+| Dependência | Gate 0 (pré-condição)                  | Verifica apenas o metadata canônico `depends-on`; bloqueia se pendentes              |
 | Transição   | Gate 2 → Gate 3                        | Muda postura de implementador para revisor independente                              |
 | Retorno     | Revisor emite "ALTERAÇÕES SOLICITADAS" | Documenta fixes, retorna ao implementador, aplica correções, re-executa revisão      |
 | Inviolável  | Sempre ativo no modo revisor           | Revisor **nunca** implementa — apenas documenta bloqueios e devolve ao implementador |
@@ -1020,17 +1025,19 @@ O conjunto exato varia conforme a stack declarada. Abaixo a estrutura completa c
 
 #### Baseline (seções dentro de `speckit-baseline/SKILL.md`)
 
-| Seção                    | Instrui o agente a...                                                                                                                               |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `00-agent-integrity`     | Nunca assumir nomes sem vê-los; declarar incerteza; respeitar escopo; exigir 80% cobertura                                                          |
-| `01-performance`         | Big-O antes de propor; `Promise.all`/`Task.WhenAll` para I/O paralelo; paginação + caching. **SLOs da story** (ou baseline `P99 < 500ms` / `99,9%`) |
-| `02-architecture`        | Respeitar arquitetura definida; SOLID; **timeout + retry + circuit breaker** em todo cliente HTTP; propagar `traceparent`                           |
-| `03-context-management`  | Não misturar módulos; pedir arquivos antes de propor; declarar contexto insuficiente                                                                |
-| `04-testing-standards`   | Happy path + edge + error; AAA obrigatório; **cenários dos critérios de aceite**; testes de carga com SLO declarado ou baseline                     |
-| `05-git-workflow`        | Conventional Commits; branch `feature/<id>-<slug>`; nunca commit direto em main                                                                     |
-| `06-credential-security` | IAM roles; secrets via SecretsManager/Vault; nunca logar tokens/senhas                                                                              |
-| `07-observability`       | JSON com `traceId`; `traceparent` W3C; Prometheus; **SLOs parametrizados**; consumer lag em Kafka/SQS                                               |
-| `08-security-tests`      | Sem token → 401; expirado → 401; role insuficiente → 403; SQL injection → 400; sem stack trace no response                                          |
+| Seção                    | Instrui o agente a...                                                                                                                                                       |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `00-agent-integrity`     | Nunca assumir nomes sem vê-los; declarar incerteza; respeitar escopo; exigir 80% cobertura                                                                                  |
+| `01-performance`         | Big-O antes de propor; `Promise.all`/`Task.WhenAll` para I/O paralelo; paginação + caching. **SLOs da story** (ou baseline `P99 < 500ms` / `99,9%`)                         |
+| `02-architecture`        | Respeitar arquitetura definida; SOLID; **timeout + retry + circuit breaker** em todo cliente HTTP; propagar `traceparent`                                                   |
+| `03-context-management`  | Não misturar módulos; pedir arquivos antes de propor; declarar contexto insuficiente                                                                                        |
+| `04-testing-standards`   | Happy path + edge + error; AAA obrigatório; **cenários dos critérios de aceite**; testes de carga com SLO declarado ou baseline; preflight Testcontainers com Docker/Podman |
+| `05-git-workflow`        | Conventional Commits; branch `feature/<id>-<slug>`; nunca commit direto em main                                                                                             |
+| `06-credential-security` | IAM roles; secrets via SecretsManager/Vault; nunca logar tokens/senhas                                                                                                      |
+| `07-observability`       | JSON com `traceId`; `traceparent` W3C; Prometheus; **SLOs parametrizados**; consumer lag em Kafka/SQS                                                                       |
+| `08-security-tests`      | Sem token → 401; expirado → 401; role insuficiente → 403; SQL injection → 400; sem stack trace no response                                                                  |
+
+> Quando testes de integração usam Testcontainers e Docker não está disponível, o agente deve verificar Podman, executar `podman machine start` se a máquina estiver parada e só então repetir a execução dos testes.
 
 #### Infraestrutura (seções em `speckit-stack/SKILL.md`, se detectadas)
 

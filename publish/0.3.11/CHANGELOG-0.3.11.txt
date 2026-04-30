@@ -1,0 +1,55 @@
+SpecKit — Changelog 0.3.11
+===========================
+Data: 30/04/2026
+Branch base: release/0.3.11
+
+PATCH — Robustez operacional de desenvolvimento
+-----------------------------------------------
+Esta versão melhora a confiabilidade operacional do SpecKit em dois pontos comuns de execução local: commits em workspaces ainda sem repositório Git e testes de integração baseados em Testcontainers quando Docker não está disponível, mas Podman está instalado.
+
+Correções funcionais
+--------------------
+- O comando /commit agora detecta se o workspace ainda não é um repositório Git.
+- Quando o workspace não está dentro de um repositório Git, /commit executa git init automaticamente antes de verificar alterações e criar o commit.
+- A abstração GitOperations passou a expor isRepository e init para permitir detecção e inicialização controlada do repositório.
+- O fluxo de /diff continua sem inicializar repositório; a mudança é restrita ao /commit.
+
+Preflight para Testcontainers
+-----------------------------
+- Criado gerador compartilhado ContainerRuntimePreflight para instruir agentes a validar runtime local de containers antes de executar testes de integração.
+- O agente deve tentar docker info primeiro.
+- Se Docker não existir ou não estiver rodando, o agente deve verificar Podman com podman --version e podman info.
+- Se a máquina Podman estiver parada, o agente deve executar podman machine start e repetir podman info antes de considerar o teste bloqueado.
+- Testes de integração não devem ser marcados como não aplicáveis apenas porque Docker não está disponível quando Podman está instalado e pode ser iniciado.
+
+Geradores impactados
+--------------------
+- speckit-baseline/SKILL.md passa a incluir preflight Testcontainers com Docker/Podman na seção de padrões de teste.
+- Agente implementador de Story passa a incluir preflight de container runtime antes da implementação.
+- Agente implementador de Fix passa a incluir preflight de container runtime antes da correção.
+
+Documentação
+------------
+- README atualizado para documentar que /commit inicializa Git automaticamente quando necessário.
+- README atualizado para documentar o preflight Testcontainers com fallback para Podman.
+
+Testes adicionados
+------------------
+- Testes de /commit garantindo que git init é executado quando o workspace não é repositório.
+- Teste garantindo que /commit não executa git init quando o workspace já é repositório.
+- Teste do baseline TestingStandardsGenerator garantindo presença do preflight Testcontainers/Podman.
+- Teste do agente implementador de Story garantindo presença do preflight Testcontainers/Podman.
+- Teste do agente implementador de Fix garantindo presença do preflight Testcontainers/Podman.
+
+Validação executada antes do release
+------------------------------------
+- .\\node_modules\\.bin\\vitest.cmd run tests/unit/generator/baseline/generators.test.ts tests/unit/generator/agent/UnifiedAgentGenerator.test.ts tests/unit/generator/fix/generators.test.ts --reporter verbose -> 93 testes / 93 passando
+- .\\node_modules\\.bin\\tsc.cmd --noEmit -> 0 erros
+- npm run lint -> 0 erros, 6 warnings preexistentes
+- npm run test:unit -> 1007 testes / 1007 passando
+- npm run test:unit:coverage -> 1007 testes / 1007 passando; cobertura global 94,14% statements/lines, 85,26% branches, 93,97% functions
+- npm run package -> changelogs validados, build de produção concluído, VSIX gerado e verificado com sucesso
+
+Artefato gerado
+---------------
+- publish/0.3.11/vscode-plugin-speckit-0.3.11.vsix

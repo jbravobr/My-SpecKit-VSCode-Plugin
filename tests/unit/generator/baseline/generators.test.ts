@@ -1,14 +1,14 @@
-import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { parseStory } from '../../../../src/story/StoryParser';
+import { describe, expect, it } from 'vitest';
 import { generateAgentIntegrity } from '../../../../src/generator/baseline/AgentIntegrityGenerator';
-import { generatePerformance } from '../../../../src/generator/baseline/PerformanceGenerator';
 import { generateArchitecture } from '../../../../src/generator/baseline/ArchitectureGenerator';
 import { generateContextManagement } from '../../../../src/generator/baseline/ContextManagementGenerator';
-import { generateTestingStandards } from '../../../../src/generator/baseline/TestingStandardsGenerator';
 import { generateGitWorkflow } from '../../../../src/generator/baseline/GitWorkflowGenerator';
 import { generateObservability } from '../../../../src/generator/baseline/ObservabilityGenerator';
+import { generatePerformance } from '../../../../src/generator/baseline/PerformanceGenerator';
+import { generateTestingStandards } from '../../../../src/generator/baseline/TestingStandardsGenerator';
+import { parseStory } from '../../../../src/story/StoryParser';
 
 const fixturesDir = resolve(__dirname, '../../../fixtures');
 function loadStory(filename: string) {
@@ -91,6 +91,14 @@ describe('TestingStandardsGenerator', () => {
     expect(result).toContain('80%');
     expect(result).toContain('Arrange');
     expect(result).toContain('mock');
+  });
+
+  it('includes Testcontainers preflight with Podman fallback', () => {
+    const result = generateTestingStandards();
+    expect(result).toContain('Pré-flight para Testcontainers');
+    expect(result).toContain('docker info');
+    expect(result).toContain('podman machine start');
+    expect(result).toContain('podman info');
   });
 
   it('includes acceptance criteria section when story has criteria', () => {

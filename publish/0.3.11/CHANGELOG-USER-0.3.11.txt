@@ -1,0 +1,33 @@
+SpecKit — Novidades para usuários — 0.3.11
+==========================================
+Data: 30/04/2026
+
+Resumo
+------
+Esta versão deixa o SpecKit mais resiliente durante sessões reais de desenvolvimento. O plugin agora ajuda a evitar falhas desnecessárias em commits quando o workspace ainda não tem Git inicializado e orienta os agentes a não pularem testes Testcontainers quando Podman pode ser usado como alternativa ao Docker.
+
+O que mudou
+-----------
+- Ao usar @speckit /commit em um workspace que ainda não é repositório Git, o plugin executa git init automaticamente antes de verificar alterações e commitar.
+- Os agentes gerados passam a incluir um preflight para testes com Testcontainers.
+- Quando Docker não está disponível, o agente deve verificar se Podman existe, iniciar a máquina Podman se ela estiver parada e repetir a validação antes de bloquear ou marcar o teste como não aplicável.
+
+Benefício prático
+-----------------
+- Menos interrupções no primeiro commit de um workspace novo.
+- Menos risco de testes de integração serem ignorados indevidamente por falta de Docker quando Podman está instalado.
+- Mais evidência operacional durante execução de testes locais com containers.
+
+Como usar
+---------
+1. Use @speckit /commit normalmente. Se o workspace ainda não tiver Git, o plugin inicializa o repositório antes do commit.
+2. Em stories ou fixes que usam Testcontainers, gere/valide os agentes normalmente.
+3. Durante a execução, o agente seguirá o preflight Docker/Podman antes de decidir que testes de integração estão bloqueados.
+
+Observação
+----------
+O plugin faz uma tentativa operacional segura de inicializar Git e instrui o agente a iniciar Podman quando possível. Caso Podman esteja instalado incorretamente, bloqueado por política local ou com a VM corrompida, a execução ainda pode falhar, mas o agente deverá registrar a evidência em vez de simplesmente pular os testes.
+
+Artefato
+--------
+- publish/0.3.11/vscode-plugin-speckit-0.3.11.vsix

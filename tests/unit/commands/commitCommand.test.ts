@@ -16,6 +16,8 @@ function fakeGit(overrides: Partial<IGitOps> = {}): IGitOps {
     diff: async () => '',
     commit: async () => '[main abc1234] speckit: test\n 1 file changed, 2 insertions',
     hasChanges: async () => true,
+    isRepository: async () => true,
+    init: async () => 'Initialized empty Git repository',
     ...overrides,
   };
 }
@@ -100,6 +102,64 @@ describe('handleCommitCommand', () => {
     expect(capturedMessage).toBe('speckit: refactor: extrair validação');
     expect(stream.getAllMarkdown()).toContain('Commit realizado');
     expect(stream.getAllMarkdown()).toContain('speckit: refactor');
+  });
+
+  it('initializes git repository before committing when workspace is not a repo', async () => {
+    const stream = createMockStream();
+    const ws = new WorkspaceStub();
+    const fs = new InMemoryFileSystem();
+    const calls: string[] = [];
+    const git = fakeGit({
+      isRepository: async () => {
+        calls.push('isRepository');
+        return false;
+      },
+      init: async () => {
+        calls.push('init');
+        return 'Initialized empty Git repository';
+      },
+      hasChanges: async () => {
+        calls.push('hasChanges');
+        return true;
+      },
+      commit: async () => {
+        calls.push('commit');
+        return '[main abc] speckit: feat: inicial';
+      },
+    });
+
+    await handleCommitCommand(createMockRequest('feat: inicial'), stream, token, ws, fs, git);
+
+    expect(calls).toEqual(['isRepository', 'init', 'hasChanges', 'commit']);
+    expect(stream.getAllMarkdown()).toContain('Repositório Git não encontrado');
+    expect(stream.getAllMarkdown()).toContain('git init');
+    expect(stream.getAllMarkdown()).toContain('Commit realizado');
+  });
+
+  it('does not initialize git repository when workspace is already a repo', async () => {
+    const stream = createMockStream();
+    const ws = new WorkspaceStub();
+    let initialized = false;
+    const git = fakeGit({
+      isRepository: async () => true,
+      init: async () => {
+        initialized = true;
+        return 'Initialized empty Git repository';
+      },
+    });
+
+    await handleCommitCommand(
+      createMockRequest('feat: existente'),
+      stream,
+      token,
+      ws,
+      new InMemoryFileSystem(),
+      git,
+    );
+
+    expect(initialized).toBe(false);
+    expect(stream.getAllMarkdown()).not.toContain('Repositório Git não encontrado');
+    expect(stream.getAllMarkdown()).toContain('Commit realizado');
   });
 
   it('writes session log after successful commit', async () => {

@@ -1,0 +1,29 @@
+SpecKit — Novidades para usuários — 0.3.10
+==========================================
+Data: 30/04/2026
+
+Resumo
+------
+Esta versão deixa mais previsível o trabalho com múltiplas stories no SpecKit. Agora, uma story só é considerada bloqueada por outra quando a dependência estiver declarada explicitamente no campo depends-on do metadata. Referências textuais dentro da história continuam úteis como contexto, mas não criam bloqueios automáticos.
+
+O que mudou
+-----------
+- Dependências entre stories passam a ser reconhecidas apenas pelo campo metadata depends-on.
+- Menções a outras stories ou fixes no texto da história, critérios de aceite, fora de escopo, infraestrutura ou contexto são ignoradas para fins de bloqueio.
+- O agente unificado gerado pelo /batch --generate --unified agora segue a mesma regra canônica usada pelo parser e pela análise de dependências do plugin.
+
+Benefício prático
+-----------------
+- Evita bloqueios inesperados quando uma story apenas cita outra entrega como referência ou contexto.
+- Torna o fluxo de execução em lote mais determinístico e fácil de auditar.
+- Deixa claro onde declarar uma dependência real: no campo depends-on do bloco de metadata.
+
+Como usar
+---------
+1. Para bloquear uma story até outra ser concluída, preencha depends-on no metadata da story.
+2. Para apenas citar outra story como contexto, mencione-a no texto normalmente sem preencher depends-on.
+3. Execute @speckit /batch ou @speckit /batch --generate --unified para ver o estado das stories com base nas dependências canônicas.
+
+Artefato
+--------
+- publish/0.3.10/vscode-plugin-speckit-0.3.10.vsix

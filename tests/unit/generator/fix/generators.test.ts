@@ -237,6 +237,13 @@ describe('Fix Agent Generators — no tool-setup instructions', () => {
     expect(result).toContain('Protocolo de governança');
   });
 
+  it('fix-implementador agent contains container runtime preflight for Testcontainers and Podman', () => {
+    const result = generateFixImplementadorAgent(completeFix, mockStack);
+    expect(result).toContain('Pré-flight para Testcontainers');
+    expect(result).toContain('docker info');
+    expect(result).toContain('podman machine start');
+  });
+
   it('fix-revisor agent does NOT contain tool-setup instructions', () => {
     const result = generateFixRevisorAgent(completeFix, mockStack);
     expect(result).not.toContain('PRÉ-REQUISITO OBRIGATÓRIO');

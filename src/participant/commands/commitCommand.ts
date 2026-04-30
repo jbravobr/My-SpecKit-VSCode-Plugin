@@ -28,6 +28,12 @@ export async function handleCommitCommand(
   }
 
   try {
+    const isRepository = await git.isRepository(workspaceRoot);
+    if (!isRepository) {
+      await git.init(workspaceRoot);
+      stream.markdown('ℹ️ Repositório Git não encontrado. `git init` executado no workspace.\n\n');
+    }
+
     const hasChanges = await git.hasChanges(workspaceRoot);
     if (!hasChanges) {
       stream.markdown('✅ Nada para commitar — working tree limpa.\n');

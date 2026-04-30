@@ -1,4 +1,5 @@
 import { Story } from '../../story/Story';
+import { generateContainerRuntimePreflightSection } from '../utils/ContainerRuntimePreflight';
 
 export function generateTestingStandards(story?: Story): string {
   const criteriaSection = buildAcceptanceCriteriaSection(story);
@@ -36,6 +37,7 @@ ${criteriaSection}
 - Java: \`<Classe>Test.java\` (JUnit) ou \`<Classe>Spec.groovy\` (Spock)
 - C#: \`<Classe>Tests.cs\` (xUnit/NUnit)
 - Python: \`test_<arquivo>.py\` (pytest)
+${generateContainerRuntimePreflightSection()}
 ${perfSection}
 ## O que NÃO é aceitável
 - **"Build passou, então funciona"** — build com transpiladores (esbuild, swc, tsc emit) NÃO verifica tipos. Execute \`tsc --noEmit\` (TS), \`mypy\` (Python), \`dotnet build\` (C#) como gate separado

@@ -4,6 +4,8 @@ export interface IGitOps {
   diff(cwd: string, full: boolean): Promise<string>;
   commit(cwd: string, message: string): Promise<string>;
   hasChanges(cwd: string): Promise<boolean>;
+  isRepository(cwd: string): Promise<boolean>;
+  init(cwd: string): Promise<string>;
 }
 
 const MAX_OUTPUT_BYTES = 50 * 1024; // 50KB
@@ -35,6 +37,11 @@ function execGit(args: string[], cwd: string): Promise<string> {
   });
 }
 
+function isNotGitRepositoryError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return message.toLowerCase().includes('not a git repository');
+}
+
 export const gitOps: IGitOps = {
   async diff(cwd: string, full: boolean): Promise<string> {
     const args = full ? ['diff', 'HEAD'] : ['diff', 'HEAD', '--stat'];
@@ -49,5 +56,19 @@ export const gitOps: IGitOps = {
   async hasChanges(cwd: string): Promise<boolean> {
     const status = await execGit(['status', '--porcelain'], cwd);
     return status.trim().length > 0;
+  },
+
+  async isRepository(cwd: string): Promise<boolean> {
+    try {
+      const output = await execGit(['rev-parse', '--is-inside-work-tree'], cwd);
+      return output.trim() === 'true';
+    } catch (err: unknown) {
+      if (isNotGitRepositoryError(err)) return false;
+      throw err;
+    }
+  },
+
+  async init(cwd: string): Promise<string> {
+    return execGit(['init'], cwd);
   },
 };
