@@ -244,6 +244,15 @@ describe('Fix Agent Generators — no tool-setup instructions', () => {
     expect(result).toContain('podman machine start');
   });
 
+  it('fix-implementador agent contains git init recovery for missing repository', () => {
+    const result = generateFixImplementadorAgent(completeFix, mockStack);
+    expect(result).toContain('Setup git resiliente');
+    expect(result).toContain('git rev-parse --is-inside-work-tree');
+    expect(result).toContain('git init');
+    expect(result).toContain('fix/001-<slug>');
+    expect(result).toContain('Repita exatamente o mesmo `git add` e o mesmo `git commit`');
+  });
+
   it('fix-revisor agent does NOT contain tool-setup instructions', () => {
     const result = generateFixRevisorAgent(completeFix, mockStack);
     expect(result).not.toContain('PRÉ-REQUISITO OBRIGATÓRIO');

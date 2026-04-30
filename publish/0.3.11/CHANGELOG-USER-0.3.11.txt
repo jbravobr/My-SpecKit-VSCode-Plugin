@@ -9,20 +9,23 @@ Esta versão deixa o SpecKit mais resiliente durante sessões reais de desenvolv
 O que mudou
 -----------
 - Ao usar @speckit /commit em um workspace que ainda não é repositório Git, o plugin executa git init automaticamente antes de verificar alterações e commitar.
+- As sessões com agentes implementadores também passam a receber instruções para inicializar Git quando encontrarem erro de workspace fora de um repositório.
 - Os agentes gerados passam a incluir um preflight para testes com Testcontainers.
 - Quando Docker não está disponível, o agente deve verificar se Podman existe, iniciar a máquina Podman se ela estiver parada e repetir a validação antes de bloquear ou marcar o teste como não aplicável.
 
 Benefício prático
 -----------------
 - Menos interrupções no primeiro commit de um workspace novo.
+- Menos falhas em sessões autônomas de implementação quando o agente executa git commit diretamente.
 - Menos risco de testes de integração serem ignorados indevidamente por falta de Docker quando Podman está instalado.
 - Mais evidência operacional durante execução de testes locais com containers.
 
 Como usar
 ---------
 1. Use @speckit /commit normalmente. Se o workspace ainda não tiver Git, o plugin inicializa o repositório antes do commit.
-2. Em stories ou fixes que usam Testcontainers, gere/valide os agentes normalmente.
-3. Durante a execução, o agente seguirá o preflight Docker/Podman antes de decidir que testes de integração estão bloqueados.
+2. Em sessões com agentes implementadores de Story ou Fix, o agente validará git rev-parse --is-inside-work-tree antes de checkout/commit e executará git init se o workspace ainda não for repositório.
+3. Em stories ou fixes que usam Testcontainers, gere/valide os agentes normalmente.
+4. Durante a execução, o agente seguirá o preflight Docker/Podman antes de decidir que testes de integração estão bloqueados.
 
 Observação
 ----------

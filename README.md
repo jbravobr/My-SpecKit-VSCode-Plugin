@@ -618,7 +618,7 @@ Faz auto-stage de todas as alterações e commit com prefixo `speckit:`.
 
 > O commit só executa se houver alterações pendentes. Caso contrário: `✅ Nada para commitar — working tree limpa.`
 
-> Se o workspace ainda não for um repositório Git, o `/commit` executa `git init` automaticamente antes de verificar alterações e commitar.
+> Se o workspace ainda não for um repositório Git, o `/commit` executa `git init` automaticamente antes de verificar alterações e commitar. Os agentes implementadores gerados também recebem um preflight Git: ao encontrar `not a git repository` em `checkout`, `pull` ou `commit`, devem executar `git init` no workspace e repetir o mesmo commit uma única vez.
 
 > Todos os commits são registrados no audit log automaticamente.
 
@@ -1032,12 +1032,13 @@ O conjunto exato varia conforme a stack declarada. Abaixo a estrutura completa c
 | `02-architecture`        | Respeitar arquitetura definida; SOLID; **timeout + retry + circuit breaker** em todo cliente HTTP; propagar `traceparent`                                                   |
 | `03-context-management`  | Não misturar módulos; pedir arquivos antes de propor; declarar contexto insuficiente                                                                                        |
 | `04-testing-standards`   | Happy path + edge + error; AAA obrigatório; **cenários dos critérios de aceite**; testes de carga com SLO declarado ou baseline; preflight Testcontainers com Docker/Podman |
-| `05-git-workflow`        | Conventional Commits; branch `feature/<id>-<slug>`; nunca commit direto em main                                                                                             |
+| `05-git-workflow`        | Conventional Commits; branch `feature/<id>-<slug>`; preflight `git init` quando workspace ainda não é repo; nunca commit direto em main                                     |
 | `06-credential-security` | IAM roles; secrets via SecretsManager/Vault; nunca logar tokens/senhas                                                                                                      |
 | `07-observability`       | JSON com `traceId`; `traceparent` W3C; Prometheus; **SLOs parametrizados**; consumer lag em Kafka/SQS                                                                       |
 | `08-security-tests`      | Sem token → 401; expirado → 401; role insuficiente → 403; SQL injection → 400; sem stack trace no response                                                                  |
 
 > Quando testes de integração usam Testcontainers e Docker não está disponível, o agente deve verificar Podman, executar `podman machine start` se a máquina estiver parada e só então repetir a execução dos testes.
+> Quando uma sessão com agente implementador executa Git diretamente, o agente deve validar `git rev-parse --is-inside-work-tree` antes de `checkout`/`commit`; se receber `not a git repository`, deve executar `git init`, confirmar com `git status` e repetir o mesmo `git add`/`git commit` apenas uma vez.
 
 #### Infraestrutura (seções em `speckit-stack/SKILL.md`, se detectadas)
 

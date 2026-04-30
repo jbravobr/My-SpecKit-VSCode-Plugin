@@ -14,6 +14,14 @@ Correções funcionais
 - A abstração GitOperations passou a expor isRepository e init para permitir detecção e inicialização controlada do repositório.
 - O fluxo de /diff continua sem inicializar repositório; a mudança é restrita ao /commit.
 
+Preflight Git para agentes implementadores
+------------------------------------------
+- Criado gerador compartilhado GitRepositoryPreflight para instruir agentes a validar git rev-parse --is-inside-work-tree antes de checkout, pull ou commit.
+- Agente implementador de Story agora inicializa o repositório com git init quando o workspace ainda não é um repositório Git e segue para a branch feature/<story-id>-<slug>.
+- Agente implementador de Fix agora aplica o mesmo preflight antes de criar a branch fix/<fix-id>-<slug>.
+- Se um git commit executado pelo agente falhar com not a git repository, o agente deve executar git init, confirmar com git status e repetir exatamente o mesmo git add/git commit uma única vez.
+- O fallback não deve ser usado para outros erros de commit, como hook falhando, identidade Git ausente, conflitos ou mensagem inválida.
+
 Preflight para Testcontainers
 -----------------------------
 - Criado gerador compartilhado ContainerRuntimePreflight para instruir agentes a validar runtime local de containers antes de executar testes de integração.
@@ -25,8 +33,10 @@ Preflight para Testcontainers
 Geradores impactados
 --------------------
 - speckit-baseline/SKILL.md passa a incluir preflight Testcontainers com Docker/Podman na seção de padrões de teste.
+- speckit-baseline/SKILL.md passa a incluir preflight Git obrigatório na seção de workflow Git.
 - Agente implementador de Story passa a incluir preflight de container runtime antes da implementação.
 - Agente implementador de Fix passa a incluir preflight de container runtime antes da correção.
+- Agentes implementadores de Story e Fix passam a incluir recuperação controlada para repositório Git ausente.
 
 Documentação
 ------------
@@ -40,14 +50,17 @@ Testes adicionados
 - Teste do baseline TestingStandardsGenerator garantindo presença do preflight Testcontainers/Podman.
 - Teste do agente implementador de Story garantindo presença do preflight Testcontainers/Podman.
 - Teste do agente implementador de Fix garantindo presença do preflight Testcontainers/Podman.
+- Teste do baseline GitWorkflowGenerator garantindo presença do preflight Git e recuperação via git init.
+- Teste do agente implementador de Story garantindo presença do preflight Git e retry de commit para repositório ausente.
+- Teste do agente implementador de Fix garantindo presença do preflight Git e retry de commit para repositório ausente.
 
 Validação executada antes do release
 ------------------------------------
-- .\\node_modules\\.bin\\vitest.cmd run tests/unit/generator/baseline/generators.test.ts tests/unit/generator/agent/UnifiedAgentGenerator.test.ts tests/unit/generator/fix/generators.test.ts --reporter verbose -> 93 testes / 93 passando
+- .\\node_modules\\.bin\\vitest.cmd run tests/unit/generator/baseline/generators.test.ts tests/unit/generator/agent/UnifiedAgentGenerator.test.ts tests/unit/generator/fix/generators.test.ts --reporter verbose -> 96 testes / 96 passando
 - .\\node_modules\\.bin\\tsc.cmd --noEmit -> 0 erros
 - npm run lint -> 0 erros, 6 warnings preexistentes
-- npm run test:unit -> 1007 testes / 1007 passando
-- npm run test:unit:coverage -> 1007 testes / 1007 passando; cobertura global 94,14% statements/lines, 85,26% branches, 93,97% functions
+- npm run test:unit -> 1010 testes / 1010 passando
+- npm run test:unit:coverage -> 1010 testes / 1010 passando; cobertura global 94,15% statements/lines, 85,28% branches, 94,02% functions
 - npm run package -> changelogs validados, build de produção concluído, VSIX gerado e verificado com sucesso
 
 Artefato gerado

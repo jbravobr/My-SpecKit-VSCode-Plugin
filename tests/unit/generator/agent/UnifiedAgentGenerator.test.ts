@@ -133,6 +133,16 @@ describe('generateImplementadorContent', () => {
     expect(result).toContain('podman machine start');
   });
 
+  it('contains git repository preflight and commit recovery for missing repository', () => {
+    const result = generateImplementadorContent(completeStory);
+    expect(result).toContain('Setup git resiliente');
+    expect(result).toContain('git rev-parse --is-inside-work-tree');
+    expect(result).toContain('git init');
+    expect(result).toContain('feature/001-<slug>');
+    expect(result).toContain('Repita exatamente o mesmo `git add` e o mesmo `git commit`');
+    expect(result).toContain('Não execute `git init` para outros erros de commit');
+  });
+
   it('includes acceptance criteria from story', () => {
     const result = generateImplementadorContent(completeStory);
     expect(result).toContain('Botão "Login com GitHub"');

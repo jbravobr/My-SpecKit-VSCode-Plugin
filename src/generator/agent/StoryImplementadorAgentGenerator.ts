@@ -1,5 +1,6 @@
 import { Story } from '../../story/Story';
 import { generateContainerRuntimePreflightSection } from '../utils/ContainerRuntimePreflight';
+import { generateGitRepositoryPreflightSection } from '../utils/GitRepositoryPreflight';
 import { AGENT_TOOLS_YAML } from './agentTools';
 
 export function generateImplementadorAgent(story: Story): string {
@@ -136,11 +137,7 @@ ${generateContainerRuntimePreflightSection()}
 
 ## Gate 1 — Implementação
 
-### Setup git
-\`\`\`bash
-git checkout develop && git pull
-git checkout -b feature/${storyId}-<slug>
-\`\`\`
+${generateGitRepositoryPreflightSection(`feature/${storyId}-<slug>`)}
 
 ### Planejamento de tarefas (faça ANTES de escrever qualquer código)
 

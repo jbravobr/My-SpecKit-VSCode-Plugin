@@ -73,6 +73,15 @@ describe('baseline static generators', () => {
     expect(result).toContain('Conventional Commits');
     expect(result).toContain('feature/');
   });
+
+  it('GitWorkflow: covers git init recovery when workspace is not a repository', () => {
+    const result = generateGitWorkflow();
+    expect(result).toContain('Pré-flight Git obrigatório');
+    expect(result).toContain('git rev-parse --is-inside-work-tree');
+    expect(result).toContain('not a git repository');
+    expect(result).toContain('git init');
+    expect(result).toContain('repita exatamente o mesmo `git add` e `git commit` uma única vez');
+  });
 });
 
 describe('TestingStandardsGenerator', () => {
