@@ -62,6 +62,19 @@ describe('handleBatchCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Nenhuma spec encontrada');
   });
 
+  it('shows guidance for invalid flags', async () => {
+    const fs = seedFs([{ fileName: 'STORY-001.md', content: completeStoryMd }]);
+    const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+    const stream = createMockStream();
+
+    await handleBatchCommand(createMockRequest('--full'), stream, createMockToken(), fs, workspace);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Parâmetro(s) inválido(s)');
+    expect(output).toContain('--generate');
+    expect(output).toContain('--unified');
+  });
+
   it('validates all specs in parallel and shows summary', async () => {
     const fs = seedFs([
       { fileName: 'STORY-001.md', content: completeStoryMd },

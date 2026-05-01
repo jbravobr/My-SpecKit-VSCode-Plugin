@@ -57,6 +57,21 @@ export async function handleBatchCommand(
 ): Promise<void> {
   const workspaceRoot = requireWorkspace(workspace, stream);
   if (!workspaceRoot) return;
+
+  const prompt = (request.prompt ?? '').toLowerCase();
+  const flags = prompt.split(/\s+/).filter((token) => token.startsWith('--'));
+  const allowedFlags = new Set(['--generate', '--gen', '--unified']);
+  const invalidFlags = flags.filter((flag) => !allowedFlags.has(flag));
+
+  if (invalidFlags.length > 0) {
+    stream.markdown(
+      `❌ Parâmetro(s) inválido(s) em /batch: ${invalidFlags.map((flag) => `\`${flag}\``).join(', ')}\n\n` +
+        '**Uso:** `@speckit /batch [--generate|--gen] [--unified]`\n' +
+        'Dica: para modo unificado, use `@speckit /batch --generate --unified`.',
+    );
+    return;
+  }
+
   const commandExecutionId = createCorrelationId('exec');
   const batchId = createCorrelationId('batch');
   const audit = new AuditLogger(workspaceRoot, fs);
@@ -107,7 +122,6 @@ export async function handleBatchCommand(
   // Phase 2: Report validation summary
   emitSummary(stream, entries, valid, invalid, errored, skipped);
 
-  const prompt = request.prompt ?? '';
   const generateConfigs = prompt.includes('--generate') || prompt.includes('--gen');
   const useUnified = prompt.includes('--unified');
 

@@ -1,0 +1,3 @@
+Release 0.3.15
+
+Pacote de UX para descobribilidade de parâmetros no chat do SpecKit: foram adicionados aliases de comando no dispatcher e no menu do chat (`status-all`, `batch-generate`, `batch-unified`, `help`, `help-status`), criado o handler dedicado `/help` com ajuda geral e tópica por comando, e incluídas validações de flags inválidas em `/status` e `/batch` com mensagens de uso e sugestões direcionadas. Também foram atualizados testes unitários e documentação para cobrir os novos fluxos e manter regressão controlada.

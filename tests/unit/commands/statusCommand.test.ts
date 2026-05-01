@@ -47,6 +47,25 @@ describe('handleStatusCommand', () => {
     expect(stream.getAllMarkdown()).toContain('workspace');
   });
 
+  it('shows guidance for invalid flags', async () => {
+    const stream = createMockStream();
+    const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+    const fs = seedFs(completeStoryMd);
+
+    await handleStatusCommand(
+      createMockRequest('--everything'),
+      stream,
+      createMockToken(),
+      fs,
+      workspace,
+    );
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Parâmetro(s) inválido(s)');
+    expect(output).toContain('--all');
+    expect(output).toContain('--closed');
+  });
+
   it('shows story title in output', async () => {
     const stream = createMockStream();
     const fs = seedFs(completeStoryMd);
@@ -171,6 +190,19 @@ describe('handleStatusCommand', () => {
     expect(stream.getAllMarkdown()).toContain('nenhuma');
   });
 
+  it('includes done stories when --all is used', async () => {
+    const stream = createMockStream();
+    const fs = seedFs(doneStoryMd);
+    const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+
+    await handleStatusCommand(createMockRequest('--all'), stream, createMockToken(), fs, workspace);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Stories (1)');
+    expect(output).toContain('Done Story');
+    expect(output).toContain('[done]');
+  });
+
   // ── Fix branches ──────────────────────────────────────────────────────────
 
   it('skips fix with status done', async () => {
@@ -217,6 +249,19 @@ describe('handleStatusCommand', () => {
     await handleStatusCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('erro ao ler arquivo');
+  });
+
+  it('includes done fixes when --all is used', async () => {
+    const stream = createMockStream();
+    const fs = seedFs(doneFixMd, 'FIX-001.md');
+    const workspace = new WorkspaceStub({ storyFiles: [], fixFiles: ['FIX-001.md'] });
+
+    await handleStatusCommand(createMockRequest('--all'), stream, createMockToken(), fs, workspace);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Fixes (1)');
+    expect(output).toContain('Done Fix');
+    expect(output).toContain('[done]');
   });
 
   // ── Gate labels ───────────────────────────────────────────────────────────

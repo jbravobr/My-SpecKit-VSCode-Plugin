@@ -325,6 +325,14 @@ Exibe resumo de todas as specs abertas no workspace:
 - **Fixes:** título, severidade (🐛 critical / high / medium / low), gate atual (`🚪 Gate N — Label`)
 - Specs com `status: done` ou `cancelled` são ocultadas automaticamente
 
+**Opções:**
+
+- `@speckit /status` → mostra somente specs abertas
+- `@speckit /status --all` (ou `--closed`) → inclui specs `done` e `cancelled`
+- `@speckit /status-all` → atalho para `@speckit /status --all`
+
+Se você passar um parâmetro inválido, o comando retorna o uso correto e sugere as flags suportadas.
+
 **Exemplo de output:**
 
 ```
@@ -335,6 +343,28 @@ Stories abertas (2):
 Fixes abertos (1):
 - 🐛 FIX-001.md — Login OAuth2 500 [high]  | 🚪 Gate 2 — Testes
 ```
+
+### `@speckit /help`
+
+Ajuda rápida para descobrir parâmetros e atalhos sem sair do chat.
+
+**Uso:**
+
+```
+@speckit /help
+@speckit /help status
+@speckit /help batch
+@speckit /help validate
+@speckit /help draft
+@speckit /help-status
+```
+
+**Atalhos úteis para descobrir parâmetros:**
+
+- `@speckit /status-all` → `@speckit /status --all`
+- `@speckit /batch-generate` → `@speckit /batch --generate`
+- `@speckit /batch-unified` → `@speckit /batch --generate --unified`
+- `@speckit /help-status` → `@speckit /help status`
 
 ---
 
@@ -750,7 +780,11 @@ Processa **todas** as specs em `.speckit/` em lote — validação paralela + ge
 @speckit /batch                        → Valida todas as specs e mostra resumo
 @speckit /batch --generate             → Valida + gera config Copilot para cada spec válida
 @speckit /batch --generate --unified   → Gera agentes unificados (implementador + revisor por story)
+@speckit /batch-generate               → Atalho para /batch --generate
+@speckit /batch-unified                → Atalho para /batch --generate --unified
 ```
+
+Se você passar um parâmetro inválido, o comando retorna o uso correto e sugere a combinação recomendada.
 
 **Resumo de validação:**
 
@@ -889,6 +923,8 @@ Inicializa o workspace e consolida specs dispersas em `.speckit/`.
 ### Sem comando (help)
 
 Se chamar `@speckit` sem comando ou com comando desconhecido, exibe a lista de comandos disponíveis.
+
+Para ajuda detalhada por comando, use `@speckit /help`.
 
 ---
 
@@ -2269,15 +2305,16 @@ Cada entrada contém o comando executado, o resultado e metadados relevantes. Ú
 
 ### Criando specs
 
-| Você quer...                | Diga                                                   |
-| --------------------------- | ------------------------------------------------------ |
-| Criar story por texto livre | `@speckit /draft Quero calcular comissão via Kafka`    |
-| Criar story por template    | `@speckit /new`                                        |
-| Criar fix por texto livre   | `@speckit /draft Login retorna 500 após expirar token` |
-| Criar fix por template      | `@speckit /fix`                                        |
-| Validar e gerar arquivos    | `@speckit /validate`                                   |
-| Ver todas as specs abertas  | `@speckit /status`                                     |
-| Ver histórico agregado      | `@speckit /history`                                    |
+| Você quer...                  | Diga                                                   |
+| ----------------------------- | ------------------------------------------------------ |
+| Criar story por texto livre   | `@speckit /draft Quero calcular comissão via Kafka`    |
+| Criar story por template      | `@speckit /new`                                        |
+| Criar fix por texto livre     | `@speckit /draft Login retorna 500 após expirar token` |
+| Criar fix por template        | `@speckit /fix`                                        |
+| Validar e gerar arquivos      | `@speckit /validate`                                   |
+| Ver todas as specs abertas    | `@speckit /status`                                     |
+| Incluir concluídas/canceladas | `@speckit /status --all`                               |
+| Ver histórico agregado        | `@speckit /history`                                    |
 
 ### Trabalhando com gates
 

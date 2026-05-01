@@ -2,7 +2,7 @@
   "name": "vscode-plugin-speckit",
   "displayName": "SpecKit — Spec Driven Development",
   "description": "Defina sua história e configure o Copilot para desenvolvimento orientado a spec",
-  "version": "0.3.14",
+  "version": "0.3.15",
   "icon": "assets/speckit_icon.png",
   "publisher": "local",
   "engines": {
@@ -37,6 +37,10 @@
           {
             "name": "status",
             "description": "Exibir resumo de todas as specs abertas (Stories e Fixes)"
+          },
+          {
+            "name": "status-all",
+            "description": "Atalho para /status --all (inclui done/cancelled)"
           },
           {
             "name": "draft",
@@ -81,6 +85,22 @@
           {
             "name": "batch",
             "description": "Processar todas as specs em lote — validar e gerar configuração Copilot"
+          },
+          {
+            "name": "batch-generate",
+            "description": "Atalho para /batch --generate"
+          },
+          {
+            "name": "batch-unified",
+            "description": "Atalho para /batch --generate --unified"
+          },
+          {
+            "name": "help",
+            "description": "Ajuda rápida de comandos e parâmetros"
+          },
+          {
+            "name": "help-status",
+            "description": "Atalho para /help status"
           },
           {
             "name": "init",

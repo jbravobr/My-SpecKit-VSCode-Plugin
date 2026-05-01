@@ -12,6 +12,7 @@ import { handleDoctorCommand } from './commands/doctorCommand';
 import { handleDraftCommand } from './commands/draftCommand';
 import { handleFixCommand } from './commands/fixCommand';
 import { handleGateCommand } from './commands/gateCommand';
+import { handleHelpCommand } from './commands/helpCommand';
 import { handleHistoryCommand } from './commands/historyCommand';
 import { handleInitCommand } from './commands/initCommand';
 import { handleNewCommand } from './commands/newCommand';
@@ -20,6 +21,24 @@ import { handleTraceCommand } from './commands/traceCommand';
 import { handleValidateCommand } from './commands/validateCommand';
 
 const LLM_HISTORY_COMMANDS = new Set<string>(['new', 'fix', 'draft', 'batch', 'validate']);
+
+function withPrompt(request: vscode.ChatRequest, prompt: string): vscode.ChatRequest {
+  return {
+    ...request,
+    prompt,
+  };
+}
+
+function appendFlags(prompt: string | undefined, flags: string[]): string {
+  const baseTokens = (prompt ?? '').trim().split(/\s+/).filter(Boolean);
+  const tokenSet = new Set(baseTokens.map((token) => token.toLowerCase()));
+  for (const flag of flags) {
+    if (!tokenSet.has(flag.toLowerCase())) {
+      baseTokens.push(flag);
+    }
+  }
+  return baseTokens.join(' ');
+}
 
 export async function handleSpeckitRequest(
   request: vscode.ChatRequest,
@@ -48,6 +67,13 @@ export async function handleSpeckitRequest(
         break;
       case 'status':
         await handleStatusCommand(request, stream, token);
+        break;
+      case 'status-all':
+        await handleStatusCommand(
+          withPrompt(request, appendFlags(request.prompt, ['--all'])),
+          stream,
+          token,
+        );
         break;
       case 'draft':
         await handleDraftCommand(request, stream, token);
@@ -82,6 +108,26 @@ export async function handleSpeckitRequest(
       case 'batch':
         await handleBatchCommand(request, stream, token);
         break;
+      case 'batch-generate':
+        await handleBatchCommand(
+          withPrompt(request, appendFlags(request.prompt, ['--generate'])),
+          stream,
+          token,
+        );
+        break;
+      case 'batch-unified':
+        await handleBatchCommand(
+          withPrompt(request, appendFlags(request.prompt, ['--generate', '--unified'])),
+          stream,
+          token,
+        );
+        break;
+      case 'help':
+        await handleHelpCommand(request, stream, token);
+        break;
+      case 'help-status':
+        await handleHelpCommand(withPrompt(request, 'status'), stream, token);
+        break;
       case 'init':
         await handleInitCommand(request, stream, token);
         break;
@@ -94,6 +140,7 @@ export async function handleSpeckitRequest(
             '- `/draft` — Rascunhar uma spec (story ou fix) a partir de texto livre\n' +
             '- `/validate` — Validar a spec ativa e gerar configuração Copilot\n' +
             '- `/status` — Ver todas as specs abertas (Stories e Fixes)\n' +
+            '- `/status-all` — Atalho para `/status --all`\n' +
             '- `/agent` — Alternar modo do agente (debugger, refactor, implementador, revisor)\n' +
             '- `/gate` — Exibir regras de gate e validar transições\n' +
             '- `/audit` — Visualizar log de auditoria\n' +
@@ -104,6 +151,10 @@ export async function handleSpeckitRequest(
             '- `/context` — Gerenciar arquivos de contexto\n' +
             '- `/doctor` — Diagnóstico de saúde do workspace\n' +
             '- `/batch` — Processar todas as specs em lote (validar + gerar config)\n' +
+            '- `/batch-generate` — Atalho para `/batch --generate`\n' +
+            '- `/batch-unified` — Atalho para `/batch --generate --unified`\n' +
+            '- `/help` — Ajuda rápida de comandos e parâmetros\n' +
+            '- `/help-status` — Atalho para `/help status`\n' +
             '- `/init` — Inicializar workspace e consolidar specs em .speckit/\n',
         );
     }
