@@ -16,11 +16,19 @@ import { handleHelpCommand } from './commands/helpCommand';
 import { handleHistoryCommand } from './commands/historyCommand';
 import { handleInitCommand } from './commands/initCommand';
 import { handleNewCommand } from './commands/newCommand';
+import { handleReviewAutoCommand } from './commands/reviewAutoCommand';
 import { handleStatusCommand } from './commands/statusCommand';
 import { handleTraceCommand } from './commands/traceCommand';
 import { handleValidateCommand } from './commands/validateCommand';
 
-const LLM_HISTORY_COMMANDS = new Set<string>(['new', 'fix', 'draft', 'batch', 'validate']);
+const LLM_HISTORY_COMMANDS = new Set<string>([
+  'new',
+  'fix',
+  'draft',
+  'batch',
+  'validate',
+  'review-auto',
+]);
 
 function withPrompt(request: vscode.ChatRequest, prompt: string): vscode.ChatRequest {
   return {
@@ -131,6 +139,9 @@ export async function handleSpeckitRequest(
       case 'init':
         await handleInitCommand(request, stream, token);
         break;
+      case 'review-auto':
+        await handleReviewAutoCommand(request, stream, token);
+        break;
       default:
         stream.markdown(
           '**SpecKit** — Spec Driven Development\n\n' +
@@ -155,6 +166,7 @@ export async function handleSpeckitRequest(
             '- `/batch-unified` — Atalho para `/batch --generate --unified`\n' +
             '- `/help` — Ajuda rápida de comandos e parâmetros\n' +
             '- `/help-status` — Atalho para `/help status`\n' +
+            '- `/review-auto` — Orquestrar transição para Gate 3 e executar revisão automática\n' +
             '- `/init` — Inicializar workspace e consolidar specs em .speckit/\n',
         );
     }

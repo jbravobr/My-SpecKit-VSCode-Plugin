@@ -50,6 +50,12 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     usage: ['@speckit /help', '@speckit /help status', '@speckit /help batch'],
     aliases: ['/help-status'],
   },
+  'review-auto': {
+    title: '/review-auto',
+    summary:
+      'Orquestra a transição para Gate 3, coleta evidências e força execução de revisão no mesmo fluxo.',
+    usage: ['@speckit /review-auto'],
+  },
 };
 
 const TOPIC_ALIASES: Record<string, string> = {
@@ -71,6 +77,7 @@ function renderGeneralHelp(): string {
     '- `/status [--all|--closed]`\n' +
     '- `/batch [--generate|--gen] [--unified]`\n' +
     '- `/validate [--devtools]`\n' +
+    '- `/review-auto`\n' +
     '- `/draft [--fix|--refactoring|--spike]`\n\n' +
     '**Atalhos (aliases):**\n' +
     '- `/status-all` → `/status --all`\n' +
@@ -119,7 +126,7 @@ export async function handleHelpCommand(
   if (!topic) {
     stream.markdown(
       `❌ Comando não reconhecido em /help: \`${rawTopic}\`\n\n` +
-        '**Tópicos disponíveis:** status, batch, validate, draft, help\n' +
+        '**Tópicos disponíveis:** status, batch, validate, review-auto, draft, help\n' +
         'Use `@speckit /help` para ver a ajuda geral.',
     );
     return;

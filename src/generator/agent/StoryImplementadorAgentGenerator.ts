@@ -93,9 +93,24 @@ Gates 0–2 completos. **Não encerre a sessão.**
 
 O fluxo unificado deve continuar imediatamente para o protocolo de transição (Gate 2 → Gate 3) e iniciar o MODO REVISOR no mesmo agente.
 
-Antes de iniciar o MODO REVISOR, atualize obrigatoriamente o metadata em \`.speckit/STORY-${storyId}.md\` para:
-- \`gate: 3\`
-- \`status: review\`
+  Antes de iniciar o MODO REVISOR:
+  1. Finalize commit local pendente do Gate 2:
+    - Execute \`git status --porcelain\`
+    - Se houver alterações, execute:
+      \`git add -A\`
+      \`git commit -m "test(${storyId}): fechamento do gate 2"\`
+    - Se falhar por erro operacional, tente \`@speckit /commit\` sem mensagem
+    - Só peça ação manual ao usuário se as duas tentativas falharem
+  2. Atualize obrigatoriamente o metadata em \`.speckit/STORY-${storyId}.md\` para:
+    - \`gate: 3\`
+    - \`status: review\`
+  3. Emita no chat o handoff explícito:
+    - "✅ Gates 0-2 concluídos"
+    - "🔁 Handoff: IMPLEMENTADOR → REVISOR"
+    - "🚪 Gate atualizado: 2 → 3"
+    - "📌 Status atualizado: in-progress/open → review"
+  4. Execute \`@speckit /review-auto\` para consolidar evidências e bloquear inconsistências automáticas
+  5. Sem aguardar novo comando do usuário, execute imediatamente o checklist completo do Gate 3 e emita veredito (APROVADO/ALTERAÇÕES SOLICITADAS)
 
 Sem persistir esse metadata, a troca de gate não foi concluída.
 
@@ -103,7 +118,26 @@ Não selecione outro agente neste ponto.
 `
     : `## Sessão A concluída
 
-Gates 0–2 completos. **Encerre esta sessão.**
+  Gates 0–2 completos.
+
+  Antes de encerrar esta sessão, execute o handoff obrigatório:
+  1. Finalize commit local pendente do Gate 2:
+    - Execute \`git status --porcelain\`
+    - Se houver alterações, execute:
+      \`git add -A\`
+      \`git commit -m "test(${storyId}): fechamento do gate 2"\`
+    - Se falhar por erro operacional, tente \`@speckit /commit\` sem mensagem
+    - Só peça ação manual ao usuário se as duas tentativas falharem
+  2. Atualize \`.speckit/STORY-${storyId}.md\` com:
+    - \`gate: 3\`
+    - \`status: review\`
+  3. Emita no chat o handoff explícito:
+    - "✅ Gates 0-2 concluídos"
+    - "🔁 Handoff: IMPLEMENTADOR → REVISOR"
+    - "🚪 Gate atualizado: 2 → 3"
+    - "📌 Status atualizado: in-progress/open → review"
+
+  Agora sim, **encerre esta sessão.**
 
 Para iniciar a revisão independente, o usuário deve selecionar o agente **speckit-revisor** no dropdown de agentes do Copilot Chat.
 

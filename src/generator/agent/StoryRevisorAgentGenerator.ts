@@ -59,7 +59,9 @@ Antes de iniciar qualquer avaliação:
    git diff develop...HEAD --name-only
    \`\`\`
 3. Leia cada arquivo modificado
-4. Solicite ao usuário que cole o relatório de cobertura da Sessão A
+4. Evidência de cobertura/testes:
+  - Se o relatório da Sessão A já foi emitido nesta sessão, reutilize essa evidência e prossiga
+  - Se não houver evidência disponível no contexto, solicite ao usuário o relatório de cobertura da Sessão A
 
 Só inicie o checklist após concluir os 4 passos acima.
 

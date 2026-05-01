@@ -160,6 +160,18 @@ describe('handleSpeckitRequest — dispatcher', () => {
     expect(output).toContain('--all');
   });
 
+  it('routes /review-auto to orchestrated review command', async () => {
+    const stream = createMockStream();
+    await handleSpeckitRequest(
+      createMockRequest('', 'review-auto'),
+      createMockContext(),
+      stream,
+      createMockToken(),
+    );
+    expect(stream.getAllMarkdown()).toContain('workspace');
+    expect(stream.getAllMarkdown()).not.toContain('Comandos disponíveis');
+  });
+
   it('shows help menu for unknown command', async () => {
     const stream = createMockStream();
     await handleSpeckitRequest(
@@ -178,6 +190,7 @@ describe('handleSpeckitRequest — dispatcher', () => {
     expect(stream.getAllMarkdown()).toContain('/draft');
     expect(stream.getAllMarkdown()).toContain('/agent');
     expect(stream.getAllMarkdown()).toContain('/history');
+    expect(stream.getAllMarkdown()).toContain('/review-auto');
   });
 
   it('shows help menu when no command is provided', async () => {

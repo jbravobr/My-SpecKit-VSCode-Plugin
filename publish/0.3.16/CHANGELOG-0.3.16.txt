@@ -1,0 +1,50 @@
+SpecKit — Changelog 0.3.16
+===========================
+Data: 01/05/2026
+Branch base: release/0.3.16
+
+PATCH — Orquestração determinística da revisão Gate 3
+----------------------------------------------------
+Esta release elimina a ambiguidade do handoff automático implementador -> revisor ao introduzir execução orquestrada de revisão no participant.
+
+Resumo da release
+-----------------
+A transição Gate 2 -> Gate 3 deixa de depender exclusivamente de instrução textual do agente e passa a contar com um comando orquestrado (`/review-auto`) para consolidar evidências, aplicar bloqueios automáticos mínimos e exigir veredito estruturado no mesmo fluxo.
+
+Mudanças técnicas
+-----------------
+- Novo comando `/review-auto` no participant para revisão automatizada da story ativa.
+- Dispatcher atualizado para rotear `/review-auto` e registrar execução em auditoria.
+- `GitOperations` ampliado com helper opcional de arquivos alterados por range (`changedFiles`) com fallback.
+- Protocolo de transição dos agentes unificados atualizado para acionar `/review-auto` antes do veredito Gate 3.
+- Protocolo do implementador unificado reforçado para executar revisão no mesmo fluxo após handoff.
+- Protocolo do revisor ajustado para reutilizar evidência de cobertura da sessão quando disponível.
+- Mensagens de `/validate` e ajuda contextual atualizadas para incorporar o passo de revisão orquestrada.
+
+Documentação
+------------
+- README atualizado com seção dedicada ao comando `/review-auto`.
+- Fluxo unificado documentado com transição Gate 2 -> Gate 3 acoplada à orquestração de revisão.
+- Tabela de protocolos do agente unificado atualizada para refletir execução imediata de Gate 3 com veredito.
+
+Testes adicionados
+------------------
+- Novo teste unitário de `reviewAutoCommand` cobrindo:
+  - bloqueio por gate inválido,
+  - rejeição para spec não-story,
+  - persistência de metadata gate/status,
+  - veredito com e sem bloqueios automáticos.
+- Testes do dispatcher e help atualizados para `/review-auto`.
+- Testes de gerador unificado atualizados para garantir presença da etapa orquestrada no handoff.
+
+Validação executada antes do release
+------------------------------------
+- npm run test:unit -- tests/unit/commands/reviewAutoCommand.test.ts tests/unit/commands/helpCommand.test.ts tests/unit/commands/speckitParticipant.test.ts tests/unit/generator/agent/UnifiedAgentGenerator.test.ts tests/unit/commands/validateCommand.test.ts -> suíte direcionada passando
+- npx tsc --noEmit -> 0 erros
+- npm run lint -> 0 erros, warnings preexistentes mantidos
+- npm run test:unit -> suíte unitária completa passando
+- npm run package -> changelogs validados, VSIX gerado e verificado
+
+Artefato gerado
+---------------
+- publish/0.3.16/vscode-plugin-speckit-0.3.16.vsix

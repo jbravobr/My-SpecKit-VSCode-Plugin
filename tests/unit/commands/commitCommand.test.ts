@@ -44,9 +44,32 @@ describe('handleCommitCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Nenhum workspace');
   });
 
-  it('shows error when no message provided', async () => {
+  it('auto-generates message when none is provided and active story is available', async () => {
     const stream = createMockStream();
     const ws = new WorkspaceStub();
+    const fs = new InMemoryFileSystem();
+    await fs.writeFile(
+      'C:/workspace/.speckit/STORY-001.md',
+      '<!-- metadata\nid: 001\nstatus: open\ngate: 2\n-->',
+    );
+    let capturedMessage = '';
+    const git = fakeGit({
+      commit: async (_cwd, msg) => {
+        capturedMessage = msg;
+        return `[main abc] ${msg}`;
+      },
+    });
+
+    await handleCommitCommand(createMockRequest(''), stream, token, ws, fs, git);
+
+    expect(stream.getAllMarkdown()).toContain('Mensagem não informada');
+    expect(capturedMessage).toBe('speckit: test(001): validações do gate 2');
+  });
+
+  it('shows error when no message is provided and no active spec can be inferred', async () => {
+    const stream = createMockStream();
+    const ws = new WorkspaceStub({ activeSpecPath: undefined as unknown as string });
+    ws.getActiveSpecPath = async () => undefined;
 
     await handleCommitCommand(
       createMockRequest(''),

@@ -92,7 +92,18 @@ function generateTransitionProtocol(storyId: string): string {
 
 Ao concluir o Gate 2 com sucesso (0 falhas + cobertura ≥ 80%):
 
-1. Informe ao usuário: "✅ Gates 0-2 concluídos. Iniciando revisão independente (Gate 3)."
+1. **Finalize commit local pendente do Gate 2 (obrigatório):**
+   - Execute:
+     \`\`\`bash
+     git status --porcelain
+     \`\`\`
+   - Se houver alterações pendentes, execute:
+     \`\`\`bash
+     git add -A
+     git commit -m "test(${storyId}): fechamento do gate 2"
+     \`\`\`
+   - Se o commit falhar por erro operacional, tente \`@speckit /commit\` sem mensagem.
+   - Só peça ação manual ao usuário se as duas tentativas falharem.
 2. **Persista a troca de gate no metadata da story (obrigatório):**
    - Edite \`.speckit/STORY-${storyId}.md\`
    - No bloco \`<!-- metadata -->\`, garanta:
@@ -100,11 +111,21 @@ Ao concluir o Gate 2 com sucesso (0 falhas + cobertura ≥ 80%):
      - \`status: review\`
    - Salve o arquivo antes de continuar.
 3. Se não conseguir persistir o metadata, **interrompa** e solicite ação do usuário. Não inicie Gate 3 sem essa atualização.
-4. **Mude de postura:** A partir deste ponto, você é um **revisor independente**. Desconsidere justificativas que você deu durante a implementação. Avalie apenas: o código final atende à spec?
-5. Releia \`.speckit/STORY-${storyId}.md\` do zero.
-6. Execute \`git diff develop...HEAD --name-only\` para obter a lista atualizada de arquivos.
-7. Leia cada arquivo modificado com olhar crítico de revisão.
-8. Inicie o Gate 3 do MODO REVISOR.
+4. Emita no chat o bloco de handoff obrigatório:
+   - "✅ Gates 0-2 concluídos"
+   - "🔁 Handoff: IMPLEMENTADOR → REVISOR"
+   - "🚪 Gate atualizado: 2 → 3"
+   - "📌 Status atualizado: in-progress/open → review"
+5. **Mude de postura:** A partir deste ponto, você é um **revisor independente**. Desconsidere justificativas que você deu durante a implementação. Avalie apenas: o código final atende à spec?
+6. Releia \`.speckit/STORY-${storyId}.md\` do zero.
+7. Execute \`git diff develop...HEAD --name-only\` para obter a lista atualizada de arquivos.
+8. Leia cada arquivo modificado com olhar crítico de revisão.
+9. Execute \`@speckit /review-auto\` para orquestrar a revisão automática e consolidar evidências.
+10. **Sem aguardar novo comando do usuário, inicie e conclua o Gate 3 do MODO REVISOR no mesmo fluxo:**
+  - Execute todo o checklist do Gate 3 (funcionalidade, arquitetura, qualidade, testes, segurança, observabilidade, NFR, git, DoD)
+  - Emita veredito completo (APROVADO ou ALTERAÇÕES SOLICITADAS)
+  - Se houver bloqueantes, liste cada item com evidência objetiva (arquivo/critério)
+11. **Proibido encerrar a resposta somente com handoff.** O handoff só é válido quando acompanhado da execução efetiva da revisão Gate 3.
 
 > **Aviso:** Não carregue nenhuma premissa da fase de implementação. Avalie como se estivesse lendo o código pela primeira vez.`;
 }

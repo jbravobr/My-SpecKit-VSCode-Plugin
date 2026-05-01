@@ -669,7 +669,10 @@ Faz auto-stage de todas as alterações e commit com prefixo `speckit:`.
 
 ```
 @speckit /commit <mensagem>
+@speckit /commit
 ```
+
+Sem `<mensagem>`, o comando tenta derivar um padrão automático com base na spec ativa (Story/Fix) e no gate atual.
 
 **Exemplos:**
 
@@ -693,7 +696,30 @@ Faz auto-stage de todas as alterações e commit com prefixo `speckit:`.
 
 > Se o workspace ainda não for um repositório Git, o `/commit` executa `git init` automaticamente antes de verificar alterações e commitar. Os agentes implementadores gerados também recebem um preflight Git: ao encontrar `not a git repository` em `checkout`, `pull` ou `commit`, devem executar `git init` no workspace e repetir o mesmo commit uma única vez.
 
+> No fechamento do Gate 2, os protocolos de Story passam a exigir tentativa de commit automático pelo agente e só permitem ação manual do usuário como fallback em erro operacional.
+
 > Todos os commits são registrados no audit log automaticamente.
+
+---
+
+### `@speckit /review-auto`
+
+Orquestra a revisão automática da Story ativa no Gate 3 com protocolo determinístico.
+
+**O que faz:**
+
+1. Garante a transição para revisão (persistindo `gate: 3` e `status: review` quando aplicável)
+2. Coleta evidências automáticas (arquivos alterados e cobertura `lcov` quando disponível)
+3. Aplica bloqueios automáticos mínimos (ex.: cobertura ausente/abaixo de 80%)
+4. Emite veredito orquestrado e força continuidade do checklist completo de revisão no mesmo fluxo
+
+**Uso:**
+
+```
+@speckit /review-auto
+```
+
+> No modo unificado, a transição Gate 2 → Gate 3 deve acionar `/review-auto` antes da emissão do veredito final de revisão.
 
 ---
 
@@ -828,6 +854,8 @@ Gera um **agente unificado por story** — cada agente contém o protocolo compl
 2. **Agentes por story** — cria `.github/agents/speckit-story-{id}.agent.md` com ambos os modos
 3. **Batch index** — gera `copilot-instructions.md` listando todas as stories ativas, skills e agents
 4. **Transição automática de revisão** — ao concluir Gate 2, o protocolo unificado persiste `gate: 3` e `status: review` no metadata da story antes de iniciar Gate 3
+5. **Execução imediata da revisão** — após o handoff, o próprio agente deve acionar `@speckit /review-auto` e executar o checklist completo do Gate 3 no mesmo fluxo (sem aguardar novo comando do usuário), emitindo veredito
+6. **Handoff explícito** — a transição Gate 2 → Gate 3 deve emitir no chat o bloco de handoff (`IMPLEMENTADOR → REVISOR`) com gate/status atualizados
 
 > Referências narrativas a outras stories ou fixes dentro do corpo da história não entram na análise de dependências. Para bloquear uma story, declare explicitamente o ID no campo `depends-on` do metadata.
 
@@ -859,19 +887,20 @@ Resumo (modo unificado):
 - 📄 copilot-instructions.md gerado em modo batch
 
 Próximo passo: Abra o Copilot Chat e selecione o agente da story desejada no dropdown.
-Importante: no modo unificado, a própria transição Gate 2 → Gate 3 atualiza o metadata da story para `gate: 3` e `status: review` antes da revisão.
+Importante: no modo unificado, a própria transição Gate 2 → Gate 3 atualiza o metadata da story para `gate: 3` e `status: review`, executa `@speckit /review-auto` e a revisão Gate 3 deve ser concluída imediatamente no mesmo fluxo.
+Importante: no modo unificado, a transição também tenta fechar automaticamente commit pendente do Gate 2 antes da revisão.
 ```
 
 **Protocolo do agente unificado:**
 
 Cada agente unificado contém 4 protocolos embutidos:
 
-| Protocolo   | Quando ativa                           | O que faz                                                                                |
-| ----------- | -------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Dependência | Gate 0 (pré-condição)                  | Verifica apenas o metadata canônico `depends-on`; bloqueia se pendentes                  |
-| Transição   | Gate 2 → Gate 3                        | Persiste metadata (`gate: 3`, `status: review`) e muda postura para revisor independente |
-| Retorno     | Revisor emite "ALTERAÇÕES SOLICITADAS" | Documenta fixes, retorna ao implementador, aplica correções, re-executa revisão          |
-| Inviolável  | Sempre ativo no modo revisor           | Revisor **nunca** implementa — apenas documenta bloqueios e devolve ao implementador     |
+| Protocolo   | Quando ativa                           | O que faz                                                                                                                                                                      |
+| ----------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Dependência | Gate 0 (pré-condição)                  | Verifica apenas o metadata canônico `depends-on`; bloqueia se pendentes                                                                                                        |
+| Transição   | Gate 2 → Gate 3                        | Tenta commit automático do Gate 2, persiste metadata (`gate: 3`, `status: review`), aciona `/review-auto`, emite handoff explícito e executa Gate 3 imediatamente com veredito |
+| Retorno     | Revisor emite "ALTERAÇÕES SOLICITADAS" | Documenta fixes, retorna ao implementador, aplica correções, re-executa revisão                                                                                                |
+| Inviolável  | Sempre ativo no modo revisor           | Revisor **nunca** implementa — apenas documenta bloqueios e devolve ao implementador                                                                                           |
 
 > Stories independentes podem ser executadas em paralelo (abas de chat separadas). Stories bloqueadas aguardam conclusão das dependências.
 
@@ -1722,6 +1751,15 @@ Agente:  📋 Testes — STORY-001
          Cobertura: 91% (mínimo: 80%) ✅
          26 testes passando, 0 falhas ✅
 
+         Tentativa de commit automático do Gate 2:
+         speckit: test(STORY-001): fechamento do gate 2 ✅
+
+         Handoff no chat:
+         ✅ Gates 0-2 concluídos
+         🔁 Handoff: IMPLEMENTADOR → REVISOR
+         🚪 Gate atualizado: 2 → 3
+         📌 Status atualizado: in-progress/open → review
+
          ✅ Gate 2 concluído. Próximo: Gate 3 (abra nova sessão → agent revisor).
 ```
 
@@ -2495,7 +2533,7 @@ Atualmente o plugin opera sobre o **primeiro workspace carregado**. Suporte comp
 <details>
 <summary><strong>O `/commit` faz push automaticamente?</strong></summary>
 
-Não. O `/commit` apenas executa `git add . && git commit -m "speckit: <mensagem>"`. O push é deliberadamente manual para permitir revisão antes de enviar ao remote.
+Não. O `/commit` apenas executa stage + commit local (prefixo `speckit:`). O push é deliberadamente manual para permitir revisão antes de enviar ao remote. Se você omitir a mensagem, o SpecKit tenta derivar uma mensagem automática da spec ativa e do gate atual.
 
 </details>
 

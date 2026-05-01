@@ -72,6 +72,13 @@ describe('StoryUnifiedAgentGenerator', () => {
     it('contains transition protocol', () => {
       const result = generateUnifiedAgent(completeStory);
       expect(result).toContain('PROTOCOLO DE TRANSIÇÃO');
+      expect(result).toContain('Finalize commit local pendente do Gate 2');
+      expect(result).toContain('git status --porcelain');
+      expect(result).toContain('test(001): fechamento do gate 2');
+      expect(result).toContain('Handoff: IMPLEMENTADOR → REVISOR');
+      expect(result).toContain('@speckit /review-auto');
+      expect(result).toContain('Sem aguardar novo comando do usuário');
+      expect(result).toContain('Proibido encerrar a resposta somente com handoff');
     });
 
     it('contains return protocol', () => {
@@ -171,6 +178,9 @@ describe('generateImplementadorContent', () => {
     const result = generateImplementadorContentForUnified(completeStory);
     expect(result).toContain('Handoff interno para revisão');
     expect(result).toContain('Não encerre a sessão.');
+    expect(result).toContain('Finalize commit local pendente do Gate 2');
+    expect(result).toContain('@speckit /review-auto');
+    expect(result).toContain('Sem aguardar novo comando do usuário');
     expect(result).toContain('gate: 3');
     expect(result).toContain('status: review');
     expect(result).not.toContain('Para iniciar a revisão independente, o usuário deve selecionar');
@@ -201,6 +211,16 @@ describe('generateRevisorContent', () => {
     expect(result).toContain('Funcionalidade');
     expect(result).toContain('Segurança');
     expect(result).toContain('Observabilidade');
+  });
+
+  it('does not require asking for coverage when evidence already exists in current session', () => {
+    const result = generateRevisorContent(completeStory);
+    expect(result).toContain(
+      'Se o relatório da Sessão A já foi emitido nesta sessão, reutilize essa evidência e prossiga',
+    );
+    expect(result).toContain(
+      'Se não houver evidência disponível no contexto, solicite ao usuário o relatório de cobertura da Sessão A',
+    );
   });
 
   it('does not throw for empty story', () => {

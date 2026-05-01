@@ -12,6 +12,17 @@ describe('handleHelpCommand', () => {
     expect(output).toContain('Ajuda rápida');
     expect(output).toContain('/status-all');
     expect(output).toContain('/batch-unified');
+    expect(output).toContain('/review-auto');
+  });
+
+  it('shows topic-specific help for review-auto', async () => {
+    const stream = createMockStream();
+
+    await handleHelpCommand(createMockRequest('review-auto'), stream, createMockToken());
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('/review-auto');
+    expect(output).toContain('transição para Gate 3');
   });
 
   it('shows topic-specific help for status', async () => {

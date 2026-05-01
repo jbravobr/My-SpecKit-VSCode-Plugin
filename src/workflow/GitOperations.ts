@@ -6,6 +6,7 @@ export interface IGitOps {
   hasChanges(cwd: string): Promise<boolean>;
   isRepository(cwd: string): Promise<boolean>;
   init(cwd: string): Promise<string>;
+  changedFiles?(cwd: string, range?: string): Promise<string[]>;
 }
 
 const MAX_OUTPUT_BYTES = 50 * 1024; // 50KB
@@ -70,5 +71,25 @@ export const gitOps: IGitOps = {
 
   async init(cwd: string): Promise<string> {
     return execGit(['init'], cwd);
+  },
+
+  async changedFiles(cwd: string, range = 'develop...HEAD'): Promise<string[]> {
+    try {
+      const output = await execGit(['diff', '--name-only', range], cwd);
+      return output
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+    } catch (err: unknown) {
+      // Fallback for repositories without local develop branch.
+      if (range === 'develop...HEAD') {
+        const output = await execGit(['diff', '--name-only', 'HEAD'], cwd);
+        return output
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean);
+      }
+      throw err;
+    }
   },
 };
