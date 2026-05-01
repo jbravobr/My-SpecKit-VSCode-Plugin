@@ -21,3 +21,6 @@ vitest-run.log
 vitest-shared.log
 vitest.log
 STORY-011.md
+assets/presentation/generate_pptx.py
+assets/presentation/Pitch-SpecKit-PAN-BTG.md
+assets/presentation/SpecKit-PAN-BTG.pptx
