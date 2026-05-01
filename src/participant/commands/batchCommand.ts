@@ -98,6 +98,10 @@ export async function handleBatchCommand(
 
   stream.markdown(`⏳ Processando **${allFiles.length}** spec(s) em paralelo...\n\n`);
 
+  const generateConfigs = prompt.includes('--generate') || prompt.includes('--gen');
+  const useUnified = prompt.includes('--unified');
+  const phaseCommand = resolveBatchCommandLabel(generateConfigs, useUnified);
+
   // Phase 1: Parse + Validate all specs in parallel (read-only, safe)
   const entries = await Promise.all(
     allFiles.map(({ name, hint }) => processSpec(name, hint, specDir, fs)),
@@ -110,7 +114,7 @@ export async function handleBatchCommand(
 
   await recordBatchPhaseEvents(
     entries,
-    '/batch',
+    phaseCommand,
     workspaceRoot,
     fs,
     audit,
@@ -121,9 +125,6 @@ export async function handleBatchCommand(
 
   // Phase 2: Report validation summary
   emitSummary(stream, entries, valid, invalid, errored, skipped);
-
-  const generateConfigs = prompt.includes('--generate') || prompt.includes('--gen');
-  const useUnified = prompt.includes('--unified');
 
   if (!generateConfigs) {
     stream.markdown(
@@ -140,7 +141,7 @@ export async function handleBatchCommand(
         outcome: `📊 ${valid.length} válida(s), ${invalid.length} inválida(s), ${errored.length} erro(s), ${skipped.length} finalizada(s)`,
         commandExecutionId,
         batchId,
-        llmResponseReceived: false,
+        llmResponseReceived: true,
       },
       fs,
     );
@@ -153,7 +154,17 @@ export async function handleBatchCommand(
   }
 
   if (useUnified) {
-    await handleUnifiedGenerate(valid, specDir, workspaceRoot, stream, fs);
+    await handleUnifiedGenerate(
+      valid,
+      specDir,
+      workspaceRoot,
+      stream,
+      fs,
+      audit,
+      tracer,
+      commandExecutionId,
+      batchId,
+    );
     await appendLog(
       workspaceRoot,
       {
@@ -161,7 +172,7 @@ export async function handleBatchCommand(
         outcome: `Agentes unificados gerados para ${valid.length} spec(s)`,
         commandExecutionId,
         batchId,
-        llmResponseReceived: false,
+        llmResponseReceived: true,
       },
       fs,
     );
@@ -234,7 +245,7 @@ export async function handleBatchCommand(
       outcome: `✅ ${generated.length} spec(s) processada(s), ${totalFiles} arquivo(s) gerado(s), ${failed.length} falha(s)`,
       commandExecutionId,
       batchId,
-      llmResponseReceived: false,
+      llmResponseReceived: true,
     },
     fs,
   );
@@ -380,6 +391,10 @@ async function handleUnifiedGenerate(
   workspaceRoot: string,
   stream: vscode.ChatResponseStream,
   fs: IFileSystem,
+  audit: AuditLogger,
+  tracer: TraceabilityManager,
+  commandExecutionId: string,
+  batchId: string,
 ): Promise<void> {
   stream.markdown('\n---\n\n⏳ Gerando agentes unificados + análise de dependências...\n\n');
 
@@ -391,13 +406,26 @@ async function handleUnifiedGenerate(
   // Parse all valid story specs into Story objects
   const stories: Story[] = [];
   const storyEntries = validEntries.filter((e) => e.specType === 'story');
+  const storyEntryById = new Map(storyEntries.map((entry) => [entry.id, entry]));
 
   for (const entry of storyEntries) {
     try {
       const content = await fs.readFile(path.join(specDir, entry.fileName));
       stories.push(parseStory(content));
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       stream.markdown(`⚠️ Erro ao re-parsear \`${entry.fileName}\` — ignorando.\n`);
+      await recordBatchGenerateEvent(
+        entry,
+        `❌ erro ao preparar story unificada: ${msg}`,
+        workspaceRoot,
+        fs,
+        audit,
+        tracer,
+        commandExecutionId,
+        batchId,
+        '/batch --generate --unified',
+      );
     }
   }
 
@@ -428,15 +456,52 @@ async function handleUnifiedGenerate(
   let agentCount = 0;
 
   for (const story of stories) {
+    const storyEntry = storyEntryById.get(story.metadata.id) ?? {
+      fileName: `STORY-${story.metadata.id}.md`,
+      specType: 'story' as const,
+      valid: true,
+      gapCount: 0,
+      title: story.metadata.title || '(sem título)',
+      id: story.metadata.id,
+      gate: story.metadata.gate,
+      status: story.metadata.status,
+      language: story.technicalSpec.language || undefined,
+      framework: story.technicalSpec.framework || undefined,
+    };
+
     try {
       const content = generateUnifiedAgent(story);
       const agentPath = path.join(agentsDir, `speckit-story-${story.metadata.id}.agent.md`);
       await fs.writeFile(agentPath, content);
       stream.markdown(`✅ Agente unificado: \`speckit-story-${story.metadata.id}.agent.md\`\n`);
       agentCount++;
+
+      await recordBatchGenerateEvent(
+        storyEntry,
+        '✅ agente unificado gerado',
+        workspaceRoot,
+        fs,
+        audit,
+        tracer,
+        commandExecutionId,
+        batchId,
+        '/batch --generate --unified',
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       stream.markdown(`❌ Agente \`${story.metadata.id}\` — erro: ${msg}\n`);
+
+      await recordBatchGenerateEvent(
+        storyEntry,
+        `❌ erro na geração unificada: ${msg}`,
+        workspaceRoot,
+        fs,
+        audit,
+        tracer,
+        commandExecutionId,
+        batchId,
+        '/batch --generate --unified',
+      );
     }
   }
 
@@ -456,9 +521,33 @@ async function handleUnifiedGenerate(
       await generateFixCopilotConfig(workspaceRoot, fix, fs);
       fixCount++;
       stream.markdown(`✅ Fix \`${entry.id}\` — config gerada\n`);
+
+      await recordBatchGenerateEvent(
+        entry,
+        '✅ config de fix gerada no modo unificado',
+        workspaceRoot,
+        fs,
+        audit,
+        tracer,
+        commandExecutionId,
+        batchId,
+        '/batch --generate --unified',
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       stream.markdown(`❌ Fix \`${entry.id}\` — erro: ${msg}\n`);
+
+      await recordBatchGenerateEvent(
+        entry,
+        `❌ erro na geração de fix (modo unificado): ${msg}`,
+        workspaceRoot,
+        fs,
+        audit,
+        tracer,
+        commandExecutionId,
+        batchId,
+        '/batch --generate --unified',
+      );
     }
   }
 
@@ -473,6 +562,7 @@ ${fixSummaryLine}- 📄 \`copilot-instructions.md\` gerado em modo batch
 
 **Próximo passo:** Abra o Copilot Chat e selecione o agente da story desejada no dropdown.
 **Importante (modo unificado):** implementação e revisão acontecem no mesmo agente (speckit-story-<id>). Não espere um agente \`speckit-revisor\` separado neste fluxo.
+**Estratégia de branch (modo unificado):** use uma branch única do lote (ex: \`feature/batch-<yyyymmdd>-<slug>\`). Não crie branch por story e não empilhe branches de stories.
 Ao concluir Gate 2 com sucesso, execute \`@speckit /review-auto\` para persistir \`gate: 3\` e \`status: review\` com evidência visível no chat.
 Se o veredito do Gate 3 for ALTERAÇÕES SOLICITADAS, execute \`@speckit /review-auto --changes-requested\`.
 Se o veredito do Gate 3 for APROVADO, execute \`@speckit /review-auto --approved\`.
@@ -521,10 +611,11 @@ async function recordBatchGenerateEvent(
   tracer: TraceabilityManager,
   commandExecutionId: string,
   batchId: string,
+  command = '/batch --generate',
 ): Promise<void> {
   await recordBatchEvent(
     entry,
-    '/batch --generate',
+    command,
     outcome,
     workspaceRoot,
     fs,
@@ -563,7 +654,6 @@ async function recordBatchEvent(
       agentMode,
       gate: entry.gate,
       sessionAlias,
-      llmResponseReceived: false,
     },
     fs,
   );
@@ -597,4 +687,10 @@ async function recordBatchEvent(
   } catch {
     // Traceability should never break the main flow
   }
+}
+
+function resolveBatchCommandLabel(generateConfigs: boolean, useUnified: boolean): string {
+  if (generateConfigs && useUnified) return '/batch --generate --unified';
+  if (generateConfigs) return '/batch --generate';
+  return '/batch';
 }

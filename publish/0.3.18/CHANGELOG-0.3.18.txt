@@ -1,0 +1,47 @@
+SpecKit — Changelog 0.3.18
+===========================
+Data: 01/05/2026
+Branch base: release/0.3.18
+
+PATCH — Rastreabilidade completa no batch e review-auto
+-------------------------------------------------------
+Esta release consolida a trilha operacional do fluxo em lote com rastros consistentes de sessao, auditoria e trace, inclusive quando a implementacao/revisao acontece com orquestracao automatica.
+
+Resumo da release
+-----------------
+A mudanca principal foi corrigir inconsistencias entre session log, audit log e traceability no fluxo `/batch`, incluindo comando efetivo com flags, eventos por story no modo unificado e alinhamento de sinal de resposta de LLM. Tambem foi instrumentado o `/review-auto` para gerar trilha completa mesmo em transicoes automaticas de gate.
+
+Mudanças técnicas
+-----------------
+- `batchCommand` atualizado para registrar o comando efetivo da execucao (`/batch`, `/batch --generate`, `/batch --generate --unified`) na fase de validacao.
+- `batchCommand` passou a registrar eventos por story no modo unificado (geracao de agente/fix e falhas) em sessao, auditoria e traceability.
+- Remocao de `llmResponseReceived: false` hardcoded nos eventos por item do batch, com consolidacao para `true` no fechamento da execucao.
+- `reviewAutoCommand` instrumentado com recorder unificado para sessao + auditoria + trace nos fluxos:
+  - orquestracao Gate 2 -> Gate 3,
+  - `--changes-requested` (Gate 3 -> Gate 2),
+  - `--approved` (Gate 3 -> Gate 4).
+- `ObservabilityContext` atualizado para truncamento de alias mais legivel (limite maior e reticencias em fronteira de palavra).
+
+Documentação
+------------
+- Diretrizes de branch unica no fluxo batch unificado reforcadas nos geradores de agentes e no indice de batch.
+- Atualizacao de protocolos de saida Markdown nos modos de agente implementador/revisor/debugger/refactor.
+
+Testes adicionados
+------------------
+- `batchCommand.test` ampliado para validar:
+  - `LLMResponseReceived: true` em sessao,
+  - eventos de traceability com comando efetivo no modo `--generate --unified`.
+- `reviewAutoCommand.test` ampliado para validar emissao de sessao, auditoria e trace em fluxos automaticos de revisao.
+- Suite de agente unificado mantida para validar protocolo de branch unica e templates Markdown.
+
+Validação executada antes do release
+------------------------------------
+- npx tsc --noEmit -> 0 erros
+- npx eslint src/participant/commands/batchCommand.ts src/participant/commands/reviewAutoCommand.ts src/workflow/ObservabilityContext.ts tests/unit/commands/batchCommand.test.ts tests/unit/commands/reviewAutoCommand.test.ts -> 0 erros
+- npx vitest run tests/unit/commands/batchCommand.test.ts tests/unit/commands/reviewAutoCommand.test.ts tests/unit/generator/agent/UnifiedAgentGenerator.test.ts -> 57 testes passando
+- npm run package -> changelogs validados, VSIX gerado e verificado
+
+Artefato gerado
+---------------
+- publish/0.3.18/vscode-plugin-speckit-0.3.18.vsix

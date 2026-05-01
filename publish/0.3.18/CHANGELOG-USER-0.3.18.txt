@@ -1,0 +1,37 @@
+SpecKit — Novidades para usuários — 0.3.18
+==========================================
+Data: 01/05/2026
+
+Resumo
+------
+O fluxo batch ficou mais confiavel para auditoria: agora sessao, auditoria e trace registram de forma coerente o que aconteceu, inclusive quando parte da revisao e transicao de gate ocorre automaticamente.
+
+Novas features
+--------------
+- Rastro por story no modo `@speckit /batch --generate --unified` para geracao de agentes e resultados.
+- Registro do comando efetivo (com flags) na trilha do batch.
+- Trilha automatica completa para `@speckit /review-auto`, `--changes-requested` e `--approved`.
+
+Melhorias de experiência
+------------------------
+- Logs de sessao mais coerentes com auditoria e traceability no batch.
+- Alias de sessao com truncamento mais legivel para titulos longos.
+- Melhor visibilidade operacional de transicoes automaticas de gate no fluxo de revisao.
+
+Correções e segurança de release
+--------------------------------
+- Eliminada inconsistência de `LLMResponseReceived` no fluxo batch.
+- Reduzido risco de diagnostico incorreto em auditoria por perda de contexto do comando executado.
+- Trilha de evidencias fortalecida para governanca do fluxo automatizado.
+
+Como usar rapidamente
+---------------------
+1. Rode `@speckit /batch --generate --unified` para gerar e orquestrar o lote.
+2. Execute as stories na branch unica do lote conforme protocolo.
+3. Para revisao automatica da story ativa, rode `@speckit /review-auto`.
+4. Se houver ajustes, rode `@speckit /review-auto --changes-requested`.
+5. Quando aprovado, finalize com `@speckit /review-auto --approved`.
+
+Artefato
+--------
+- publish/0.3.18/vscode-plugin-speckit-0.3.18.vsix

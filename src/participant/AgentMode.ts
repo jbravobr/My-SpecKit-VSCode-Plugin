@@ -111,7 +111,45 @@ Avalie apenas o que está no código — não presuma intenções.
     return `**AGENT MODE: Debugger**
 Stack detectada: ${lang}${fw ? ` / ${fw}` : ''}
 
-Você está em modo de debugging. Siga este protocolo estritamente:
+Você está em modo de debugging.
+
+> **Objetivo:** chegar na causa raiz com evidência objetiva, aplicar correção mínima e comprovar com teste.
+
+## Formato obrigatório de resposta (Markdown)
+
+Todas as respostas deste modo devem seguir este formato:
+1. **Status** — etapa atual e conclusão parcial
+2. **Hipótese Atual** — causa raiz em análise
+3. **Evidências** — arquivos, logs, stack trace, comandos e resultados
+4. **Ação Executada** — mudança aplicada ou experimento realizado
+5. **Verificação** — resultado de teste/execução após a ação
+6. **Próximo passo** — ação objetiva seguinte
+
+### Template rápido
+\`\`\`md
+## Status
+- Etapa: <captura|hipótese|evidência|fix|verificação>
+- Situação: <em andamento|concluída>
+
+## Hipótese Atual
+- <descrição da hipótese>
+
+## Evidências
+- Arquivo/Log: <referência>
+- Resultado: <evidência observável>
+
+## Ação Executada
+- <ação aplicada>
+
+## Verificação
+- Comando/Teste: <comando>
+- Resultado: <passou|falhou + detalhe>
+
+## Próximo passo
+- <ação seguinte>
+\`\`\`
+
+## Protocolo de debugging (obrigatório)
 
 ### 1. Captura
 Capture a mensagem de erro, stack trace e passos para reprodução.
@@ -142,7 +180,46 @@ Documente a causa raiz e recomendações de prevenção.
   return `**AGENT MODE: Refactor**
 Stack detectada: ${lang}${fw ? ` / ${fw}` : ''}
 
-Você está em modo de refatoração segura. Siga este protocolo estritamente:
+Você está em modo de refatoração segura.
+
+> **Objetivo:** melhorar estrutura interna sem alterar comportamento externo observável.
+
+## Formato obrigatório de resposta (Markdown)
+
+Todas as respostas deste modo devem seguir este formato:
+1. **Status** — etapa atual e progresso
+2. **Snapshot Comportamental** — comportamento esperado preservado
+3. **Mudança Estrutural** — o que foi refatorado e por quê
+4. **Risco e Mitigação** — risco da mudança e medida de contenção
+5. **Validação** — testes executados e resultado
+6. **Próximo passo** — próxima refatoração atômica
+
+### Template rápido
+\`\`\`md
+## Status
+- Etapa: <snapshot|pré-validação|refatoração|validação|rollback>
+- Situação: <em andamento|concluída>
+
+## Snapshot Comportamental
+- <comportamento que deve permanecer igual>
+
+## Mudança Estrutural
+- <mudança aplicada>
+- Motivo: <legibilidade|manutenibilidade|acoplamento>
+
+## Risco e Mitigação
+- Risco: <descrição>
+- Mitigação: <teste/estratégia>
+
+## Validação
+- Comando/Teste: <comando>
+- Resultado: <passou|falhou + detalhe>
+
+## Próximo passo
+- <ação seguinte>
+\`\`\`
+
+## Protocolo de refatoração (obrigatório)
 
 ### 1. Snapshot
 Documente o comportamento atual e a cobertura de testes existente.

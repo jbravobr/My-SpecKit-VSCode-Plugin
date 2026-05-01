@@ -99,6 +99,9 @@ describe('handleReviewAutoCommand', () => {
 
     const output = stream.getAllMarkdown();
     const storyContent = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
+    const sessionContent = fs.contentFor('session-');
+    const auditContent = fs.contentFor('audit.log');
+    const traceRaw = fs.contentFor('traceability/001.json');
 
     expect(output).toContain('Transição de Gate/Status');
     expect(output).toContain('| Gate | `2` | `3` |');
@@ -110,6 +113,23 @@ describe('handleReviewAutoCommand', () => {
     );
     expect(storyContent).toContain('gate: 3');
     expect(storyContent).toContain('status: review');
+
+    expect(sessionContent).toContain('/review-auto');
+    expect(sessionContent).toContain('SessionAlias:');
+    expect(sessionContent).toContain('LLMResponseReceived: true');
+
+    expect(auditContent).toContain('/review-auto: ✅ REVISÃO GATE 3 EXECUTADA');
+
+    expect(traceRaw).toBeDefined();
+    const trace = JSON.parse(traceRaw as string) as {
+      entries: Array<{ description: string; data: { command: string } }>;
+    };
+    expect(
+      trace.entries.some(
+        (entry) =>
+          entry.description.includes('review-auto event') && entry.data.command === '/review-auto',
+      ),
+    ).toBe(true);
   });
 
   it('emits blocking verdict when coverage evidence is missing', async () => {
@@ -147,12 +167,22 @@ describe('handleReviewAutoCommand', () => {
 
     const output = stream.getAllMarkdown();
     const storyContent = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
+    const auditContent = fs.contentFor('audit.log');
+    const traceRaw = fs.contentFor('traceability/001.json');
 
     expect(output).toContain('Encerramento Orquestrado');
     expect(output).toContain('| Gate | `3` | `4` |');
     expect(output).toContain('| Status | `review` | `done` |');
     expect(storyContent).toContain('gate: 4');
     expect(storyContent).toContain('status: done');
+    expect(auditContent).toContain('/review-auto --approved: ✅ Veredito APROVADO');
+
+    const trace = JSON.parse(traceRaw as string) as {
+      entries: Array<{ description: string; data: { command: string } }>;
+    };
+    expect(trace.entries.some((entry) => entry.data.command === '/review-auto --approved')).toBe(
+      true,
+    );
   });
 
   it('applies changes-requested transition from gate 3 to gate 2', async () => {
@@ -173,12 +203,22 @@ describe('handleReviewAutoCommand', () => {
 
     const output = stream.getAllMarkdown();
     const storyContent = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
+    const auditContent = fs.contentFor('audit.log');
+    const traceRaw = fs.contentFor('traceability/001.json');
 
     expect(output).toContain('Retorno Orquestrado para Retrabalho');
     expect(output).toContain('| Gate | `3` | `2` |');
     expect(output).toContain('| Status | `review` | `in-progress` |');
     expect(storyContent).toContain('gate: 2');
     expect(storyContent).toContain('status: in-progress');
+    expect(auditContent).toContain('/review-auto --changes-requested: 🔄 Alterações solicitadas');
+
+    const trace = JSON.parse(traceRaw as string) as {
+      entries: Array<{ description: string; data: { command: string } }>;
+    };
+    expect(
+      trace.entries.some((entry) => entry.data.command === '/review-auto --changes-requested'),
+    ).toBe(true);
   });
 
   it('rejects conflicting review-auto flags', async () => {

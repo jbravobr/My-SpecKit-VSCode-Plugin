@@ -213,6 +213,8 @@ describe('handleBatchCommand', () => {
     expect(sessionContent).toBeDefined();
     expect(sessionContent).toContain('SessionAlias:');
     expect(sessionContent).toContain('BatchId:');
+    expect(sessionContent).toContain('LLMResponseReceived: true');
+    expect(sessionContent).not.toContain('LLMResponseReceived: false');
   });
 
   describe('--unified flag', () => {
@@ -242,10 +244,53 @@ describe('handleBatchCommand', () => {
       const output = stream.getAllMarkdown();
       expect(output).toContain('Agente unificado');
       expect(output).toContain('Não espere um agente `speckit-revisor` separado neste fluxo.');
+      expect(output).toContain('Estratégia de branch (modo unificado)');
+      expect(output).toContain('use uma branch única do lote');
       expect(output).toContain('gate: 3');
       expect(output).toContain('status: review');
       expect(fs.hasFile('speckit-story-001.agent.md')).toBe(true);
       expect(fs.hasFile('copilot-instructions.md')).toBe(true);
+
+      const sessionContent = fs.contentFor('session-');
+      expect(sessionContent).toContain('LLMResponseReceived: true');
+      expect(sessionContent).not.toContain('LLMResponseReceived: false');
+    });
+
+    it('records validation and unified generation events in traceability with effective command', async () => {
+      const fs = seedFs([{ fileName: 'STORY-001.md', content: completeStoryMd }]);
+      const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+      const stream = createMockStream();
+
+      await handleBatchCommand(
+        createMockRequest('--generate --unified'),
+        stream,
+        createMockToken(),
+        fs,
+        workspace,
+      );
+
+      const traceRaw = fs.contentFor('traceability/001.json');
+      expect(traceRaw).toBeDefined();
+
+      const trace = JSON.parse(traceRaw as string) as {
+        entries: Array<{ description: string; data: { command: string } }>;
+      };
+
+      expect(
+        trace.entries.some(
+          (entry) =>
+            entry.description.includes('batch validation') &&
+            entry.data.command === '/batch --generate --unified',
+        ),
+      ).toBe(true);
+
+      expect(
+        trace.entries.some(
+          (entry) =>
+            entry.description.includes('agente unificado gerado') &&
+            entry.data.command === '/batch --generate --unified',
+        ),
+      ).toBe(true);
     });
 
     it('reports independent and blocked stories in unified mode', async () => {

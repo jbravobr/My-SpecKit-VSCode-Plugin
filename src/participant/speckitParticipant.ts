@@ -83,6 +83,13 @@ export async function handleSpeckitRequest(
           token,
         );
         break;
+      case 'status-fix':
+        await handleStatusCommand(
+          withPrompt(request, appendFlags(request.prompt, ['--fix'])),
+          stream,
+          token,
+        );
+        break;
       case 'draft':
         await handleDraftCommand(request, stream, token);
         break;
@@ -152,6 +159,7 @@ export async function handleSpeckitRequest(
             '- `/validate` — Validar a spec ativa e gerar configuração Copilot\n' +
             '- `/status` — Ver todas as specs abertas (Stories e Fixes)\n' +
             '- `/status-all` — Atalho para `/status --all`\n' +
+            '- `/status-fix` — Atalho para `/status --fix` (retro-persiste gate em specs `done`)\n' +
             '- `/agent` — Alternar modo do agente (debugger, refactor, implementador, revisor)\n' +
             '- `/gate` — Exibir regras de gate e validar transições\n' +
             '- `/audit` — Visualizar log de auditoria\n' +

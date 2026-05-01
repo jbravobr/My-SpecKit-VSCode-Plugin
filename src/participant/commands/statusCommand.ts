@@ -9,6 +9,7 @@ import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { Gate } from '../../story/Story';
 import { parseStory } from '../../story/StoryParser';
 import { validateStory } from '../../story/StoryValidator';
+import { upsertMetadataFields } from '../../workflow/MetadataPatcher';
 import { requireWorkspace } from './CommandHelpers';
 
 const GATE_LABELS: Record<Gate, string> = {
@@ -18,6 +19,22 @@ const GATE_LABELS: Record<Gate, string> = {
   3: 'Revisão',
   4: 'Entrega',
 };
+
+interface RetrofitChange {
+  fileName: string;
+  fromGate: Gate;
+  toGate: Gate;
+}
+
+/**
+ * Returns the gate that should be displayed for a spec, treating
+ * `done` as Gate 4 even when the file still records a lower gate.
+ * `cancelled` is preserved as-is (we don't promote unfinished specs).
+ */
+function effectiveGate(storedGate: Gate, status: string): Gate {
+  if (status === 'done' && storedGate < 4) return 4;
+  return storedGate;
+}
 
 export async function handleStatusCommand(
   request: vscode.ChatRequest,
@@ -31,14 +48,15 @@ export async function handleStatusCommand(
 
   const prompt = (request.prompt ?? '').toLowerCase();
   const flags = prompt.split(/\s+/).filter((token) => token.startsWith('--'));
-  const allowedFlags = new Set(['--all', '--closed']);
+  const allowedFlags = new Set(['--all', '--closed', '--fix']);
   const invalidFlags = flags.filter((flag) => !allowedFlags.has(flag));
 
   if (invalidFlags.length > 0) {
     stream.markdown(
       `❌ Parâmetro(s) inválido(s) em /status: ${invalidFlags.map((flag) => `\`${flag}\``).join(', ')}\n\n` +
-        '**Uso:** `@speckit /status [--all|--closed]`\n' +
-        'Dica: use `--all` para incluir specs `done` e `cancelled`.',
+        '**Uso:** `@speckit /status [--all|--closed] [--fix]`\n' +
+        'Dica: use `--all` para incluir specs `done` e `cancelled`. ' +
+        'Use `--fix` para retro-persistir `gate: 4` em specs com `status: done` mas gate desatualizado.',
     );
     return;
   }
@@ -48,13 +66,21 @@ export async function handleStatusCommand(
     workspace.listStoryFiles(specDir),
     workspace.listFixFiles(specDir),
   ]);
-  const includeClosed = prompt.includes('--all') || prompt.includes('--closed');
+  const retrofit = prompt.includes('--fix');
+  // --fix implies --all so the user sees the changes that were applied.
+  const includeClosed = retrofit || prompt.includes('--all') || prompt.includes('--closed');
+
+  const retrofitChanges: RetrofitChange[] = [];
+  if (retrofit) {
+    const storyChanges = await retrofitGateForDoneSpecs(storyFiles, specDir, fs, 'story');
+    const fixChanges = await retrofitGateForDoneSpecs(fixFiles, specDir, fs, 'fix');
+    retrofitChanges.push(...storyChanges, ...fixChanges);
+  }
 
   const storyLines = await buildStoryLines(storyFiles, specDir, fs, includeClosed);
   const fixLines = await buildFixLines(fixFiles, specDir, fs, includeClosed);
 
   const storySection = storyLines.length > 0 ? storyLines.join('\n') : '- nenhuma';
-
   const fixSection = fixLines.length > 0 ? fixLines.join('\n') : '- nenhum';
 
   const storyHeader = includeClosed
@@ -67,13 +93,64 @@ export async function handleStatusCommand(
   await appendLog(
     workspaceRoot,
     {
-      command: '/status',
-      outcome: `📊 ${storyLines.length} stories, ${fixLines.length} fixes${includeClosed ? ' (inclui fechadas)' : ''}`,
+      command: retrofit ? '/status --fix' : '/status',
+      outcome:
+        `📊 ${storyLines.length} stories, ${fixLines.length} fixes` +
+        (includeClosed ? ' (inclui fechadas)' : '') +
+        (retrofit ? ` | retrofit: ${retrofitChanges.length} arquivo(s)` : ''),
     },
     fs,
   );
 
+  if (retrofit) {
+    stream.markdown(formatRetrofitReport(retrofitChanges) + '\n\n');
+  }
   stream.markdown(`${storyHeader}\n${storySection}\n\n` + `${fixHeader}\n${fixSection}\n`);
+}
+
+function formatRetrofitReport(changes: RetrofitChange[]): string {
+  if (changes.length === 0) {
+    return '✅ **Retrofit de gate**: nenhuma spec `done` precisava de correção.';
+  }
+  const rows = changes
+    .map((c) => `| \`${c.fileName}\` | Gate ${c.fromGate} | Gate ${c.toGate} |`)
+    .join('\n');
+  return (
+    `✅ **Retrofit de gate aplicado em ${changes.length} arquivo(s):**\n\n` +
+    `| Arquivo | Antes | Depois |\n` +
+    `| --- | --- | --- |\n` +
+    `${rows}`
+  );
+}
+
+async function retrofitGateForDoneSpecs(
+  files: string[],
+  specDir: string,
+  fs: IFileSystem,
+  kind: 'story' | 'fix',
+): Promise<RetrofitChange[]> {
+  const results: RetrofitChange[] = [];
+  for (const name of files) {
+    try {
+      const filePath = path.join(specDir, name);
+      const content = await fs.readFile(filePath);
+      const meta =
+        kind === 'story'
+          ? { status: parseStory(content).metadata.status, gate: parseStory(content).metadata.gate }
+          : { status: parseFix(content).metadata.status, gate: parseFix(content).metadata.gate };
+
+      if (meta.status !== 'done' || meta.gate >= 4) continue;
+
+      const patch = upsertMetadataFields(content, { gate: 4 });
+      if (patch.changed) {
+        await fs.writeFile(filePath, patch.content);
+        results.push({ fileName: name, fromGate: meta.gate, toGate: 4 });
+      }
+    } catch {
+      // ignore unreadable / malformed files; they'll surface in the listing below
+    }
+  }
+  return results;
 }
 
 async function buildStoryLines(
@@ -97,8 +174,8 @@ async function buildStoryLines(
               const result = validateStory(story);
               return result.valid ? '✅' : `⚠️ (${result.gaps.length} lacuna(s))`;
             })();
-        const gate = story.metadata.gate;
-        const gateLabel = `Gate ${gate} — ${GATE_LABELS[gate]}`;
+        const displayedGate = effectiveGate(story.metadata.gate, story.metadata.status);
+        const gateLabel = `Gate ${displayedGate} — ${GATE_LABELS[displayedGate]}`;
         return (
           `- ${statusIcon} \`${name}\` — **${story.metadata.title || '(sem título)'}** [${story.metadata.status}]  ` +
           `${story.technicalSpec.language || '—'} / ${story.technicalSpec.framework || '—'} / ${story.technicalSpec.architecture || '—'}` +
@@ -128,8 +205,8 @@ async function buildFixLines(
         const severityTag = fix.impactAssessment.severity
           ? ` [${fix.impactAssessment.severity}]`
           : '';
-        const gate = fix.metadata.gate;
-        const gateLabel = `Gate ${gate} — ${GATE_LABELS[gate]}`;
+        const displayedGate = effectiveGate(fix.metadata.gate, fix.metadata.status);
+        const gateLabel = `Gate ${displayedGate} — ${GATE_LABELS[displayedGate]}`;
         if (isClosed) {
           const statusIcon = fix.metadata.status === 'done' ? '✅' : '⏭️';
           return (

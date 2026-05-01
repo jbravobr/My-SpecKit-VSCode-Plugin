@@ -5,11 +5,19 @@ import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { appendLog } from '../../generator/utils/SessionLogger';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
-import { extractSpecType, RE_META_BLOCK } from '../../parser/BaseParser';
+import { extractSpecType } from '../../parser/BaseParser';
 import { Gate, SpecStatus } from '../../story/Story';
 import { parseStory } from '../../story/StoryParser';
+import { AuditLogger } from '../../workflow/AuditLogger';
 import { validateGateTransition, validateStatusTransition } from '../../workflow/GateEnforcer';
 import { gitOps, IGitOps } from '../../workflow/GitOperations';
+import { upsertMetadataFields } from '../../workflow/MetadataPatcher';
+import {
+  buildSessionAlias,
+  createCorrelationId,
+  inferAgentModeFromGate,
+} from '../../workflow/ObservabilityContext';
+import { TraceabilityManager } from '../../workflow/TraceabilityManager';
 import { requireWorkspace } from './CommandHelpers';
 
 interface CoverageInfo {
@@ -18,10 +26,7 @@ interface CoverageInfo {
   linesFound: number;
 }
 
-interface MetadataPatchResult {
-  content: string;
-  changed: boolean;
-}
+type MetadataPatchResult = import('../../workflow/MetadataPatcher').MetadataPatchResult;
 
 type ReviewAutoAction = 'orchestrate' | 'approved' | 'changes-requested';
 
@@ -35,47 +40,7 @@ interface StoryTransitionSummary {
 }
 
 function upsertStoryMetadata(content: string, gate: Gate, status: SpecStatus): MetadataPatchResult {
-  const metaMatch = content.match(RE_META_BLOCK);
-  if (!metaMatch || metaMatch.index === undefined) {
-    throw new Error('Bloco <!-- metadata --> não encontrado na story ativa.');
-  }
-
-  const before = content.slice(0, metaMatch.index);
-  const after = content.slice(metaMatch.index + metaMatch[0].length);
-  const lines = metaMatch[1].replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-
-  let gateFound = false;
-  let statusFound = false;
-
-  const nextLines = lines.map((line) => {
-    if (/^\s*gate\s*:/i.test(line)) {
-      gateFound = true;
-      return `gate: ${gate}`;
-    }
-    if (/^\s*status\s*:/i.test(line)) {
-      statusFound = true;
-      return `status: ${status}`;
-    }
-    return line;
-  });
-
-  if (!gateFound) nextLines.push(`gate: ${gate}`);
-  if (!statusFound) nextLines.push(`status: ${status}`);
-
-  const normalizedLines = nextLines
-    .join('\n')
-    .split('\n')
-    .map((line) => line.trimEnd())
-    .filter(
-      (line, idx, arr) =>
-        !(idx === 0 && line.trim().length === 0) &&
-        !(idx === arr.length - 1 && line.trim().length === 0),
-    );
-
-  const replacement = `<!-- metadata\n${normalizedLines.join('\n')}\n-->`;
-  const nextContent = `${before}${replacement}${after}`;
-
-  return { content: nextContent, changed: nextContent !== content };
+  return upsertMetadataFields(content, { gate, status });
 }
 
 function extractChangedFilesFromDiff(diffOutput: string): string[] {
@@ -236,6 +201,72 @@ function formatTransitionMarkdown(summary: StoryTransitionSummary): string {
   );
 }
 
+interface ReviewAutoRecordInput {
+  command: string;
+  outcome: string;
+  detail?: string;
+  gate: Gate;
+  commandExecutionId: string;
+  specId: string;
+  specTitle: string;
+  workspaceRoot: string;
+  fs: IFileSystem;
+  audit: AuditLogger;
+  tracer: TraceabilityManager;
+}
+
+async function recordReviewAutoEvent(input: ReviewAutoRecordInput): Promise<void> {
+  const sessionId = createCorrelationId('session');
+  const agentMode = inferAgentModeFromGate(input.gate);
+  const sessionAlias = buildSessionAlias(input.specId, input.specTitle, agentMode, input.gate);
+
+  await appendLog(
+    input.workspaceRoot,
+    {
+      command: input.command,
+      specId: input.specId,
+      specTitle: input.specTitle,
+      gate: input.gate,
+      outcome: input.outcome,
+      detail: input.detail,
+      commandExecutionId: input.commandExecutionId,
+      sessionId,
+      agentMode,
+      sessionAlias,
+      llmResponseReceived: true,
+    },
+    input.fs,
+  );
+
+  await input.audit.log('command', `${input.command}: ${input.outcome}`, {
+    command: input.command,
+    commandExecutionId: input.commandExecutionId,
+    sessionId,
+    specId: input.specId,
+    agentMode,
+    gate: input.gate,
+    sessionAlias,
+  });
+
+  try {
+    await input.tracer.record(input.specId, 'story', {
+      type: 'custom',
+      description: `review-auto event: ${input.outcome}`,
+      data: {
+        command: input.command,
+        commandExecutionId: input.commandExecutionId,
+        sessionId,
+        specId: input.specId,
+        agentMode,
+        gate: String(input.gate),
+        sessionAlias,
+      },
+    });
+  } catch {
+    // Traceability should never break the main flow
+  }
+}
+
 export async function handleReviewAutoCommand(
   request: vscode.ChatRequest,
   stream: vscode.ChatResponseStream,
@@ -246,6 +277,10 @@ export async function handleReviewAutoCommand(
 ): Promise<void> {
   const workspaceRoot = requireWorkspace(workspace, stream);
   if (!workspaceRoot) return;
+
+  const commandExecutionId = createCorrelationId('exec');
+  const audit = new AuditLogger(workspaceRoot, fs);
+  const tracer = new TraceabilityManager(workspaceRoot, fs);
 
   const activeSpecPath = await workspace.getActiveSpecPath();
   if (!activeSpecPath) {
@@ -304,18 +339,19 @@ export async function handleReviewAutoCommand(
         await fs.writeFile(activeSpecPath, patch.content);
       }
 
-      await appendLog(
+      await recordReviewAutoEvent({
+        command: '/review-auto --approved',
+        outcome: '✅ Veredito APROVADO — story encerrada no Gate 4',
+        detail: `Gate: ${summary.fromGate} -> ${summary.toGate}\nStatus: ${summary.fromStatus} -> ${summary.toStatus}`,
+        gate: 4,
+        commandExecutionId,
+        specId: story.metadata.id,
+        specTitle: story.metadata.title,
         workspaceRoot,
-        {
-          command: '/review-auto --approved',
-          specId: story.metadata.id,
-          specTitle: story.metadata.title,
-          gate: 4,
-          outcome: '✅ Veredito APROVADO — story encerrada no Gate 4',
-          detail: `Gate: ${summary.fromGate} -> ${summary.toGate}\nStatus: ${summary.fromStatus} -> ${summary.toStatus}`,
-        },
         fs,
-      );
+        audit,
+        tracer,
+      });
 
       stream.markdown(
         `## ✅ Encerramento Orquestrado — STORY-${story.metadata.id}\n\n` +
@@ -353,18 +389,19 @@ export async function handleReviewAutoCommand(
         await fs.writeFile(activeSpecPath, patch.content);
       }
 
-      await appendLog(
+      await recordReviewAutoEvent({
+        command: '/review-auto --changes-requested',
+        outcome: '🔄 Alterações solicitadas — retorno para Gate 2 (implementação)',
+        detail: `Gate: ${summary.fromGate} -> ${summary.toGate}\nStatus: ${summary.fromStatus} -> ${summary.toStatus}`,
+        gate: 2,
+        commandExecutionId,
+        specId: story.metadata.id,
+        specTitle: story.metadata.title,
         workspaceRoot,
-        {
-          command: '/review-auto --changes-requested',
-          specId: story.metadata.id,
-          specTitle: story.metadata.title,
-          gate: 2,
-          outcome: '🔄 Alterações solicitadas — retorno para Gate 2 (implementação)',
-          detail: `Gate: ${summary.fromGate} -> ${summary.toGate}\nStatus: ${summary.fromStatus} -> ${summary.toStatus}`,
-        },
         fs,
-      );
+        audit,
+        tracer,
+      });
 
       stream.markdown(
         `## 🔄 Retorno Orquestrado para Retrabalho — STORY-${story.metadata.id}\n\n` +
@@ -459,23 +496,24 @@ export async function handleReviewAutoCommand(
       ? 'ALTERAÇÕES SOLICITADAS (bloqueios automáticos)'
       : 'REVISÃO GATE 3 EXECUTADA (sem bloqueios automáticos)';
 
-  await appendLog(
+  await recordReviewAutoEvent({
+    command: '/review-auto',
+    outcome: `✅ ${verdict}`,
+    detail:
+      `Gate: ${transitionSummary.fromGate} -> ${transitionSummary.toGate}\n` +
+      `Status: ${transitionSummary.fromStatus} -> ${transitionSummary.toStatus}\n` +
+      `Arquivos detectados: ${changedFiles.length}\n` +
+      `Cobertura: ${formatCoverage(coverage)}\n` +
+      `Bloqueios: ${blockers.length}`,
+    gate: 3,
+    commandExecutionId,
+    specId: story.metadata.id,
+    specTitle: story.metadata.title,
     workspaceRoot,
-    {
-      command: '/review-auto',
-      specId: story.metadata.id,
-      specTitle: story.metadata.title,
-      gate: 3,
-      outcome: `✅ ${verdict}`,
-      detail:
-        `Gate: ${transitionSummary.fromGate} -> ${transitionSummary.toGate}\n` +
-        `Status: ${transitionSummary.fromStatus} -> ${transitionSummary.toStatus}\n` +
-        `Arquivos detectados: ${changedFiles.length}\n` +
-        `Cobertura: ${formatCoverage(coverage)}\n` +
-        `Bloqueios: ${blockers.length}`,
-    },
     fs,
-  );
+    audit,
+    tracer,
+  });
 
   stream.markdown(
     `## ✅ Revisão Orquestrada — STORY-${story.metadata.id}\n\n` +

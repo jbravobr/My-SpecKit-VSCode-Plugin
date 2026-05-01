@@ -99,4 +99,14 @@ describe('generateBatchIndex', () => {
     expect(result).toContain('Copilot Chat');
     expect(result).toContain('dropdown');
   });
+
+  it('contains single-branch guidance for batch mode', () => {
+    const stories = [makeStory({ id: '001' })];
+    const result = generateBatchIndex(stories);
+
+    expect(result).toContain('Estratégia de branch (batch)');
+    expect(result).toContain('Use **uma única branch** para todo o lote');
+    expect(result).toContain('Não crie `feature/<story-id>-<slug>` neste modo');
+    expect(result).toContain('Não empilhe branch de uma story sobre outra');
+  });
 });

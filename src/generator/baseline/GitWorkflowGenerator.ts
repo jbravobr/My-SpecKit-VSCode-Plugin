@@ -24,6 +24,12 @@ ${generateGenericGitRepositoryPreflightSection()}
 4. Execute os testes — todos devem passar com cobertura ≥ 80%
 5. Faça o commit final local na branch da feature
 
+## Exceção — /batch --generate --unified
+- Use uma **branch única do lote** (ex: \`feature/batch-<yyyymmdd>-<slug>\`)
+- Não crie \`feature/<story-id>-<slug>\` dentro do fluxo batch unificado
+- Não empilhe branch de uma story sobre outra
+- Todos os commits das stories do lote devem permanecer na mesma branch de integração
+
 ## Conventional Commits — formato obrigatório
 \`\`\`
 <tipo>(<escopo>): <descrição curta em inglês>

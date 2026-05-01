@@ -2,7 +2,7 @@
   "name": "vscode-plugin-speckit",
   "displayName": "SpecKit — Spec Driven Development",
   "description": "Defina sua história e configure o Copilot para desenvolvimento orientado a spec",
-  "version": "0.3.17",
+  "version": "0.3.18",
   "icon": "assets/speckit_icon.png",
   "publisher": "local",
   "engines": {
@@ -41,6 +41,10 @@
           {
             "name": "status-all",
             "description": "Atalho para /status --all (inclui done/cancelled)"
+          },
+          {
+            "name": "status-fix",
+            "description": "Atalho para /status --fix (retro-persiste gate: 4 em specs done com gate desatualizado)"
           },
           {
             "name": "draft",

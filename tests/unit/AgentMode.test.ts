@@ -84,6 +84,10 @@ describe('AgentMode', () => {
     it('should return debugger prompt with protocol steps', () => {
       const prompt = getAgentModePrompt('debugger');
       expect(prompt).toContain('Debugger');
+      expect(prompt).toContain('Formato obrigatório de resposta (Markdown)');
+      expect(prompt).toContain('Template rápido');
+      expect(prompt).toContain('## Status');
+      expect(prompt).toContain('## Evidências');
       expect(prompt).toContain('Hipótese');
       expect(prompt).toContain('Evidência');
       expect(prompt).toContain('Fix Mínimo');
@@ -94,6 +98,10 @@ describe('AgentMode', () => {
     it('should return refactor prompt with protocol steps', () => {
       const prompt = getAgentModePrompt('refactor');
       expect(prompt).toContain('Refactor');
+      expect(prompt).toContain('Formato obrigatório de resposta (Markdown)');
+      expect(prompt).toContain('Template rápido');
+      expect(prompt).toContain('## Snapshot Comportamental');
+      expect(prompt).toContain('## Validação');
       expect(prompt).toContain('Snapshot');
       expect(prompt).toContain('Verificação Prévia');
       expect(prompt).toContain('Refatoração');

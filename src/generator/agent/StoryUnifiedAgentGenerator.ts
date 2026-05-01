@@ -46,6 +46,10 @@ Dependências: ${deps}
 
 ---
 
+${generateBatchBranchProtocol()}
+
+---
+
 ${generateDependencyProtocol(story)}
 
 ---
@@ -62,13 +66,26 @@ ${generateTransitionProtocol(storyId)}
 
 ## MODO REVISOR — Gates 3, 4
 
-${generateRevisorContent(story)}
+${generateRevisorContent(story, { mode: 'batch-unified' })}
 
 > **REGRA INVIOLÁVEL DO MODO REVISOR:** Você **NUNCA** implementa código, cria arquivos de produção, faz commits de código ou altera qualquer artefato que não seja documentação de revisão. Se o veredito for ALTERAÇÕES SOLICITADAS, documente os bloqueios e retorne ao MODO IMPLEMENTADOR via protocolo de retorno.
 
 ---
 
 ${generateReturnProtocol(storyId)}
+`;
+}
+
+function generateBatchBranchProtocol(): string {
+  return `## PROTOCOLO DE BRANCH (modo batch unificado)
+
+Neste fluxo \`/batch --generate --unified\`, a execução de todas as stories ocorre em **uma única branch de integração do lote**.
+
+Regras obrigatórias:
+1. Não criar branch por story
+2. Não empilhar story branch sobre story branch
+3. Se a sessão iniciar em \`develop\`/\`main\`, criar **uma** branch de lote (ex: \`feature/batch-<yyyymmdd>-<slug>\`) e reutilizá-la para todas as stories
+4. Todos os commits de implementação/revisão permanecem nessa branch única até o encerramento do lote
 `;
 }
 

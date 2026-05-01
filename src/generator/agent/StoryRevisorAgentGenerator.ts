@@ -1,6 +1,12 @@
 import { Story } from '../../story/Story';
 import { AGENT_TOOLS_YAML } from './agentTools';
 
+export type RevisorContentMode = 'standard' | 'batch-unified';
+
+interface RevisorContentOptions {
+  mode?: RevisorContentMode;
+}
+
 export function generateRevisorAgent(story: Story): string {
   const storyId = story.metadata.id || '001';
 
@@ -10,15 +16,16 @@ description: "Agente SpecKit — revisão independente de story. Conduz Gates 3-
 ${AGENT_TOOLS_YAML}
 ---
 
-${generateRevisorContent(story)}`;
+${generateRevisorContent(story, { mode: 'standard' })}`;
 }
 
 /**
  * Returns the revisor agent content WITHOUT frontmatter.
  * Used by the unified agent generator to compose impl + revisor in one file.
  */
-export function generateRevisorContent(story: Story): string {
+export function generateRevisorContent(story: Story, options: RevisorContentOptions = {}): string {
   const storyId = story.metadata.id || '001';
+  const isBatchUnified = options.mode === 'batch-unified';
   const criteria = story.functionalSpec.acceptanceCriteria.map((c) => `- [ ] ${c}`).join('\n');
   const dodList = story.dod.criteria.map((c) => `- [ ] ${c}`).join('\n');
   const hasKafka = (story.technicalSpec.infrastructure ?? '').toLowerCase().includes('kafka');
@@ -28,6 +35,28 @@ export function generateRevisorContent(story: Story): string {
   const scalabilityLine = story.nonFunctionalSpec.scalability?.trim()
     ? `\n- [ ] Escalabilidade (código): ${story.nonFunctionalSpec.scalability.trim()}`
     : '';
+
+  const gitChecklist = isBatchUnified
+    ? `### Git
+- [ ] Branch atual é a branch única do lote (ex: \`feature/batch-<yyyymmdd>-<slug>\`)
+- [ ] Nenhuma branch por story foi criada neste fluxo batch
+- [ ] Não houve empilhamento de branch entre stories
+- [ ] Commits seguem Conventional Commits
+- [ ] Sem commits com mensagem genérica ("fix", "wip", "test")
+- [ ] Nenhum commit direto em \`develop\` ou \`main\``
+    : `### Git
+- [ ] Branch segue padrão \`feature/${storyId}-<slug>\`
+- [ ] Commits seguem Conventional Commits
+- [ ] Sem commits com mensagem genérica ("fix", "wip", "test")
+- [ ] Nenhum commit direto em \`develop\` ou \`main\``;
+
+  const syncStepLabel = isBatchUnified
+    ? '### Passo 1 — Sincronize a branch única do lote com develop (rebase)'
+    : '### Passo 1 — Sincronize com develop (rebase)';
+
+  const completionBranchLine = isBatchUnified
+    ? '> Commit local na **branch única do lote** (ex: `feature/batch-<yyyymmdd>-<slug>`).'
+    : `> Commit local na branch \`feature/${storyId}-<slug>\`.`;
 
   return `# SpecKit Revisor — Story ${storyId} (Gates 3–4)
 
@@ -56,6 +85,26 @@ Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${st
   - ## 🚪 Transição de Gate/Status
   - tabela com Antes e Depois para gate e status
   - motivo da transição em uma linha objetiva
+
+### Template rápido (use em toda interação)
+
+\`\`\`md
+## Status
+- Gate atual: <3|4>
+- Situação: <em revisão|aprovado|alterações solicitadas>
+
+## Evidências
+- Arquivo(s): <lista>
+- Critério(s): <item do checklist + prova objetiva>
+
+## Veredito
+- Resultado: <APROVADO|ALTERAÇÕES SOLICITADAS>
+- Bloqueantes: <lista objetiva>
+- Melhorias: <lista não bloqueante>
+
+## Próximo passo
+- <ação objetiva seguinte>
+\`\`\`
 
 ---
 
@@ -118,11 +167,7 @@ ${criteria || '- [ ] (critérios não especificados)'}
 - [ ] Segurança: ${story.nonFunctionalSpec.security || '(não especificado)'}${scalabilityLine}
 - [ ] Idempotência: operações de escrita não duplicam estado — Idempotency-Key ou deduplicação por chave de negócio presente
 
-### Git
-- [ ] Branch segue padrão \`feature/${storyId}-<slug>\`
-- [ ] Commits seguem Conventional Commits
-- [ ] Sem commits com mensagem genérica ("fix", "wip", "test")
-- [ ] Nenhum commit direto em \`develop\` ou \`main\`
+${gitChecklist}
 
 ### DoD
 ${dodList || '- [ ] (não especificado)'}
@@ -166,7 +211,7 @@ Só avance para o Gate 4 após novo veredito: APROVADO.
 
 ## Gate 4 — Entrega
 
-### Passo 1 — Sincronize com develop (rebase)
+${syncStepLabel}
 \`\`\`bash
 git fetch origin
 git rebase origin/develop
@@ -228,6 +273,6 @@ git commit -m "chore(${storyId}): encerra story no speckit"
 ## Declaração de conclusão
 
 > **Story ${storyId} CONCLUÍDA.** Testes: 100% passando. Cobertura: X%.
-> Commit local na branch \`feature/${storyId}-<slug>\`.
+${completionBranchLine}
 `;
 }

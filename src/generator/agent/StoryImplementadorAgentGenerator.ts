@@ -35,6 +35,31 @@ export function generateImplementadorContentForUnified(story: Story): string {
   return generateImplementadorContentInternal(story, { unifiedMode: true });
 }
 
+function generateBatchUnifiedGitSection(storyId: string): string {
+  return `### Setup git (modo batch unificado — branch única do lote)
+
+Neste modo, todas as stories do batch evoluem na **mesma linha de código**.
+
+1. Valide repositório e branch atual:
+   \`\`\`bash
+   git rev-parse --is-inside-work-tree
+   git branch --show-current
+   \`\`\`
+2. Se a branch atual for \`develop\`, \`main\` ou estiver vazia, crie uma única branch de integração para o lote:
+   \`\`\`bash
+   git checkout develop && git pull --ff-only
+   git checkout -b feature/batch-<yyyymmdd>-<slug>
+   \`\`\`
+3. Se já existir uma branch de trabalho do lote, **permaneça nela**.
+
+Regras inegociáveis neste modo:
+- Não crie \`feature/${storyId}-<slug>\`
+- Não crie branch por story
+- Não empilhe story branch sobre outra story branch
+- Todas as tasks/commits desta story devem entrar na branch única do lote
+`;
+}
+
 function generateImplementadorContentInternal(
   story: Story,
   options: ImplementadorContentOptions,
@@ -59,6 +84,10 @@ function generateImplementadorContentInternal(
     story.dod.criteria.length > 0
       ? story.dod.criteria.map((c) => `- [ ] ${c}`).join('\n')
       : '- (não especificado)';
+
+  const gitSetupSection = options.unifiedMode
+    ? generateBatchUnifiedGitSection(storyId)
+    : generateGitRepositoryPreflightSection(`feature/${storyId}-<slug>`);
 
   const stageSection =
     projectStage === 'greenfield'
@@ -170,6 +199,29 @@ Se o escopo mudar → replanejar antes de continuar.
   - tabela com Antes e Depois para gate e status
   - motivo da transição em uma linha objetiva
 
+### Template rápido (use em toda interação)
+
+\`\`\`md
+## Status
+- Gate atual: <0|1|2>
+- Situação: <em andamento|concluído>
+
+## Plano da Etapa
+- <ação atômica 1>
+- <ação atômica 2>
+
+## Evidências
+- Arquivo(s): <lista>
+- Critério(s) coberto(s): <CA-X>
+
+## Validação
+- Comando: <comando executado>
+- Resultado: <passou|falhou + detalhe>
+
+## Próximo passo
+- <ação objetiva seguinte>
+\`\`\`
+
 ---
 
 ## Gate 0 — Alinhamento e confirmação
@@ -216,7 +268,7 @@ ${generateContainerRuntimePreflightSection()}
 
 ## Gate 1 — Implementação
 
-${generateGitRepositoryPreflightSection(`feature/${storyId}-<slug>`)}
+${gitSetupSection}
 
 ### Planejamento de tarefas (faça ANTES de escrever qualquer código)
 

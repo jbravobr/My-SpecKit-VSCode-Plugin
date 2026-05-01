@@ -12,9 +12,18 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
   status: {
     title: '/status',
     summary: 'Exibe resumo de stories e fixes no workspace.',
-    usage: ['@speckit /status', '@speckit /status --all', '@speckit /status --closed'],
-    options: ['--all (inclui done e cancelled)', '--closed (alias de --all)'],
-    aliases: ['/status-all'],
+    usage: [
+      '@speckit /status',
+      '@speckit /status --all',
+      '@speckit /status --closed',
+      '@speckit /status --fix',
+    ],
+    options: [
+      '--all (inclui done e cancelled)',
+      '--closed (alias de --all)',
+      '--fix (retro-persiste gate: 4 em specs com status: done e gate desatualizado; implica --all)',
+    ],
+    aliases: ['/status-all', '/status-fix'],
   },
   batch: {
     title: '/batch',
@@ -68,6 +77,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
 
 const TOPIC_ALIASES: Record<string, string> = {
   'status-all': 'status',
+  'status-fix': 'status',
   'help-status': 'status',
   'batch-generate': 'batch',
   'batch-unified': 'batch',
@@ -82,13 +92,14 @@ function renderGeneralHelp(): string {
   return (
     '**SpecKit — Ajuda rápida**\n\n' +
     '**Comandos com parâmetros mais usados:**\n' +
-    '- `/status [--all|--closed]`\n' +
+    '- `/status [--all|--closed] [--fix]`\n' +
     '- `/batch [--generate|--gen] [--unified]`\n' +
     '- `/validate [--devtools]`\n' +
     '- `/review-auto`\n' +
     '- `/draft [--fix|--refactoring|--spike]`\n\n' +
     '**Atalhos (aliases):**\n' +
     '- `/status-all` → `/status --all`\n' +
+    '- `/status-fix` → `/status --fix`\n' +
     '- `/batch-generate` → `/batch --generate`\n' +
     '- `/batch-unified` → `/batch --generate --unified`\n' +
     '- `/help-status` → `/help status`\n\n' +

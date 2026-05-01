@@ -47,6 +47,14 @@ describe('StoryUnifiedAgentGenerator', () => {
       expect(result).toContain('MODO REVISOR');
     });
 
+    it('enforces single shared batch branch strategy in unified mode', () => {
+      const result = generateUnifiedAgent(completeStory);
+      expect(result).toContain('PROTOCOLO DE BRANCH (modo batch unificado)');
+      expect(result).toContain('uma única branch de integração do lote');
+      expect(result).toContain('Não criar branch por story');
+      expect(result).toContain('Não empilhar story branch sobre story branch');
+    });
+
     it('contains dependency protocol', () => {
       const result = generateUnifiedAgent(completeStory);
       expect(result).toContain('PROTOCOLO DE DEPENDÊNCIA');
@@ -162,7 +170,10 @@ describe('generateImplementadorContent', () => {
   it('requires markdown response formatting in implementador mode', () => {
     const result = generateImplementadorContent(completeStory);
     expect(result).toContain('Formato obrigatório de resposta no chat (Markdown)');
+    expect(result).toContain('Template rápido (use em toda interação)');
     expect(result).toContain('Status');
+    expect(result).toContain('Plano da Etapa');
+    expect(result).toContain('Validação');
     expect(result).toContain('Evidências');
     expect(result).toContain('Próximo passo');
   });
@@ -197,6 +208,9 @@ describe('generateImplementadorContent', () => {
     const result = generateImplementadorContentForUnified(completeStory);
     expect(result).toContain('Handoff interno para revisão');
     expect(result).toContain('Não encerre a sessão.');
+    expect(result).toContain('modo batch unificado — branch única do lote');
+    expect(result).toContain('Não crie `feature/001-<slug>`');
+    expect(result).toContain('Não crie branch por story');
     expect(result).toContain('Finalize commit local pendente do Gate 2');
     expect(result).toContain('@speckit /review-auto');
     expect(result).toContain('Sem aguardar novo comando do usuário');
@@ -235,8 +249,10 @@ describe('generateRevisorContent', () => {
   it('requires markdown response formatting in revisor mode', () => {
     const result = generateRevisorContent(completeStory);
     expect(result).toContain('Formato obrigatório de resposta no chat (Markdown)');
+    expect(result).toContain('Template rápido (use em toda interação)');
     expect(result).toContain('Status');
     expect(result).toContain('Evidências');
+    expect(result).toContain('Veredito');
     expect(result).toContain('Veredito/Próximo passo');
   });
 
@@ -252,5 +268,13 @@ describe('generateRevisorContent', () => {
 
   it('does not throw for empty story', () => {
     expect(() => generateRevisorContent(emptyStory())).not.toThrow();
+  });
+
+  it('uses batch unified git checklist when requested', () => {
+    const result = generateRevisorContent(completeStory, { mode: 'batch-unified' });
+    expect(result).toContain('Branch atual é a branch única do lote');
+    expect(result).toContain('Nenhuma branch por story foi criada neste fluxo batch');
+    expect(result).toContain('Não houve empilhamento de branch entre stories');
+    expect(result).toContain('branch única do lote');
   });
 });

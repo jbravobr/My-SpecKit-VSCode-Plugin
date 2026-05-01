@@ -329,4 +329,127 @@ describe('handleStatusCommand', () => {
     expect(sessionContent).toContain('1 stories');
     expect(sessionContent).toContain('0 fixes');
   });
+
+  // ── Bug regression: stories with status=done but stored gate < 4 ──────
+  // Reproduces the issue where /status-all showed "Gate 0 — Alinhamento"
+  // for stories already implemented, reviewed and committed (status=done)
+  // because only /review-auto on the active spec persisted gate: 4.
+
+  const doneStoryAtGate0Md =
+    '<!-- metadata\nid: 042\ntitle: Old Done Story\ntype: story\nstatus: done\ngate: 0\n-->';
+
+  it('displays Gate 4 — Entrega for status=done stories even when stored gate is 0', async () => {
+    const stream = createMockStream();
+    const fs = seedFs(doneStoryAtGate0Md);
+    const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+
+    await handleStatusCommand(createMockRequest('--all'), stream, createMockToken(), fs, workspace);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Old Done Story');
+    expect(output).toContain('🚪 Gate 4 — Entrega');
+    expect(output).not.toContain('🚪 Gate 0 — Alinhamento');
+  });
+
+  it('displays Gate 4 — Entrega for status=done fixes even when stored gate is 0', async () => {
+    const doneFixAtGate0Md =
+      '<!-- metadata\nid: 042\ntitle: Old Done Fix\ntype: fix\nstatus: done\ngate: 0\n-->';
+    const stream = createMockStream();
+    const fs = seedFs(doneFixAtGate0Md, 'FIX-001.md');
+    const workspace = new WorkspaceStub({ storyFiles: [], fixFiles: ['FIX-001.md'] });
+
+    await handleStatusCommand(createMockRequest('--all'), stream, createMockToken(), fs, workspace);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Old Done Fix');
+    expect(output).toContain('🚪 Gate 4 — Entrega');
+  });
+
+  it('keeps stored gate for cancelled stories (does not auto-promote)', async () => {
+    const cancelledMd =
+      '<!-- metadata\nid: 042\ntitle: Cancelled Story\ntype: story\nstatus: cancelled\ngate: 1\n-->';
+    const stream = createMockStream();
+    const fs = seedFs(cancelledMd);
+    const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+
+    await handleStatusCommand(createMockRequest('--all'), stream, createMockToken(), fs, workspace);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('🚪 Gate 1 — Implementação');
+  });
+
+  // ── --fix flag retro-persists gate on disk ───────────────────────────
+
+  it('--fix retro-persists gate: 4 in file content for done stories with stale gate', async () => {
+    const stream = createMockStream();
+    const fs = seedFs(doneStoryAtGate0Md);
+    const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+
+    await handleStatusCommand(createMockRequest('--fix'), stream, createMockToken(), fs, workspace);
+
+    const updated = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
+    expect(updated).toMatch(/^gate:\s*4$/m);
+    expect(updated).not.toMatch(/^gate:\s*0$/m);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Retrofit de gate aplicado em 1 arquivo(s)');
+    expect(output).toContain('STORY-001.md');
+    // --fix implies --all
+    expect(output).toContain('Stories (1)');
+  });
+
+  it('--fix reports nothing to do when there are no stale done specs', async () => {
+    const stream = createMockStream();
+    const fs = seedFs(completeStoryMd);
+    const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+
+    await handleStatusCommand(createMockRequest('--fix'), stream, createMockToken(), fs, workspace);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('nenhuma spec `done` precisava de correção');
+  });
+
+  it('--fix does not modify cancelled specs', async () => {
+    const cancelledMd =
+      '<!-- metadata\nid: 042\ntitle: Cancelled\ntype: story\nstatus: cancelled\ngate: 1\n-->';
+    const stream = createMockStream();
+    const fs = seedFs(cancelledMd);
+    const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+
+    await handleStatusCommand(createMockRequest('--fix'), stream, createMockToken(), fs, workspace);
+
+    const updated = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
+    expect(updated).toMatch(/^gate:\s*1$/m);
+  });
+
+  it('--fix retro-persists gate: 4 for done fixes with stale gate', async () => {
+    const doneFixAtGate2Md =
+      '<!-- metadata\nid: 042\ntitle: Old Done Fix\ntype: fix\nstatus: done\ngate: 2\n-->';
+    const stream = createMockStream();
+    const fs = seedFs(doneFixAtGate2Md, 'FIX-001.md');
+    const workspace = new WorkspaceStub({ storyFiles: [], fixFiles: ['FIX-001.md'] });
+
+    await handleStatusCommand(createMockRequest('--fix'), stream, createMockToken(), fs, workspace);
+
+    const updated = await fs.readFile('C:/workspace/.speckit/FIX-001.md');
+    expect(updated).toMatch(/^gate:\s*4$/m);
+  });
+
+  it('rejects unknown flags (preserves --all/--closed/--fix allowlist)', async () => {
+    const stream = createMockStream();
+    const fs = seedFs(completeStoryMd);
+    const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+
+    await handleStatusCommand(
+      createMockRequest('--bogus'),
+      stream,
+      createMockToken(),
+      fs,
+      workspace,
+    );
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Parâmetro(s) inválido(s)');
+    expect(output).toContain('--fix');
+  });
 });

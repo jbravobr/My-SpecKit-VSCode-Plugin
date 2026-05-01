@@ -60,5 +60,12 @@ ${agentsList || '- nenhum'}
 - Respeite os gates — não pule etapas
 - O revisor **nunca** implementa — apenas documenta e devolve ao implementador
 - Dependências entre stories são verificadas no Gate 0
+
+## Estratégia de branch (batch)
+
+- Use **uma única branch** para todo o lote (ex: \`feature/batch-<yyyymmdd>-<slug>\`)
+- Não crie \`feature/<story-id>-<slug>\` neste modo
+- Não empilhe branch de uma story sobre outra
+- Se a execução iniciar em \`develop\`/\`main\`, crie a branch do lote uma vez e reutilize até o fim
 `;
 }

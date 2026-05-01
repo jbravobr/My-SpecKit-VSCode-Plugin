@@ -1,5 +1,7 @@
 export type AgentExecutionMode = 'default' | 'implementador' | 'revisor' | 'debugger' | 'refactor';
 
+const MAX_ALIAS_LABEL_LENGTH = 96;
+
 export interface CommandCorrelationContext {
   commandExecutionId?: string;
   batchId?: string;
@@ -44,9 +46,23 @@ export function buildSessionAlias(
 }
 
 function sanitizeAliasPart(value: string): string {
-  return value
+  const sanitized = value
     .replace(/[\r\n|`]+/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 72);
+    .trim();
+
+  if (sanitized.length <= MAX_ALIAS_LABEL_LENGTH) {
+    return sanitized;
+  }
+
+  const maxWithoutEllipsis = MAX_ALIAS_LABEL_LENGTH - 3;
+  const head = sanitized.slice(0, maxWithoutEllipsis).trimEnd();
+  const boundary = head.lastIndexOf(' ');
+
+  // Keep truncation stable while preferring whole-word cuts for readability.
+  if (boundary >= Math.floor(maxWithoutEllipsis * 0.6)) {
+    return `${head.slice(0, boundary)}...`;
+  }
+
+  return `${head}...`;
 }

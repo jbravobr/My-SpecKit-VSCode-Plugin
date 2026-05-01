@@ -1,0 +1,8 @@
+[2026-05-01T21:45:13.050Z] command: /agent
+[2026-05-01T21:45:13.071Z] command: /agent — ok
+[2026-05-01T21:45:25.841Z] command: /agent
+[2026-05-01T21:45:25.896Z] command: agent mode changed to debugger | command="/agent" commandExecutionId="exec-20260501184525-umwa1zv7" sessionId="session-20260501184525-je0mjpd0" agentMode="debugger" sessionAlias="global-session + debugger + Gate--"
+[2026-05-01T21:45:26.032Z] command: /agent — ok
+[2026-05-01T22:02:37.194Z] command: /agent
+[2026-05-01T22:02:37.224Z] command: agent mode changed to refactor | command="/agent" commandExecutionId="exec-20260501190237-lbg5zhm0" sessionId="session-20260501190237-oab3ostn" agentMode="refactor" sessionAlias="global-session + refactor + Gate--"
+[2026-05-01T22:02:37.371Z] command: /agent — ok
