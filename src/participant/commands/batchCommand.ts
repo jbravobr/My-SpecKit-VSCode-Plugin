@@ -17,6 +17,13 @@ import { extractSpecType } from '../../parser/BaseParser';
 import type { Gate, Story } from '../../story/Story';
 import { parseStory } from '../../story/StoryParser';
 import { validateStory } from '../../story/StoryValidator';
+import { AuditLogger } from '../../workflow/AuditLogger';
+import {
+  buildSessionAlias,
+  createCorrelationId,
+  inferAgentModeFromGate,
+} from '../../workflow/ObservabilityContext';
+import { TraceabilityManager } from '../../workflow/TraceabilityManager';
 import { requireWorkspace } from './CommandHelpers';
 
 const GATE_LABELS: Record<Gate, string> = {
@@ -50,6 +57,10 @@ export async function handleBatchCommand(
 ): Promise<void> {
   const workspaceRoot = requireWorkspace(workspace, stream);
   if (!workspaceRoot) return;
+  const commandExecutionId = createCorrelationId('exec');
+  const batchId = createCorrelationId('batch');
+  const audit = new AuditLogger(workspaceRoot, fs);
+  const tracer = new TraceabilityManager(workspaceRoot, fs);
 
   const specDir = path.join(workspaceRoot, '.speckit');
 
@@ -82,6 +93,17 @@ export async function handleBatchCommand(
   const errored = entries.filter((e) => !!e.error);
   const skipped = entries.filter((e) => isTerminal(e.status));
 
+  await recordBatchPhaseEvents(
+    entries,
+    '/batch',
+    workspaceRoot,
+    fs,
+    audit,
+    tracer,
+    commandExecutionId,
+    batchId,
+  );
+
   // Phase 2: Report validation summary
   emitSummary(stream, entries, valid, invalid, errored, skipped);
 
@@ -102,6 +124,9 @@ export async function handleBatchCommand(
       {
         command: '/batch',
         outcome: `📊 ${valid.length} válida(s), ${invalid.length} inválida(s), ${errored.length} erro(s), ${skipped.length} finalizada(s)`,
+        commandExecutionId,
+        batchId,
+        llmResponseReceived: false,
       },
       fs,
     );
@@ -120,6 +145,9 @@ export async function handleBatchCommand(
       {
         command: '/batch --generate --unified',
         outcome: `Agentes unificados gerados para ${valid.length} spec(s)`,
+        commandExecutionId,
+        batchId,
+        llmResponseReceived: false,
       },
       fs,
     );
@@ -151,10 +179,34 @@ export async function handleBatchCommand(
       }
 
       generated.push({ id: entry.id, files });
+
+      await recordBatchGenerateEvent(
+        entry,
+        `✅ ${files.length} arquivo(s) gerado(s)`,
+        workspaceRoot,
+        fs,
+        audit,
+        tracer,
+        commandExecutionId,
+        batchId,
+      );
+
       stream.markdown(`✅ \`${entry.id}\` — ${files.length} arquivo(s) gerado(s)\n`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       failed.push({ id: entry.id, error: msg });
+
+      await recordBatchGenerateEvent(
+        entry,
+        `❌ erro na geração: ${msg}`,
+        workspaceRoot,
+        fs,
+        audit,
+        tracer,
+        commandExecutionId,
+        batchId,
+      );
+
       stream.markdown(`❌ \`${entry.id}\` — erro: ${msg}\n`);
     }
   }
@@ -166,6 +218,9 @@ export async function handleBatchCommand(
     {
       command: '/batch --generate',
       outcome: `✅ ${generated.length} spec(s) processada(s), ${totalFiles} arquivo(s) gerado(s), ${failed.length} falha(s)`,
+      commandExecutionId,
+      batchId,
+      llmResponseReceived: false,
     },
     fs,
   );
@@ -401,4 +456,124 @@ async function handleUnifiedGenerate(
       `- 📄 \`copilot-instructions.md\` gerado em modo batch\n` +
       '\n**Próximo passo:** Abra o Copilot Chat e selecione o agente da story desejada no dropdown.\n',
   );
+}
+
+async function recordBatchPhaseEvents(
+  entries: SpecEntry[],
+  command: string,
+  workspaceRoot: string,
+  fs: IFileSystem,
+  audit: AuditLogger,
+  tracer: TraceabilityManager,
+  commandExecutionId: string,
+  batchId: string,
+): Promise<void> {
+  for (const entry of entries) {
+    const status = entry.error
+      ? `erro: ${entry.error}`
+      : isTerminal(entry.status)
+        ? `status terminal: ${entry.status}`
+        : entry.valid
+          ? 'válida'
+          : `inválida (${entry.gapCount} lacuna[s])`;
+
+    await recordBatchEvent(
+      entry,
+      command,
+      `batch validation — ${status}`,
+      workspaceRoot,
+      fs,
+      audit,
+      tracer,
+      commandExecutionId,
+      batchId,
+    );
+  }
+}
+
+async function recordBatchGenerateEvent(
+  entry: SpecEntry,
+  outcome: string,
+  workspaceRoot: string,
+  fs: IFileSystem,
+  audit: AuditLogger,
+  tracer: TraceabilityManager,
+  commandExecutionId: string,
+  batchId: string,
+): Promise<void> {
+  await recordBatchEvent(
+    entry,
+    '/batch --generate',
+    outcome,
+    workspaceRoot,
+    fs,
+    audit,
+    tracer,
+    commandExecutionId,
+    batchId,
+  );
+}
+
+async function recordBatchEvent(
+  entry: SpecEntry,
+  command: string,
+  outcome: string,
+  workspaceRoot: string,
+  fs: IFileSystem,
+  audit: AuditLogger,
+  tracer: TraceabilityManager,
+  commandExecutionId: string,
+  batchId: string,
+): Promise<void> {
+  const agentMode = inferAgentModeFromGate(entry.gate);
+  const sessionId = createCorrelationId('session');
+  const sessionAlias = buildSessionAlias(entry.id, entry.title, agentMode, entry.gate);
+
+  await appendLog(
+    workspaceRoot,
+    {
+      command,
+      specId: entry.id,
+      specTitle: entry.title,
+      outcome,
+      commandExecutionId,
+      sessionId,
+      batchId,
+      agentMode,
+      gate: entry.gate,
+      sessionAlias,
+      llmResponseReceived: false,
+    },
+    fs,
+  );
+
+  await audit.log('command', `batch item ${entry.id}: ${outcome}`, {
+    command,
+    commandExecutionId,
+    batchId,
+    sessionId,
+    specId: entry.id,
+    agentMode,
+    gate: entry.gate,
+    sessionAlias,
+  });
+
+  try {
+    await tracer.record(entry.id, entry.specType, {
+      type: 'custom',
+      description: `batch event: ${outcome}`,
+      data: {
+        command,
+        commandExecutionId,
+        batchId,
+        sessionId,
+        specId: entry.id,
+        agentMode,
+        gate: String(entry.gate),
+        sessionAlias,
+      },
+    });
+  } catch {
+    // Traceability should never break the main flow
+  }
 }

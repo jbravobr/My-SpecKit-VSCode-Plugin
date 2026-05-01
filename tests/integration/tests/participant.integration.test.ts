@@ -210,6 +210,66 @@ suite('Participant routing — /fix', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Suite: /history
+// ---------------------------------------------------------------------------
+
+suite('Participant routing — /history', () => {
+  let root: string;
+  let specDir: string;
+
+  setup(() => {
+    root = vscode.workspace.workspaceFolders![0].uri.fsPath;
+    specDir = path.join(root, '.speckit');
+  });
+
+  teardown(async () => {
+    await removeDir(specDir);
+  });
+
+  test('/history: exibe visão agregada após comandos que geram trilhas', async () => {
+    await handleSpeckitRequest(createRequest('new'), {} as any, createStream() as any, {} as any);
+
+    const stream = createStream();
+    await handleSpeckitRequest(createRequest('history'), {} as any, stream as any, {} as any);
+
+    const out = stream.getAll();
+    assert.ok(out.includes('History'), 'Deveria exibir bloco principal de history');
+    assert.ok(out.includes('Sessões canônicas'), 'Deveria exibir agrupamento por sessão');
+  });
+
+  test('/history audit 5: aplica filtro de tipo', async () => {
+    await handleSpeckitRequest(createRequest('fix'), {} as any, createStream() as any, {} as any);
+
+    const stream = createStream();
+    await handleSpeckitRequest(
+      createRequest('history', 'audit 5'),
+      {} as any,
+      stream as any,
+      {} as any,
+    );
+
+    const out = stream.getAll();
+    assert.ok(out.includes('filtro: `audit`'), 'Deveria indicar filtro audit');
+  });
+
+  test('/history session implementador: exibe drill-down da sessão canônica', async () => {
+    await handleSpeckitRequest(createRequest('new'), {} as any, createStream() as any, {} as any);
+
+    const stream = createStream();
+    await handleSpeckitRequest(
+      createRequest('history', 'session implementador'),
+      {} as any,
+      stream as any,
+      {} as any,
+    );
+
+    const out = stream.getAll();
+    assert.ok(out.includes('Sessão canônica'), 'Deveria exibir sessão selecionada');
+    assert.ok(out.includes('audit:'), 'Deveria exibir resumo por tipo');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Suite: smoke — todos os comandos roteiam sem throw
 // ---------------------------------------------------------------------------
 
@@ -229,7 +289,7 @@ suite('Participant routing — smoke (todos os comandos)', () => {
     await removeDir(path.join(root, '.github'));
   });
 
-  const commands = ['new', 'fix', 'validate', 'status', 'draft'];
+  const commands = ['new', 'fix', 'validate', 'status', 'draft', 'history'];
 
   for (const cmd of commands) {
     test(`/${cmd}: não lança exceção com workspace vazio`, async () => {

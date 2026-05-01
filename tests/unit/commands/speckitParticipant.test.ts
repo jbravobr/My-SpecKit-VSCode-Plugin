@@ -86,6 +86,18 @@ describe('handleSpeckitRequest — dispatcher', () => {
     expect(stream.getAllMarkdown()).not.toContain('Comandos disponíveis');
   });
 
+  it('routes /history to handleHistoryCommand', async () => {
+    const stream = createMockStream();
+    await handleSpeckitRequest(
+      createMockRequest('', 'history'),
+      createMockContext(),
+      stream,
+      createMockToken(),
+    );
+    expect(stream.getAllMarkdown()).toContain('workspace');
+    expect(stream.getAllMarkdown()).not.toContain('Comandos disponíveis');
+  });
+
   it('shows help menu for unknown command', async () => {
     const stream = createMockStream();
     await handleSpeckitRequest(
@@ -101,6 +113,7 @@ describe('handleSpeckitRequest — dispatcher', () => {
     expect(stream.getAllMarkdown()).toContain('/status');
     expect(stream.getAllMarkdown()).toContain('/draft');
     expect(stream.getAllMarkdown()).toContain('/agent');
+    expect(stream.getAllMarkdown()).toContain('/history');
   });
 
   it('shows help menu when no command is provided', async () => {

@@ -195,6 +195,11 @@ describe('handleBatchCommand', () => {
 
     const output = stream.getAllMarkdown();
     expect(output).toContain('2 spec(s) processada(s)');
+
+    const sessionContent = fs.contentFor('session-');
+    expect(sessionContent).toBeDefined();
+    expect(sessionContent).toContain('SessionAlias:');
+    expect(sessionContent).toContain('BatchId:');
   });
 
   describe('--unified flag', () => {

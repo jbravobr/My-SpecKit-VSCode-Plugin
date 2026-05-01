@@ -140,5 +140,8 @@ describe('handleNewCommand', () => {
     expect(sessionContent).toBeDefined();
     expect(sessionContent).toContain('/new');
     expect(sessionContent).toContain('História criada');
+    expect(sessionContent).toContain('SessionAlias:');
+    expect(sessionContent).toContain('AgentMode: implementador');
+    expect(sessionContent).toContain('Gate: 0');
   });
 });

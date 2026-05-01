@@ -7,6 +7,13 @@ export interface LogEntry {
   specTitle?: string;
   outcome: string;
   detail?: string;
+  commandExecutionId?: string;
+  sessionId?: string;
+  batchId?: string;
+  agentMode?: string;
+  gate?: number;
+  sessionAlias?: string;
+  llmResponseReceived?: boolean;
 }
 
 function timestamp(): string {
@@ -28,6 +35,17 @@ function formatEntry(entry: LogEntry): string {
     lines.push(`**Spec:** ${parts.join(' — ')}`);
   }
   lines.push(`**Resultado:** ${entry.outcome}`);
+
+  if (entry.sessionAlias) lines.push(`SessionAlias: ${entry.sessionAlias}`);
+  if (entry.agentMode) lines.push(`AgentMode: ${entry.agentMode}`);
+  if (entry.gate !== undefined) lines.push(`Gate: ${entry.gate}`);
+  if (entry.commandExecutionId) lines.push(`CommandExecutionId: ${entry.commandExecutionId}`);
+  if (entry.batchId) lines.push(`BatchId: ${entry.batchId}`);
+  if (entry.sessionId) lines.push(`SessionId: ${entry.sessionId}`);
+  if (entry.llmResponseReceived !== undefined) {
+    lines.push(`LLMResponseReceived: ${entry.llmResponseReceived ? 'true' : 'false'}`);
+  }
+
   if (entry.detail) {
     lines.push(entry.detail);
   }

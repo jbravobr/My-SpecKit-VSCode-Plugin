@@ -542,6 +542,36 @@ Histórico:
 
 ---
 
+### `@speckit /history`
+
+Exibe histórico agregado em uma única visão, combinando eventos de auditoria, trace e session log.
+
+Além da lista cronológica, o comando também apresenta um resumo de sessões canônicas (top por volume) para facilitar navegação de histórico.
+
+**Uso:**
+
+```
+@speckit /history           → Agregado (audit + trace + log), últimas 20 entradas
+@speckit /history audit     → Somente audit
+@speckit /history trace 50  → Somente trace, últimas 50 entradas
+@speckit /history log 100   → Somente session log, últimas 100 entradas
+@speckit /history sessions 8                     → Somente resumo de sessões canônicas (top 8)
+@speckit /history session implementador          → Drill-down por termo de alias
+@speckit /history session "Comissao + revisor"  → Drill-down por alias completo/trecho (com aspas)
+```
+
+**Filtros válidos:** `all`, `audit`, `trace`, `log`
+
+**Modos adicionais:** `sessions`, `session <alias|termo>`
+
+**Exemplo de contexto exibido por entrada:**
+
+```
+spec:US-WORKSPACE-20260501-1030, agent:implementador, gate:2, alias:Comissao Kafka + implementador + Gate-2
+```
+
+---
+
 ### `@speckit /diff`
 
 Mostra o git diff no chat — útil para revisar alterações sem sair da conversa.
@@ -955,6 +985,13 @@ Formato de cada entrada:
 
 **Spec:** 001 — Cálculo de comissão
 **Resultado:** ✅ Válida — 9 arquivo(s) gerado(s)
+SessionAlias: Calculo de comissao + implementador + Gate-2
+AgentMode: implementador
+Gate: 2
+CommandExecutionId: exec-...
+SessionId: session-...
+BatchId: batch-...
+LLMResponseReceived: false
 
 - .github/copilot-instructions.md
 - .github/skills/speckit-baseline/SKILL.md
@@ -2221,6 +2258,9 @@ Além do audit log e traces, o plugin grava logs de sessão em Markdown:
 
 Cada entrada contém o comando executado, o resultado e metadados relevantes. Útil para revisão pós-sessão.
 
+> Limitação de plataforma: a API atual de Chat Participant do VS Code/Copilot não permite renomear programaticamente o título nativo da conversa.
+> Para facilitar navegação no histórico, o SpecKit grava e exibe um alias canônico de sessão no formato `Story + Agente + Gate` via `/history` e session logs.
+
 ---
 
 ## Referência rápida — o que dizer ao agente
@@ -2235,6 +2275,7 @@ Cada entrada contém o comando executado, o resultado e metadados relevantes. Ú
 | Criar fix por template      | `@speckit /fix`                                        |
 | Validar e gerar arquivos    | `@speckit /validate`                                   |
 | Ver todas as specs abertas  | `@speckit /status`                                     |
+| Ver histórico agregado      | `@speckit /history`                                    |
 
 ### Trabalhando com gates
 

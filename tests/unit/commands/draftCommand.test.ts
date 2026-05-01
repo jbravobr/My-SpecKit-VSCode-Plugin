@@ -580,4 +580,25 @@ describe('handleDraftCommand', () => {
     expect(trace.specType).toBe('fix');
     expect(trace.entries[0].description).toBe('elicit prompt created');
   });
+
+  it('writes session alias metadata for draft execution', async () => {
+    const stream = createMockStream();
+    const workspace = new WorkspaceStub({ storyFiles: [] });
+    const fs = new InMemoryFileSystem();
+
+    await handleDraftCommand(
+      createMockRequest('Criar relatório de auditoria mensal'),
+      stream,
+      token,
+      fs,
+      workspace,
+    );
+
+    const sessionContent = fs.contentFor('session-');
+    expect(sessionContent).toBeDefined();
+    expect(sessionContent).toContain('/draft');
+    expect(sessionContent).toContain('SessionAlias:');
+    expect(sessionContent).toContain('AgentMode: implementador');
+    expect(sessionContent).toContain('Gate: 0');
+  });
 });

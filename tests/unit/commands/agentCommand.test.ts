@@ -157,5 +157,7 @@ describe('handleAgentCommand', () => {
     expect(sessionContent).toBeDefined();
     expect(sessionContent).toContain('/agent');
     expect(sessionContent).toContain('Debugger');
+    expect(sessionContent).toContain('SessionAlias:');
+    expect(sessionContent).toContain('AgentMode: debugger');
   });
 });

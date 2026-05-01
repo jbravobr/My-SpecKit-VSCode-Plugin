@@ -12,11 +12,14 @@ import { handleDoctorCommand } from './commands/doctorCommand';
 import { handleDraftCommand } from './commands/draftCommand';
 import { handleFixCommand } from './commands/fixCommand';
 import { handleGateCommand } from './commands/gateCommand';
+import { handleHistoryCommand } from './commands/historyCommand';
 import { handleInitCommand } from './commands/initCommand';
 import { handleNewCommand } from './commands/newCommand';
 import { handleStatusCommand } from './commands/statusCommand';
 import { handleTraceCommand } from './commands/traceCommand';
 import { handleValidateCommand } from './commands/validateCommand';
+
+const LLM_HISTORY_COMMANDS = new Set<string>(['new', 'fix', 'draft', 'batch', 'validate']);
 
 export async function handleSpeckitRequest(
   request: vscode.ChatRequest,
@@ -61,6 +64,9 @@ export async function handleSpeckitRequest(
       case 'trace':
         await handleTraceCommand(request, stream, token);
         break;
+      case 'history':
+        await handleHistoryCommand(request, stream, token);
+        break;
       case 'diff':
         await handleDiffCommand(request, stream, token);
         break;
@@ -92,6 +98,7 @@ export async function handleSpeckitRequest(
             '- `/gate` — Exibir regras de gate e validar transições\n' +
             '- `/audit` — Visualizar log de auditoria\n' +
             '- `/trace` — Visualizar rastreabilidade de specs\n' +
+            '- `/history` — Visualizar histórico agregado (audit, trace e log)\n' +
             '- `/diff` — Mostrar git diff no chat\n' +
             '- `/commit` — Auto-stage e commit com prefixo speckit:\n' +
             '- `/context` — Gerenciar arquivos de contexto\n' +
@@ -100,6 +107,14 @@ export async function handleSpeckitRequest(
             '- `/init` — Inicializar workspace e consolidar specs em .speckit/\n',
         );
     }
+
+    if (audit && command && LLM_HISTORY_COMMANDS.has(command)) {
+      await audit.log('tool_call', 'llm_response_received', {
+        command: `/${command}`,
+        llmResponseReceived: true,
+      });
+    }
+
     if (audit && command) {
       await audit.log('command', `/${command} — ok`);
     }

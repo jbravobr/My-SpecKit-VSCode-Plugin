@@ -10,6 +10,12 @@ import { generateFixId, generateStoryId } from '../../generator/utils/SpecIdGene
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { SpecType } from '../../story/Story';
+import { AuditLogger } from '../../workflow/AuditLogger';
+import {
+  buildSessionAlias,
+  createCorrelationId,
+  inferAgentModeFromGate,
+} from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
 import { handleCommandError, requireWorkspace } from './CommandHelpers';
 
@@ -49,6 +55,9 @@ export async function handleDraftCommand(
 
   const specDir = path.join(workspaceRoot, '.speckit');
   await fs.ensureDir(specDir);
+  const gate = 0;
+  const commandExecutionId = createCorrelationId('exec');
+  const audit = new AuditLogger(workspaceRoot, fs);
 
   const intent = detectDraftIntent(roughInput);
   const cleanInput = roughInput
@@ -60,6 +69,9 @@ export async function handleDraftCommand(
   if (intent === 'fix') {
     const existing = await workspace.listFixFiles(specDir);
     const specId = generateFixId(workspaceRoot, existing);
+    const agentMode = 'debugger';
+    const sessionId = createCorrelationId('session');
+    const sessionAlias = buildSessionAlias(specId, undefined, agentMode, gate);
     const fileName = `elicit-fix-${specId}.prompt.md`;
     const filePath = path.join(specDir, fileName);
 
@@ -78,16 +90,42 @@ export async function handleDraftCommand(
         specId,
         outcome: `✅ Elicitação de fix iniciada — ${specId}`,
         detail: `Input: ${roughInput.slice(0, 120)}${roughInput.length > 120 ? '…' : ''}`,
+        commandExecutionId,
+        sessionId,
+        agentMode,
+        gate,
+        sessionAlias,
+        llmResponseReceived: false,
       },
       fs,
     );
+
+    await audit.log('file_write', `draft prompt created: ${fileName}`, {
+      command: '/draft',
+      commandExecutionId,
+      sessionId,
+      specId,
+      agentMode,
+      gate,
+      sessionAlias,
+    });
 
     try {
       const tracer = new TraceabilityManager(workspaceRoot, fs);
       await tracer.record(specId, 'fix', {
         type: 'file',
         description: 'elicit prompt created',
-        data: { specId, fileName, intent },
+        data: {
+          specId,
+          fileName,
+          intent,
+          command: '/draft',
+          commandExecutionId,
+          sessionId,
+          agentMode,
+          gate: String(gate),
+          sessionAlias,
+        },
       });
     } catch {
       // Traceability should never break the main flow
@@ -110,6 +148,9 @@ export async function handleDraftCommand(
       intent === 'refactoring' ? 'refactoring' : intent === 'spike' ? 'spike' : 'story';
     const existing = await workspace.listStoryFiles(specDir);
     const specId = generateStoryId(workspaceRoot, existing);
+    const agentMode = inferAgentModeFromGate(gate);
+    const sessionId = createCorrelationId('session');
+    const sessionAlias = buildSessionAlias(specId, undefined, agentMode, gate);
     const fileName = `elicit-story-${specId}.prompt.md`;
     const filePath = path.join(specDir, fileName);
 
@@ -128,16 +169,42 @@ export async function handleDraftCommand(
         specId,
         outcome: `✅ Elicitação de story iniciada — ${specId}`,
         detail: `Input: ${roughInput.slice(0, 120)}${roughInput.length > 120 ? '…' : ''}`,
+        commandExecutionId,
+        sessionId,
+        agentMode,
+        gate,
+        sessionAlias,
+        llmResponseReceived: false,
       },
       fs,
     );
+
+    await audit.log('file_write', `draft prompt created: ${fileName}`, {
+      command: '/draft',
+      commandExecutionId,
+      sessionId,
+      specId,
+      agentMode,
+      gate,
+      sessionAlias,
+    });
 
     try {
       const tracer = new TraceabilityManager(workspaceRoot, fs);
       await tracer.record(specId, 'story', {
         type: 'file',
         description: 'elicit prompt created',
-        data: { specId, fileName, intent },
+        data: {
+          specId,
+          fileName,
+          intent,
+          command: '/draft',
+          commandExecutionId,
+          sessionId,
+          agentMode,
+          gate: String(gate),
+          sessionAlias,
+        },
       });
     } catch {
       // Traceability should never break the main flow

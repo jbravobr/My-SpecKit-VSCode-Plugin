@@ -1,0 +1,40 @@
+SpecKit — Changelog 0.3.12
+===========================
+Data: 01/05/2026
+Branch base: release/0.3.12
+
+PATCH — Observabilidade de sessões e histórico navegável
+--------------------------------------------------------
+Esta versão consolida a evolução do comando /history com foco em leitura operacional de sessões canônicas, drill-down por alias e maior consistência de rastreabilidade entre audit, trace e session logs.
+
+Correções e melhorias funcionais
+--------------------------------
+- Evolução do /history para suportar novos modos de consulta por sessão.
+- Novo modo `sessions` para exibir somente o resumo de sessões canônicas (top por volume).
+- Novo modo `session <alias|termo>` para drill-down de uma sessão específica, com timeline filtrada.
+- Resolução de alias com tratamento explícito para cenários sem correspondência e para ambiguidades.
+- Compatibilidade preservada com filtros por tipo (`all`, `audit`, `trace`, `log`) e limite numérico.
+
+Consistência de contexto operacional
+------------------------------------
+- Melhor agregação de eventos por alias canônico de sessão.
+- Exibição consolidada de contexto por evento (`spec`, `agent`, `gate`, `alias`, `cmd`) no histórico.
+- Organização da leitura por volume e último evento para facilitar triagem operacional.
+
+Testes e validação
+------------------
+- Novos testes unitários cobrindo visão `sessions`, drill-down `session` e cenário de ambiguidade de alias.
+- Teste de integração adicional cobrindo roteamento e renderização de `/history session` no host real do VS Code.
+- Ajuste de estabilidade em integração para seleção explícita de arquivos de spec na pasta .speckit.
+
+Validação executada antes do release
+------------------------------------
+- npx tsc --noEmit -> 0 erros
+- npm run test:unit -> 1020 testes / 1020 passando
+- npm run test:integration -> 33 testes / 33 passando
+- npm run lint -> 0 erros, 6 warnings preexistentes
+- npm run package -> changelogs validados, build de produção concluído, VSIX gerado e verificado com sucesso
+
+Artefato gerado
+---------------
+- publish/0.3.12/vscode-plugin-speckit-0.3.12.vsix
