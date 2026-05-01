@@ -53,8 +53,16 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
   'review-auto': {
     title: '/review-auto',
     summary:
-      'Orquestra a transição para Gate 3, coleta evidências e força execução de revisão no mesmo fluxo.',
-    usage: ['@speckit /review-auto'],
+      'Orquestra revisão e transições de gate da story com evidência explícita no chat (2→3, 3→2, 3→4).',
+    usage: [
+      '@speckit /review-auto',
+      '@speckit /review-auto --changes-requested',
+      '@speckit /review-auto --approved',
+    ],
+    options: [
+      '--changes-requested (alias: --changes, --rework) para retornar Gate 3 → Gate 2',
+      '--approved (alias: --approve) para encerrar Gate 3 → Gate 4/status done',
+    ],
   },
 };
 

@@ -1,0 +1,52 @@
+SpecKit — Changelog 0.3.17
+===========================
+Data: 01/05/2026
+Branch base: release/0.3.17
+
+PATCH — Transicoes explicitas de gate e respostas Markdown no chat
+---------------------------------------------------------------
+Esta release melhora a previsibilidade operacional do fluxo unificado ao tornar toda transicao de gate visivel no chat e ao padronizar respostas dos agentes em Markdown estruturado.
+
+Resumo da release
+-----------------
+A mudanca central foi transformar o `/review-auto` em um orquestrador de transicoes de gate completas para story (Gate 2 -> 3, Gate 3 -> 2 e Gate 3 -> 4), com bloco de evidencia Before/After no chat e logs consistentes. Em paralelo, os geradores de agentes receberam regra obrigatoria de saida em Markdown para evitar respostas sem estrutura.
+
+Mudanças técnicas
+-----------------
+- `/review-auto` expandido com flags:
+  - `--changes-requested` para retorno Gate 3 -> Gate 2 (status `in-progress`).
+  - `--approved` para fechamento Gate 3 -> Gate 4 (status `done`).
+- Validacao formal de transicao de gate e status aplicada no fluxo orquestrado usando `GateEnforcer`.
+- Bloco Markdown obrigatorio de transicao (tabela antes/depois) emitido em toda mudanca de gate/status.
+- Ajuda contextual (`/help`) atualizada com novos parametros de `/review-auto`.
+- Fluxos de `/validate` e `/batch --generate --unified` atualizados para uso de transicoes explicitas pos-veredito.
+- Geradores de agentes Story/Fix atualizados com regra obrigatoria de respostas em Markdown estruturado.
+- Protocolo do agente unificado alinhado para persistencia de transicao por comando (sem depender de edicao manual de metadata).
+
+Documentação
+------------
+- README atualizado na secao de `/review-auto` com novos modos de uso e exemplos rapidos.
+- README atualizado no fluxo unificado para incluir desfechos explicitos de Gate 3.
+- README atualizado com TODO de automacao equivalente para transicoes de Fix.
+
+Testes adicionados
+------------------
+- Novos testes unitarios de `reviewAutoCommand` para:
+  - `--approved` (Gate 3 -> 4),
+  - `--changes-requested` (Gate 3 -> 2),
+  - conflito de flags.
+- Testes de help atualizados para cobertura dos novos parametros de `/review-auto`.
+- Testes de geracao de agentes ampliados para validar:
+  - exigencia de formato Markdown no chat,
+  - uso dos comandos explicitos de transicao no fluxo unificado.
+
+Validação executada antes do release
+------------------------------------
+- npx vitest run tests/unit/commands/reviewAutoCommand.test.ts tests/unit/commands/helpCommand.test.ts tests/unit/generator/agent/UnifiedAgentGenerator.test.ts tests/unit/generator/fix/generators.test.ts -> 78 testes passando
+- npx tsc --noEmit -> 0 erros
+- npx eslint src tests -> 0 erros (warnings preexistentes mantidos)
+- npm run package -> changelogs validados, VSIX gerado e verificado
+
+Artefato gerado
+---------------
+- publish/0.3.17/vscode-plugin-speckit-0.3.17.vsix

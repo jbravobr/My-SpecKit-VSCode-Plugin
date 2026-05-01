@@ -200,13 +200,14 @@ async function validateStory_(
       '2. No dropdown de agentes, selecione **speckit-implementador**\n' +
       '3. O agente conduz: alinhamento → implementação → testes\n' +
       '4. Ao fechar o Gate 2, o agente deve tentar commit local automático (fallback para ação manual só em erro)\n' +
-      '5. Ao fechar o Gate 2, o agente deve atualizar o metadata para `gate: 3` e `status: review`\n' +
+      '5. Ao fechar o Gate 2, execute `@speckit /review-auto` para persistir `gate: 3` + `status: review` com evidência no chat\n' +
       '6. O agente deve emitir handoff explícito no chat: IMPLEMENTADOR → REVISOR\n\n' +
       '**Sessão B — Revisão independente (portões 3–4):**\n' +
       '7. Ao concluir a Sessão A, abra um novo **Copilot Chat**\n' +
       '8. No dropdown de agentes, selecione **speckit-revisor**\n' +
       '9. Execute `@speckit /review-auto` para orquestrar a revisão Gate 3\n' +
-      '10. O agente revisa e valida a entrega\n\n' +
+      '10. Se veredito for ALTERAÇÕES SOLICITADAS, execute `@speckit /review-auto --changes-requested` para retornar ao Gate 2\n' +
+      '11. Se veredito for APROVADO, execute `@speckit /review-auto --approved` para encerrar em Gate 4/status done\n\n' +
       'Agentes em `.github/agents/`. Skills em `.github/skills/`.\n',
   );
 }

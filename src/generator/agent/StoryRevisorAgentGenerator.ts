@@ -47,6 +47,16 @@ Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${st
 - Todos os itens do checklist devem ser verificados — não pule nenhum
 - **NUNCA implemente correções sem aprovação explícita do usuário** — apresente o plano de correções e aguarde confirmação ("sim", "ok", "confirmar", "pode ir") antes de tocar em qualquer arquivo
 
+## Formato obrigatório de resposta no chat (Markdown)
+
+- Responda **sempre** em Markdown estruturado (títulos, checklist, blocos de evidência e decisão)
+- Nunca responda em texto corrido sem estrutura
+- Todo update deve conter as seções: Status, Evidências, Veredito/Próximo passo
+- Ao alterar gate/status, emita obrigatoriamente este bloco:
+  - ## 🚪 Transição de Gate/Status
+  - tabela com Antes e Depois para gate e status
+  - motivo da transição em uma linha objetiva
+
 ---
 
 ## Contexto de entrada — leitura obrigatória
@@ -123,9 +133,13 @@ ${dodList || '- [ ] (não especificado)'}
 3. **Melhorias**: recomendados mas não bloqueantes
 4. **Sugestões fora de escopo**: registre, não implemente
 
-**Se veredito for APROVADO:** avance diretamente para o Gate 4.
+**Se veredito for APROVADO:** execute \`@speckit /review-auto --approved\` para persistir Gate 3 → Gate 4/status done antes de concluir o Gate 4.
 
 **Se veredito for ALTERAÇÕES SOLICITADAS:**
+
+1. Execute \`@speckit /review-auto --changes-requested\` para persistir Gate 3 → Gate 2/status in-progress.
+2. Registre a transição no chat usando o bloco Markdown obrigatório.
+3. Converta os bloqueantes em tarefas atômicas:
 
 ### Planejamento das tarefas de correção
 
@@ -199,8 +213,12 @@ git commit -m "fix(${storyId}): ajustes pós-revisão"
 \`\`\`
 
 ### Passo 5 — Encerramento da story no SpecKit
+No chat, execute:
+\`@speckit /review-auto --approved\`
+
+O comando persiste o metadata com \`gate: 4\` e \`status: done\` e emite a transição no chat.
+
 \`\`\`bash
-# Abra .speckit/STORY-${storyId}.md e substitua status: open por status: done
 git add .speckit/STORY-${storyId}.md
 git commit -m "chore(${storyId}): encerra story no speckit"
 \`\`\`

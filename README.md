@@ -704,7 +704,7 @@ Sem `<mensagem>`, o comando tenta derivar um padrão automático com base na spe
 
 ### `@speckit /review-auto`
 
-Orquestra a revisão automática da Story ativa no Gate 3 com protocolo determinístico.
+Orquestra a revisão automática da Story ativa e as transições de gate com protocolo determinístico e saída Markdown explícita no chat.
 
 **O que faz:**
 
@@ -712,14 +712,19 @@ Orquestra a revisão automática da Story ativa no Gate 3 com protocolo determin
 2. Coleta evidências automáticas (arquivos alterados e cobertura `lcov` quando disponível)
 3. Aplica bloqueios automáticos mínimos (ex.: cobertura ausente/abaixo de 80%)
 4. Emite veredito orquestrado e força continuidade do checklist completo de revisão no mesmo fluxo
+5. Expõe toda transição de gate/status com bloco Markdown `Antes` → `Depois`
 
 **Uso:**
 
 ```
 @speckit /review-auto
+@speckit /review-auto --changes-requested
+@speckit /review-auto --approved
 ```
 
 > No modo unificado, a transição Gate 2 → Gate 3 deve acionar `/review-auto` antes da emissão do veredito final de revisão.
+> Se o veredito for **ALTERAÇÕES SOLICITADAS**, execute `/review-auto --changes-requested` para retornar ao Gate 2.
+> Se o veredito for **APROVADO**, execute `/review-auto --approved` para fechar Gate 3 → Gate 4 (`status: done`).
 
 ---
 
@@ -853,9 +858,10 @@ Gera um **agente unificado por story** — cada agente contém o protocolo compl
 1. **Análise de dependências** — identifica stories independentes (prontas) e bloqueadas (dependências pendentes) usando somente o metadata `depends-on`
 2. **Agentes por story** — cria `.github/agents/speckit-story-{id}.agent.md` com ambos os modos
 3. **Batch index** — gera `copilot-instructions.md` listando todas as stories ativas, skills e agents
-4. **Transição automática de revisão** — ao concluir Gate 2, o protocolo unificado persiste `gate: 3` e `status: review` no metadata da story antes de iniciar Gate 3
+4. **Transição automática de revisão** — ao concluir Gate 2, o protocolo unificado aciona `@speckit /review-auto`, persiste `gate: 3` e `status: review` e expõe a transição no chat
 5. **Execução imediata da revisão** — após o handoff, o próprio agente deve acionar `@speckit /review-auto` e executar o checklist completo do Gate 3 no mesmo fluxo (sem aguardar novo comando do usuário), emitindo veredito
 6. **Handoff explícito** — a transição Gate 2 → Gate 3 deve emitir no chat o bloco de handoff (`IMPLEMENTADOR → REVISOR`) com gate/status atualizados
+7. **Outcomes explícitos no chat** — após o veredito, o agente deve executar `@speckit /review-auto --changes-requested` (Gate 3 → 2) ou `@speckit /review-auto --approved` (Gate 3 → 4)
 
 > Referências narrativas a outras stories ou fixes dentro do corpo da história não entram na análise de dependências. Para bloquear uma story, declare explicitamente o ID no campo `depends-on` do metadata.
 
@@ -887,7 +893,8 @@ Resumo (modo unificado):
 - 📄 copilot-instructions.md gerado em modo batch
 
 Próximo passo: Abra o Copilot Chat e selecione o agente da story desejada no dropdown.
-Importante: no modo unificado, a própria transição Gate 2 → Gate 3 atualiza o metadata da story para `gate: 3` e `status: review`, executa `@speckit /review-auto` e a revisão Gate 3 deve ser concluída imediatamente no mesmo fluxo.
+Importante: no modo unificado, a própria transição Gate 2 → Gate 3 aciona `@speckit /review-auto`, atualiza o metadata da story para `gate: 3` e `status: review`, e a revisão Gate 3 deve ser concluída imediatamente no mesmo fluxo.
+Importante: após o veredito, acione `@speckit /review-auto --changes-requested` (rework) ou `@speckit /review-auto --approved` (encerramento).
 Importante: no modo unificado, a transição também tenta fechar automaticamente commit pendente do Gate 2 antes da revisão.
 ```
 
@@ -898,7 +905,8 @@ Cada agente unificado contém 4 protocolos embutidos:
 | Protocolo   | Quando ativa                           | O que faz                                                                                                                                                                      |
 | ----------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Dependência | Gate 0 (pré-condição)                  | Verifica apenas o metadata canônico `depends-on`; bloqueia se pendentes                                                                                                        |
-| Transição   | Gate 2 → Gate 3                        | Tenta commit automático do Gate 2, persiste metadata (`gate: 3`, `status: review`), aciona `/review-auto`, emite handoff explícito e executa Gate 3 imediatamente com veredito |
+| Transição   | Gate 2 → Gate 3                        | Tenta commit automático do Gate 2, aciona `/review-auto`, persiste metadata (`gate: 3`, `status: review`), emite handoff explícito e executa Gate 3 imediatamente com veredito |
+| Desfecho    | Gate 3 → Gate 2 ou Gate 4              | Comandos explícitos: `/review-auto --changes-requested` (retrabalho) ou `/review-auto --approved` (encerramento) com transição visível no chat                                 |
 | Retorno     | Revisor emite "ALTERAÇÕES SOLICITADAS" | Documenta fixes, retorna ao implementador, aplica correções, re-executa revisão                                                                                                |
 | Inviolável  | Sempre ativo no modo revisor           | Revisor **nunca** implementa — apenas documenta bloqueios e devolve ao implementador                                                                                           |
 
@@ -2555,6 +2563,7 @@ Não. O `/commit` apenas executa stage + commit local (prefixo `speckit:`). O pu
 | ------------------------------------------------------------------------ | ------------------ | -------------------------------------- |
 | Multi-root workspace: opera apenas no primeiro workspace carregado       | Planejado (SQLite) | Abrir um workspace por vez             |
 | Modo do agente (`/agent`) não persiste entre reinicializações do VS Code | By design          | Re-executar `/agent <modo>` ao reabrir |
+| Transições automáticas de gate para Fix ainda são manuais                | Planejado          | Atualizar metadata do FIX no Gate 4    |
 | Sem telemetria interna do plugin (métricas de uso)                       | Planejado (opt-in) | Usar audit log para rastreio manual    |
 | Sem `CONTRIBUTING.md` para contribuições externas                        | Planejado          | —                                      |
 | Sem CI/CD own pipeline (GitHub Actions para o repo do plugin)            | Planejado          | Build e lint locais                    |
@@ -2714,6 +2723,7 @@ Avaliação baseada na versão **0.3.1** do plugin com evidências verificáveis
 | Prioridade | Acao                                     | Dimensao impactada |
 | ---------- | ---------------------------------------- | ------------------ |
 | Media      | Secao de limitacoes conhecidas no README | Documentacao       |
+| Media      | Automatizar transicoes de gate para Fix  | Funcionalidades    |
 | Baixa      | Telemetria interna do plugin (opt-in)    | Observabilidade    |
 | Baixa      | CONTRIBUTING.md                          | Documentacao       |
 | Planejado  | SQLite para estado multi-workspace       | Funcionalidades    |

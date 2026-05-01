@@ -22,7 +22,8 @@ describe('handleHelpCommand', () => {
 
     const output = stream.getAllMarkdown();
     expect(output).toContain('/review-auto');
-    expect(output).toContain('transição para Gate 3');
+    expect(output).toContain('--changes-requested');
+    expect(output).toContain('--approved');
   });
 
   it('shows topic-specific help for status', async () => {

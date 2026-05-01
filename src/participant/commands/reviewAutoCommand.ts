@@ -8,7 +8,7 @@ import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { extractSpecType, RE_META_BLOCK } from '../../parser/BaseParser';
 import { Gate, SpecStatus } from '../../story/Story';
 import { parseStory } from '../../story/StoryParser';
-import { validateGateTransition } from '../../workflow/GateEnforcer';
+import { validateGateTransition, validateStatusTransition } from '../../workflow/GateEnforcer';
 import { gitOps, IGitOps } from '../../workflow/GitOperations';
 import { requireWorkspace } from './CommandHelpers';
 
@@ -21,6 +21,17 @@ interface CoverageInfo {
 interface MetadataPatchResult {
   content: string;
   changed: boolean;
+}
+
+type ReviewAutoAction = 'orchestrate' | 'approved' | 'changes-requested';
+
+interface StoryTransitionSummary {
+  fromGate: Gate;
+  toGate: Gate;
+  fromStatus: SpecStatus;
+  toStatus: SpecStatus;
+  changed: boolean;
+  reason: string;
 }
 
 function upsertStoryMetadata(content: string, gate: Gate, status: SpecStatus): MetadataPatchResult {
@@ -140,8 +151,93 @@ function formatCoverage(coverage: CoverageInfo): string {
   return `${coverage.percent.toFixed(2)}% (${coverage.linesHit}/${coverage.linesFound})`;
 }
 
+function parseReviewAutoAction(prompt: string | undefined): {
+  action: ReviewAutoAction;
+  error?: string;
+} {
+  const tokens = (prompt ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+
+  const approved = tokens.includes('--approved') || tokens.includes('--approve');
+  const changesRequested =
+    tokens.includes('--changes-requested') ||
+    tokens.includes('--changes') ||
+    tokens.includes('--rework');
+
+  if (approved && changesRequested) {
+    return {
+      action: 'orchestrate',
+      error:
+        'Flags conflitantes: use apenas uma entre `--approved` e `--changes-requested` no comando `/review-auto`.',
+    };
+  }
+
+  if (approved) return { action: 'approved' };
+  if (changesRequested) return { action: 'changes-requested' };
+  return { action: 'orchestrate' };
+}
+
+function applyStoryTransition(
+  content: string,
+  fromGate: Gate,
+  fromStatus: SpecStatus,
+  toGate: Gate,
+  toStatus: SpecStatus,
+  reason: string,
+): { patch: MetadataPatchResult; summary: StoryTransitionSummary } {
+  if (fromGate !== toGate) {
+    const gateValidation = validateGateTransition(fromGate, toGate);
+    if (!gateValidation.allowed) {
+      throw new Error(
+        `Transição automática de gate bloqueada (${fromGate} → ${toGate}): ${gateValidation.reason ?? 'motivo não informado'}`,
+      );
+    }
+  }
+
+  if (fromStatus !== toStatus) {
+    const statusValidation = validateStatusTransition(fromStatus, toStatus);
+    if (!statusValidation.allowed) {
+      throw new Error(
+        `Transição automática de status bloqueada (${fromStatus} → ${toStatus}): ${statusValidation.reason ?? 'motivo não informado'}`,
+      );
+    }
+  }
+
+  const patch = upsertStoryMetadata(content, toGate, toStatus);
+  return {
+    patch,
+    summary: {
+      fromGate,
+      toGate,
+      fromStatus,
+      toStatus,
+      changed: patch.changed,
+      reason,
+    },
+  };
+}
+
+function formatTransitionMarkdown(summary: StoryTransitionSummary): string {
+  if (!summary.changed) {
+    return (
+      `### 🚪 Transição de Gate/Status\n` +
+      `- ℹ️ Sem mudança persistida (gate/status já estavam no estado esperado).\n` +
+      `- Motivo: ${summary.reason}\n`
+    );
+  }
+
+  return (
+    `### 🚪 Transição de Gate/Status\n` +
+    `| Campo | Antes | Depois |\n` +
+    `| --- | --- | --- |\n` +
+    `| Gate | \`${summary.fromGate}\` | \`${summary.toGate}\` |\n` +
+    `| Status | \`${summary.fromStatus}\` | \`${summary.toStatus}\` |\n` +
+    `\n` +
+    `**Motivo:** ${summary.reason}\n`
+  );
+}
+
 export async function handleReviewAutoCommand(
-  _request: vscode.ChatRequest,
+  request: vscode.ChatRequest,
   stream: vscode.ChatResponseStream,
   _token: vscode.CancellationToken,
   workspace: IWorkspace = vscodeWorkspace,
@@ -167,12 +263,122 @@ export async function handleReviewAutoCommand(
   }
 
   const story = parseStory(content);
+  const parsedAction = parseReviewAutoAction(request.prompt);
+
+  if (parsedAction.error) {
+    stream.markdown(
+      `❌ ${parsedAction.error}\n\n` +
+        '**Uso suportado:**\n' +
+        '- `@speckit /review-auto` (orquestra Gate 2 → Gate 3 e revisão automática)\n' +
+        '- `@speckit /review-auto --changes-requested` (Gate 3 → Gate 2 para retrabalho)\n' +
+        '- `@speckit /review-auto --approved` (Gate 3 → Gate 4 com status done)\n',
+    );
+    return;
+  }
 
   if (story.metadata.status === 'done' || story.metadata.status === 'cancelled') {
     stream.markdown(
       `❌ Story \`${story.metadata.id}\` já está em status terminal (\`${story.metadata.status}\`). Revisão automática não aplicável.\n`,
     );
     return;
+  }
+
+  if (parsedAction.action === 'approved') {
+    if (story.metadata.gate < 3) {
+      stream.markdown(
+        `❌ Story \`${story.metadata.id}\` está no Gate ${story.metadata.gate}. O encerramento automático exige Gate 3 com revisão concluída.\n`,
+      );
+      return;
+    }
+
+    try {
+      const { patch, summary } = applyStoryTransition(
+        content,
+        story.metadata.gate,
+        story.metadata.status,
+        4,
+        'done',
+        'Veredito APROVADO confirmado no Gate 3.',
+      );
+      if (patch.changed) {
+        await fs.writeFile(activeSpecPath, patch.content);
+      }
+
+      await appendLog(
+        workspaceRoot,
+        {
+          command: '/review-auto --approved',
+          specId: story.metadata.id,
+          specTitle: story.metadata.title,
+          gate: 4,
+          outcome: '✅ Veredito APROVADO — story encerrada no Gate 4',
+          detail: `Gate: ${summary.fromGate} -> ${summary.toGate}\nStatus: ${summary.fromStatus} -> ${summary.toStatus}`,
+        },
+        fs,
+      );
+
+      stream.markdown(
+        `## ✅ Encerramento Orquestrado — STORY-${story.metadata.id}\n\n` +
+          `${formatTransitionMarkdown(summary)}\n\n` +
+          '### Próximo passo\n' +
+          `- Faça o commit do metadata da story: \`git add .speckit/STORY-${story.metadata.id}.md\`\n` +
+          `- Conclua com: \`git commit -m "chore(${story.metadata.id}): encerra story no speckit"\`\n`,
+      );
+      return;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      stream.markdown(`❌ ${msg}\n`);
+      return;
+    }
+  }
+
+  if (parsedAction.action === 'changes-requested') {
+    if (story.metadata.gate < 3) {
+      stream.markdown(
+        `❌ Story \`${story.metadata.id}\` está no Gate ${story.metadata.gate}. O retorno para retrabalho exige Gate 3.\n`,
+      );
+      return;
+    }
+
+    try {
+      const { patch, summary } = applyStoryTransition(
+        content,
+        story.metadata.gate,
+        story.metadata.status,
+        2,
+        'in-progress',
+        'Veredito ALTERAÇÕES SOLICITADAS no Gate 3.',
+      );
+      if (patch.changed) {
+        await fs.writeFile(activeSpecPath, patch.content);
+      }
+
+      await appendLog(
+        workspaceRoot,
+        {
+          command: '/review-auto --changes-requested',
+          specId: story.metadata.id,
+          specTitle: story.metadata.title,
+          gate: 2,
+          outcome: '🔄 Alterações solicitadas — retorno para Gate 2 (implementação)',
+          detail: `Gate: ${summary.fromGate} -> ${summary.toGate}\nStatus: ${summary.fromStatus} -> ${summary.toStatus}`,
+        },
+        fs,
+      );
+
+      stream.markdown(
+        `## 🔄 Retorno Orquestrado para Retrabalho — STORY-${story.metadata.id}\n\n` +
+          `${formatTransitionMarkdown(summary)}\n\n` +
+          '### Próximo passo\n' +
+          '- Retorne ao modo implementador e aplique apenas os FIXes aprovados no plano de revisão.\n' +
+          '- Após concluir os FIXes e revalidar testes/cobertura, execute `@speckit /review-auto` para novo ciclo de revisão.\n',
+      );
+      return;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      stream.markdown(`❌ ${msg}\n`);
+      return;
+    }
   }
 
   if (story.metadata.gate < 2) {
@@ -182,25 +388,41 @@ export async function handleReviewAutoCommand(
     return;
   }
 
-  let transitionMessage = 'ℹ️ Story já estava em modo de revisão (gate/status preservados).';
+  if (story.metadata.gate > 3) {
+    stream.markdown(
+      `❌ Story \`${story.metadata.id}\` está no Gate ${story.metadata.gate}. Para novos ciclos de revisão, retorne antes ao Gate 2 via fluxo de correções.\n`,
+    );
+    return;
+  }
+
+  let transitionSummary: StoryTransitionSummary = {
+    fromGate: story.metadata.gate,
+    toGate: story.metadata.gate,
+    fromStatus: story.metadata.status,
+    toStatus: story.metadata.status,
+    changed: false,
+    reason: 'Story já estava em modo de revisão (gate/status preservados).',
+  };
 
   if (story.metadata.gate === 2 || story.metadata.status !== 'review') {
-    if (story.metadata.gate === 2) {
-      const gateValidation = validateGateTransition(2, 3);
-      if (!gateValidation.allowed) {
-        stream.markdown(
-          `❌ Transição automática de gate bloqueada (2 → 3): ${gateValidation.reason ?? 'motivo não informado'}.\n`,
-        );
-        return;
+    try {
+      const transition = applyStoryTransition(
+        content,
+        story.metadata.gate,
+        story.metadata.status,
+        3,
+        'review',
+        'Handoff implementador → revisor orquestrado automaticamente.',
+      );
+      transitionSummary = transition.summary;
+      if (transition.patch.changed) {
+        await fs.writeFile(activeSpecPath, transition.patch.content);
       }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      stream.markdown(`❌ ${msg}\n`);
+      return;
     }
-
-    const patch = upsertStoryMetadata(content, 3, 'review');
-    if (patch.changed) {
-      await fs.writeFile(activeSpecPath, patch.content);
-    }
-    transitionMessage =
-      '✅ Handoff orquestrado concluído: gate atualizado para `3` e status para `review`.';
   }
 
   const changedFiles = await collectChangedFiles(workspaceRoot, git);
@@ -246,6 +468,8 @@ export async function handleReviewAutoCommand(
       gate: 3,
       outcome: `✅ ${verdict}`,
       detail:
+        `Gate: ${transitionSummary.fromGate} -> ${transitionSummary.toGate}\n` +
+        `Status: ${transitionSummary.fromStatus} -> ${transitionSummary.toStatus}\n` +
         `Arquivos detectados: ${changedFiles.length}\n` +
         `Cobertura: ${formatCoverage(coverage)}\n` +
         `Bloqueios: ${blockers.length}`,
@@ -255,7 +479,7 @@ export async function handleReviewAutoCommand(
 
   stream.markdown(
     `## ✅ Revisão Orquestrada — STORY-${story.metadata.id}\n\n` +
-      `${transitionMessage}\n\n` +
+      `${formatTransitionMarkdown(transitionSummary)}\n\n` +
       `### Evidências coletadas\n` +
       `- Arquivos detectados para revisão: ${changedFiles.length}\n` +
       `- Cobertura detectada: ${formatCoverage(coverage)}\n\n` +

@@ -41,6 +41,13 @@ Stack detectada: ${stack.language} / ${stack.framework}${stack.architecture ? ` 
 - Todos os itens do checklist devem ser verificados — não pule nenhum
 - **NUNCA implemente correções sem aprovação explícita do usuário** — apresente o plano de correções e aguarde confirmação ("sim", "ok", "confirmar", "pode ir") antes de tocar em qualquer arquivo
 
+## Formato obrigatório de resposta no chat (Markdown)
+
+- Responda **sempre** em Markdown estruturado (títulos, checklist, evidências e decisão)
+- Nunca responda em texto corrido sem estrutura
+- Todo update deve conter as seções: Status, Evidências, Veredito/Próximo passo
+- Ao recomendar alteração de gate/status do fix, explicite no chat o estado Antes e Depois
+
 ---
 
 ## Contexto de entrada — leitura obrigatória

@@ -1,0 +1,36 @@
+SpecKit — Novidades para usuários — 0.3.17
+==========================================
+Data: 01/05/2026
+
+Resumo
+------
+Agora toda transicao de gate da story fica visivel no chat com antes/depois, e os agentes passaram a responder em Markdown estruturado para melhorar leitura, rastreabilidade e handoff entre implementacao e revisao.
+
+Novas features
+--------------
+- `/review-auto --changes-requested`: retorna automaticamente Gate 3 -> Gate 2 para retrabalho.
+- `/review-auto --approved`: fecha automaticamente Gate 3 -> Gate 4 com status `done`.
+- Bloco de transicao no chat com tabela de Gate/Status (antes e depois).
+
+Melhorias de experiência
+------------------------
+- Menos ambiguidade no ciclo de revisao: cada veredito agora aciona uma transicao explicita.
+- Respostas dos agentes com estrutura Markdown obrigatoria (Status, Evidencias, Proximo passo).
+- Ajuda do comando atualizada com parametros e aliases de revisao.
+
+Correções e segurança de release
+--------------------------------
+- Reducao de risco de lock em perfil de revisor apos solicitacao de alteracoes.
+- Maior consistencia entre protocolo textual e estado persistido da story.
+- Validacoes de transicao aplicadas para impedir combinacoes invalidas de gate/status.
+
+Como usar rapidamente
+---------------------
+1. Conclua Gate 2 e execute `@speckit /review-auto`.
+2. Revise o veredito no Gate 3.
+3. Se houver ajustes, execute `@speckit /review-auto --changes-requested` e volte ao implementador.
+4. Quando aprovado, execute `@speckit /review-auto --approved` para encerrar em Gate 4.
+
+Artefato
+--------
+- publish/0.3.17/vscode-plugin-speckit-0.3.17.vsix

@@ -34,6 +34,16 @@ Dependências: ${deps}
 > O modo ativo é determinado pelo gate atual da story.
 > **NUNCA** pule gates. Siga a ordem: 0 → 1 → 2 → 3 → 4.
 
+## FORMATO OBRIGATÓRIO NO CHAT (MARKDOWN)
+
+- Responda sempre em Markdown estruturado (títulos, checklist, evidências e próximos passos)
+- Nunca responda em texto corrido sem estrutura
+- Todo update deve conter as seções: Status, Evidências, Próximo passo
+- Toda mudança de gate/status deve exibir o bloco:
+  - ## 🚪 Transição de Gate/Status
+  - tabela com Antes e Depois para gate e status
+  - motivo da transição em uma linha objetiva
+
 ---
 
 ${generateDependencyProtocol(story)}
@@ -104,13 +114,10 @@ Ao concluir o Gate 2 com sucesso (0 falhas + cobertura ≥ 80%):
      \`\`\`
    - Se o commit falhar por erro operacional, tente \`@speckit /commit\` sem mensagem.
    - Só peça ação manual ao usuário se as duas tentativas falharem.
-2. **Persista a troca de gate no metadata da story (obrigatório):**
-   - Edite \`.speckit/STORY-${storyId}.md\`
-   - No bloco \`<!-- metadata -->\`, garanta:
-     - \`gate: 3\`
-     - \`status: review\`
-   - Salve o arquivo antes de continuar.
-3. Se não conseguir persistir o metadata, **interrompa** e solicite ação do usuário. Não inicie Gate 3 sem essa atualização.
+2. **Persista a troca de gate via comando (obrigatório):**
+  - Execute: \`@speckit /review-auto\`
+  - O comando deve persistir \`gate: 3\` e \`status: review\` e emitir a transição no chat.
+3. Se não conseguir persistir a transição, **interrompa** e solicite ação do usuário. Não inicie Gate 3 sem essa atualização.
 4. Emita no chat o bloco de handoff obrigatório:
    - "✅ Gates 0-2 concluídos"
    - "🔁 Handoff: IMPLEMENTADOR → REVISOR"
@@ -125,7 +132,11 @@ Ao concluir o Gate 2 com sucesso (0 falhas + cobertura ≥ 80%):
   - Execute todo o checklist do Gate 3 (funcionalidade, arquitetura, qualidade, testes, segurança, observabilidade, NFR, git, DoD)
   - Emita veredito completo (APROVADO ou ALTERAÇÕES SOLICITADAS)
   - Se houver bloqueantes, liste cada item com evidência objetiva (arquivo/critério)
-11. **Proibido encerrar a resposta somente com handoff.** O handoff só é válido quando acompanhado da execução efetiva da revisão Gate 3.
+11. Após emitir o veredito, persista a transição correspondente:
+  - Se APROVADO: execute \`@speckit /review-auto --approved\` (Gate 3 → Gate 4)
+  - Se ALTERAÇÕES SOLICITADAS: execute \`@speckit /review-auto --changes-requested\` (Gate 3 → Gate 2)
+12. Em qualquer transição acima, confirme no chat o bloco Markdown de transição de gate/status.
+13. **Proibido encerrar a resposta somente com handoff.** O handoff só é válido quando acompanhado da execução efetiva da revisão Gate 3.
 
 > **Aviso:** Não carregue nenhuma premissa da fase de implementação. Avalie como se estivesse lendo o código pela primeira vez.`;
 }
@@ -141,14 +152,15 @@ Quando o MODO REVISOR emitir veredito **ALTERAÇÕES SOLICITADAS**:
    [ ] FIX-2: ...
    \`\`\`
 2. Informe ao usuário: "🔄 Retornando ao MODO IMPLEMENTADOR para aplicar N correção(ões)."
-3. **Aguarde confirmação** do usuário ("ok", "sim", "confirmar", "pode ir").
-4. Entre no **MODO IMPLEMENTADOR**:
+3. Se a transição de retorno ainda não foi persistida nesta rodada, execute \`@speckit /review-auto --changes-requested\` para registrar Gate 3 → Gate 2/status in-progress.
+4. **Aguarde confirmação** do usuário ("ok", "sim", "confirmar", "pode ir").
+5. Entre no **MODO IMPLEMENTADOR**:
    - Aplique **SOMENTE** os fixes listados (não implemente nada novo, não refatore)
    - Para cada fix: \`git commit -m "fix(${storyId}): FIX-N — <descrição>"\`
-5. Ao concluir todos os fixes:
+6. Ao concluir todos os fixes:
    - Execute testes (0 falhas + cobertura ≥80%)
    - Informe: "✅ Correções aplicadas. Retornando ao MODO REVISOR para revalidação."
-6. Retorne ao **MODO REVISOR** — re-execute o Gate 3 **desde o início** (releia story + diff fresco).
+7. Retorne ao **MODO REVISOR** — re-execute o Gate 3 **desde o início** (releia story + diff fresco).
 
 > Este ciclo se repete até o veredito ser **APROVADO**.`;
 }

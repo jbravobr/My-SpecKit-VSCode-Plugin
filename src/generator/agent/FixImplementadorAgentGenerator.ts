@@ -34,6 +34,13 @@ NUNCA inicie implementação sem:
 
 Se surgir ambiguidade durante execução → interromper e perguntar.
 
+## Formato obrigatório de resposta no chat (Markdown)
+
+- Responda **sempre** em Markdown estruturado (títulos, checklist, evidências e próximos passos)
+- Nunca responda em texto corrido sem estrutura
+- Todo update deve conter as seções: Status, Evidências, Próximo passo
+- Ao recomendar alteração de gate/status do fix, explicite no chat o estado Antes e Depois
+
 ---
 
 ## Gate 0 — Investigação e Confirmação

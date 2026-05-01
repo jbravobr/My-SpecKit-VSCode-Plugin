@@ -100,7 +100,9 @@ describe('handleReviewAutoCommand', () => {
     const output = stream.getAllMarkdown();
     const storyContent = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
 
-    expect(output).toContain('Handoff orquestrado concluído');
+    expect(output).toContain('Transição de Gate/Status');
+    expect(output).toContain('| Gate | `2` | `3` |');
+    expect(output).toContain('| Status | `in-progress` | `review` |');
     expect(output).toContain('Arquivos detectados para revisão: 2');
     expect(output).toContain('Cobertura detectada: 90.00%');
     expect(output).toContain(
@@ -125,5 +127,75 @@ describe('handleReviewAutoCommand', () => {
     expect(output).toContain(
       'Veredito orquestrado:** ALTERAÇÕES SOLICITADAS (bloqueios automáticos)',
     );
+  });
+
+  it('applies approved transition from gate 3 to gate 4', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub();
+
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyWithMeta(3, 'review'));
+
+    await handleReviewAutoCommand(
+      createMockRequest('--approved'),
+      stream,
+      token,
+      ws,
+      fs,
+      fakeGit(),
+    );
+
+    const output = stream.getAllMarkdown();
+    const storyContent = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
+
+    expect(output).toContain('Encerramento Orquestrado');
+    expect(output).toContain('| Gate | `3` | `4` |');
+    expect(output).toContain('| Status | `review` | `done` |');
+    expect(storyContent).toContain('gate: 4');
+    expect(storyContent).toContain('status: done');
+  });
+
+  it('applies changes-requested transition from gate 3 to gate 2', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub();
+
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyWithMeta(3, 'review'));
+
+    await handleReviewAutoCommand(
+      createMockRequest('--changes-requested'),
+      stream,
+      token,
+      ws,
+      fs,
+      fakeGit(),
+    );
+
+    const output = stream.getAllMarkdown();
+    const storyContent = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
+
+    expect(output).toContain('Retorno Orquestrado para Retrabalho');
+    expect(output).toContain('| Gate | `3` | `2` |');
+    expect(output).toContain('| Status | `review` | `in-progress` |');
+    expect(storyContent).toContain('gate: 2');
+    expect(storyContent).toContain('status: in-progress');
+  });
+
+  it('rejects conflicting review-auto flags', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub();
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyWithMeta(3, 'review'));
+
+    await handleReviewAutoCommand(
+      createMockRequest('--approved --changes-requested'),
+      stream,
+      token,
+      ws,
+      fs,
+      fakeGit(),
+    );
+
+    expect(stream.getAllMarkdown()).toContain('Flags conflitantes');
   });
 });

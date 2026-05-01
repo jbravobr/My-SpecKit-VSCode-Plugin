@@ -235,6 +235,7 @@ describe('Fix Agent Generators — no tool-setup instructions', () => {
     expect(result).toContain('read/readFile');
     expect(result).toContain('execute/runInTerminal');
     expect(result).toContain('Protocolo de governança');
+    expect(result).toContain('Formato obrigatório de resposta no chat (Markdown)');
   });
 
   it('fix-implementador agent contains container runtime preflight for Testcontainers and Podman', () => {
@@ -262,6 +263,7 @@ describe('Fix Agent Generators — no tool-setup instructions', () => {
     expect(result).toContain('read/readFile');
     expect(result).toContain('execute/runInTerminal');
     expect(result).toContain('Protocolo de governança');
+    expect(result).toContain('Formato obrigatório de resposta no chat (Markdown)');
   });
 
   it('fix-revisor agent requires user confirmation before corrections', () => {

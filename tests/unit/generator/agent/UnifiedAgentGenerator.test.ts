@@ -77,8 +77,19 @@ describe('StoryUnifiedAgentGenerator', () => {
       expect(result).toContain('test(001): fechamento do gate 2');
       expect(result).toContain('Handoff: IMPLEMENTADOR → REVISOR');
       expect(result).toContain('@speckit /review-auto');
+      expect(result).toContain('@speckit /review-auto --changes-requested');
+      expect(result).toContain('@speckit /review-auto --approved');
       expect(result).toContain('Sem aguardar novo comando do usuário');
       expect(result).toContain('Proibido encerrar a resposta somente com handoff');
+    });
+
+    it('enforces markdown formatting and explicit gate transition block in chat responses', () => {
+      const result = generateUnifiedAgent(completeStory);
+      expect(result).toContain('FORMATO OBRIGATÓRIO NO CHAT (MARKDOWN)');
+      expect(result).toContain('## 🚪 Transição de Gate/Status');
+      expect(result).toContain('Status');
+      expect(result).toContain('Evidências');
+      expect(result).toContain('Próximo passo');
     });
 
     it('contains return protocol', () => {
@@ -148,6 +159,14 @@ describe('generateImplementadorContent', () => {
     expect(result).toContain('80%');
   });
 
+  it('requires markdown response formatting in implementador mode', () => {
+    const result = generateImplementadorContent(completeStory);
+    expect(result).toContain('Formato obrigatório de resposta no chat (Markdown)');
+    expect(result).toContain('Status');
+    expect(result).toContain('Evidências');
+    expect(result).toContain('Próximo passo');
+  });
+
   it('contains container runtime preflight for Testcontainers and Podman', () => {
     const result = generateImplementadorContent(completeStory);
     expect(result).toContain('Pré-flight para Testcontainers');
@@ -181,8 +200,8 @@ describe('generateImplementadorContent', () => {
     expect(result).toContain('Finalize commit local pendente do Gate 2');
     expect(result).toContain('@speckit /review-auto');
     expect(result).toContain('Sem aguardar novo comando do usuário');
-    expect(result).toContain('gate: 3');
-    expect(result).toContain('status: review');
+    expect(result).toContain('Gate atualizado: 2 → 3');
+    expect(result).toContain('Status atualizado: in-progress/open → review');
     expect(result).not.toContain('Para iniciar a revisão independente, o usuário deve selecionar');
   });
 });
@@ -211,6 +230,14 @@ describe('generateRevisorContent', () => {
     expect(result).toContain('Funcionalidade');
     expect(result).toContain('Segurança');
     expect(result).toContain('Observabilidade');
+  });
+
+  it('requires markdown response formatting in revisor mode', () => {
+    const result = generateRevisorContent(completeStory);
+    expect(result).toContain('Formato obrigatório de resposta no chat (Markdown)');
+    expect(result).toContain('Status');
+    expect(result).toContain('Evidências');
+    expect(result).toContain('Veredito/Próximo passo');
   });
 
   it('does not require asking for coverage when evidence already exists in current session', () => {
