@@ -459,6 +459,7 @@ ${fixSummaryLine}- 📄 \`copilot-instructions.md\` gerado em modo batch
 
 **Próximo passo:** Abra o Copilot Chat e selecione o agente da story desejada no dropdown.
 **Importante (modo unificado):** implementação e revisão acontecem no mesmo agente (speckit-story-<id>). Não espere um agente \`speckit-revisor\` separado neste fluxo.
+Ao concluir Gate 2 com sucesso, o protocolo unificado deve atualizar o metadata da story para \`gate: 3\` e \`status: review\` antes de iniciar Gate 3.
 `);
 }
 

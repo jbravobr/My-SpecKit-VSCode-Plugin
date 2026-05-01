@@ -1,0 +1,3 @@
+Novidades para usuários na versão 0.3.14
+
+No modo unificado, a revisão agora é iniciada com controle mais confiável de estado: ao concluir os testes do Gate 2, o protocolo orienta atualizar automaticamente o metadata da story para `gate: 3` e `status: review` antes de entrar no checklist de revisão. Isso reduz inconsistências de gate após retomadas de sessão, evita dependência de acionamento manual de revisão e deixa o fluxo unificado mais previsível para execução de ponta a ponta.

@@ -107,6 +107,8 @@ describe('StoryUnifiedAgentGenerator', () => {
       expect(result).toContain('Handoff interno para revisão');
       expect(result).toContain('Não encerre a sessão.');
       expect(result).toContain('Não selecione outro agente neste ponto.');
+      expect(result).toContain('gate: 3');
+      expect(result).toContain('status: review');
       expect(result).not.toContain(
         'Para iniciar a revisão independente, o usuário deve selecionar',
       );
@@ -169,6 +171,8 @@ describe('generateImplementadorContent', () => {
     const result = generateImplementadorContentForUnified(completeStory);
     expect(result).toContain('Handoff interno para revisão');
     expect(result).toContain('Não encerre a sessão.');
+    expect(result).toContain('gate: 3');
+    expect(result).toContain('status: review');
     expect(result).not.toContain('Para iniciar a revisão independente, o usuário deve selecionar');
   });
 });

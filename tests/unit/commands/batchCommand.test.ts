@@ -229,6 +229,8 @@ describe('handleBatchCommand', () => {
       const output = stream.getAllMarkdown();
       expect(output).toContain('Agente unificado');
       expect(output).toContain('Não espere um agente `speckit-revisor` separado neste fluxo.');
+      expect(output).toContain('gate: 3');
+      expect(output).toContain('status: review');
       expect(fs.hasFile('speckit-story-001.agent.md')).toBe(true);
       expect(fs.hasFile('copilot-instructions.md')).toBe(true);
     });

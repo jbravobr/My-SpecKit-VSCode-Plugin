@@ -780,6 +780,7 @@ Gera um **agente unificado por story** — cada agente contém o protocolo compl
 1. **Análise de dependências** — identifica stories independentes (prontas) e bloqueadas (dependências pendentes) usando somente o metadata `depends-on`
 2. **Agentes por story** — cria `.github/agents/speckit-story-{id}.agent.md` com ambos os modos
 3. **Batch index** — gera `copilot-instructions.md` listando todas as stories ativas, skills e agents
+4. **Transição automática de revisão** — ao concluir Gate 2, o protocolo unificado persiste `gate: 3` e `status: review` no metadata da story antes de iniciar Gate 3
 
 > Referências narrativas a outras stories ou fixes dentro do corpo da história não entram na análise de dependências. Para bloquear uma story, declare explicitamente o ID no campo `depends-on` do metadata.
 
@@ -811,18 +812,19 @@ Resumo (modo unificado):
 - 📄 copilot-instructions.md gerado em modo batch
 
 Próximo passo: Abra o Copilot Chat e selecione o agente da story desejada no dropdown.
+Importante: no modo unificado, a própria transição Gate 2 → Gate 3 atualiza o metadata da story para `gate: 3` e `status: review` antes da revisão.
 ```
 
 **Protocolo do agente unificado:**
 
 Cada agente unificado contém 4 protocolos embutidos:
 
-| Protocolo   | Quando ativa                           | O que faz                                                                            |
-| ----------- | -------------------------------------- | ------------------------------------------------------------------------------------ |
-| Dependência | Gate 0 (pré-condição)                  | Verifica apenas o metadata canônico `depends-on`; bloqueia se pendentes              |
-| Transição   | Gate 2 → Gate 3                        | Muda postura de implementador para revisor independente                              |
-| Retorno     | Revisor emite "ALTERAÇÕES SOLICITADAS" | Documenta fixes, retorna ao implementador, aplica correções, re-executa revisão      |
-| Inviolável  | Sempre ativo no modo revisor           | Revisor **nunca** implementa — apenas documenta bloqueios e devolve ao implementador |
+| Protocolo   | Quando ativa                           | O que faz                                                                                |
+| ----------- | -------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Dependência | Gate 0 (pré-condição)                  | Verifica apenas o metadata canônico `depends-on`; bloqueia se pendentes                  |
+| Transição   | Gate 2 → Gate 3                        | Persiste metadata (`gate: 3`, `status: review`) e muda postura para revisor independente |
+| Retorno     | Revisor emite "ALTERAÇÕES SOLICITADAS" | Documenta fixes, retorna ao implementador, aplica correções, re-executa revisão          |
+| Inviolável  | Sempre ativo no modo revisor           | Revisor **nunca** implementa — apenas documenta bloqueios e devolve ao implementador     |
 
 > Stories independentes podem ser executadas em paralelo (abas de chat separadas). Stories bloqueadas aguardam conclusão das dependências.
 
@@ -1029,7 +1031,7 @@ O conjunto exato varia conforme a stack declarada. Abaixo a estrutura completa c
 ```
 
 > A sessão de implementação usa o **agent implementador** (dropdown) para Gates 0–2. A revisão usa o **agent revisor** em nova sessão. O `run.prompt.md` é uma alternativa monolítica (todos os gates em uma sessão).
-> Em modo **batch unificado** (`/batch --generate --unified`), cada story recebe um agente `speckit-story-{id}` que conduz o ciclo completo com transição interna entre modos.
+> Em modo **batch unificado** (`/batch --generate --unified`), cada story recebe um agente `speckit-story-{id}` que conduz o ciclo completo com transição interna entre modos e atualização automática de metadata para `gate: 3` + `status: review` ao final do Gate 2.
 > O skill DevTools é gerado apenas quando o usuário aceita a oferta via botão ou `--devtools`.
 
 </details>

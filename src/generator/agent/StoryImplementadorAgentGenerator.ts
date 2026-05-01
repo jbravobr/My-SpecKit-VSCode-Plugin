@@ -93,6 +93,12 @@ Gates 0–2 completos. **Não encerre a sessão.**
 
 O fluxo unificado deve continuar imediatamente para o protocolo de transição (Gate 2 → Gate 3) e iniciar o MODO REVISOR no mesmo agente.
 
+Antes de iniciar o MODO REVISOR, atualize obrigatoriamente o metadata em \`.speckit/STORY-${storyId}.md\` para:
+- \`gate: 3\`
+- \`status: review\`
+
+Sem persistir esse metadata, a troca de gate não foi concluída.
+
 Não selecione outro agente neste ponto.
 `
     : `## Sessão A concluída
@@ -110,7 +116,7 @@ Story: **${story.metadata.title || storyId}** | ID: ${storyId}
 Stack: ${lang} / ${fw} / ${arch}
 
 > Esta sessão cobre: alinhamento → implementação → testes.
-> Ao concluir o Gate 2 com 0 falhas e cobertura ≥ 80%, encerre a sessão.
+> Ao concluir o Gate 2 com 0 falhas e cobertura ≥ 80%, execute o handoff para revisão conforme o protocolo desta sessão.
 
 ---
 
