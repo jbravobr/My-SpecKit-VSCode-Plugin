@@ -1,0 +1,35 @@
+SpecKit — Novidades para usuários — 0.3.16
+==========================================
+Data: 01/05/2026
+
+Resumo
+------
+A revisão automática no handoff de implementação ficou mais confiável: agora o plugin tem um comando orquestrado para consolidar evidências e emitir veredito de revisão sem depender apenas de instruções livres no chat.
+
+Novas features
+--------------
+- Novo comando `@speckit /review-auto` para orquestrar a revisão da story ativa no Gate 3.
+- Transição unificada Gate 2 -> Gate 3 passa a acionar revisão orquestrada antes do veredito.
+- Coleta automática de evidências de revisão (arquivos alterados e cobertura quando disponível).
+
+Melhorias de experiência
+------------------------
+- Menor risco de handoff incompleto (troca de gate sem revisão real).
+- Fluxo de revisão mais previsível com veredito estruturado no mesmo contexto.
+- Mensagens de ajuda e validação atualizadas para orientar o uso do `/review-auto`.
+
+Correções e segurança de release
+--------------------------------
+- Redução de inconsistência operacional em sessões onde o agente declarava handoff mas não concluía checklist de revisão.
+- Aplicação de bloqueios automáticos mínimos quando evidências essenciais de revisão estão ausentes.
+
+Como usar rapidamente
+---------------------
+1. Conclua implementação e testes obrigatórios até o Gate 2.
+2. No handoff para revisão, execute `@speckit /review-auto`.
+3. Verifique o veredito orquestrado (com bloqueios automáticos, se houver).
+4. Continue no mesmo fluxo com checklist completo do Gate 3 e decisão final (APROVADO ou ALTERAÇÕES SOLICITADAS).
+
+Artefato
+--------
+- publish/0.3.16/vscode-plugin-speckit-0.3.16.vsix

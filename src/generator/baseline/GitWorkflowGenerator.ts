@@ -1,3 +1,5 @@
+import { generateGenericGitRepositoryPreflightSection } from '../utils/GitRepositoryPreflight';
+
 export function generateGitWorkflow(): string {
   return `---
 applyTo: "**"
@@ -12,6 +14,8 @@ applyTo: "**"
 - \`feature/<story-id>-<slug>\` — uma branch por story (ex: \`feature/001-user-auth\`)
 - \`release/<versão>\` — preparação de release; bump de versão e changelog
 - \`hotfix/<slug>\` — correção urgente; parte de \`main\`, merge em \`main\` e \`develop\`
+
+${generateGenericGitRepositoryPreflightSection()}
 
 ## Fluxo obrigatório por story
 1. Sempre parta de \`develop\` atualizado: \`git checkout develop && git pull\`

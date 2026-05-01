@@ -1,7 +1,44 @@
 import { Story } from '../../story/Story';
+import { generateContainerRuntimePreflightSection } from '../utils/ContainerRuntimePreflight';
+import { generateGitRepositoryPreflightSection } from '../utils/GitRepositoryPreflight';
 import { AGENT_TOOLS_YAML } from './agentTools';
 
 export function generateImplementadorAgent(story: Story): string {
+  const storyId = story.metadata.id;
+  const lang = story.technicalSpec.language || '(não definida)';
+  const fw = story.technicalSpec.framework || '(não definido)';
+  const arch = story.technicalSpec.architecture || '(não definida)';
+
+  return `---
+name: speckit-implementador
+description: "Agente SpecKit — implementação autônoma de story. Conduz Gates 0-2: alinhamento com spec, implementação por tarefas atômicas com commits convencionais, testes com cobertura ≥80%. Leia .speckit/STORY-${storyId}.md antes de qualquer ação. Stack: ${lang}/${fw}/${arch}."
+${AGENT_TOOLS_YAML}
+---
+
+${generateImplementadorContent(story)}`;
+}
+
+interface ImplementadorContentOptions {
+  unifiedMode?: boolean;
+}
+
+/**
+ * Returns the implementador agent content WITHOUT frontmatter.
+ * Used by the unified agent generator to compose impl + revisor in one file.
+ */
+export function generateImplementadorContent(story: Story): string {
+  const options: ImplementadorContentOptions = {};
+  return generateImplementadorContentInternal(story, options);
+}
+
+export function generateImplementadorContentForUnified(story: Story): string {
+  return generateImplementadorContentInternal(story, { unifiedMode: true });
+}
+
+function generateImplementadorContentInternal(
+  story: Story,
+  options: ImplementadorContentOptions,
+): string {
   const storyId = story.metadata.id;
   const lang = story.technicalSpec.language || '(não definida)';
   const fw = story.technicalSpec.framework || '(não definido)';
@@ -49,19 +86,71 @@ Este é um projeto **existente (brownfield)**. Antes de implementar:
 4. **Integração** — garanta compatibilidade com módulos e serviços existentes
 `;
 
-  return `---
-name: speckit-implementador
-description: "Agente SpecKit — implementação autônoma de story. Conduz Gates 0-2: alinhamento com spec, implementação por tarefas atômicas com commits convencionais, testes com cobertura ≥80%. Leia .speckit/STORY-${storyId}.md antes de qualquer ação. Stack: ${lang}/${fw}/${arch}."
-${AGENT_TOOLS_YAML}
----
+  const sessionClosureSection = options.unifiedMode
+    ? `## Handoff interno para revisão
 
-# SpecKit Implementador — Story ${storyId} (Gates 0–2)
+Gates 0–2 completos. **Não encerre a sessão.**
+
+O fluxo unificado deve continuar imediatamente para o protocolo de transição (Gate 2 → Gate 3) e iniciar o MODO REVISOR no mesmo agente.
+
+  Antes de iniciar o MODO REVISOR:
+  1. Finalize commit local pendente do Gate 2:
+    - Execute \`git status --porcelain\`
+    - Se houver alterações, execute:
+      \`git add -A\`
+      \`git commit -m "test(${storyId}): fechamento do gate 2"\`
+    - Se falhar por erro operacional, tente \`@speckit /commit\` sem mensagem
+    - Só peça ação manual ao usuário se as duas tentativas falharem
+  2. Atualize obrigatoriamente o metadata em \`.speckit/STORY-${storyId}.md\` para:
+    - \`gate: 3\`
+    - \`status: review\`
+  3. Emita no chat o handoff explícito:
+    - "✅ Gates 0-2 concluídos"
+    - "🔁 Handoff: IMPLEMENTADOR → REVISOR"
+    - "🚪 Gate atualizado: 2 → 3"
+    - "📌 Status atualizado: in-progress/open → review"
+  4. Execute \`@speckit /review-auto\` para consolidar evidências e bloquear inconsistências automáticas
+  5. Sem aguardar novo comando do usuário, execute imediatamente o checklist completo do Gate 3 e emita veredito (APROVADO/ALTERAÇÕES SOLICITADAS)
+
+Sem persistir esse metadata, a troca de gate não foi concluída.
+
+Não selecione outro agente neste ponto.
+`
+    : `## Sessão A concluída
+
+  Gates 0–2 completos.
+
+  Antes de encerrar esta sessão, execute o handoff obrigatório:
+  1. Finalize commit local pendente do Gate 2:
+    - Execute \`git status --porcelain\`
+    - Se houver alterações, execute:
+      \`git add -A\`
+      \`git commit -m "test(${storyId}): fechamento do gate 2"\`
+    - Se falhar por erro operacional, tente \`@speckit /commit\` sem mensagem
+    - Só peça ação manual ao usuário se as duas tentativas falharem
+  2. Atualize \`.speckit/STORY-${storyId}.md\` com:
+    - \`gate: 3\`
+    - \`status: review\`
+  3. Emita no chat o handoff explícito:
+    - "✅ Gates 0-2 concluídos"
+    - "🔁 Handoff: IMPLEMENTADOR → REVISOR"
+    - "🚪 Gate atualizado: 2 → 3"
+    - "📌 Status atualizado: in-progress/open → review"
+
+  Agora sim, **encerre esta sessão.**
+
+Para iniciar a revisão independente, o usuário deve selecionar o agente **speckit-revisor** no dropdown de agentes do Copilot Chat.
+
+Não faça mais alterações de código nesta sessão.
+`;
+
+  return `# SpecKit Implementador — Story ${storyId} (Gates 0–2)
 
 Story: **${story.metadata.title || storyId}** | ID: ${storyId}
 Stack: ${lang} / ${fw} / ${arch}
 
 > Esta sessão cobre: alinhamento → implementação → testes.
-> Ao concluir o Gate 2 com 0 falhas e cobertura ≥ 80%, encerre a sessão.
+> Ao concluir o Gate 2 com 0 falhas e cobertura ≥ 80%, execute o handoff para revisão conforme o protocolo desta sessão.
 
 ---
 
@@ -116,16 +205,13 @@ Antes de criar qualquer arquivo de produção, execute e garanta que passam:
 - **Testes existentes**: \`npm test\` (ou equivalente)
 
 Se qualquer validação falhar no estado atual do repositório, corrija ANTES de começar a implementação.
+${generateContainerRuntimePreflightSection()}
 
 ---
 
 ## Gate 1 — Implementação
 
-### Setup git
-\`\`\`bash
-git checkout develop && git pull
-git checkout -b feature/${storyId}-<slug>
-\`\`\`
+${generateGitRepositoryPreflightSection(`feature/${storyId}-<slug>`)}
 
 ### Planejamento de tarefas (faça ANTES de escrever qualquer código)
 
@@ -246,12 +332,6 @@ Só avance para a próxima tarefa após 0 falhas e commit concluído.
 
 ---
 
-## Sessão A concluída
-
-Gates 0–2 completos. **Encerre esta sessão.**
-
-Para iniciar a revisão independente, o usuário deve selecionar o agente **speckit-revisor** no dropdown de agentes do Copilot Chat.
-
-Não faça mais alterações de código nesta sessão.
+${sessionClosureSection}
 `;
 }

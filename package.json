@@ -2,7 +2,7 @@
   "name": "vscode-plugin-speckit",
   "displayName": "SpecKit — Spec Driven Development",
   "description": "Defina sua história e configure o Copilot para desenvolvimento orientado a spec",
-  "version": "0.3.6",
+  "version": "0.3.16",
   "icon": "assets/speckit_icon.png",
   "publisher": "local",
   "engines": {
@@ -39,6 +39,10 @@
             "description": "Exibir resumo de todas as specs abertas (Stories e Fixes)"
           },
           {
+            "name": "status-all",
+            "description": "Atalho para /status --all (inclui done/cancelled)"
+          },
+          {
             "name": "draft",
             "description": "Rascunhar uma spec (story ou fix) a partir de texto livre"
           },
@@ -59,6 +63,10 @@
             "description": "Visualizar rastreabilidade de specs"
           },
           {
+            "name": "history",
+            "description": "Visualizar histórico agregado por tipo (audit, trace e log)"
+          },
+          {
             "name": "diff",
             "description": "Mostrar git diff no chat"
           },
@@ -73,6 +81,34 @@
           {
             "name": "doctor",
             "description": "Diagnóstico de saúde do workspace"
+          },
+          {
+            "name": "batch",
+            "description": "Processar todas as specs em lote — validar e gerar configuração Copilot"
+          },
+          {
+            "name": "batch-generate",
+            "description": "Atalho para /batch --generate"
+          },
+          {
+            "name": "batch-unified",
+            "description": "Atalho para /batch --generate --unified"
+          },
+          {
+            "name": "help",
+            "description": "Ajuda rápida de comandos e parâmetros"
+          },
+          {
+            "name": "help-status",
+            "description": "Atalho para /help status"
+          },
+          {
+            "name": "review-auto",
+            "description": "Orquestrar transição para Gate 3 e revisão automática da story ativa"
+          },
+          {
+            "name": "init",
+            "description": "Inicializar workspace e consolidar specs dispersas em .speckit/"
           }
         ]
       }

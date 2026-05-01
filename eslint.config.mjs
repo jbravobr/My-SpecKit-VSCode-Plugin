@@ -13,6 +13,7 @@ export default tseslint.config(
       ".vscode-test/**",
       "markdown-to-pdf/**",
       "publish/**",
+      "reports/**",
       "esbuild.js",
       "vitest.config.ts",
       "vitest.behavioral.config.ts",

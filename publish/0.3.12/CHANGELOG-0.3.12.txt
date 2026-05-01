@@ -1,0 +1,43 @@
+SpecKit — Changelog 0.3.12
+===========================
+Data: 01/05/2026
+Branch base: release/0.3.12
+
+PATCH — Observabilidade de sessões e histórico navegável
+--------------------------------------------------------
+Consolidação da evolução do comando `/history` para leitura operacional de sessões canônicas com drill-down por alias e trilha de contexto mais consistente.
+
+Resumo da release
+-----------------
+Esta release prioriza rastreabilidade operacional no chat, melhorando como eventos são agregados e investigados por sessão.
+
+Mudanças técnicas
+-----------------
+- Evolução do `/history` para novos modos de consulta por sessão.
+- Novo modo `sessions` para listar sessões canônicas por volume.
+- Novo modo `session <alias|termo>` para drill-down com timeline filtrada.
+- Resolução de alias com tratamento explícito para ausência de correspondência e ambiguidades.
+- Compatibilidade preservada com filtros por tipo (`all`, `audit`, `trace`, `log`) e limite numérico.
+- Melhor agregação de eventos por alias canônico e contexto (`spec`, `agent`, `gate`, `alias`, `cmd`).
+
+Documentação
+------------
+- Documentação operacional atualizada para incluir os novos modos de histórico por sessão.
+
+Testes adicionados
+------------------
+- Testes unitários cobrindo visão `sessions`, drill-down `session` e cenário de ambiguidade de alias.
+- Teste de integração cobrindo roteamento e renderização de `/history session` no host do VS Code.
+- Ajuste de estabilidade em integração para seleção explícita de specs na pasta `.speckit`.
+
+Validação executada antes do release
+------------------------------------
+- npx tsc --noEmit -> 0 erros
+- npm run test:unit -> 1020 testes / 1020 passando
+- npm run test:integration -> 33 testes / 33 passando
+- npm run lint -> 0 erros, 6 warnings preexistentes
+- npm run package -> changelogs validados, build de produção concluído, VSIX gerado e verificado com sucesso
+
+Artefato gerado
+---------------
+- publish/0.3.12/vscode-plugin-speckit-0.3.12.vsix

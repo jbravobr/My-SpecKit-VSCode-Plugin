@@ -1,0 +1,40 @@
+SpecKit — Changelog 0.3.14
+===========================
+Data: 01/05/2026
+Branch base: release/0.3.14
+
+PATCH — Persistência obrigatória na transição Gate 2 -> Gate 3
+--------------------------------------------------------------
+Aprimoramento do protocolo unificado para exigir atualização explícita de metadata antes do início da revisão.
+
+Resumo da release
+-----------------
+Esta release fortalece a consistência de estado no fluxo unificado ao tornar obrigatória a persistência de `gate: 3` e `status: review` antes da etapa de revisão.
+
+Mudanças técnicas
+-----------------
+- A transição de Gate 2 para Gate 3 passou a exigir persistência explícita do metadata da story.
+- Protocolo do implementador unificado reforçado para garantir handoff interno com estado consistente.
+- Mensagem do comando `/batch --generate --unified` atualizada para refletir a regra de persistência obrigatória.
+- Fluxo desacoplado de qualquer acionamento manual separado de revisor.
+
+Documentação
+------------
+- README e orientações de batch unificado atualizados para explicitar a persistência de metadata antes da revisão.
+
+Testes adicionados
+------------------
+- Testes de regressão para validar exigência de `gate: 3` e `status: review` no handoff interno.
+- Cobertura de comando batch para confirmar instrução de transição obrigatória.
+
+Validação executada antes do release
+------------------------------------
+- npx vitest run tests/unit/generator/agent/UnifiedAgentGenerator.test.ts tests/unit/commands/batchCommand.test.ts -> suíte passando
+- npx tsc --noEmit -> 0 erros
+- npm run lint -> 0 erros, warnings preexistentes mantidos
+- npm run test:unit -> suíte unitária passando
+- npm run build -> build concluído com sucesso
+
+Artefato gerado
+---------------
+- publish/0.3.14/vscode-plugin-speckit-0.3.14.vsix

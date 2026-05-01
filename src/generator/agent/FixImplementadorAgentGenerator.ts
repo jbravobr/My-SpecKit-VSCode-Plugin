@@ -1,4 +1,6 @@
 import { Fix, TechStackDetection } from '../../fix/Fix';
+import { generateContainerRuntimePreflightSection } from '../utils/ContainerRuntimePreflight';
+import { generateGitRepositoryPreflightSection } from '../utils/GitRepositoryPreflight';
 import { AGENT_TOOLS_YAML } from './agentTools';
 
 export function generateFixImplementadorAgent(fix: Fix, stack: TechStackDetection): string {
@@ -68,16 +70,13 @@ Antes de modificar qualquer arquivo de produção, execute e garanta que passam:
 - **Testes existentes**: \`npm test\` (ou equivalente)
 
 Se qualquer validação falhar no estado atual do repositório, corrija ANTES de começar o fix.
+${generateContainerRuntimePreflightSection()}
 
 ---
 
 ## Gate 1 — Implementação
 
-### Setup git
-\`\`\`bash
-git checkout develop && git pull
-git checkout -b fix/${fixId}-<slug>
-\`\`\`
+${generateGitRepositoryPreflightSection(`fix/${fixId}-<slug>`)}
 
 ### Regras de implementação
 - Corrija **apenas** o que causa o bug — nenhuma refatoração ou melhoria além do escopo

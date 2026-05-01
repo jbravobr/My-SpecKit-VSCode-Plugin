@@ -7,6 +7,12 @@ import { appendLog } from '../../generator/utils/SessionLogger';
 import { generateFixId } from '../../generator/utils/SpecIdGenerator';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
+import { AuditLogger } from '../../workflow/AuditLogger';
+import {
+  buildSessionAlias,
+  createCorrelationId,
+  inferAgentModeFromGate,
+} from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
 import { handleCommandError, requireWorkspace } from './CommandHelpers';
 
@@ -25,6 +31,10 @@ export async function handleFixCommand(
 
   const existing = await workspace.listFixFiles(specDir);
   const specId = generateFixId(workspaceRoot, existing);
+  const gate = 0;
+  const agentMode = inferAgentModeFromGate(gate);
+  const commandExecutionId = createCorrelationId('exec');
+  const sessionId = createCorrelationId('session');
   const fileName = `${specId}.md`;
   const filePath = path.join(specDir, fileName);
 
@@ -39,16 +49,38 @@ export async function handleFixCommand(
   const doc = await vscode.workspace.openTextDocument(filePath);
   await vscode.window.showTextDocument(doc);
 
+  const sessionAlias = buildSessionAlias(specId, undefined, agentMode, gate);
+  const audit = new AuditLogger(workspaceRoot, fs);
+
   try {
     const tracer = new TraceabilityManager(workspaceRoot, fs);
     await tracer.record(specId, 'fix', {
       type: 'file',
       description: 'fix created',
-      data: { specId, fileName },
+      data: {
+        specId,
+        fileName,
+        command: '/fix',
+        commandExecutionId,
+        sessionId,
+        agentMode,
+        gate: String(gate),
+        sessionAlias,
+      },
     });
   } catch {
     // Traceability should never break the main flow
   }
+
+  await audit.log('file_write', `fix spec created: ${fileName}`, {
+    command: '/fix',
+    commandExecutionId,
+    sessionId,
+    specId,
+    agentMode,
+    gate,
+    sessionAlias,
+  });
 
   await appendLog(
     workspaceRoot,
@@ -56,6 +88,12 @@ export async function handleFixCommand(
       command: '/fix',
       specId,
       outcome: `✅ Fix criado — ${specId}`,
+      commandExecutionId,
+      sessionId,
+      agentMode,
+      gate,
+      sessionAlias,
+      llmResponseReceived: false,
     },
     fs,
   );

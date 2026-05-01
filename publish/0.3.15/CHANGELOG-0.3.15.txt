@@ -1,0 +1,43 @@
+SpecKit — Changelog 0.3.15
+===========================
+Data: 01/05/2026
+Branch base: release/0.3.15
+
+PATCH — Descobribilidade de parâmetros no chat
+----------------------------------------------
+Pacote de UX para facilitar uso de comandos e flags no chat do SpecKit com aliases, ajuda contextual e mensagens de orientação para parâmetros inválidos.
+
+Resumo da release
+-----------------
+Esta release melhora a experiência diária de uso do chat participant ao reduzir tentativa e erro na execução de comandos com parâmetros.
+
+Mudanças técnicas
+-----------------
+- Adicionados aliases no dispatcher e no menu do chat: `status-all`, `batch-generate`, `batch-unified`, `help` e `help-status`.
+- Criado handler dedicado de ajuda (`/help`) com suporte a visão geral e tópicos por comando.
+- Adicionada validação de flags inválidas em `/status` com orientação de uso (`--all|--closed`).
+- Adicionada validação de flags inválidas em `/batch` com orientação de uso (`--generate|--gen` e `--unified`).
+- Fluxo de fallback/help do participant atualizado para exibir novos atalhos.
+
+Documentação
+------------
+- README atualizado com novos comandos de ajuda, aliases e exemplos de uso.
+- Seções de `/status` e `/batch` atualizadas com comportamento de sugestão para parâmetros inválidos.
+
+Testes adicionados
+------------------
+- Testes unitários para o novo comando de ajuda contextual.
+- Testes do dispatcher cobrindo roteamento dos novos aliases.
+- Testes de `/status` e `/batch` cobrindo mensagens de orientação para flags inválidas.
+
+Validação executada antes do release
+------------------------------------
+- npm run test:unit -> suíte unitária passando
+- npx tsc --noEmit -> 0 erros
+- npm run lint -> 0 erros, warnings preexistentes mantidos
+- npm run build -> build concluído com sucesso
+- npm run package -> changelogs validados, VSIX gerado e verificado
+
+Artefato gerado
+---------------
+- publish/0.3.15/vscode-plugin-speckit-0.3.15.vsix

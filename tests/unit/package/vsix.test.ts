@@ -12,6 +12,7 @@ describe('VSIX packaging guard', () => {
       'extension/assets/speckit_icon.png',
       'extension/scripts/package-vsix.mjs',
       'extension/tests/unit/example.test.ts',
+      'extension/.venv/Scripts/python.exe',
     ]);
 
     expect(forbiddenEntries).toEqual([
@@ -19,6 +20,7 @@ describe('VSIX packaging guard', () => {
       'extension/assets/diagrams/01-fluxo-resumo.mmd',
       'extension/scripts/package-vsix.mjs',
       'extension/tests/unit/example.test.ts',
+      'extension/.venv/Scripts/python.exe',
     ]);
   });
 

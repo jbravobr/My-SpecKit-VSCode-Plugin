@@ -23,6 +23,10 @@ CLAUDE.md
 # Dev tooling
 .husky/**
 .claude/**
+.venv/**
+venv/**
+env/**
+__pycache__/**
 
 # Coverage reports
 coverage/**

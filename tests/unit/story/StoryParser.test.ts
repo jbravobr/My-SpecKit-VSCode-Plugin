@@ -190,4 +190,59 @@ describe('parseStory', () => {
       expect(story.metadata.status).toBe('open');
     });
   });
+
+  describe('depends-on metadata field', () => {
+    it('defaults dependsOn to empty array when not present', () => {
+      const story = parseStory(completeStoryMd);
+      expect(story.metadata.dependsOn).toEqual([]);
+    });
+
+    it('parses single dependency', () => {
+      const md = completeStoryMd.replace('version: 1', 'version: 1\ndepends-on: US-002');
+      const story = parseStory(md);
+      expect(story.metadata.dependsOn).toEqual(['US-002']);
+    });
+
+    it('parses multiple comma-separated dependencies', () => {
+      const md = completeStoryMd.replace(
+        'version: 1',
+        'version: 1\ndepends-on: US-002, US-003, BF-001',
+      );
+      const story = parseStory(md);
+      expect(story.metadata.dependsOn).toEqual(['US-002', 'US-003', 'BF-001']);
+    });
+
+    it('trims whitespace around dependency IDs', () => {
+      const md = completeStoryMd.replace(
+        'version: 1',
+        'version: 1\ndepends-on:  US-002 ,  US-003 ',
+      );
+      const story = parseStory(md);
+      expect(story.metadata.dependsOn).toEqual(['US-002', 'US-003']);
+    });
+
+    it('ignores empty entries from trailing comma', () => {
+      const md = completeStoryMd.replace('version: 1', 'version: 1\ndepends-on: US-002, , US-003,');
+      const story = parseStory(md);
+      expect(story.metadata.dependsOn).toEqual(['US-002', 'US-003']);
+    });
+
+    it('returns empty array for blank depends-on value', () => {
+      const md = completeStoryMd.replace('version: 1', 'version: 1\ndepends-on:');
+      const story = parseStory(md);
+      expect(story.metadata.dependsOn).toEqual([]);
+    });
+
+    it('ignores story IDs mentioned outside metadata depends-on', () => {
+      const md = completeStoryMd.replace(
+        '- Token válido resulta em sessão autenticada',
+        '- Token válido resulta em sessão autenticada após STORY-999 estar disponível',
+      );
+      const story = parseStory(md);
+      expect(story.metadata.dependsOn).toEqual([]);
+      expect(story.functionalSpec.acceptanceCriteria).toContain(
+        'Token válido resulta em sessão autenticada após STORY-999 estar disponível',
+      );
+    });
+  });
 });

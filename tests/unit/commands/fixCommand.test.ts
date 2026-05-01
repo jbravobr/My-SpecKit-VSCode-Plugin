@@ -166,5 +166,8 @@ describe('handleFixCommand', () => {
     expect(sessionContent).toBeDefined();
     expect(sessionContent).toContain('/fix');
     expect(sessionContent).toContain('Fix criado');
+    expect(sessionContent).toContain('SessionAlias:');
+    expect(sessionContent).toContain('AgentMode: implementador');
+    expect(sessionContent).toContain('Gate: 0');
   });
 });

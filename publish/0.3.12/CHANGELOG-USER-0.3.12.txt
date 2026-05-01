@@ -1,0 +1,37 @@
+SpecKit — Novidades para usuários — 0.3.12
+==========================================
+Data: 01/05/2026
+
+Resumo
+------
+Esta versão melhora bastante a consulta de histórico no chat do SpecKit. Agora você consegue navegar por sessões canônicas com mais clareza, filtrar por tipo de trilha e abrir rapidamente o detalhe de uma sessão específica para investigação.
+
+Novas features
+--------------
+- O comando `@speckit /history` continua exibindo a visão agregada de eventos.
+- Novo comando `@speckit /history sessions` para mostrar um resumo das sessões canônicas com maior volume.
+- Novo comando `@speckit /history session <termo>` para abrir o detalhe de uma sessão específica.
+- O filtro por tipo continua disponível e pode ser combinado com os novos modos (`audit`, `trace`, `log`).
+- Quando o termo informado em `session` corresponder a mais de uma sessão, o plugin passa a pedir refinamento de forma explícita.
+
+Melhorias de experiência
+------------------------
+- Menos tempo para localizar o contexto correto de uma execução.
+- Investigação operacional mais rápida por sessão, sem precisar vasculhar tudo manualmente.
+- Melhor leitura das trilhas quando há uso intensivo de /batch, /draft, /new e /fix.
+
+Correções e segurança de release
+--------------------------------
+- Melhoria de consistência na resolução de alias para evitar navegação ambígua em histórico.
+- Reforço de rastreabilidade para reduzir investigação manual de sessões longas.
+
+Como usar rapidamente
+---------------------
+1. Rode `@speckit /history` para visão geral dos eventos recentes.
+2. Rode `@speckit /history sessions 8` para listar as principais sessões canônicas.
+3. Rode `@speckit /history session implementador` para detalhar uma sessão por termo.
+4. Se necessário, combine com tipo e limite, por exemplo: `@speckit /history session implementador trace 30`.
+
+Artefato
+--------
+- publish/0.3.12/vscode-plugin-speckit-0.3.12.vsix

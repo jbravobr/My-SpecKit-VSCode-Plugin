@@ -1,0 +1,35 @@
+SpecKit — Novidades para usuários — 0.3.15
+==========================================
+Data: 01/05/2026
+
+Resumo
+------
+Agora ficou mais fácil descobrir e usar parâmetros dos comandos no chat, com atalhos explícitos e ajuda contextual integrada.
+
+Novas features
+--------------
+- Novo comando `@speckit /help` para listar uso e parâmetros por comando.
+- Novos atalhos: `@speckit /status-all`, `@speckit /batch-generate`, `@speckit /batch-unified` e `@speckit /help-status`.
+- Orientação automática quando parâmetros inválidos são passados para `/status` ou `/batch`.
+
+Melhorias de experiência
+------------------------
+- Menos tentativa e erro para lembrar flags de comandos.
+- Descoberta mais rápida de opções sem depender de leitura externa do README.
+- Fluxo de uso mais direto para quem alterna entre validação, batch e revisão.
+
+Correções e segurança de release
+--------------------------------
+- Redução de erro operacional por uso incorreto de flags.
+- Mensagens de comando passaram a orientar a combinação válida de parâmetros.
+
+Como usar rapidamente
+---------------------
+1. Rode `@speckit /help` para ver os comandos e parâmetros mais usados.
+2. Use `@speckit /status-all` para incluir specs concluídas/canceladas no status.
+3. Use `@speckit /batch-unified` para gerar agentes unificados com atalho direto.
+4. Se informar uma flag inválida em `/status` ou `/batch`, siga a sugestão exibida pelo plugin.
+
+Artefato
+--------
+- publish/0.3.15/vscode-plugin-speckit-0.3.15.vsix

@@ -1,0 +1,43 @@
+SpecKit — Changelog 0.3.10
+===========================
+Data: 30/04/2026
+Branch base: release/0.3.10
+
+PATCH — Dependências canônicas entre stories
+--------------------------------------------
+Correção do protocolo do agente unificado para garantir que o bloqueio entre stories siga somente o contrato canônico de metadata (`depends-on`).
+
+Resumo da release
+-----------------
+Esta release elimina ambiguidade na resolução de dependências em histórias executadas por fluxo batch unificado. A partir desta versão, referências narrativas no corpo da spec não influenciam bloqueio de execução.
+
+Mudanças técnicas
+-----------------
+- Removida a instrução de descoberta semântica de dependências no agente `speckit-story-{id}.agent.md`.
+- O protocolo de Gate 0 passou a consultar exclusivamente `metadata.depends-on`.
+- Citações a stories/fixes no corpo da história passaram a ser tratadas como contexto, sem efeito de bloqueio.
+- Comportamento alinhado entre geração de agente, parser e grafo de dependências (`StoryParser` e `DependencyGraph`).
+
+Documentação
+------------
+- README atualizado para declarar `depends-on` como fonte exclusiva de dependências.
+- Seção de batch unificado atualizada com a regra de que referências narrativas não entram na análise de bloqueio.
+
+Testes adicionados
+------------------
+- Teste do agente unificado validando `depends-on` como fonte única de dependência.
+- Teste de regressão garantindo ausência de heurística semântica no corpo da story.
+- Teste de parser validando que menção narrativa (`STORY-999`) não popula `metadata.dependsOn`.
+
+Validação executada antes do release
+------------------------------------
+- npx vitest run tests/unit/generator/agent/UnifiedAgentGenerator.test.ts tests/unit/story/StoryParser.test.ts tests/unit/generator/utils/DependencyGraph.test.ts -> 58 testes / 58 passando
+- npx tsc --noEmit -> 0 erros
+- npm run lint -> 0 erros, 6 warnings preexistentes
+- npm run test:unit -> 1002 testes / 1002 passando
+- npm run test:unit:coverage -> cobertura global acima de 80%
+- npm run build -> build concluído com sucesso
+
+Artefato gerado
+---------------
+- publish/0.3.10/vscode-plugin-speckit-0.3.10.vsix

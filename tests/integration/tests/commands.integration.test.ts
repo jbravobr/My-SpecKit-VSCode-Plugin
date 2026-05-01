@@ -305,7 +305,9 @@ suite('Commands integration — /new', () => {
     const stream = createStream();
     await handleNewCommand({} as any, stream as any, {} as any);
 
-    const generatedFile = (await listFileNames(specDir)).find((name) => name !== existingId);
+    const generatedFile = (await listFileNames(specDir)).find(
+      (name) => name !== existingId && name.startsWith('US-') && name.endsWith('.md'),
+    );
     assert.ok(generatedFile, 'Uma nova story deveria ter sido criada');
     assert.notStrictEqual(generatedFile, existingId, 'O ID gerado não deveria colidir');
     assert.match(generatedFile!, /^US-[A-Z0-9]{1,10}-\d{8}-\d{4}\.md$/);

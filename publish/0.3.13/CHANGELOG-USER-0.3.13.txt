@@ -1,0 +1,33 @@
+SpecKit — Novidades para usuários — 0.3.13
+==========================================
+Data: 01/05/2026
+
+Resumo
+------
+Esta versão deixa o fluxo unificado mais claro e confiável ao manter implementação e revisão dentro do mesmo agente da story.
+
+Novas features
+--------------
+- O modo `@speckit /batch --generate --unified` passou a reforçar que o ciclo completo ocorre no agente `speckit-story-<id>`.
+- Mensagens de execução foram ajustadas para reduzir ambiguidade na transição entre gates.
+
+Melhorias de experiência
+------------------------
+- Menos confusão no handoff entre Gate 2 e Gate 3.
+- Melhor continuidade de sessão após retomadas.
+- Menor necessidade de troca manual de agente durante revisão.
+
+Correções e segurança de release
+--------------------------------
+- Removida instrução indevida que sugeria revisor externo no fluxo unificado.
+- Reforçadas validações automáticas para evitar regressão desse comportamento.
+
+Como usar rapidamente
+---------------------
+1. Execute `@speckit /batch --generate --unified` para gerar agentes por story.
+2. Abra o agente da story e siga o fluxo completo sem trocar para revisor externo.
+3. Conduza Gate 2 e Gate 3 no mesmo agente, conforme orientações geradas.
+
+Artefato
+--------
+- publish/0.3.13/vscode-plugin-speckit-0.3.13.vsix

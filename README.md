@@ -11,7 +11,7 @@ O Copilot passa a conhecer o requisito de negócio, critérios de aceite, restri
 | Ordem | Seção                                | Quando ler                                        |
 | ----- | ------------------------------------ | ------------------------------------------------- |
 | 1     | **Como usar**                        | Fluxo essencial de ponta a ponta                  |
-| 2     | **Comandos**                         | Referência objetiva de cada comando (13 comandos) |
+| 2     | **Comandos**                         | Referência objetiva de cada comando (15 comandos) |
 | 3     | **Paleta de comandos**               | Atalhos via `Ctrl+Shift+P`                        |
 | 4     | **Configuração do workspace**        | Defaults, detecção de stack, backup, logging      |
 | 5     | **Arquivos gerados**                 | O que o plugin cria e para que serve              |
@@ -58,6 +58,19 @@ npm run package
 ```
 
 O comando gera o `.vsix` em `publish/<version>/` e falha se o artefato incluir conteúdo proibido como `coverage/`, `assets/diagrams/` ou `tests/`.
+
+Além disso, o `npm run package` valida automaticamente o padrão obrigatório de changelog da versão:
+
+- Técnico: `publish/<version>/CHANGELOG-<version>.txt`
+  - Título `SpecKit — Changelog <version>`
+  - `Data`, `Branch base`, tipo de release (`RELEASE|PATCH|HOTFIX|MINOR|MAJOR`)
+  - Seções: `Resumo da release`, `Mudanças técnicas`, `Documentação`, `Testes adicionados`, `Validação executada antes do release`, `Artefato gerado`
+- Usuário: `publish/<version>/CHANGELOG-USER-<version>.txt`
+  - Título `SpecKit — Novidades para usuários — <version>`
+  - `Data`
+  - Seções: `Resumo`, `Novas features`, `Melhorias de experiência`, `Correções e segurança de release`, `Como usar rapidamente`, `Artefato`
+
+Se qualquer seção obrigatória estiver ausente ou mal formatada, o empacotamento é bloqueado.
 
 ---
 
@@ -238,14 +251,16 @@ Cria o arquivo `.speckit/STORY-XXX.md` (numeração automática) e abre no edito
 
 Cada spec contém um bloco `<!-- metadata -->` no markdown com campos gerenciados automaticamente:
 
-| Campo          | Valores                                                              | Descrição                                                                  |
-| -------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `type`         | `story` · `refactoring` · `spike`                                    | Tipo da spec (story default, ou via `--refactoring`/`--spike` no `/draft`) |
-| `status`       | `open` · `in-progress` · `review` · `blocked` · `done` · `cancelled` | Ciclo de vida da spec                                                      |
-| `gate`         | `0` · `1` · `2` · `3` · `4`                                          | Gate atual de implementação                                                |
-| `projectStage` | `greenfield` · `brownfield`                                          | Maturidade do projeto (afeta profundidade das instruções)                  |
+| Campo          | Valores                                                              | Descrição                                                                                  |
+| -------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `type`         | `story` · `refactoring` · `spike`                                    | Tipo da spec (story default, ou via `--refactoring`/`--spike` no `/draft`)                 |
+| `status`       | `open` · `in-progress` · `review` · `blocked` · `done` · `cancelled` | Ciclo de vida da spec                                                                      |
+| `gate`         | `0` · `1` · `2` · `3` · `4`                                          | Gate atual de implementação                                                                |
+| `projectStage` | `greenfield` · `brownfield`                                          | Maturidade do projeto (afeta profundidade das instruções)                                  |
+| `depends-on`   | IDs separados por vírgula (ex: `US-002, BF-001`)                     | Fonte canônica e exclusiva de dependências — story não inicia até que todas estejam `done` |
 
 > `type`, `status` e `gate` são usados pelo `/status` para exibir o progresso. O `projectStage` influencia o nível de detalhe dos skills gerados (greenfield → mais guardrails).
+> Dependências entre stories são consideradas **somente** quando declaradas no metadata `depends-on`. Menções no corpo da história, critérios de aceite, fora de escopo, infraestrutura ou contexto são ignoradas para bloqueio de dependência.
 
 </details>
 
@@ -323,6 +338,14 @@ Exibe resumo de todas as specs abertas no workspace:
 - **Fixes:** título, severidade (🐛 critical / high / medium / low), gate atual (`🚪 Gate N — Label`)
 - Specs com `status: done` ou `cancelled` são ocultadas automaticamente
 
+**Opções:**
+
+- `@speckit /status` → mostra somente specs abertas
+- `@speckit /status --all` (ou `--closed`) → inclui specs `done` e `cancelled`
+- `@speckit /status-all` → atalho para `@speckit /status --all`
+
+Se você passar um parâmetro inválido, o comando retorna o uso correto e sugere as flags suportadas.
+
 **Exemplo de output:**
 
 ```
@@ -333,6 +356,28 @@ Stories abertas (2):
 Fixes abertos (1):
 - 🐛 FIX-001.md — Login OAuth2 500 [high]  | 🚪 Gate 2 — Testes
 ```
+
+### `@speckit /help`
+
+Ajuda rápida para descobrir parâmetros e atalhos sem sair do chat.
+
+**Uso:**
+
+```
+@speckit /help
+@speckit /help status
+@speckit /help batch
+@speckit /help validate
+@speckit /help draft
+@speckit /help-status
+```
+
+**Atalhos úteis para descobrir parâmetros:**
+
+- `@speckit /status-all` → `@speckit /status --all`
+- `@speckit /batch-generate` → `@speckit /batch --generate`
+- `@speckit /batch-unified` → `@speckit /batch --generate --unified`
+- `@speckit /help-status` → `@speckit /help status`
 
 ---
 
@@ -540,6 +585,36 @@ Histórico:
 
 ---
 
+### `@speckit /history`
+
+Exibe histórico agregado em uma única visão, combinando eventos de auditoria, trace e session log.
+
+Além da lista cronológica, o comando também apresenta um resumo de sessões canônicas (top por volume) para facilitar navegação de histórico.
+
+**Uso:**
+
+```
+@speckit /history           → Agregado (audit + trace + log), últimas 20 entradas
+@speckit /history audit     → Somente audit
+@speckit /history trace 50  → Somente trace, últimas 50 entradas
+@speckit /history log 100   → Somente session log, últimas 100 entradas
+@speckit /history sessions 8                     → Somente resumo de sessões canônicas (top 8)
+@speckit /history session implementador          → Drill-down por termo de alias
+@speckit /history session "Comissao + revisor"  → Drill-down por alias completo/trecho (com aspas)
+```
+
+**Filtros válidos:** `all`, `audit`, `trace`, `log`
+
+**Modos adicionais:** `sessions`, `session <alias|termo>`
+
+**Exemplo de contexto exibido por entrada:**
+
+```
+spec:US-WORKSPACE-20260501-1030, agent:implementador, gate:2, alias:Comissao Kafka + implementador + Gate-2
+```
+
+---
+
 ### `@speckit /diff`
 
 Mostra o git diff no chat — útil para revisar alterações sem sair da conversa.
@@ -594,7 +669,10 @@ Faz auto-stage de todas as alterações e commit com prefixo `speckit:`.
 
 ```
 @speckit /commit <mensagem>
+@speckit /commit
 ```
+
+Sem `<mensagem>`, o comando tenta derivar um padrão automático com base na spec ativa (Story/Fix) e no gate atual.
 
 **Exemplos:**
 
@@ -616,7 +694,32 @@ Faz auto-stage de todas as alterações e commit com prefixo `speckit:`.
 
 > O commit só executa se houver alterações pendentes. Caso contrário: `✅ Nada para commitar — working tree limpa.`
 
+> Se o workspace ainda não for um repositório Git, o `/commit` executa `git init` automaticamente antes de verificar alterações e commitar. Os agentes implementadores gerados também recebem um preflight Git: ao encontrar `not a git repository` em `checkout`, `pull` ou `commit`, devem executar `git init` no workspace e repetir o mesmo commit uma única vez.
+
+> No fechamento do Gate 2, os protocolos de Story passam a exigir tentativa de commit automático pelo agente e só permitem ação manual do usuário como fallback em erro operacional.
+
 > Todos os commits são registrados no audit log automaticamente.
+
+---
+
+### `@speckit /review-auto`
+
+Orquestra a revisão automática da Story ativa no Gate 3 com protocolo determinístico.
+
+**O que faz:**
+
+1. Garante a transição para revisão (persistindo `gate: 3` e `status: review` quando aplicável)
+2. Coleta evidências automáticas (arquivos alterados e cobertura `lcov` quando disponível)
+3. Aplica bloqueios automáticos mínimos (ex.: cobertura ausente/abaixo de 80%)
+4. Emite veredito orquestrado e força continuidade do checklist completo de revisão no mesmo fluxo
+
+**Uso:**
+
+```
+@speckit /review-auto
+```
+
+> No modo unificado, a transição Gate 2 → Gate 3 deve acionar `/review-auto` antes da emissão do veredito final de revisão.
 
 ---
 
@@ -706,9 +809,164 @@ Resultado: 1/6 verificações OK
 
 ---
 
+### `@speckit /batch`
+
+Processa **todas** as specs em `.speckit/` em lote — validação paralela + geração de configuração Copilot.
+
+**Uso:**
+
+```
+@speckit /batch                        → Valida todas as specs e mostra resumo
+@speckit /batch --generate             → Valida + gera config Copilot para cada spec válida
+@speckit /batch --generate --unified   → Gera agentes unificados (implementador + revisor por story)
+@speckit /batch-generate               → Atalho para /batch --generate
+@speckit /batch-unified                → Atalho para /batch --generate --unified
+```
+
+Se você passar um parâmetro inválido, o comando retorna o uso correto e sugere a combinação recomendada.
+
+**Resumo de validação:**
+
+O batch executa parse + validação de **todas** as specs em paralelo e exibe uma tabela:
+
+```
+Resultado do batch — 4 spec(s) encontrada(s):
+
+| Status             | Spec            | Tipo  | Título              | Gate              | Stack            |
+|--------------------|-----------------|-------|---------------------|-------------------|------------------|
+| ✅ Válida          | STORY-001.md    | story | Auth OAuth2         | 1 — Implementação | typescript/react |
+| ✅ Válida          | FIX-001.md      | fix   | Login 500           | 0 — Alinhamento   | java/springboot  |
+| ⚠️ 3 lacuna(s)    | STORY-002.md    | story | Dashboard vendas    | 0 — Alinhamento   | typescript/react |
+| ⏭️ done           | STORY-003.md    | story | Feature concluída   | 4 — Entrega       | —                |
+
+Totais: ✅ 2 válida(s) | ⚠️ 1 inválida(s) | ❌ 0 erro(s) | ⏭️ 1 finalizada(s)
+```
+
+**Flag `--generate` (modo clássico):**
+
+Gera config Copilot individualmente para cada spec válida — mesmo comportamento de `/validate` mas em lote. A última spec processada define o `copilot-instructions.md` ativo.
+
+**Flag `--generate --unified` (modo unificado):**
+
+Gera um **agente unificado por story** — cada agente contém o protocolo completo de implementação (Gates 0-2) + revisão (Gates 3-4) com ping-pong interno. Adicionalmente:
+
+1. **Análise de dependências** — identifica stories independentes (prontas) e bloqueadas (dependências pendentes) usando somente o metadata `depends-on`
+2. **Agentes por story** — cria `.github/agents/speckit-story-{id}.agent.md` com ambos os modos
+3. **Batch index** — gera `copilot-instructions.md` listando todas as stories ativas, skills e agents
+4. **Transição automática de revisão** — ao concluir Gate 2, o protocolo unificado persiste `gate: 3` e `status: review` no metadata da story antes de iniciar Gate 3
+5. **Execução imediata da revisão** — após o handoff, o próprio agente deve acionar `@speckit /review-auto` e executar o checklist completo do Gate 3 no mesmo fluxo (sem aguardar novo comando do usuário), emitindo veredito
+6. **Handoff explícito** — a transição Gate 2 → Gate 3 deve emitir no chat o bloco de handoff (`IMPLEMENTADOR → REVISOR`) com gate/status atualizados
+
+> Referências narrativas a outras stories ou fixes dentro do corpo da história não entram na análise de dependências. Para bloquear uma story, declare explicitamente o ID no campo `depends-on` do metadata.
+
+**Exemplo de output (modo unificado):**
+
+```
+⏳ Gerando agentes unificados + análise de dependências...
+
+💾 Backup do copilot-instructions.md anterior salvo.
+
+### ⚠️ Dependências pendentes
+
+- `002` bloqueada por: `001`
+
+### ✅ Stories independentes (prontas para execução)
+
+- `001`
+
+✅ Agente unificado: speckit-story-001.agent.md
+✅ Agente unificado: speckit-story-002.agent.md
+
+✅ copilot-instructions.md atualizado (modo batch).
+
+---
+
+Resumo (modo unificado):
+- 🤖 2 agente(s) unificado(s) gerado(s)
+- 🔗 1 independente(s), 1 bloqueada(s)
+- 📄 copilot-instructions.md gerado em modo batch
+
+Próximo passo: Abra o Copilot Chat e selecione o agente da story desejada no dropdown.
+Importante: no modo unificado, a própria transição Gate 2 → Gate 3 atualiza o metadata da story para `gate: 3` e `status: review`, executa `@speckit /review-auto` e a revisão Gate 3 deve ser concluída imediatamente no mesmo fluxo.
+Importante: no modo unificado, a transição também tenta fechar automaticamente commit pendente do Gate 2 antes da revisão.
+```
+
+**Protocolo do agente unificado:**
+
+Cada agente unificado contém 4 protocolos embutidos:
+
+| Protocolo   | Quando ativa                           | O que faz                                                                                                                                                                      |
+| ----------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Dependência | Gate 0 (pré-condição)                  | Verifica apenas o metadata canônico `depends-on`; bloqueia se pendentes                                                                                                        |
+| Transição   | Gate 2 → Gate 3                        | Tenta commit automático do Gate 2, persiste metadata (`gate: 3`, `status: review`), aciona `/review-auto`, emite handoff explícito e executa Gate 3 imediatamente com veredito |
+| Retorno     | Revisor emite "ALTERAÇÕES SOLICITADAS" | Documenta fixes, retorna ao implementador, aplica correções, re-executa revisão                                                                                                |
+| Inviolável  | Sempre ativo no modo revisor           | Revisor **nunca** implementa — apenas documenta bloqueios e devolve ao implementador                                                                                           |
+
+> Stories independentes podem ser executadas em paralelo (abas de chat separadas). Stories bloqueadas aguardam conclusão das dependências.
+
+---
+
+### `@speckit /init`
+
+Inicializa o workspace e consolida specs dispersas em `.speckit/`.
+
+**Uso:**
+
+```
+@speckit /init
+```
+
+**O que faz:**
+
+1. **Garante `.speckit/` existe** — cria o diretório se ausente
+2. **Busca specs dispersas** — encontra recursivamente arquivos `STORY-*.md` e `US-*.md` fora de `.speckit/`
+3. **Consolida** — move cada arquivo encontrado para `.speckit/`, preservando o conteúdo
+4. **Detecta conflitos** — se já existe um arquivo com mesmo nome em `.speckit/`, não sobrescreve
+
+**Diretórios ignorados:** `node_modules`, `.git`, `dist`, `out`, `.venv`, `__pycache__`, `.next`, `.nuxt`, `coverage`, `build`
+
+**Exemplo de output (specs encontradas):**
+
+```
+✅ Workspace inicializado.
+
+📁 `.speckit/` — criado
+📄 2 arquivo(s) movido(s) para `.speckit/`:
+  - docs/STORY-001.md → .speckit/STORY-001.md
+  - US-AUTH-002.md → .speckit/US-AUTH-002.md
+```
+
+**Exemplo de output (com conflitos):**
+
+```
+✅ Workspace inicializado.
+
+📁 `.speckit/` — já existia
+📄 1 arquivo(s) movido(s) para `.speckit/`:
+  - src/STORY-002.md → .speckit/STORY-002.md
+
+⚠️ 1 conflito(s) — não movido(s) (já existem no destino):
+  - STORY-001.md
+```
+
+**Exemplo de output (nada a fazer):**
+
+```
+✅ Workspace inicializado.
+
+📁 `.speckit/` — já existia
+📄 Nenhum arquivo de estória encontrado fora de `.speckit/`.
+```
+
+> Execute `/init` logo após clonar um repositório para garantir que todas as specs estejam centralizadas. Complementa o `/doctor`.
+
+---
+
 ### Sem comando (help)
 
 Se chamar `@speckit` sem comando ou com comando desconhecido, exibe a lista de comandos disponíveis.
+
+Para ajuda detalhada por comando, use `@speckit /help`.
 
 ---
 
@@ -807,6 +1065,13 @@ Formato de cada entrada:
 
 **Spec:** 001 — Cálculo de comissão
 **Resultado:** ✅ Válida — 9 arquivo(s) gerado(s)
+SessionAlias: Calculo de comissao + implementador + Gate-2
+AgentMode: implementador
+Gate: 2
+CommandExecutionId: exec-...
+SessionId: session-...
+BatchId: batch-...
+LLMResponseReceived: false
 
 - .github/copilot-instructions.md
 - .github/skills/speckit-baseline/SKILL.md
@@ -840,9 +1105,11 @@ O conjunto exato varia conforme a stack declarada. Abaixo a estrutura completa c
 +-- agents/
     +-- speckit-implementador.agent.md ← Gates 0–2 (dropdown Copilot)
     +-- speckit-revisor.agent.md       ← Gates 3–4 (dropdown Copilot)
+    +-- speckit-story-{id}.agent.md    ← (batch) Gates 0–4 unificados
 ```
 
 > A sessão de implementação usa o **agent implementador** (dropdown) para Gates 0–2. A revisão usa o **agent revisor** em nova sessão. O `run.prompt.md` é uma alternativa monolítica (todos os gates em uma sessão).
+> Em modo **batch unificado** (`/batch --generate --unified`), cada story recebe um agente `speckit-story-{id}` que conduz o ciclo completo com transição interna entre modos e atualização automática de metadata para `gate: 3` + `status: review` ao final do Gate 2.
 > O skill DevTools é gerado apenas quando o usuário aceita a oferta via botão ou `--devtools`.
 
 </details>
@@ -875,17 +1142,20 @@ O conjunto exato varia conforme a stack declarada. Abaixo a estrutura completa c
 
 #### Baseline (seções dentro de `speckit-baseline/SKILL.md`)
 
-| Seção                    | Instrui o agente a...                                                                                                                               |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `00-agent-integrity`     | Nunca assumir nomes sem vê-los; declarar incerteza; respeitar escopo; exigir 80% cobertura                                                          |
-| `01-performance`         | Big-O antes de propor; `Promise.all`/`Task.WhenAll` para I/O paralelo; paginação + caching. **SLOs da story** (ou baseline `P99 < 500ms` / `99,9%`) |
-| `02-architecture`        | Respeitar arquitetura definida; SOLID; **timeout + retry + circuit breaker** em todo cliente HTTP; propagar `traceparent`                           |
-| `03-context-management`  | Não misturar módulos; pedir arquivos antes de propor; declarar contexto insuficiente                                                                |
-| `04-testing-standards`   | Happy path + edge + error; AAA obrigatório; **cenários dos critérios de aceite**; testes de carga com SLO declarado ou baseline                     |
-| `05-git-workflow`        | Conventional Commits; branch `feature/<id>-<slug>`; nunca commit direto em main                                                                     |
-| `06-credential-security` | IAM roles; secrets via SecretsManager/Vault; nunca logar tokens/senhas                                                                              |
-| `07-observability`       | JSON com `traceId`; `traceparent` W3C; Prometheus; **SLOs parametrizados**; consumer lag em Kafka/SQS                                               |
-| `08-security-tests`      | Sem token → 401; expirado → 401; role insuficiente → 403; SQL injection → 400; sem stack trace no response                                          |
+| Seção                    | Instrui o agente a...                                                                                                                                                       |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `00-agent-integrity`     | Nunca assumir nomes sem vê-los; declarar incerteza; respeitar escopo; exigir 80% cobertura                                                                                  |
+| `01-performance`         | Big-O antes de propor; `Promise.all`/`Task.WhenAll` para I/O paralelo; paginação + caching. **SLOs da story** (ou baseline `P99 < 500ms` / `99,9%`)                         |
+| `02-architecture`        | Respeitar arquitetura definida; SOLID; **timeout + retry + circuit breaker** em todo cliente HTTP; propagar `traceparent`                                                   |
+| `03-context-management`  | Não misturar módulos; pedir arquivos antes de propor; declarar contexto insuficiente                                                                                        |
+| `04-testing-standards`   | Happy path + edge + error; AAA obrigatório; **cenários dos critérios de aceite**; testes de carga com SLO declarado ou baseline; preflight Testcontainers com Docker/Podman |
+| `05-git-workflow`        | Conventional Commits; branch `feature/<id>-<slug>`; preflight `git init` quando workspace ainda não é repo; nunca commit direto em main                                     |
+| `06-credential-security` | IAM roles; secrets via SecretsManager/Vault; nunca logar tokens/senhas                                                                                                      |
+| `07-observability`       | JSON com `traceId`; `traceparent` W3C; Prometheus; **SLOs parametrizados**; consumer lag em Kafka/SQS                                                                       |
+| `08-security-tests`      | Sem token → 401; expirado → 401; role insuficiente → 403; SQL injection → 400; sem stack trace no response                                                                  |
+
+> Quando testes de integração usam Testcontainers e Docker não está disponível, o agente deve verificar Podman, executar `podman machine start` se a máquina estiver parada e só então repetir a execução dos testes.
+> Quando uma sessão com agente implementador executa Git diretamente, o agente deve validar `git rev-parse --is-inside-work-tree` antes de `checkout`/`commit`; se receber `not a git repository`, deve executar `git init`, confirmar com `git status` e repetir o mesmo `git add`/`git commit` apenas uma vez.
 
 #### Infraestrutura (seções em `speckit-stack/SKILL.md`, se detectadas)
 
@@ -1031,6 +1301,7 @@ O skill `speckit-stack` é composto dinamicamente. Cada seção abaixo só é in
 | --------------------- | --------------------------------------------------- | -------------------------------------------- | ------------------------ |
 | **Implementador**     | `.github/agents/speckit-implementador.agent.md`     | 0–2 (alinhamento, implementação, testes)     | Dropdown no Copilot Chat |
 | **Revisor**           | `.github/agents/speckit-revisor.agent.md`           | 3–4 (revisão independente, entrega)          | Dropdown no Copilot Chat |
+| **Unificado (batch)** | `.github/agents/speckit-story-{id}.agent.md`        | 0–4 (ciclo completo com ping-pong interno)   | Dropdown no Copilot Chat |
 | **Fix Implementador** | `.github/agents/speckit-fix-implementador.agent.md` | 0–2 (investigação, fix cirúrgico, regressão) | Dropdown no Copilot Chat |
 | **Fix Revisor**       | `.github/agents/speckit-fix-revisor.agent.md`       | 3–4 (verificação, encerramento)              | Dropdown no Copilot Chat |
 
@@ -1479,6 +1750,15 @@ Agente:  📋 Testes — STORY-001
          ./mvnw verify → BUILD SUCCESS
          Cobertura: 91% (mínimo: 80%) ✅
          26 testes passando, 0 falhas ✅
+
+         Tentativa de commit automático do Gate 2:
+         speckit: test(STORY-001): fechamento do gate 2 ✅
+
+         Handoff no chat:
+         ✅ Gates 0-2 concluídos
+         🔁 Handoff: IMPLEMENTADOR → REVISOR
+         🚪 Gate atualizado: 2 → 3
+         📌 Status atualizado: in-progress/open → review
 
          ✅ Gate 2 concluído. Próximo: Gate 3 (abra nova sessão → agent revisor).
 ```
@@ -2067,20 +2347,25 @@ Além do audit log e traces, o plugin grava logs de sessão em Markdown:
 
 Cada entrada contém o comando executado, o resultado e metadados relevantes. Útil para revisão pós-sessão.
 
+> Limitação de plataforma: a API atual de Chat Participant do VS Code/Copilot não permite renomear programaticamente o título nativo da conversa.
+> Para facilitar navegação no histórico, o SpecKit grava e exibe um alias canônico de sessão no formato `Story + Agente + Gate` via `/history` e session logs.
+
 ---
 
 ## Referência rápida — o que dizer ao agente
 
 ### Criando specs
 
-| Você quer...                | Diga                                                   |
-| --------------------------- | ------------------------------------------------------ |
-| Criar story por texto livre | `@speckit /draft Quero calcular comissão via Kafka`    |
-| Criar story por template    | `@speckit /new`                                        |
-| Criar fix por texto livre   | `@speckit /draft Login retorna 500 após expirar token` |
-| Criar fix por template      | `@speckit /fix`                                        |
-| Validar e gerar arquivos    | `@speckit /validate`                                   |
-| Ver todas as specs abertas  | `@speckit /status`                                     |
+| Você quer...                  | Diga                                                   |
+| ----------------------------- | ------------------------------------------------------ |
+| Criar story por texto livre   | `@speckit /draft Quero calcular comissão via Kafka`    |
+| Criar story por template      | `@speckit /new`                                        |
+| Criar fix por texto livre     | `@speckit /draft Login retorna 500 após expirar token` |
+| Criar fix por template        | `@speckit /fix`                                        |
+| Validar e gerar arquivos      | `@speckit /validate`                                   |
+| Ver todas as specs abertas    | `@speckit /status`                                     |
+| Incluir concluídas/canceladas | `@speckit /status --all`                               |
+| Ver histórico agregado        | `@speckit /history`                                    |
 
 ### Trabalhando com gates
 
@@ -2248,7 +2533,7 @@ Atualmente o plugin opera sobre o **primeiro workspace carregado**. Suporte comp
 <details>
 <summary><strong>O `/commit` faz push automaticamente?</strong></summary>
 
-Não. O `/commit` apenas executa `git add . && git commit -m "speckit: <mensagem>"`. O push é deliberadamente manual para permitir revisão antes de enviar ao remote.
+Não. O `/commit` apenas executa stage + commit local (prefixo `speckit:`). O push é deliberadamente manual para permitir revisão antes de enviar ao remote. Se você omitir a mensagem, o SpecKit tenta derivar uma mensagem automática da spec ativa e do gate atual.
 
 </details>
 

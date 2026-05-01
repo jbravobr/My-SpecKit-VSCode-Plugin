@@ -8,6 +8,12 @@ import { generateStoryId } from '../../generator/utils/SpecIdGenerator';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { generateStoryTemplate } from '../../story/StoryTemplate';
+import { AuditLogger } from '../../workflow/AuditLogger';
+import {
+  buildSessionAlias,
+  createCorrelationId,
+  inferAgentModeFromGate,
+} from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
 import { handleCommandError, requireWorkspace } from './CommandHelpers';
 
@@ -26,6 +32,10 @@ export async function handleNewCommand(
 
   const existing = await workspace.listStoryFiles(specDir);
   const specId = generateStoryId(workspaceRoot, existing);
+  const gate = 0;
+  const agentMode = inferAgentModeFromGate(gate);
+  const commandExecutionId = createCorrelationId('exec');
+  const sessionId = createCorrelationId('session');
   const fileName = `${specId}.md`;
   const filePath = path.join(specDir, fileName);
 
@@ -41,16 +51,38 @@ export async function handleNewCommand(
   const doc = await vscode.workspace.openTextDocument(filePath);
   await vscode.window.showTextDocument(doc);
 
+  const sessionAlias = buildSessionAlias(specId, undefined, agentMode, gate);
+  const audit = new AuditLogger(workspaceRoot, fs);
+
   try {
     const tracer = new TraceabilityManager(workspaceRoot, fs);
     await tracer.record(specId, 'story', {
       type: 'file',
       description: 'spec created',
-      data: { specId, fileName },
+      data: {
+        specId,
+        fileName,
+        command: '/new',
+        commandExecutionId,
+        sessionId,
+        agentMode,
+        gate: String(gate),
+        sessionAlias,
+      },
     });
   } catch {
     // Traceability should never break the main flow
   }
+
+  await audit.log('file_write', `story spec created: ${fileName}`, {
+    command: '/new',
+    commandExecutionId,
+    sessionId,
+    specId,
+    agentMode,
+    gate,
+    sessionAlias,
+  });
 
   await appendLog(
     workspaceRoot,
@@ -58,6 +90,12 @@ export async function handleNewCommand(
       command: '/new',
       specId,
       outcome: `✅ História criada — ${specId}`,
+      commandExecutionId,
+      sessionId,
+      agentMode,
+      gate,
+      sessionAlias,
+      llmResponseReceived: false,
     },
     fs,
   );

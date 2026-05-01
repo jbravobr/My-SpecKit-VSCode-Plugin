@@ -20,6 +20,9 @@ export interface AuditEntry {
   detail: string;
 }
 
+type AuditContextValue = string | number | boolean | undefined;
+type AuditContext = Record<string, AuditContextValue>;
+
 export class AuditLogger {
   private readonly logPath: string;
   private writeQueue: Promise<void> = Promise.resolve();
@@ -31,13 +34,14 @@ export class AuditLogger {
     this.logPath = path.join(workspaceRoot, '.speckit', 'audit.log');
   }
 
-  async log(event: AuditEvent, detail: string): Promise<void> {
-    this.writeQueue = this.writeQueue.then(() => this.doLog(event, detail));
+  async log(event: AuditEvent, detail: string, context?: AuditContext): Promise<void> {
+    this.writeQueue = this.writeQueue.then(() => this.doLog(event, detail, context));
     return this.writeQueue;
   }
 
-  private async doLog(event: AuditEvent, detail: string): Promise<void> {
-    const entry: AuditEntry = { timestamp: new Date().toISOString(), event, detail };
+  private async doLog(event: AuditEvent, detail: string, context?: AuditContext): Promise<void> {
+    const withContext = serializeContext(detail, context);
+    const entry: AuditEntry = { timestamp: new Date().toISOString(), event, detail: withContext };
     const line = `[${entry.timestamp}] ${entry.event}: ${entry.detail}\n`;
     try {
       await this.fs.ensureDir(path.dirname(this.logPath));
@@ -67,4 +71,15 @@ export class AuditLogger {
   getLogPath(): string {
     return this.logPath;
   }
+}
+
+function serializeContext(detail: string, context?: AuditContext): string {
+  if (!context) return detail;
+
+  const parts = Object.entries(context)
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => `${key}="${String(value).replace(/"/g, '\\"')}"`);
+
+  if (parts.length === 0) return detail;
+  return `${detail} | ${parts.join(' ')}`;
 }

@@ -33,6 +33,7 @@ export function parseStory(markdown: string): Story {
     story.metadata.type = parseSpecType(fields['type']);
     story.metadata.status = parseSpecStatus(fields['status']);
     story.metadata.gate = parseGate(fields['gate']);
+    story.metadata.dependsOn = parseDependsOn(fields['depends-on']);
   }
 
   const sectionMap = buildSectionMap(markdown);
@@ -93,4 +94,12 @@ function parseSpecType(raw: string | undefined): SpecType {
 function parseGate(raw: string | undefined): Gate {
   const n = parseInt(raw ?? '0', 10);
   return (n >= 0 && n <= 4 ? n : 0) as Gate;
+}
+
+function parseDependsOn(raw: string | undefined): string[] {
+  if (!raw || !raw.trim()) return [];
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
