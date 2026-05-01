@@ -1,3 +1,39 @@
-Release 0.3.13
+SpecKit — Changelog 0.3.13
+===========================
+Data: 01/05/2026
+Branch base: release/0.3.13
 
-Correção de fluxo no modo batch unificado: o agente de story unificado não orienta mais encerrar sessão para selecionar speckit-revisor externo, evitando quebra de handoff entre Gate 2 e Gate 3. Também foi adicionada mensagem explícita no resumo do comando /batch --generate --unified informando que implementação e revisão acontecem no mesmo agente speckit-story-<id>. Inclui testes de regressão para garantir esse comportamento.
+PATCH — Fluxo unificado sem handoff externo de revisor
+------------------------------------------------------
+Correção de fluxo no modo batch unificado para manter implementação e revisão no mesmo agente da story.
+
+Resumo da release
+-----------------
+Esta release remove orientações contraditórias no modo unificado que induziam troca indevida para agente revisor externo, causando quebra de continuidade entre Gate 2 e Gate 3.
+
+Mudanças técnicas
+-----------------
+- O agente unificado de story deixou de orientar encerramento de sessão para seleção manual de `speckit-revisor`.
+- O resumo do comando `/batch --generate --unified` passou a indicar explicitamente que implementação e revisão ocorrem no mesmo agente `speckit-story-<id>`.
+- O handoff interno entre Gate 2 e Gate 3 ficou consistente com a proposta de execução unificada.
+
+Documentação
+------------
+- README e mensagens de execução em batch unificado atualizados para refletir o fluxo único por story.
+
+Testes adicionados
+------------------
+- Testes de regressão para garantir ausência de instrução de handoff externo no agente unificado.
+- Testes de comando batch para validar mensagem explícita sobre revisão no mesmo agente.
+
+Validação executada antes do release
+------------------------------------
+- npx vitest run tests/unit/generator/agent/UnifiedAgentGenerator.test.ts tests/unit/commands/batchCommand.test.ts -> suíte passando
+- npx tsc --noEmit -> 0 erros
+- npm run lint -> 0 erros, warnings preexistentes mantidos
+- npm run test:unit -> suíte unitária passando
+- npm run build -> build concluído com sucesso
+
+Artefato gerado
+---------------
+- publish/0.3.13/vscode-plugin-speckit-0.3.13.vsix

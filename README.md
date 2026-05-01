@@ -59,6 +59,19 @@ npm run package
 
 O comando gera o `.vsix` em `publish/<version>/` e falha se o artefato incluir conteúdo proibido como `coverage/`, `assets/diagrams/` ou `tests/`.
 
+Além disso, o `npm run package` valida automaticamente o padrão obrigatório de changelog da versão:
+
+- Técnico: `publish/<version>/CHANGELOG-<version>.txt`
+  - Título `SpecKit — Changelog <version>`
+  - `Data`, `Branch base`, tipo de release (`RELEASE|PATCH|HOTFIX|MINOR|MAJOR`)
+  - Seções: `Resumo da release`, `Mudanças técnicas`, `Documentação`, `Testes adicionados`, `Validação executada antes do release`, `Artefato gerado`
+- Usuário: `publish/<version>/CHANGELOG-USER-<version>.txt`
+  - Título `SpecKit — Novidades para usuários — <version>`
+  - `Data`
+  - Seções: `Resumo`, `Novas features`, `Melhorias de experiência`, `Correções e segurança de release`, `Como usar rapidamente`, `Artefato`
+
+Se qualquer seção obrigatória estiver ausente ou mal formatada, o empacotamento é bloqueado.
+
 ---
 
 ## Como usar

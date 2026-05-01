@@ -7,36 +7,19 @@ PATCH — Robustez operacional de desenvolvimento
 -----------------------------------------------
 Esta versão melhora a confiabilidade operacional do SpecKit em dois pontos comuns de execução local: commits em workspaces ainda sem repositório Git e testes de integração baseados em Testcontainers quando Docker não está disponível, mas Podman está instalado.
 
-Correções funcionais
---------------------
-- O comando /commit agora detecta se o workspace ainda não é um repositório Git.
-- Quando o workspace não está dentro de um repositório Git, /commit executa git init automaticamente antes de verificar alterações e criar o commit.
-- A abstração GitOperations passou a expor isRepository e init para permitir detecção e inicialização controlada do repositório.
-- O fluxo de /diff continua sem inicializar repositório; a mudança é restrita ao /commit.
+Resumo da release
+-----------------
+Release focada em robustez de execução para reduzir interrupções em sessões reais de desenvolvimento assistido. O plugin e os agentes passam a executar preflights explícitos para Git e runtime de containers antes de operações críticas.
 
-Preflight Git para agentes implementadores
-------------------------------------------
-- Criado gerador compartilhado GitRepositoryPreflight para instruir agentes a validar git rev-parse --is-inside-work-tree antes de checkout, pull ou commit.
-- Agente implementador de Story agora inicializa o repositório com git init quando o workspace ainda não é um repositório Git e segue para a branch feature/<story-id>-<slug>.
-- Agente implementador de Fix agora aplica o mesmo preflight antes de criar a branch fix/<fix-id>-<slug>.
-- Se um git commit executado pelo agente falhar com not a git repository, o agente deve executar git init, confirmar com git status e repetir exatamente o mesmo git add/git commit uma única vez.
-- O fallback não deve ser usado para outros erros de commit, como hook falhando, identidade Git ausente, conflitos ou mensagem inválida.
-
-Preflight para Testcontainers
------------------------------
-- Criado gerador compartilhado ContainerRuntimePreflight para instruir agentes a validar runtime local de containers antes de executar testes de integração.
-- O agente deve tentar docker info primeiro.
-- Se Docker não existir ou não estiver rodando, o agente deve verificar Podman com podman --version e podman info.
-- Se a máquina Podman estiver parada, o agente deve executar podman machine start e repetir podman info antes de considerar o teste bloqueado.
-- Testes de integração não devem ser marcados como não aplicáveis apenas porque Docker não está disponível quando Podman está instalado e pode ser iniciado.
-
-Geradores impactados
---------------------
-- speckit-baseline/SKILL.md passa a incluir preflight Testcontainers com Docker/Podman na seção de padrões de teste.
-- speckit-baseline/SKILL.md passa a incluir preflight Git obrigatório na seção de workflow Git.
-- Agente implementador de Story passa a incluir preflight de container runtime antes da implementação.
-- Agente implementador de Fix passa a incluir preflight de container runtime antes da correção.
-- Agentes implementadores de Story e Fix passam a incluir recuperação controlada para repositório Git ausente.
+Mudanças técnicas
+-----------------
+- O comando `/commit` passou a detectar workspace fora de repositório e executar `git init` automaticamente antes do commit.
+- A abstração `GitOperations` passou a expor `isRepository` e `init` para inicialização controlada.
+- Criado preflight Git compartilhado (`GitRepositoryPreflight`) para agentes implementadores.
+- Agentes de Story e Fix passaram a aplicar recuperação controlada para erro `not a git repository` com retry único do mesmo commit.
+- Criado preflight de containers (`ContainerRuntimePreflight`) com fallback Docker -> Podman.
+- Fluxo de integração passou a considerar inicialização de `podman machine` antes de marcar teste como bloqueado.
+- Mudança de comportamento intencionalmente restrita ao `/commit`; `/diff` não inicializa repositório.
 
 Documentação
 ------------

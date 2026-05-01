@@ -5,27 +5,30 @@ Branch base: release/0.3.12
 
 PATCH — Observabilidade de sessões e histórico navegável
 --------------------------------------------------------
-Esta versão consolida a evolução do comando /history com foco em leitura operacional de sessões canônicas, drill-down por alias e maior consistência de rastreabilidade entre audit, trace e session logs.
+Consolidação da evolução do comando `/history` para leitura operacional de sessões canônicas com drill-down por alias e trilha de contexto mais consistente.
 
-Correções e melhorias funcionais
---------------------------------
-- Evolução do /history para suportar novos modos de consulta por sessão.
-- Novo modo `sessions` para exibir somente o resumo de sessões canônicas (top por volume).
-- Novo modo `session <alias|termo>` para drill-down de uma sessão específica, com timeline filtrada.
-- Resolução de alias com tratamento explícito para cenários sem correspondência e para ambiguidades.
+Resumo da release
+-----------------
+Esta release prioriza rastreabilidade operacional no chat, melhorando como eventos são agregados e investigados por sessão.
+
+Mudanças técnicas
+-----------------
+- Evolução do `/history` para novos modos de consulta por sessão.
+- Novo modo `sessions` para listar sessões canônicas por volume.
+- Novo modo `session <alias|termo>` para drill-down com timeline filtrada.
+- Resolução de alias com tratamento explícito para ausência de correspondência e ambiguidades.
 - Compatibilidade preservada com filtros por tipo (`all`, `audit`, `trace`, `log`) e limite numérico.
+- Melhor agregação de eventos por alias canônico e contexto (`spec`, `agent`, `gate`, `alias`, `cmd`).
 
-Consistência de contexto operacional
-------------------------------------
-- Melhor agregação de eventos por alias canônico de sessão.
-- Exibição consolidada de contexto por evento (`spec`, `agent`, `gate`, `alias`, `cmd`) no histórico.
-- Organização da leitura por volume e último evento para facilitar triagem operacional.
+Documentação
+------------
+- Documentação operacional atualizada para incluir os novos modos de histórico por sessão.
 
-Testes e validação
+Testes adicionados
 ------------------
-- Novos testes unitários cobrindo visão `sessions`, drill-down `session` e cenário de ambiguidade de alias.
-- Teste de integração adicional cobrindo roteamento e renderização de `/history session` no host real do VS Code.
-- Ajuste de estabilidade em integração para seleção explícita de arquivos de spec na pasta .speckit.
+- Testes unitários cobrindo visão `sessions`, drill-down `session` e cenário de ambiguidade de alias.
+- Teste de integração cobrindo roteamento e renderização de `/history session` no host do VS Code.
+- Ajuste de estabilidade em integração para seleção explícita de specs na pasta `.speckit`.
 
 Validação executada antes do release
 ------------------------------------

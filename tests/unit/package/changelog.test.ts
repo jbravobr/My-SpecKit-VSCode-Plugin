@@ -5,10 +5,72 @@ import { join, resolve } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const scriptPath = resolve(process.cwd(), 'scripts', 'check-changelog.mjs');
-const releaseText =
-  'Conteúdo em português com descrição suficiente das mudanças técnicas desta versão para cumprir a validação mínima obrigatória.';
-const userReleaseText =
-  'Novidades para usuários do plugin: comandos novos, correções visíveis e melhorias práticas explicadas sem detalhes internos.';
+
+function buildTechnicalChangelog(version: string): string {
+  return `SpecKit — Changelog ${version}
+===========================
+Data: 01/05/2026
+Branch base: release/${version}
+
+PATCH — Exemplo de release
+--------------------------
+Mudança técnica exemplificativa para validar o padrão obrigatório.
+
+Resumo da release
+-----------------
+Resumo técnico em português com contexto da entrega.
+
+Mudanças técnicas
+-----------------
+- Ajuste técnico 1.
+- Ajuste técnico 2.
+
+Documentação
+------------
+- README atualizado.
+
+Testes adicionados
+------------------
+- Teste unitário de exemplo.
+
+Validação executada antes do release
+------------------------------------
+- npx tsc --noEmit -> 0 erros
+
+Artefato gerado
+---------------
+- publish/${version}/vscode-plugin-speckit-${version}.vsix`;
+}
+
+function buildUserChangelog(version: string): string {
+  return `SpecKit — Novidades para usuários — ${version}
+==========================================
+Data: 01/05/2026
+
+Resumo
+------
+Resumo objetivo da novidade para usuários finais.
+
+Novas features
+--------------
+- Nova feature de exemplo.
+
+Melhorias de experiência
+------------------------
+- Melhoria prática de uso.
+
+Correções e segurança de release
+--------------------------------
+- Correção operacional de exemplo.
+
+Como usar rapidamente
+---------------------
+1. Execute o comando de exemplo.
+
+Artefato
+--------
+- publish/${version}/vscode-plugin-speckit-${version}.vsix`;
+}
 
 const tempRoots: string[] = [];
 
@@ -36,8 +98,16 @@ afterEach(() => {
 describe('check-changelog release guard', () => {
   it('requires both technical and user-oriented changelogs', () => {
     const { root, version, releaseDir } = createReleaseRoot();
-    writeFileSync(join(releaseDir, `CHANGELOG-${version}.txt`), releaseText, 'utf8');
-    writeFileSync(join(releaseDir, `CHANGELOG-USER-${version}.txt`), userReleaseText, 'utf8');
+    writeFileSync(
+      join(releaseDir, `CHANGELOG-${version}.txt`),
+      buildTechnicalChangelog(version),
+      'utf8',
+    );
+    writeFileSync(
+      join(releaseDir, `CHANGELOG-USER-${version}.txt`),
+      buildUserChangelog(version),
+      'utf8',
+    );
 
     const result = runCheck(root);
 
@@ -48,7 +118,11 @@ describe('check-changelog release guard', () => {
 
   it('fails when the user-oriented changelog is missing', () => {
     const { root, version, releaseDir } = createReleaseRoot();
-    writeFileSync(join(releaseDir, `CHANGELOG-${version}.txt`), releaseText, 'utf8');
+    writeFileSync(
+      join(releaseDir, `CHANGELOG-${version}.txt`),
+      buildTechnicalChangelog(version),
+      'utf8',
+    );
 
     const result = runCheck(root);
 
@@ -62,12 +136,60 @@ describe('check-changelog release guard', () => {
     rmSync(join(root, 'publish', version), { recursive: true, force: true });
     const releaseDir = join(root, 'publish', `${version}-rc1`);
     mkdirSync(releaseDir, { recursive: true });
-    writeFileSync(join(releaseDir, `CHANGELOG-${version}.txt`), releaseText, 'utf8');
-    writeFileSync(join(releaseDir, `CHANGELOG-USER-${version}.txt`), userReleaseText, 'utf8');
+    writeFileSync(
+      join(releaseDir, `CHANGELOG-${version}.txt`),
+      buildTechnicalChangelog(version),
+      'utf8',
+    );
+    writeFileSync(
+      join(releaseDir, `CHANGELOG-USER-${version}.txt`),
+      buildUserChangelog(version),
+      'utf8',
+    );
 
     const result = runCheck(root);
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain(`publish${resolve('/') === '/' ? '/' : '\\'}${version}-rc1`);
+  });
+
+  it('fails when technical changelog is outside the mandatory format', () => {
+    const { root, version, releaseDir } = createReleaseRoot();
+    const malformed = buildTechnicalChangelog(version).replace(
+      'Resumo da release\n-----------------',
+      'Resumo',
+    );
+    writeFileSync(join(releaseDir, `CHANGELOG-${version}.txt`), malformed, 'utf8');
+    writeFileSync(
+      join(releaseDir, `CHANGELOG-USER-${version}.txt`),
+      buildUserChangelog(version),
+      'utf8',
+    );
+
+    const result = runCheck(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Seção técnica obrigatória ausente');
+    expect(result.stderr).toContain('Resumo da release');
+  });
+
+  it('fails when user changelog is outside the mandatory format', () => {
+    const { root, version, releaseDir } = createReleaseRoot();
+    const malformed = buildUserChangelog(version).replace(
+      'Como usar rapidamente\n---------------------',
+      'Como usar',
+    );
+    writeFileSync(
+      join(releaseDir, `CHANGELOG-${version}.txt`),
+      buildTechnicalChangelog(version),
+      'utf8',
+    );
+    writeFileSync(join(releaseDir, `CHANGELOG-USER-${version}.txt`), malformed, 'utf8');
+
+    const result = runCheck(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('Seção de usuário obrigatória ausente');
+    expect(result.stderr).toContain('Como usar rapidamente');
   });
 });

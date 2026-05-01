@@ -1,3 +1,33 @@
-Novidades para usuários na versão 0.3.14
+SpecKit — Novidades para usuários — 0.3.14
+==========================================
+Data: 01/05/2026
 
-No modo unificado, a revisão agora é iniciada com controle mais confiável de estado: ao concluir os testes do Gate 2, o protocolo orienta atualizar automaticamente o metadata da story para `gate: 3` e `status: review` antes de entrar no checklist de revisão. Isso reduz inconsistências de gate após retomadas de sessão, evita dependência de acionamento manual de revisão e deixa o fluxo unificado mais previsível para execução de ponta a ponta.
+Resumo
+------
+No modo unificado, a revisão passou a começar com estado mais confiável porque a transição de Gate 2 para Gate 3 agora exige atualização explícita de metadata.
+
+Novas features
+--------------
+- O fluxo unificado orienta persistir `gate: 3` e `status: review` antes de iniciar o checklist de revisão.
+- O comando `@speckit /batch --generate --unified` passou a reforçar essa regra na orientação operacional.
+
+Melhorias de experiência
+------------------------
+- Menos inconsistências de gate após retomadas de sessão.
+- Fluxo de revisão mais previsível de ponta a ponta.
+- Menor dependência de intervenção manual para acertar estado da story.
+
+Correções e segurança de release
+--------------------------------
+- Redução de risco de revisão iniciada com metadata desatualizado.
+- Reforço de validações para impedir regressão de handoff no modo unificado.
+
+Como usar rapidamente
+---------------------
+1. Execute `@speckit /batch --generate --unified` e abra o agente da story.
+2. Conclua Gate 2 normalmente e aplique a atualização de metadata orientada pelo protocolo.
+3. Só então prossiga para Gate 3 no mesmo agente com estado consistente.
+
+Artefato
+--------
+- publish/0.3.14/vscode-plugin-speckit-0.3.14.vsix
