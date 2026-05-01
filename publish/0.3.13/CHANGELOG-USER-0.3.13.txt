@@ -1,0 +1,3 @@
+Novidades para usuários na versão 0.3.13
+
+O fluxo unificado ficou mais claro e confiável. Ao usar @speckit /batch --generate --unified, o ciclo de implementação e revisão continua no mesmo agente da story, sem depender do agente revisor separado no menu. Isso reduz confusão durante a transição entre gates e melhora a continuidade da sessão após retomadas. Também foram reforçadas validações automatizadas para evitar regressões nesse comportamento.

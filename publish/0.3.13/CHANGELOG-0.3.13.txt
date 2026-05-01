@@ -1,0 +1,3 @@
+Release 0.3.13
+
+Correção de fluxo no modo batch unificado: o agente de story unificado não orienta mais encerrar sessão para selecionar speckit-revisor externo, evitando quebra de handoff entre Gate 2 e Gate 3. Também foi adicionada mensagem explícita no resumo do comando /batch --generate --unified informando que implementação e revisão acontecem no mesmo agente speckit-story-<id>. Inclui testes de regressão para garantir esse comportamento.

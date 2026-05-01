@@ -1,6 +1,6 @@
 import { Story } from '../../story/Story';
 import { AGENT_TOOLS_YAML } from './agentTools';
-import { generateImplementadorContent } from './StoryImplementadorAgentGenerator';
+import { generateImplementadorContentForUnified } from './StoryImplementadorAgentGenerator';
 import { generateRevisorContent } from './StoryRevisorAgentGenerator';
 
 /**
@@ -42,7 +42,7 @@ ${generateDependencyProtocol(story)}
 
 ## MODO IMPLEMENTADOR — Gates 0, 1, 2
 
-${generateImplementadorContent(story)}
+${generateImplementadorContentForUnified(story)}
 
 ---
 

@@ -1,7 +1,10 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { describe, expect, it } from 'vitest';
-import { generateImplementadorContent } from '../../../../src/generator/agent/StoryImplementadorAgentGenerator';
+import {
+  generateImplementadorContent,
+  generateImplementadorContentForUnified,
+} from '../../../../src/generator/agent/StoryImplementadorAgentGenerator';
 import { generateRevisorContent } from '../../../../src/generator/agent/StoryRevisorAgentGenerator';
 import { generateUnifiedAgent } from '../../../../src/generator/agent/StoryUnifiedAgentGenerator';
 import { emptyStory, type Story } from '../../../../src/story/Story';
@@ -98,6 +101,16 @@ describe('StoryUnifiedAgentGenerator', () => {
       const result = generateUnifiedAgent(completeStory);
       expect(result).toContain('0 → 1 → 2 → 3 → 4');
     });
+
+    it('keeps review handoff inside the same unified agent', () => {
+      const result = generateUnifiedAgent(completeStory);
+      expect(result).toContain('Handoff interno para revisão');
+      expect(result).toContain('Não encerre a sessão.');
+      expect(result).toContain('Não selecione outro agente neste ponto.');
+      expect(result).not.toContain(
+        'Para iniciar a revisão independente, o usuário deve selecionar',
+      );
+    });
   });
 });
 
@@ -150,6 +163,13 @@ describe('generateImplementadorContent', () => {
 
   it('does not throw for empty story', () => {
     expect(() => generateImplementadorContent(emptyStory())).not.toThrow();
+  });
+
+  it('returns unified closure section for unified flow', () => {
+    const result = generateImplementadorContentForUnified(completeStory);
+    expect(result).toContain('Handoff interno para revisão');
+    expect(result).toContain('Não encerre a sessão.');
+    expect(result).not.toContain('Para iniciar a revisão independente, o usuário deve selecionar');
   });
 });
 

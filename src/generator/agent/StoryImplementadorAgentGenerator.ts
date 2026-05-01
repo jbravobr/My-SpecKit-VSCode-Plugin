@@ -18,11 +18,27 @@ ${AGENT_TOOLS_YAML}
 ${generateImplementadorContent(story)}`;
 }
 
+interface ImplementadorContentOptions {
+  unifiedMode?: boolean;
+}
+
 /**
  * Returns the implementador agent content WITHOUT frontmatter.
  * Used by the unified agent generator to compose impl + revisor in one file.
  */
 export function generateImplementadorContent(story: Story): string {
+  const options: ImplementadorContentOptions = {};
+  return generateImplementadorContentInternal(story, options);
+}
+
+export function generateImplementadorContentForUnified(story: Story): string {
+  return generateImplementadorContentInternal(story, { unifiedMode: true });
+}
+
+function generateImplementadorContentInternal(
+  story: Story,
+  options: ImplementadorContentOptions,
+): string {
   const storyId = story.metadata.id;
   const lang = story.technicalSpec.language || '(não definida)';
   const fw = story.technicalSpec.framework || '(não definido)';
@@ -68,6 +84,24 @@ Este é um projeto **existente (brownfield)**. Antes de implementar:
 2. **Respeite convenções** — siga os mesmos padrões encontrados no código existente
 3. **Não refatore** — não altere código fora do escopo da story
 4. **Integração** — garanta compatibilidade com módulos e serviços existentes
+`;
+
+  const sessionClosureSection = options.unifiedMode
+    ? `## Handoff interno para revisão
+
+Gates 0–2 completos. **Não encerre a sessão.**
+
+O fluxo unificado deve continuar imediatamente para o protocolo de transição (Gate 2 → Gate 3) e iniciar o MODO REVISOR no mesmo agente.
+
+Não selecione outro agente neste ponto.
+`
+    : `## Sessão A concluída
+
+Gates 0–2 completos. **Encerre esta sessão.**
+
+Para iniciar a revisão independente, o usuário deve selecionar o agente **speckit-revisor** no dropdown de agentes do Copilot Chat.
+
+Não faça mais alterações de código nesta sessão.
 `;
 
   return `# SpecKit Implementador — Story ${storyId} (Gates 0–2)
@@ -258,12 +292,6 @@ Só avance para a próxima tarefa após 0 falhas e commit concluído.
 
 ---
 
-## Sessão A concluída
-
-Gates 0–2 completos. **Encerre esta sessão.**
-
-Para iniciar a revisão independente, o usuário deve selecionar o agente **speckit-revisor** no dropdown de agentes do Copilot Chat.
-
-Não faça mais alterações de código nesta sessão.
+${sessionClosureSection}
 `;
 }

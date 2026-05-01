@@ -448,14 +448,18 @@ async function handleUnifiedGenerate(
     }
   }
 
-  stream.markdown(
-    `\n---\n\n**Resumo (modo unificado):**\n` +
-      `- 🤖 ${agentCount} agente(s) unificado(s) gerado(s)\n` +
-      `- 🔗 ${depResult.independent.length} independente(s), ${depResult.blocked.size} bloqueada(s)\n` +
-      (fixCount > 0 ? `- 🔧 ${fixCount} fix(es) processado(s)\n` : '') +
-      `- 📄 \`copilot-instructions.md\` gerado em modo batch\n` +
-      '\n**Próximo passo:** Abra o Copilot Chat e selecione o agente da story desejada no dropdown.\n',
-  );
+  const fixSummaryLine = fixCount > 0 ? `- 🔧 ${fixCount} fix(es) processado(s)\n` : '';
+  stream.markdown(`
+---
+
+**Resumo (modo unificado):**
+- 🤖 ${agentCount} agente(s) unificado(s) gerado(s)
+- 🔗 ${depResult.independent.length} independente(s), ${depResult.blocked.size} bloqueada(s)
+${fixSummaryLine}- 📄 \`copilot-instructions.md\` gerado em modo batch
+
+**Próximo passo:** Abra o Copilot Chat e selecione o agente da story desejada no dropdown.
+**Importante (modo unificado):** implementação e revisão acontecem no mesmo agente (speckit-story-<id>). Não espere um agente \`speckit-revisor\` separado neste fluxo.
+`);
 }
 
 async function recordBatchPhaseEvents(
