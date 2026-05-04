@@ -16,8 +16,8 @@
  * Timeout: 120s (full interview takes 60–90s with 15+ turns)
  */
 
-import { describe, it, expect } from 'vitest';
 import Anthropic from '@anthropic-ai/sdk';
+import { describe, expect, it } from 'vitest';
 import { generateStoryElicitPrompt } from '../../src/generator/draft/StoryElicitGenerator';
 import { parseStory } from '../../src/story/StoryParser';
 import { validateStory } from '../../src/story/StoryValidator';

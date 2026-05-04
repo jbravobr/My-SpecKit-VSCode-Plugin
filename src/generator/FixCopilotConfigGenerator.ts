@@ -1,32 +1,17 @@
 ﻿import * as path from 'path';
 import { Fix, TechStackDetection } from '../fix/Fix';
-import { IFileSystem } from './utils/IFileSystem';
-import { IWorkspace } from './utils/IWorkspace';
-import { vscodeFileSystem } from './utils/VscodeFileSystem';
-import { vscodeWorkspace } from './utils/VscodeWorkspace';
+import { Story } from '../story/Story';
 import { generateAgentIntegrity } from './baseline/AgentIntegrityGenerator';
-import { generatePerformance } from './baseline/PerformanceGenerator';
 import { generateArchitecture } from './baseline/ArchitectureGenerator';
 import { generateContextManagement } from './baseline/ContextManagementGenerator';
-import { generateTestingStandards } from './baseline/TestingStandardsGenerator';
-import { generateGitWorkflow } from './baseline/GitWorkflowGenerator';
 import { generateCredentialSecurity } from './baseline/CredentialSecurityGenerator';
+import { generateGitWorkflow } from './baseline/GitWorkflowGenerator';
+import { generateIdempotency } from './baseline/IdempotencyGenerator';
 import { generateObservability } from './baseline/ObservabilityGenerator';
+import { generatePerformance } from './baseline/PerformanceGenerator';
 import { generateSecurityTests } from './baseline/SecurityTestsGenerator';
-import { generateTypeScript } from './language/TypeScriptGenerator';
-import { generateJavaScript } from './language/JavaScriptGenerator';
-import { generateJava } from './language/JavaGenerator';
-import { generateCSharp } from './language/CSharpGenerator';
-import { generatePython } from './language/PythonGenerator';
-import { generateDotNet } from './framework/DotNetGenerator';
-import { generateSpringBoot } from './framework/SpringBootGenerator';
-import { generateAngular } from './framework/AngularGenerator';
-import { generateReact } from './framework/ReactGenerator';
-import { generateFastApi } from './framework/FastApiGenerator';
+import { generateTestingStandards } from './baseline/TestingStandardsGenerator';
 import { generateFixContext } from './fix/FixContextGenerator';
-import { generateRootCause } from './fix/RootCauseGenerator';
-import { generateImpact } from './fix/ImpactGenerator';
-import { generateRegression } from './fix/RegressionGenerator';
 import { generateFixDof } from './fix/FixDofGenerator';
 import { generateFixIndex } from './fix/FixIndexGenerator';
 import {
@@ -34,13 +19,28 @@ import {
   generateFixReviewPrompt,
   generateFixRunPrompt,
 } from './fix/FixPromptsGenerator';
-import { generateKafka } from './infra/KafkaGenerator';
+import { generateImpact } from './fix/ImpactGenerator';
+import { generateRegression } from './fix/RegressionGenerator';
+import { generateRootCause } from './fix/RootCauseGenerator';
+import { generateAngular } from './framework/AngularGenerator';
+import { generateDotNet } from './framework/DotNetGenerator';
+import { generateFastApi } from './framework/FastApiGenerator';
+import { generateReact } from './framework/ReactGenerator';
+import { generateSpringBoot } from './framework/SpringBootGenerator';
 import { generateAws } from './infra/AwsGenerator';
-import { generateCrudPattern } from './pattern/CrudPatternGenerator';
+import { generateKafka } from './infra/KafkaGenerator';
+import { generateCSharp } from './language/CSharpGenerator';
+import { generateJava } from './language/JavaGenerator';
+import { generateJavaScript } from './language/JavaScriptGenerator';
+import { generatePython } from './language/PythonGenerator';
+import { generateTypeScript } from './language/TypeScriptGenerator';
 import { generateBffPattern } from './pattern/BffPatternGenerator';
-import { generateIdempotency } from './baseline/IdempotencyGenerator';
-import { Story } from '../story/Story';
+import { generateCrudPattern } from './pattern/CrudPatternGenerator';
+import { IFileSystem } from './utils/IFileSystem';
+import { IWorkspace } from './utils/IWorkspace';
 import { isNa } from './utils/na';
+import { vscodeFileSystem } from './utils/VscodeFileSystem';
+import { vscodeWorkspace } from './utils/VscodeWorkspace';
 
 export async function generateFixCopilotConfig(
   workspaceRoot: string,

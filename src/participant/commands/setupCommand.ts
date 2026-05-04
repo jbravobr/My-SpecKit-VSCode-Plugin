@@ -1,15 +1,15 @@
 import * as vscode from 'vscode';
+import { TechStackDetection } from '../../fix/Fix';
+import {
+  checkEnvironment,
+  EnvironmentReport,
+  INSTALL_URLS,
+  ToolResult,
+} from '../../generator/utils/EnvironmentChecker';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
-import {
-  checkEnvironment,
-  EnvironmentReport,
-  ToolResult,
-  INSTALL_URLS,
-} from '../../generator/utils/EnvironmentChecker';
-import { TechStackDetection } from '../../fix/Fix';
 import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { createCorrelationId } from '../../workflow/ObservabilityContext';
