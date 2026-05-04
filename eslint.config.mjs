@@ -14,6 +14,7 @@ export default tseslint.config(
       "markdown-to-pdf/**",
       "publish/**",
       "reports/**",
+      ".venv/**",
       "esbuild.js",
       "vitest.config.ts",
       "vitest.behavioral.config.ts",

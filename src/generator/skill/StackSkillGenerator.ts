@@ -79,7 +79,9 @@ export function generateStackSkill(opts: StackSkillOptions, story?: Story): stri
   if (needsAws) {
     sections.push(
       stripFrontmatter(
-        generateAws(story ?? ({ technicalSpec: { database: db, infrastructure: '' } } as any)),
+        generateAws(
+          story ?? ({ technicalSpec: { database: db, infrastructure: '' } } as unknown as Story),
+        ),
       ),
     );
     stackParts.push('aws');

@@ -39,6 +39,7 @@ import { generateAws } from './infra/AwsGenerator';
 import { generateCrudPattern } from './pattern/CrudPatternGenerator';
 import { generateBffPattern } from './pattern/BffPatternGenerator';
 import { generateIdempotency } from './baseline/IdempotencyGenerator';
+import { Story } from '../story/Story';
 import { isNa } from './utils/na';
 
 export async function generateFixCopilotConfig(
@@ -145,7 +146,7 @@ export async function generateFixCopilotConfig(
   if (needsAws) {
     await write(
       path.join(instructionsDir, 'infra-aws.instructions.md'),
-      generateAws({ technicalSpec: { database: db, infrastructure: '' } } as any),
+      generateAws({ technicalSpec: { database: db, infrastructure: '' } } as unknown as Story),
     );
   }
 
