@@ -1,0 +1,44 @@
+SpecKit — Changelog 0.3.19
+===========================
+Data: 04/05/2026
+Branch base: main
+
+PATCH — Governança explícita de transições e telemetria unificada
+---------------------------------------------------------------
+Esta release consolida o protocolo de confirmação explícita para comandos críticos, amplia a telemetria padronizada entre comandos e remove conteúdo desnecessário do pacote VSIX.
+
+Resumo da release
+-----------------
+A principal entrega é a governança de transições com Intent-ID e confirmação explícita em fluxos de revisão, status e troca de modo. Em paralelo, os comandos operacionais passaram a emitir trilhas consistentes em sessão, auditoria e traceability via helper unificado. Também foi reforçada a higiene do artefato final para impedir inclusão de materiais de apresentação.
+
+Mudanças técnicas
+-----------------
+- Novo módulo de telemetria unificada para comandos (`CommandTelemetry`) adotado em comandos secundários e críticos.
+- Novo módulo de governança (`TransitionGovernance`) com intents de transição, consumo com TTL e consentimento de sessão batch.
+- `/review-auto` atualizado para fluxo com proposta + confirmação (`--confirm <intent-id>`), suporte a `--batch-consent` e execução automática protegida por consentimento.
+- `/status --fix` atualizado para retrofit com proposta prévia e aplicação somente após confirmação explícita.
+- `/agent` atualizado para troca de modo com proposta/confirm e validação de intent.
+- Comandos `/new`, `/fix`, `/draft`, `/commit`, `/init`, `/setup`, `/batch` e `/validate` migrados para trilha de telemetria padronizada.
+- Regras de empacotamento atualizadas para excluir `assets/presentation/**` do VSIX.
+
+Documentação
+------------
+- README atualizado com semântica de confirmação explícita, consentimento batch e comandos com `--auto` no fluxo unificado.
+- Help de comandos atualizado para refletir novos parâmetros e fluxo de confirmação.
+
+Testes adicionados
+------------------
+- Testes unitários de `/review-auto` ampliados para validar proposta + confirmação antes de persistência de gate/status.
+- Testes unitários de `/status` ampliados para validar retrofit condicionado a confirmação explícita.
+- Testes unitários de `/agent` ampliados para validar troca de modo via intent confirmado.
+
+Validação executada antes do release
+------------------------------------
+- npx tsc --noEmit -> 0 erros
+- npm run lint -> 0 erros
+- npm run test:unit -> 1071 testes passando
+- npm run package -> changelog validado, VSIX gerado e verificado
+
+Artefato gerado
+---------------
+- publish/0.3.19/vscode-plugin-speckit-0.3.19.vsix

@@ -1,0 +1,36 @@
+SpecKit — Novidades para usuários — 0.3.19
+==========================================
+Data: 04/05/2026
+
+Resumo
+------
+Os fluxos de revisão e transição ficaram mais seguros e auditáveis: agora as mudanças críticas exigem confirmação explícita com Intent-ID, e o empacotamento da extensão foi enxugado para não carregar arquivos que não são necessários em runtime.
+
+Novas features
+--------------
+- Confirmação explícita com `--confirm <intent-id>` em transições críticas de `/review-auto`, `/status --fix` e `/agent`.
+- Consentimento único de sessão para batch unificado com `/review-auto --batch-consent`.
+- Execução automática protegida por consentimento (`--auto`) no fluxo unificado.
+
+Melhorias de experiência
+------------------------
+- Mensagens de comando mais claras, com proposta de mudança antes da persistência.
+- Rastreabilidade consistente entre log de sessão, auditoria e traceability.
+- Ajuda e documentação alinhadas ao novo protocolo de confirmação.
+
+Correções e segurança de release
+--------------------------------
+- Redução de risco de transições indevidas de gate/status sem concordância explícita.
+- Melhor governança operacional em fluxos automáticos de revisão.
+- Exclusão de artefatos não essenciais (apresentações) do pacote final da extensão.
+
+Como usar rapidamente
+---------------------
+1. Para handoff/revisão, execute `@speckit /review-auto` e confirme com `@speckit /review-auto --confirm <intent-id>`.
+2. No batch unificado, habilite consentimento único com `@speckit /review-auto --batch-consent`.
+3. Para retrofit de status, use `@speckit /status --fix` e aplique com `@speckit /status --fix --confirm <intent-id>`.
+4. Para troca de modo do agente, execute `@speckit /agent <modo>` e confirme com `@speckit /agent --confirm <intent-id>`.
+
+Artefato
+--------
+- publish/0.3.19/vscode-plugin-speckit-0.3.19.vsix
