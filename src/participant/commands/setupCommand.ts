@@ -3,9 +3,17 @@ import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
-import { checkEnvironment, EnvironmentReport, ToolResult, INSTALL_URLS } from '../../generator/utils/EnvironmentChecker';
-import { appendLog } from '../../generator/utils/SessionLogger';
+import {
+  checkEnvironment,
+  EnvironmentReport,
+  ToolResult,
+  INSTALL_URLS,
+} from '../../generator/utils/EnvironmentChecker';
 import { TechStackDetection } from '../../fix/Fix';
+import { AuditLogger } from '../../workflow/AuditLogger';
+import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
+import { createCorrelationId } from '../../workflow/ObservabilityContext';
+import { TraceabilityManager } from '../../workflow/TraceabilityManager';
 
 const LANG_LABELS: Record<string, string> = {
   typescript: 'TypeScript',
@@ -16,10 +24,7 @@ const LANG_LABELS: Record<string, string> = {
 };
 
 function renderTable(tools: ToolResult[]): string {
-  const lines: string[] = [
-    '| Ferramenta | Status | Versão |',
-    '|------------|--------|--------|',
-  ];
+  const lines: string[] = ['| Ferramenta | Status | Versão |', '|------------|--------|--------|'];
   for (const tool of tools) {
     const status = tool.available ? '✅ OK' : '❌ Não encontrado';
     const version = tool.available ? (tool.version ?? '—') : '—';
@@ -34,16 +39,18 @@ export function formatReport(report: EnvironmentReport, workspaceRoot: string): 
   lines.push(`**Workspace:** \`${workspaceRoot}\``);
 
   if (report.stackLanguage) {
-    lines.push(`**Stack detectada:** ${LANG_LABELS[report.stackLanguage] ?? report.stackLanguage}\n`);
+    lines.push(
+      `**Stack detectada:** ${LANG_LABELS[report.stackLanguage] ?? report.stackLanguage}\n`,
+    );
   } else {
     lines.push('**Stack detectada:** não identificada — verificando todas as ferramentas\n');
   }
 
-  const core = report.tools.filter(t => t.name === 'Git');
-  const node = report.tools.filter(t => t.name === 'Node.js' || t.name === 'npm');
-  const python = report.tools.filter(t => t.name === 'Python' || t.name === 'pip');
-  const java = report.tools.filter(t => t.name === 'Java' || t.name === 'Maven');
-  const dotnet = report.tools.filter(t => t.name === '.NET');
+  const core = report.tools.filter((t) => t.name === 'Git');
+  const node = report.tools.filter((t) => t.name === 'Node.js' || t.name === 'npm');
+  const python = report.tools.filter((t) => t.name === 'Python' || t.name === 'pip');
+  const java = report.tools.filter((t) => t.name === 'Java' || t.name === 'Maven');
+  const dotnet = report.tools.filter((t) => t.name === '.NET');
 
   if (core.length > 0) {
     lines.push('\n### Core');
@@ -70,7 +77,7 @@ export function formatReport(report: EnvironmentReport, workspaceRoot: string): 
     lines.push(renderTable(dotnet));
   }
 
-  const missing = report.tools.filter(t => !t.available && t.required);
+  const missing = report.tools.filter((t) => !t.available && t.required);
   lines.push('\n---');
 
   if (missing.length > 0) {
@@ -80,7 +87,9 @@ export function formatReport(report: EnvironmentReport, workspaceRoot: string): 
       const action = url ? `Instalar em ${url}` : 'instalar e adicionar ao PATH';
       lines.push(`> - **${t.name}**: ${action}`);
     }
-    lines.push('>\n> Instale as ferramentas acima e adicione-as ao PATH antes de executar os workflows de CI/CD gerados pelo SpecKit.');
+    lines.push(
+      '>\n> Instale as ferramentas acima e adicione-as ao PATH antes de executar os workflows de CI/CD gerados pelo SpecKit.',
+    );
   } else {
     lines.push('> ✅ **Todas as ferramentas obrigatórias estão disponíveis.**');
   }
@@ -101,6 +110,10 @@ export async function handleSetupCommand(
     return;
   }
 
+  const commandExecutionId = createCorrelationId('exec');
+  const audit = new AuditLogger(workspaceRoot, _fs);
+  const tracer = new TraceabilityManager(workspaceRoot, _fs);
+
   let stack: TechStackDetection | undefined;
   try {
     stack = await workspace.detectTechStack();
@@ -109,13 +122,28 @@ export async function handleSetupCommand(
   }
 
   const report = checkEnvironment(stack);
+  const missingRequired = report.tools.filter((t) => !t.available && t.required);
 
-  await appendLog(workspaceRoot, {
+  await emitCommandTelemetry({
+    workspaceRoot,
+    fs: _fs,
+    audit,
+    tracer,
     command: '/setup',
-    outcome: report.tools.some(t => !t.available && t.required)
-      ? '⚠️ Ferramentas ausentes detectadas'
-      : '✅ Ambiente verificado com sucesso',
-  }, _fs);
+    outcome:
+      missingRequired.length > 0
+        ? '⚠️ Ferramentas ausentes detectadas'
+        : '✅ Ambiente verificado com sucesso',
+    detail: `MissingRequired=${missingRequired.length}`,
+    commandExecutionId,
+    specId: 'GLOBAL-SETUP',
+    specType: 'story',
+    llmResponseReceived: true,
+    traceDescription: 'setup environment check executado',
+    traceData: {
+      missingRequired: String(missingRequired.length),
+    },
+  });
 
   stream.markdown(formatReport(report, workspaceRoot));
 }

@@ -11,6 +11,25 @@ import {
 
 const token = createMockToken();
 
+function extractIntentId(output: string): string {
+  const match = output.match(/Intent-ID:\s*`([^`]+)`/);
+  return match?.[1] ?? '';
+}
+
+async function proposeAndConfirmMode(
+  mode: string,
+  stream: ReturnType<typeof createMockStream>,
+  ws: WorkspaceStub,
+  fs: InMemoryFileSystem,
+): Promise<void> {
+  await handleAgentCommand(createMockRequest(mode), stream, token, ws, fs);
+  const proposalOutput = stream.getAllMarkdown();
+  const intentId = extractIntentId(proposalOutput);
+  expect(intentId).toBeTruthy();
+
+  await handleAgentCommand(createMockRequest(`--confirm ${intentId}`), stream, token, ws, fs);
+}
+
 describe('handleAgentCommand', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -34,7 +53,8 @@ describe('handleAgentCommand', () => {
   it('should switch to debugger mode and emit protocol', async () => {
     const stream = createMockStream();
     const ws = new WorkspaceStub();
-    await handleAgentCommand(createMockRequest('debugger'), stream, token, ws);
+    const fs = new InMemoryFileSystem();
+    await proposeAndConfirmMode('debugger', stream, ws, fs);
 
     const output = stream.getAllMarkdown();
     expect(output).toContain('Debugger');
@@ -47,7 +67,8 @@ describe('handleAgentCommand', () => {
   it('should switch to refactor mode and emit protocol', async () => {
     const stream = createMockStream();
     const ws = new WorkspaceStub();
-    await handleAgentCommand(createMockRequest('refactor'), stream, token, ws);
+    const fs = new InMemoryFileSystem();
+    await proposeAndConfirmMode('refactor', stream, ws, fs);
 
     const output = stream.getAllMarkdown();
     expect(output).toContain('Refactor');
@@ -59,7 +80,8 @@ describe('handleAgentCommand', () => {
   it('should switch to implementador mode', async () => {
     const stream = createMockStream();
     const ws = new WorkspaceStub();
-    await handleAgentCommand(createMockRequest('implementador'), stream, token, ws);
+    const fs = new InMemoryFileSystem();
+    await proposeAndConfirmMode('implementador', stream, ws, fs);
 
     const output = stream.getAllMarkdown();
     expect(output).toContain('Implementador');
@@ -69,7 +91,8 @@ describe('handleAgentCommand', () => {
   it('should switch to revisor mode', async () => {
     const stream = createMockStream();
     const ws = new WorkspaceStub();
-    await handleAgentCommand(createMockRequest('revisor'), stream, token, ws);
+    const fs = new InMemoryFileSystem();
+    await proposeAndConfirmMode('revisor', stream, ws, fs);
 
     const output = stream.getAllMarkdown();
     expect(output).toContain('Revisor');
@@ -90,6 +113,7 @@ describe('handleAgentCommand', () => {
 
   it('should use java test command when stack is java', async () => {
     const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
     const ws = new WorkspaceStub({
       techStack: {
         language: 'java',
@@ -100,7 +124,7 @@ describe('handleAgentCommand', () => {
         source: 'pom.xml',
       },
     });
-    await handleAgentCommand(createMockRequest('debugger'), stream, token, ws);
+    await proposeAndConfirmMode('debugger', stream, ws, fs);
 
     const output = stream.getAllMarkdown();
     expect(output).toContain('mvnw verify');
@@ -109,6 +133,7 @@ describe('handleAgentCommand', () => {
 
   it('should use python test command when stack is python', async () => {
     const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
     const ws = new WorkspaceStub({
       techStack: {
         language: 'python',
@@ -119,7 +144,7 @@ describe('handleAgentCommand', () => {
         source: 'pyproject.toml',
       },
     });
-    await handleAgentCommand(createMockRequest('refactor'), stream, token, ws);
+    await proposeAndConfirmMode('refactor', stream, ws, fs);
 
     const output = stream.getAllMarkdown();
     expect(output).toContain('pytest');
@@ -128,7 +153,8 @@ describe('handleAgentCommand', () => {
   it('should handle case-insensitive mode input', async () => {
     const stream = createMockStream();
     const ws = new WorkspaceStub();
-    await handleAgentCommand(createMockRequest('DEBUGGER'), stream, token, ws);
+    const fs = new InMemoryFileSystem();
+    await proposeAndConfirmMode('DEBUGGER', stream, ws, fs);
 
     const output = stream.getAllMarkdown();
     expect(output).toContain('Debugger');
@@ -138,7 +164,8 @@ describe('handleAgentCommand', () => {
   it('should trim whitespace from input', async () => {
     const stream = createMockStream();
     const ws = new WorkspaceStub();
-    await handleAgentCommand(createMockRequest('  refactor  '), stream, token, ws);
+    const fs = new InMemoryFileSystem();
+    await proposeAndConfirmMode('  refactor  ', stream, ws, fs);
 
     const output = stream.getAllMarkdown();
     expect(output).toContain('Refactor');
@@ -151,12 +178,12 @@ describe('handleAgentCommand', () => {
     const ws = new WorkspaceStub();
     const fs = new InMemoryFileSystem();
 
-    await handleAgentCommand(createMockRequest('debugger'), stream, token, ws, fs);
+    await proposeAndConfirmMode('debugger', stream, ws, fs);
 
     const sessionContent = fs.contentFor('session-');
     expect(sessionContent).toBeDefined();
-    expect(sessionContent).toContain('/agent');
-    expect(sessionContent).toContain('Debugger');
+    expect(sessionContent).toContain('/agent --confirm');
+    expect(sessionContent).toContain('debugger');
     expect(sessionContent).toContain('SessionAlias:');
     expect(sessionContent).toContain('AgentMode: debugger');
   });

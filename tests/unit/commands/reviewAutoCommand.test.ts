@@ -41,6 +41,11 @@ function storyWithMeta(gate: number, status: string): string {
       });
 }
 
+function extractIntentId(output: string): string {
+  const match = output.match(/Intent-ID:\s*`([^`]+)`/);
+  return match?.[1] ?? '';
+}
+
 describe('handleReviewAutoCommand', () => {
   it('shows error when no workspace is available', async () => {
     const stream = createMockStream();
@@ -84,7 +89,7 @@ describe('handleReviewAutoCommand', () => {
     expect(stream.getAllMarkdown()).toContain('disponível apenas para Story');
   });
 
-  it('transitions gate 2 to gate 3, persists metadata and emits non-blocking verdict', async () => {
+  it('proposes and confirms transition gate 2 to gate 3 before persisting metadata', async () => {
     const stream = createMockStream();
     const fs = new InMemoryFileSystem();
     const ws = new WorkspaceStub();
@@ -97,12 +102,31 @@ describe('handleReviewAutoCommand', () => {
 
     await handleReviewAutoCommand(createMockRequest(''), stream, token, ws, fs, git);
 
+    const proposalOutput = stream.getAllMarkdown();
+    const intentId = extractIntentId(proposalOutput);
+    expect(proposalOutput).toContain('Confirmação obrigatória de transição');
+    expect(intentId).toBeTruthy();
+
+    const afterProposal = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
+    expect(afterProposal).toContain('gate: 2');
+    expect(afterProposal).toContain('status: in-progress');
+
+    await handleReviewAutoCommand(
+      createMockRequest(`--confirm ${intentId}`),
+      stream,
+      token,
+      ws,
+      fs,
+      git,
+    );
+
     const output = stream.getAllMarkdown();
     const storyContent = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
     const sessionContent = fs.contentFor('session-');
     const auditContent = fs.contentFor('audit.log');
     const traceRaw = fs.contentFor('traceability/001.json');
 
+    expect(output).toContain('Confirmação obrigatória de transição');
     expect(output).toContain('Transição de Gate/Status');
     expect(output).toContain('| Gate | `2` | `3` |');
     expect(output).toContain('| Status | `in-progress` | `review` |');
@@ -149,7 +173,7 @@ describe('handleReviewAutoCommand', () => {
     );
   });
 
-  it('applies approved transition from gate 3 to gate 4', async () => {
+  it('requires explicit confirmation before applying approved transition from gate 3 to gate 4', async () => {
     const stream = createMockStream();
     const fs = new InMemoryFileSystem();
     const ws = new WorkspaceStub();
@@ -158,6 +182,24 @@ describe('handleReviewAutoCommand', () => {
 
     await handleReviewAutoCommand(
       createMockRequest('--approved'),
+      stream,
+      token,
+      ws,
+      fs,
+      fakeGit(),
+    );
+
+    const proposalOutput = stream.getAllMarkdown();
+    const intentId = extractIntentId(proposalOutput);
+    expect(proposalOutput).toContain('Confirmação obrigatória de transição');
+    expect(intentId).toBeTruthy();
+
+    const contentAfterProposal = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
+    expect(contentAfterProposal).toContain('gate: 3');
+    expect(contentAfterProposal).toContain('status: review');
+
+    await handleReviewAutoCommand(
+      createMockRequest(`--approved --confirm ${intentId}`),
       stream,
       token,
       ws,
@@ -185,7 +227,7 @@ describe('handleReviewAutoCommand', () => {
     );
   });
 
-  it('applies changes-requested transition from gate 3 to gate 2', async () => {
+  it('requires explicit confirmation before applying changes-requested transition from gate 3 to gate 2', async () => {
     const stream = createMockStream();
     const fs = new InMemoryFileSystem();
     const ws = new WorkspaceStub();
@@ -194,6 +236,24 @@ describe('handleReviewAutoCommand', () => {
 
     await handleReviewAutoCommand(
       createMockRequest('--changes-requested'),
+      stream,
+      token,
+      ws,
+      fs,
+      fakeGit(),
+    );
+
+    const proposalOutput = stream.getAllMarkdown();
+    const intentId = extractIntentId(proposalOutput);
+    expect(proposalOutput).toContain('Confirmação obrigatória de transição');
+    expect(intentId).toBeTruthy();
+
+    const contentAfterProposal = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
+    expect(contentAfterProposal).toContain('gate: 3');
+    expect(contentAfterProposal).toContain('status: review');
+
+    await handleReviewAutoCommand(
+      createMockRequest(`--changes-requested --confirm ${intentId}`),
       stream,
       token,
       ws,

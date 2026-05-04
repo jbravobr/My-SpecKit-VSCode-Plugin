@@ -17,11 +17,13 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       '@speckit /status --all',
       '@speckit /status --closed',
       '@speckit /status --fix',
+      '@speckit /status --fix --confirm <intent-id>',
     ],
     options: [
       '--all (inclui done e cancelled)',
       '--closed (alias de --all)',
-      '--fix (retro-persiste gate: 4 em specs com status: done e gate desatualizado; implica --all)',
+      '--fix (propõe retrofit de gate: 4 em specs com status: done e gate desatualizado; implica --all)',
+      '--confirm <intent-id> (confirma explicitamente o retrofit proposto por --fix)',
     ],
     aliases: ['/status-all', '/status-fix'],
   },
@@ -65,12 +67,19 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'Orquestra revisão e transições de gate da story com evidência explícita no chat (2→3, 3→2, 3→4).',
     usage: [
       '@speckit /review-auto',
+      '@speckit /review-auto --confirm <intent-id>',
       '@speckit /review-auto --changes-requested',
       '@speckit /review-auto --approved',
+      '@speckit /review-auto --batch-consent',
+      '@speckit /review-auto --batch-consent --confirm <intent-id>',
+      '@speckit /review-auto --auto',
     ],
     options: [
+      '--confirm <intent-id> para confirmar transição proposta (obrigatório fora de --auto)',
       '--changes-requested (alias: --changes, --rework) para retornar Gate 3 → Gate 2',
       '--approved (alias: --approve) para encerrar Gate 3 → Gate 4/status done',
+      '--batch-consent para propor consentimento único da sessão batch unificada',
+      '--auto para handoff automático somente quando consentimento batch estiver ativo',
     ],
   },
 };
@@ -92,10 +101,10 @@ function renderGeneralHelp(): string {
   return (
     '**SpecKit — Ajuda rápida**\n\n' +
     '**Comandos com parâmetros mais usados:**\n' +
-    '- `/status [--all|--closed] [--fix]`\n' +
+    '- `/status [--all|--closed] [--fix] [--confirm <intent-id>]`\n' +
     '- `/batch [--generate|--gen] [--unified]`\n' +
     '- `/validate [--devtools]`\n' +
-    '- `/review-auto`\n' +
+    '- `/review-auto [--approved|--changes-requested] [--confirm <intent-id>]`\n' +
     '- `/draft [--fix|--refactoring|--spike]`\n\n' +
     '**Atalhos (aliases):**\n' +
     '- `/status-all` → `/status --all`\n' +

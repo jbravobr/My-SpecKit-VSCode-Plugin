@@ -3,13 +3,20 @@ import * as vscode from 'vscode';
 import { parseFix } from '../../fix/FixParser';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
-import { appendLog } from '../../generator/utils/SessionLogger';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { Gate } from '../../story/Story';
 import { parseStory } from '../../story/StoryParser';
 import { validateStory } from '../../story/StoryValidator';
+import { AuditLogger } from '../../workflow/AuditLogger';
+import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { upsertMetadataFields } from '../../workflow/MetadataPatcher';
+import { createCorrelationId } from '../../workflow/ObservabilityContext';
+import { TraceabilityManager } from '../../workflow/TraceabilityManager';
+import {
+  consumeTransitionIntent,
+  createTransitionIntent,
+} from '../../workflow/TransitionGovernance';
 import { requireWorkspace } from './CommandHelpers';
 
 const GATE_LABELS: Record<Gate, string> = {
@@ -22,8 +29,26 @@ const GATE_LABELS: Record<Gate, string> = {
 
 interface RetrofitChange {
   fileName: string;
+  kind: 'story' | 'fix';
   fromGate: Gate;
   toGate: Gate;
+}
+
+function readFlagValue(tokens: string[], flag: string): string | undefined {
+  const normalized = flag.toLowerCase();
+  for (let idx = 0; idx < tokens.length; idx += 1) {
+    const token = tokens[idx];
+    if (token === normalized) {
+      const next = tokens[idx + 1];
+      if (next && !next.startsWith('--')) return next;
+      return undefined;
+    }
+
+    if (token.startsWith(`${normalized}=`)) {
+      return token.slice(normalized.length + 1).trim();
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -46,17 +71,54 @@ export async function handleStatusCommand(
   const workspaceRoot = requireWorkspace(workspace, stream);
   if (!workspaceRoot) return;
 
+  const commandExecutionId = createCorrelationId('exec');
+  const audit = new AuditLogger(workspaceRoot, fs);
+  const tracer = new TraceabilityManager(workspaceRoot, fs);
+
+  const telemetryBase = {
+    workspaceRoot,
+    fs,
+    audit,
+    tracer,
+    commandExecutionId,
+    specId: 'GLOBAL-STATUS',
+    specTitle: 'Status Command',
+    specType: 'story' as const,
+    llmResponseReceived: true,
+  };
+
   const prompt = (request.prompt ?? '').toLowerCase();
-  const flags = prompt.split(/\s+/).filter((token) => token.startsWith('--'));
-  const allowedFlags = new Set(['--all', '--closed', '--fix']);
+  const allTokens = prompt.split(/\s+/).filter(Boolean);
+  const flags = allTokens.filter((token) => token.startsWith('--'));
+  const allowedFlags = new Set(['--all', '--closed', '--fix', '--confirm']);
   const invalidFlags = flags.filter((flag) => !allowedFlags.has(flag));
+  const confirmIntentId = readFlagValue(allTokens, '--confirm');
+
+  if (flags.includes('--confirm') && !confirmIntentId) {
+    await emitCommandTelemetry({
+      ...telemetryBase,
+      command: '/status --fix',
+      outcome: '❌ parâmetro inválido para confirmação de retrofit',
+      detail: 'Use --confirm <intent-id>.',
+    });
+
+    stream.markdown('❌ Use `--confirm <intent-id>` para confirmar o retrofit pendente.\n');
+    return;
+  }
 
   if (invalidFlags.length > 0) {
+    await emitCommandTelemetry({
+      ...telemetryBase,
+      command: '/status',
+      outcome: '❌ parâmetros inválidos',
+      detail: invalidFlags.join(', '),
+    });
+
     stream.markdown(
       `❌ Parâmetro(s) inválido(s) em /status: ${invalidFlags.map((flag) => `\`${flag}\``).join(', ')}\n\n` +
-        '**Uso:** `@speckit /status [--all|--closed] [--fix]`\n' +
+        '**Uso:** `@speckit /status [--all|--closed] [--fix] [--confirm <intent-id>]`\n' +
         'Dica: use `--all` para incluir specs `done` e `cancelled`. ' +
-        'Use `--fix` para retro-persistir `gate: 4` em specs com `status: done` mas gate desatualizado.',
+        'Use `--fix` para propor retrofit e `--confirm` para aplicar o write.',
     );
     return;
   }
@@ -72,9 +134,84 @@ export async function handleStatusCommand(
 
   const retrofitChanges: RetrofitChange[] = [];
   if (retrofit) {
-    const storyChanges = await retrofitGateForDoneSpecs(storyFiles, specDir, fs, 'story');
-    const fixChanges = await retrofitGateForDoneSpecs(fixFiles, specDir, fs, 'fix');
+    const storyChanges = await collectRetrofitCandidates(storyFiles, specDir, fs, 'story');
+    const fixChanges = await collectRetrofitCandidates(fixFiles, specDir, fs, 'fix');
     retrofitChanges.push(...storyChanges, ...fixChanges);
+
+    if (retrofitChanges.length > 0 && !confirmIntentId) {
+      const intent = await createTransitionIntent(workspaceRoot, fs, {
+        kind: 'status-retrofit',
+        command: '/status --fix',
+        payload: {
+          total: String(retrofitChanges.length),
+          files: retrofitChanges
+            .map((item) => `${item.kind}:${item.fileName}:${item.fromGate}->${item.toGate}`)
+            .join('|'),
+        },
+        ttlMinutes: 30,
+      });
+
+      await emitCommandTelemetry({
+        ...telemetryBase,
+        command: '/status --fix',
+        outcome: '⏳ retrofit proposto aguardando confirmação explícita',
+        detail: `Intent-ID: ${intent.id}; arquivos: ${retrofitChanges.length}`,
+      });
+
+      stream.markdown(
+        `## ⚠️ Confirmação obrigatória para retrofit de gate\n\n` +
+          `${formatRetrofitReport(retrofitChanges)}\n\n` +
+          `Intent-ID: \`${intent.id}\`\n\n` +
+          'Para aplicar as alterações com concordância explícita, execute:\n' +
+          `- \`@speckit /status --fix --confirm ${intent.id}\`\n\n` +
+          'Sem confirmação, nenhuma spec será alterada.\n',
+      );
+      return;
+    }
+
+    if (retrofitChanges.length > 0 && confirmIntentId) {
+      const intent = await consumeTransitionIntent(
+        workspaceRoot,
+        fs,
+        confirmIntentId,
+        'status-retrofit',
+      );
+
+      if (!intent) {
+        await emitCommandTelemetry({
+          ...telemetryBase,
+          command: '/status --fix',
+          outcome: '❌ retrofit bloqueado: intent inválido/expirado',
+          detail: `Intent-ID: ${confirmIntentId}`,
+        });
+
+        stream.markdown(
+          `❌ Intent-ID inválido ou expirado: \`${confirmIntentId}\`. Gere nova proposta com \`@speckit /status --fix\`.\n`,
+        );
+        return;
+      }
+
+      const appliedStoryChanges = await applyRetrofitCandidates(
+        retrofitChanges.filter((item) => item.kind === 'story'),
+        specDir,
+        fs,
+      );
+      const appliedFixChanges = await applyRetrofitCandidates(
+        retrofitChanges.filter((item) => item.kind === 'fix'),
+        specDir,
+        fs,
+      );
+
+      retrofitChanges.length = 0;
+      retrofitChanges.push(...appliedStoryChanges, ...appliedFixChanges);
+
+      await emitCommandTelemetry({
+        ...telemetryBase,
+        command: '/status --fix',
+        outcome: '✅ retrofit aplicado com confirmação explícita',
+        detail: `Intent-ID: ${intent.id}; arquivos aplicados: ${retrofitChanges.length}`,
+      });
+    }
   }
 
   const storyLines = await buildStoryLines(storyFiles, specDir, fs, includeClosed);
@@ -90,17 +227,14 @@ export async function handleStatusCommand(
     ? `**Fixes (${fixLines.length}):**`
     : `**Fixes abertos (${fixLines.length}):**`;
 
-  await appendLog(
-    workspaceRoot,
-    {
-      command: retrofit ? '/status --fix' : '/status',
-      outcome:
-        `📊 ${storyLines.length} stories, ${fixLines.length} fixes` +
-        (includeClosed ? ' (inclui fechadas)' : '') +
-        (retrofit ? ` | retrofit: ${retrofitChanges.length} arquivo(s)` : ''),
-    },
-    fs,
-  );
+  await emitCommandTelemetry({
+    ...telemetryBase,
+    command: retrofit ? '/status --fix' : '/status',
+    outcome:
+      `📊 ${storyLines.length} stories, ${fixLines.length} fixes` +
+      (includeClosed ? ' (inclui fechadas)' : '') +
+      (retrofit ? ` | retrofit: ${retrofitChanges.length} arquivo(s)` : ''),
+  });
 
   if (retrofit) {
     stream.markdown(formatRetrofitReport(retrofitChanges) + '\n\n');
@@ -123,7 +257,7 @@ function formatRetrofitReport(changes: RetrofitChange[]): string {
   );
 }
 
-async function retrofitGateForDoneSpecs(
+async function collectRetrofitCandidates(
   files: string[],
   specDir: string,
   fs: IFileSystem,
@@ -143,14 +277,45 @@ async function retrofitGateForDoneSpecs(
 
       const patch = upsertMetadataFields(content, { gate: 4 });
       if (patch.changed) {
-        await fs.writeFile(filePath, patch.content);
-        results.push({ fileName: name, fromGate: meta.gate, toGate: 4 });
+        results.push({ fileName: name, kind, fromGate: meta.gate, toGate: 4 });
       }
     } catch {
       // ignore unreadable / malformed files; they'll surface in the listing below
     }
   }
   return results;
+}
+
+async function applyRetrofitCandidates(
+  candidates: RetrofitChange[],
+  specDir: string,
+  fs: IFileSystem,
+): Promise<RetrofitChange[]> {
+  const applied: RetrofitChange[] = [];
+
+  for (const candidate of candidates) {
+    try {
+      const filePath = path.join(specDir, candidate.fileName);
+      const content = await fs.readFile(filePath);
+
+      const meta =
+        candidate.kind === 'story'
+          ? { status: parseStory(content).metadata.status, gate: parseStory(content).metadata.gate }
+          : { status: parseFix(content).metadata.status, gate: parseFix(content).metadata.gate };
+
+      if (meta.status !== 'done' || meta.gate >= 4) continue;
+
+      const patch = upsertMetadataFields(content, { gate: 4 });
+      if (!patch.changed) continue;
+
+      await fs.writeFile(filePath, patch.content);
+      applied.push({ ...candidate, fromGate: meta.gate, toGate: 4 });
+    } catch {
+      // ignore malformed file in apply phase to keep command resilient
+    }
+  }
+
+  return applied;
 }
 
 async function buildStoryLines(

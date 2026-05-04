@@ -5,17 +5,13 @@ import { generateFixElicitPrompt } from '../../generator/draft/FixElicitGenerato
 import { generateStoryElicitPrompt } from '../../generator/draft/StoryElicitGenerator';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
-import { appendLog } from '../../generator/utils/SessionLogger';
 import { generateFixId, generateStoryId } from '../../generator/utils/SpecIdGenerator';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { SpecType } from '../../story/Story';
 import { AuditLogger } from '../../workflow/AuditLogger';
-import {
-  buildSessionAlias,
-  createCorrelationId,
-  inferAgentModeFromGate,
-} from '../../workflow/ObservabilityContext';
+import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
+import { createCorrelationId, inferAgentModeFromGate } from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
 import { handleCommandError, requireWorkspace } from './CommandHelpers';
 
@@ -58,6 +54,7 @@ export async function handleDraftCommand(
   const gate = 0;
   const commandExecutionId = createCorrelationId('exec');
   const audit = new AuditLogger(workspaceRoot, fs);
+  const tracer = new TraceabilityManager(workspaceRoot, fs);
 
   const intent = detectDraftIntent(roughInput);
   const cleanInput = roughInput
@@ -69,9 +66,6 @@ export async function handleDraftCommand(
   if (intent === 'fix') {
     const existing = await workspace.listFixFiles(specDir);
     const specId = generateFixId(workspaceRoot, existing);
-    const agentMode = 'debugger';
-    const sessionId = createCorrelationId('session');
-    const sessionAlias = buildSessionAlias(specId, undefined, agentMode, gate);
     const fileName = `elicit-fix-${specId}.prompt.md`;
     const filePath = path.join(specDir, fileName);
 
@@ -83,53 +77,28 @@ export async function handleDraftCommand(
       return;
     }
 
-    await appendLog(
+    await emitCommandTelemetry({
       workspaceRoot,
-      {
-        command: '/draft',
-        specId,
-        outcome: `✅ Elicitação de fix iniciada — ${specId}`,
-        detail: `Input: ${roughInput.slice(0, 120)}${roughInput.length > 120 ? '…' : ''}`,
-        commandExecutionId,
-        sessionId,
-        agentMode,
-        gate,
-        sessionAlias,
-        llmResponseReceived: false,
-      },
       fs,
-    );
-
-    await audit.log('file_write', `draft prompt created: ${fileName}`, {
+      audit,
+      tracer,
       command: '/draft',
+      outcome: `✅ Elicitação de fix iniciada — ${specId}`,
+      detail: `Input: ${roughInput.slice(0, 120)}${roughInput.length > 120 ? '…' : ''}`,
       commandExecutionId,
-      sessionId,
       specId,
-      agentMode,
+      specType: 'fix',
       gate,
-      sessionAlias,
+      agentMode: 'debugger',
+      llmResponseReceived: false,
+      auditEvent: 'file_write',
+      traceType: 'file',
+      traceDescription: 'elicit prompt created',
+      traceData: {
+        fileName,
+        intent,
+      },
     });
-
-    try {
-      const tracer = new TraceabilityManager(workspaceRoot, fs);
-      await tracer.record(specId, 'fix', {
-        type: 'file',
-        description: 'elicit prompt created',
-        data: {
-          specId,
-          fileName,
-          intent,
-          command: '/draft',
-          commandExecutionId,
-          sessionId,
-          agentMode,
-          gate: String(gate),
-          sessionAlias,
-        },
-      });
-    } catch {
-      // Traceability should never break the main flow
-    }
 
     const doc = await vscode.workspace.openTextDocument(filePath);
     await vscode.window.showTextDocument(doc);
@@ -149,8 +118,6 @@ export async function handleDraftCommand(
     const existing = await workspace.listStoryFiles(specDir);
     const specId = generateStoryId(workspaceRoot, existing);
     const agentMode = inferAgentModeFromGate(gate);
-    const sessionId = createCorrelationId('session');
-    const sessionAlias = buildSessionAlias(specId, undefined, agentMode, gate);
     const fileName = `elicit-story-${specId}.prompt.md`;
     const filePath = path.join(specDir, fileName);
 
@@ -162,53 +129,28 @@ export async function handleDraftCommand(
       return;
     }
 
-    await appendLog(
+    await emitCommandTelemetry({
       workspaceRoot,
-      {
-        command: '/draft',
-        specId,
-        outcome: `✅ Elicitação de story iniciada — ${specId}`,
-        detail: `Input: ${roughInput.slice(0, 120)}${roughInput.length > 120 ? '…' : ''}`,
-        commandExecutionId,
-        sessionId,
-        agentMode,
-        gate,
-        sessionAlias,
-        llmResponseReceived: false,
-      },
       fs,
-    );
-
-    await audit.log('file_write', `draft prompt created: ${fileName}`, {
+      audit,
+      tracer,
       command: '/draft',
+      outcome: `✅ Elicitação de story iniciada — ${specId}`,
+      detail: `Input: ${roughInput.slice(0, 120)}${roughInput.length > 120 ? '…' : ''}`,
       commandExecutionId,
-      sessionId,
       specId,
-      agentMode,
+      specType: 'story',
       gate,
-      sessionAlias,
+      agentMode,
+      llmResponseReceived: false,
+      auditEvent: 'file_write',
+      traceType: 'file',
+      traceDescription: 'elicit prompt created',
+      traceData: {
+        fileName,
+        intent,
+      },
     });
-
-    try {
-      const tracer = new TraceabilityManager(workspaceRoot, fs);
-      await tracer.record(specId, 'story', {
-        type: 'file',
-        description: 'elicit prompt created',
-        data: {
-          specId,
-          fileName,
-          intent,
-          command: '/draft',
-          commandExecutionId,
-          sessionId,
-          agentMode,
-          gate: String(gate),
-          sessionAlias,
-        },
-      });
-    } catch {
-      // Traceability should never break the main flow
-    }
 
     const doc = await vscode.workspace.openTextDocument(filePath);
     await vscode.window.showTextDocument(doc);

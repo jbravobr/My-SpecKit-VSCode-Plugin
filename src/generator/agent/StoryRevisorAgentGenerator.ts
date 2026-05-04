@@ -58,6 +58,14 @@ export function generateRevisorContent(story: Story, options: RevisorContentOpti
     ? '> Commit local na **branch única do lote** (ex: `feature/batch-<yyyymmdd>-<slug>`).'
     : `> Commit local na branch \`feature/${storyId}-<slug>\`.`;
 
+  const approvedCommand = isBatchUnified
+    ? '`@speckit /review-auto --approved --auto`'
+    : '`@speckit /review-auto --approved` seguido de `@speckit /review-auto --confirm <intent-id>`';
+
+  const changesRequestedCommand = isBatchUnified
+    ? '`@speckit /review-auto --changes-requested --auto`'
+    : '`@speckit /review-auto --changes-requested` seguido de `@speckit /review-auto --confirm <intent-id>`';
+
   return `# SpecKit Revisor — Story ${storyId} (Gates 3–4)
 
 Story: **${story.metadata.title || storyId}** | ID: ${storyId}
@@ -178,11 +186,11 @@ ${dodList || '- [ ] (não especificado)'}
 3. **Melhorias**: recomendados mas não bloqueantes
 4. **Sugestões fora de escopo**: registre, não implemente
 
-**Se veredito for APROVADO:** execute \`@speckit /review-auto --approved\` para persistir Gate 3 → Gate 4/status done antes de concluir o Gate 4.
+**Se veredito for APROVADO:** execute ${approvedCommand} para persistir Gate 3 → Gate 4/status done antes de concluir o Gate 4.
 
 **Se veredito for ALTERAÇÕES SOLICITADAS:**
 
-1. Execute \`@speckit /review-auto --changes-requested\` para persistir Gate 3 → Gate 2/status in-progress.
+1. Execute ${changesRequestedCommand} para persistir Gate 3 → Gate 2/status in-progress.
 2. Registre a transição no chat usando o bloco Markdown obrigatório.
 3. Converta os bloqueantes em tarefas atômicas:
 
@@ -259,7 +267,7 @@ git commit -m "fix(${storyId}): ajustes pós-revisão"
 
 ### Passo 5 — Encerramento da story no SpecKit
 No chat, execute:
-\`@speckit /review-auto --approved\`
+${approvedCommand}
 
 O comando persiste o metadata com \`gate: 4\` e \`status: done\` e emite a transição no chat.
 

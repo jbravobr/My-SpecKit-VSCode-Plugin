@@ -26,6 +26,11 @@ function seedFs(content: string, fileName: string = 'STORY-001.md'): InMemoryFil
   return fs;
 }
 
+function extractIntentId(output: string): string {
+  const match = output.match(/Intent-ID:\s*`([^`]+)`/);
+  return match?.[1] ?? '';
+}
+
 describe('handleStatusCommand', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -380,12 +385,28 @@ describe('handleStatusCommand', () => {
 
   // ── --fix flag retro-persists gate on disk ───────────────────────────
 
-  it('--fix retro-persists gate: 4 in file content for done stories with stale gate', async () => {
+  it('--fix proposes retrofit and only persists gate: 4 after explicit confirmation', async () => {
     const stream = createMockStream();
     const fs = seedFs(doneStoryAtGate0Md);
     const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
 
     await handleStatusCommand(createMockRequest('--fix'), stream, createMockToken(), fs, workspace);
+
+    const proposalOutput = stream.getAllMarkdown();
+    const intentId = extractIntentId(proposalOutput);
+    expect(proposalOutput).toContain('Confirmação obrigatória para retrofit de gate');
+    expect(intentId).toBeTruthy();
+
+    const unchanged = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
+    expect(unchanged).toMatch(/^gate:\s*0$/m);
+
+    await handleStatusCommand(
+      createMockRequest(`--fix --confirm ${intentId}`),
+      stream,
+      createMockToken(),
+      fs,
+      workspace,
+    );
 
     const updated = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
     expect(updated).toMatch(/^gate:\s*4$/m);
@@ -422,7 +443,7 @@ describe('handleStatusCommand', () => {
     expect(updated).toMatch(/^gate:\s*1$/m);
   });
 
-  it('--fix retro-persists gate: 4 for done fixes with stale gate', async () => {
+  it('--fix retro-persists gate: 4 for done fixes with stale gate only after confirm', async () => {
     const doneFixAtGate2Md =
       '<!-- metadata\nid: 042\ntitle: Old Done Fix\ntype: fix\nstatus: done\ngate: 2\n-->';
     const stream = createMockStream();
@@ -430,6 +451,18 @@ describe('handleStatusCommand', () => {
     const workspace = new WorkspaceStub({ storyFiles: [], fixFiles: ['FIX-001.md'] });
 
     await handleStatusCommand(createMockRequest('--fix'), stream, createMockToken(), fs, workspace);
+
+    const proposalOutput = stream.getAllMarkdown();
+    const intentId = extractIntentId(proposalOutput);
+    expect(intentId).toBeTruthy();
+
+    await handleStatusCommand(
+      createMockRequest(`--fix --confirm ${intentId}`),
+      stream,
+      createMockToken(),
+      fs,
+      workspace,
+    );
 
     const updated = await fs.readFile('C:/workspace/.speckit/FIX-001.md');
     expect(updated).toMatch(/^gate:\s*4$/m);

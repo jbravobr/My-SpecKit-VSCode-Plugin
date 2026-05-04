@@ -130,13 +130,14 @@ O fluxo unificado deve continuar imediatamente para o protocolo de transição (
       \`git commit -m "test(${storyId}): fechamento do gate 2"\`
     - Se falhar por erro operacional, tente \`@speckit /commit\` sem mensagem
     - Só peça ação manual ao usuário se as duas tentativas falharem
-  2. Execute \`@speckit /review-auto\` para persistir a transição Gate 2 → Gate 3 com evidência no chat.
-  3. Emita no chat o handoff explícito:
+  2. Se ainda não houver consentimento batch ativo nesta sessão, execute \`@speckit /review-auto --batch-consent\` e confirme o intent retornado.
+  3. Execute \`@speckit /review-auto --auto\` para persistir a transição Gate 2 → Gate 3 com evidência no chat.
+  4. Emita no chat o handoff explícito:
     - "✅ Gates 0-2 concluídos"
     - "🔁 Handoff: IMPLEMENTADOR → REVISOR"
     - "🚪 Gate atualizado: 2 → 3"
     - "📌 Status atualizado: in-progress/open → review"
-  4. Sem aguardar novo comando do usuário, execute imediatamente o checklist completo do Gate 3 e emita veredito (APROVADO/ALTERAÇÕES SOLICITADAS)
+  5. Sem aguardar novo comando do usuário, execute imediatamente o checklist completo do Gate 3 e emita veredito (APROVADO/ALTERAÇÕES SOLICITADAS)
 
 Sem persistir esse metadata, a troca de gate não foi concluída.
 
@@ -154,8 +155,9 @@ Não selecione outro agente neste ponto.
       \`git commit -m "test(${storyId}): fechamento do gate 2"\`
     - Se falhar por erro operacional, tente \`@speckit /commit\` sem mensagem
     - Só peça ação manual ao usuário se as duas tentativas falharem
-  2. Execute \`@speckit /review-auto\` para persistir \`gate: 3\` e \`status: review\` com evidência no chat.
-  3. Emita no chat o handoff explícito:
+  2. Execute \`@speckit /review-auto\` para **propor** a transição \`gate: 3\` e \`status: review\`.
+  3. Confirme explicitamente a transição usando \`@speckit /review-auto --confirm <intent-id>\`.
+  4. Emita no chat o handoff explícito:
     - "✅ Gates 0-2 concluídos"
     - "🔁 Handoff: IMPLEMENTADOR → REVISOR"
     - "🚪 Gate atualizado: 2 → 3"

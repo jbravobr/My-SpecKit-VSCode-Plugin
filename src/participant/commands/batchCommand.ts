@@ -10,7 +10,6 @@ import { backupCopilotInstructions } from '../../generator/utils/BackupManager';
 import { analyzeDependencies } from '../../generator/utils/DependencyGraph';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
-import { appendLog } from '../../generator/utils/SessionLogger';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { extractSpecType } from '../../parser/BaseParser';
@@ -18,11 +17,8 @@ import type { Gate, Story } from '../../story/Story';
 import { parseStory } from '../../story/StoryParser';
 import { validateStory } from '../../story/StoryValidator';
 import { AuditLogger } from '../../workflow/AuditLogger';
-import {
-  buildSessionAlias,
-  createCorrelationId,
-  inferAgentModeFromGate,
-} from '../../workflow/ObservabilityContext';
+import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
+import { createCorrelationId } from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
 import { requireWorkspace } from './CommandHelpers';
 
@@ -134,17 +130,21 @@ export async function handleBatchCommand(
         '💡 Para gerar agentes unificados (implementador + revisor por story):\n' +
         '`@speckit /batch --generate --unified`\n',
     );
-    await appendLog(
+    await emitCommandTelemetry({
       workspaceRoot,
-      {
-        command: '/batch',
-        outcome: `📊 ${valid.length} válida(s), ${invalid.length} inválida(s), ${errored.length} erro(s), ${skipped.length} finalizada(s)`,
-        commandExecutionId,
-        batchId,
-        llmResponseReceived: true,
-      },
       fs,
-    );
+      audit,
+      tracer,
+      command: '/batch',
+      outcome: `📊 ${valid.length} válida(s), ${invalid.length} inválida(s), ${errored.length} erro(s), ${skipped.length} finalizada(s)`,
+      commandExecutionId,
+      batchId,
+      specId: 'GLOBAL-BATCH',
+      specTitle: 'Batch Command',
+      specType: 'story',
+      llmResponseReceived: true,
+      traceDescription: 'batch summary sem geração',
+    });
     return;
   }
 
@@ -165,17 +165,21 @@ export async function handleBatchCommand(
       commandExecutionId,
       batchId,
     );
-    await appendLog(
+    await emitCommandTelemetry({
       workspaceRoot,
-      {
-        command: '/batch --generate --unified',
-        outcome: `Agentes unificados gerados para ${valid.length} spec(s)`,
-        commandExecutionId,
-        batchId,
-        llmResponseReceived: true,
-      },
       fs,
-    );
+      audit,
+      tracer,
+      command: '/batch --generate --unified',
+      outcome: `Agentes unificados gerados para ${valid.length} spec(s)`,
+      commandExecutionId,
+      batchId,
+      specId: 'GLOBAL-BATCH',
+      specTitle: 'Batch Command',
+      specType: 'story',
+      llmResponseReceived: true,
+      traceDescription: 'batch summary unificado',
+    });
     return;
   }
 
@@ -238,17 +242,21 @@ export async function handleBatchCommand(
 
   const totalFiles = generated.reduce((acc, g) => acc + g.files.length, 0);
 
-  await appendLog(
+  await emitCommandTelemetry({
     workspaceRoot,
-    {
-      command: '/batch --generate',
-      outcome: `✅ ${generated.length} spec(s) processada(s), ${totalFiles} arquivo(s) gerado(s), ${failed.length} falha(s)`,
-      commandExecutionId,
-      batchId,
-      llmResponseReceived: true,
-    },
     fs,
-  );
+    audit,
+    tracer,
+    command: '/batch --generate',
+    outcome: `✅ ${generated.length} spec(s) processada(s), ${totalFiles} arquivo(s) gerado(s), ${failed.length} falha(s)`,
+    commandExecutionId,
+    batchId,
+    specId: 'GLOBAL-BATCH',
+    specTitle: 'Batch Command',
+    specType: 'story',
+    llmResponseReceived: true,
+    traceDescription: 'batch summary generate',
+  });
 
   stream.markdown(
     `\n---\n\n**Resumo de geração:**\n` +
@@ -563,9 +571,10 @@ ${fixSummaryLine}- 📄 \`copilot-instructions.md\` gerado em modo batch
 **Próximo passo:** Abra o Copilot Chat e selecione o agente da story desejada no dropdown.
 **Importante (modo unificado):** implementação e revisão acontecem no mesmo agente (speckit-story-<id>). Não espere um agente \`speckit-revisor\` separado neste fluxo.
 **Estratégia de branch (modo unificado):** use uma branch única do lote (ex: \`feature/batch-<yyyymmdd>-<slug>\`). Não crie branch por story e não empilhe branches de stories.
-Ao concluir Gate 2 com sucesso, execute \`@speckit /review-auto\` para persistir \`gate: 3\` e \`status: review\` com evidência visível no chat.
-Se o veredito do Gate 3 for ALTERAÇÕES SOLICITADAS, execute \`@speckit /review-auto --changes-requested\`.
-Se o veredito do Gate 3 for APROVADO, execute \`@speckit /review-auto --approved\`.
+Antes do primeiro handoff automático, execute \`@speckit /review-auto --batch-consent\` e confirme o intent retornado.
+Ao concluir Gate 2 com sucesso, execute \`@speckit /review-auto --auto\` para persistir \`gate: 3\` e \`status: review\` com evidência visível no chat.
+Se o veredito do Gate 3 for ALTERAÇÕES SOLICITADAS, execute \`@speckit /review-auto --changes-requested --auto\`.
+Se o veredito do Gate 3 for APROVADO, execute \`@speckit /review-auto --approved --auto\`.
 `);
 }
 
@@ -637,56 +646,22 @@ async function recordBatchEvent(
   commandExecutionId: string,
   batchId: string,
 ): Promise<void> {
-  const agentMode = inferAgentModeFromGate(entry.gate);
-  const sessionId = createCorrelationId('session');
-  const sessionAlias = buildSessionAlias(entry.id, entry.title, agentMode, entry.gate);
-
-  await appendLog(
+  await emitCommandTelemetry({
     workspaceRoot,
-    {
-      command,
-      specId: entry.id,
-      specTitle: entry.title,
-      outcome,
-      commandExecutionId,
-      sessionId,
-      batchId,
-      agentMode,
-      gate: entry.gate,
-      sessionAlias,
-    },
     fs,
-  );
-
-  await audit.log('command', `batch item ${entry.id}: ${outcome}`, {
+    audit,
+    tracer,
     command,
+    outcome,
     commandExecutionId,
     batchId,
-    sessionId,
     specId: entry.id,
-    agentMode,
+    specTitle: entry.title,
+    specType: entry.specType,
     gate: entry.gate,
-    sessionAlias,
+    llmResponseReceived: true,
+    traceDescription: `batch event: ${outcome}`,
   });
-
-  try {
-    await tracer.record(entry.id, entry.specType, {
-      type: 'custom',
-      description: `batch event: ${outcome}`,
-      data: {
-        command,
-        commandExecutionId,
-        batchId,
-        sessionId,
-        specId: entry.id,
-        agentMode,
-        gate: String(entry.gate),
-        sessionAlias,
-      },
-    });
-  } catch {
-    // Traceability should never break the main flow
-  }
 }
 
 function resolveBatchCommandLabel(generateConfigs: boolean, useUnified: boolean): string {

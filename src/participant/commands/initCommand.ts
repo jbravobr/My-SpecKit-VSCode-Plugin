@@ -3,9 +3,12 @@ import * as vscode from 'vscode';
 import { findSpecFiles } from '../../generator/utils/findSpecFiles';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
-import { appendLog } from '../../generator/utils/SessionLogger';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
+import { AuditLogger } from '../../workflow/AuditLogger';
+import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
+import { createCorrelationId } from '../../workflow/ObservabilityContext';
+import { TraceabilityManager } from '../../workflow/TraceabilityManager';
 import { requireWorkspace } from './CommandHelpers';
 
 export async function handleInitCommand(
@@ -17,6 +20,20 @@ export async function handleInitCommand(
 ): Promise<void> {
   const workspaceRoot = requireWorkspace(workspace, stream);
   if (!workspaceRoot) return;
+
+  const commandExecutionId = createCorrelationId('exec');
+  const audit = new AuditLogger(workspaceRoot, fs);
+  const tracer = new TraceabilityManager(workspaceRoot, fs);
+  const telemetryBase = {
+    workspaceRoot,
+    fs,
+    audit,
+    tracer,
+    commandExecutionId,
+    specId: 'GLOBAL-INIT',
+    specType: 'story' as const,
+    llmResponseReceived: true,
+  };
 
   const specDir = path.join(workspaceRoot, '.speckit');
 
@@ -42,7 +59,12 @@ export async function handleInitCommand(
         `📁 \`.speckit/\` — ${dirStatus}\n` +
         `📄 Nenhum arquivo de estória encontrado fora de \`.speckit/\`.\n`,
     );
-    await appendLog(workspaceRoot, { command: '/init', outcome: `📁 ${dirStatus}, 0 movidos` }, fs);
+    await emitCommandTelemetry({
+      ...telemetryBase,
+      command: '/init',
+      outcome: `📁 ${dirStatus}, 0 movidos`,
+      traceDescription: 'init workspace sem movimentações',
+    });
     return;
   }
 
@@ -88,12 +110,15 @@ export async function handleInitCommand(
 
   stream.markdown(report);
 
-  await appendLog(
-    workspaceRoot,
-    {
-      command: '/init',
-      outcome: `📁 ${dirStatus}, ${moved.length} movido(s), ${conflicts.length} conflito(s)`,
+  await emitCommandTelemetry({
+    ...telemetryBase,
+    command: '/init',
+    outcome: `📁 ${dirStatus}, ${moved.length} movido(s), ${conflicts.length} conflito(s)`,
+    detail: `Moved=${moved.length}; Conflicts=${conflicts.length}`,
+    traceDescription: 'init workspace consolidado',
+    traceData: {
+      moved: String(moved.length),
+      conflicts: String(conflicts.length),
     },
-    fs,
-  );
+  });
 }

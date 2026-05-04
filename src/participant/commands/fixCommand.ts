@@ -3,16 +3,12 @@ import * as vscode from 'vscode';
 import { generateFixTemplate } from '../../fix/FixTemplate';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
-import { appendLog } from '../../generator/utils/SessionLogger';
+import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { generateFixId } from '../../generator/utils/SpecIdGenerator';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { AuditLogger } from '../../workflow/AuditLogger';
-import {
-  buildSessionAlias,
-  createCorrelationId,
-  inferAgentModeFromGate,
-} from '../../workflow/ObservabilityContext';
+import { createCorrelationId } from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
 import { handleCommandError, requireWorkspace } from './CommandHelpers';
 
@@ -32,9 +28,7 @@ export async function handleFixCommand(
   const existing = await workspace.listFixFiles(specDir);
   const specId = generateFixId(workspaceRoot, existing);
   const gate = 0;
-  const agentMode = inferAgentModeFromGate(gate);
   const commandExecutionId = createCorrelationId('exec');
-  const sessionId = createCorrelationId('session');
   const fileName = `${specId}.md`;
   const filePath = path.join(specDir, fileName);
 
@@ -49,54 +43,29 @@ export async function handleFixCommand(
   const doc = await vscode.workspace.openTextDocument(filePath);
   await vscode.window.showTextDocument(doc);
 
-  const sessionAlias = buildSessionAlias(specId, undefined, agentMode, gate);
   const audit = new AuditLogger(workspaceRoot, fs);
+  const tracer = new TraceabilityManager(workspaceRoot, fs);
 
-  try {
-    const tracer = new TraceabilityManager(workspaceRoot, fs);
-    await tracer.record(specId, 'fix', {
-      type: 'file',
-      description: 'fix created',
-      data: {
-        specId,
-        fileName,
-        command: '/fix',
-        commandExecutionId,
-        sessionId,
-        agentMode,
-        gate: String(gate),
-        sessionAlias,
-      },
-    });
-  } catch {
-    // Traceability should never break the main flow
-  }
-
-  await audit.log('file_write', `fix spec created: ${fileName}`, {
-    command: '/fix',
-    commandExecutionId,
-    sessionId,
-    specId,
-    agentMode,
-    gate,
-    sessionAlias,
-  });
-
-  await appendLog(
+  await emitCommandTelemetry({
     workspaceRoot,
-    {
-      command: '/fix',
-      specId,
-      outcome: `✅ Fix criado — ${specId}`,
-      commandExecutionId,
-      sessionId,
-      agentMode,
-      gate,
-      sessionAlias,
-      llmResponseReceived: false,
-    },
     fs,
-  );
+    audit,
+    tracer,
+    command: '/fix',
+    outcome: `✅ Fix criado — ${specId}`,
+    detail: `Arquivo: ${fileName}`,
+    commandExecutionId,
+    specId,
+    specType: 'fix',
+    gate,
+    llmResponseReceived: false,
+    auditEvent: 'file_write',
+    traceType: 'file',
+    traceDescription: 'fix created',
+    traceData: {
+      fileName,
+    },
+  });
 
   stream.markdown(
     `✅ Fix criado: \`.speckit/${fileName}\`\n\n` +

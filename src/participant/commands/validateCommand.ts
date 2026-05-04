@@ -10,7 +10,6 @@ import { backupCopilotInstructions } from '../../generator/utils/BackupManager';
 import { assessDevTools, DevToolsAssessment } from '../../generator/utils/DevToolsAssessor';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
-import { appendLog } from '../../generator/utils/SessionLogger';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { extractSpecType } from '../../parser/BaseParser';
@@ -18,6 +17,8 @@ import type { Gate } from '../../story/Story';
 import { Framework, Language } from '../../story/Story';
 import { parseStory } from '../../story/StoryParser';
 import { validateStory } from '../../story/StoryValidator';
+import { AuditLogger } from '../../workflow/AuditLogger';
+import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { getValidNextGates } from '../../workflow/GateEnforcer';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
 
@@ -46,6 +47,7 @@ export async function handleValidateCommand(
 
   const prompt = request.prompt ?? '';
   const includeDevTools = prompt.includes('--devtools');
+  const audit = new AuditLogger(workspaceRoot, fs);
 
   let content: string;
   try {
@@ -68,12 +70,22 @@ export async function handleValidateCommand(
       content,
       stream,
       fs,
+      audit,
       workspace,
       includeDevTools,
       token,
     );
   } else {
-    await validateStory_(workspaceRoot, content, stream, fs, workspace, includeDevTools, token);
+    await validateStory_(
+      workspaceRoot,
+      content,
+      stream,
+      fs,
+      audit,
+      workspace,
+      includeDevTools,
+      token,
+    );
   }
 }
 
@@ -82,6 +94,7 @@ async function validateStory_(
   content: string,
   stream: vscode.ChatResponseStream,
   fs: IFileSystem,
+  audit: AuditLogger,
   _workspace: IWorkspace,
   includeDevTools: boolean,
   token?: vscode.CancellationToken,
@@ -105,17 +118,19 @@ async function validateStory_(
     const doc = await vscode.workspace.openTextDocument(gapPromptPath);
     await vscode.window.showTextDocument(doc);
 
-    await appendLog(
+    await emitCommandTelemetry({
       workspaceRoot,
-      {
-        command: '/validate',
-        specId: story.metadata.id,
-        specTitle: story.metadata.title,
-        outcome: `⚠️ Inválida — ${result.gaps.length} lacuna(s)`,
-        detail: result.gaps.map((g) => `- [${g.section}] ${g.field}: ${g.message}`).join('\n'),
-      },
       fs,
-    );
+      audit,
+      command: '/validate',
+      specId: story.metadata.id,
+      specTitle: story.metadata.title,
+      specType: 'story',
+      gate: story.metadata.gate,
+      outcome: `⚠️ Inválida — ${result.gaps.length} lacuna(s)`,
+      detail: result.gaps.map((g) => `- [${g.section}] ${g.field}: ${g.message}`).join('\n'),
+      llmResponseReceived: true,
+    });
 
     stream.markdown(
       `⚠️ **História incompleta — ${result.gaps.length} lacuna(s) encontrada(s)**\n\n` +
@@ -158,17 +173,19 @@ async function validateStory_(
   }
   const fileList = files.map((f) => `- \`${f}\``).join('\n');
 
-  await appendLog(
+  await emitCommandTelemetry({
     workspaceRoot,
-    {
-      command: '/validate',
-      specId: story.metadata.id,
-      specTitle: story.metadata.title,
-      outcome: `✅ Válida — ${files.length} arquivo(s) gerado(s)`,
-      detail: files.map((f) => `- ${f}`).join('\n'),
-    },
     fs,
-  );
+    audit,
+    command: '/validate',
+    specId: story.metadata.id,
+    specTitle: story.metadata.title,
+    specType: 'story',
+    gate: story.metadata.gate,
+    outcome: `✅ Válida — ${files.length} arquivo(s) gerado(s)`,
+    detail: files.map((f) => `- ${f}`).join('\n'),
+    llmResponseReceived: true,
+  });
 
   stream.markdown(`✅ **${files.length} arquivo(s) gerado(s):**\n\n${fileList}\n\n---\n\n`);
 
@@ -200,14 +217,15 @@ async function validateStory_(
       '2. No dropdown de agentes, selecione **speckit-implementador**\n' +
       '3. O agente conduz: alinhamento → implementação → testes\n' +
       '4. Ao fechar o Gate 2, o agente deve tentar commit local automático (fallback para ação manual só em erro)\n' +
-      '5. Ao fechar o Gate 2, execute `@speckit /review-auto` para persistir `gate: 3` + `status: review` com evidência no chat\n' +
-      '6. O agente deve emitir handoff explícito no chat: IMPLEMENTADOR → REVISOR\n\n' +
+      '5. Ao fechar o Gate 2, execute `@speckit /review-auto` para **propor** a transição para `gate: 3` + `status: review`\n' +
+      '6. Confirme explicitamente com `@speckit /review-auto --confirm <intent-id>` antes de qualquer persistência\n' +
+      '7. O agente deve emitir handoff explícito no chat: IMPLEMENTADOR → REVISOR\n\n' +
       '**Sessão B — Revisão independente (portões 3–4):**\n' +
-      '7. Ao concluir a Sessão A, abra um novo **Copilot Chat**\n' +
-      '8. No dropdown de agentes, selecione **speckit-revisor**\n' +
-      '9. Execute `@speckit /review-auto` para orquestrar a revisão Gate 3\n' +
-      '10. Se veredito for ALTERAÇÕES SOLICITADAS, execute `@speckit /review-auto --changes-requested` para retornar ao Gate 2\n' +
-      '11. Se veredito for APROVADO, execute `@speckit /review-auto --approved` para encerrar em Gate 4/status done\n\n' +
+      '8. Ao concluir a Sessão A, abra um novo **Copilot Chat**\n' +
+      '9. No dropdown de agentes, selecione **speckit-revisor**\n' +
+      '10. Execute `@speckit /review-auto` para orquestrar a revisão Gate 3\n' +
+      '11. Se veredito for ALTERAÇÕES SOLICITADAS, execute `@speckit /review-auto --changes-requested` e confirme com `--confirm <intent-id>`\n' +
+      '12. Se veredito for APROVADO, execute `@speckit /review-auto --approved` e confirme com `--confirm <intent-id>`\n\n' +
       'Agentes em `.github/agents/`. Skills em `.github/skills/`.\n',
   );
 }
@@ -218,6 +236,7 @@ async function validateFix_(
   content: string,
   stream: vscode.ChatResponseStream,
   fs: IFileSystem,
+  audit: AuditLogger,
   workspace: IWorkspace,
   includeDevTools: boolean,
   token?: vscode.CancellationToken,
@@ -237,17 +256,19 @@ async function validateFix_(
     const doc = await vscode.workspace.openTextDocument(gapPromptPath);
     await vscode.window.showTextDocument(doc);
 
-    await appendLog(
+    await emitCommandTelemetry({
       workspaceRoot,
-      {
-        command: '/validate',
-        specId: fix.metadata.id,
-        specTitle: fix.metadata.title,
-        outcome: `⚠️ Fix inválido — ${result.gaps.length} lacuna(s)`,
-        detail: result.gaps.map((g) => `- [${g.section}] ${g.field}: ${g.message}`).join('\n'),
-      },
       fs,
-    );
+      audit,
+      command: '/validate',
+      specId: fix.metadata.id,
+      specTitle: fix.metadata.title,
+      specType: 'fix',
+      gate: fix.metadata.gate,
+      outcome: `⚠️ Fix inválido — ${result.gaps.length} lacuna(s)`,
+      detail: result.gaps.map((g) => `- [${g.section}] ${g.field}: ${g.message}`).join('\n'),
+      llmResponseReceived: true,
+    });
 
     stream.markdown(
       `⚠️ **Fix incompleto — ${result.gaps.length} lacuna(s) encontrada(s)**\n\n---\n\n` +
@@ -284,17 +305,19 @@ async function validateFix_(
     const files = await generateFixCopilotConfig(workspaceRoot, fix, fs, workspace);
     const fileList = files.map((f) => `- \`${f}\``).join('\n');
 
-    await appendLog(
+    await emitCommandTelemetry({
       workspaceRoot,
-      {
-        command: '/validate',
-        specId: fix.metadata.id,
-        specTitle: fix.metadata.title,
-        outcome: `✅ Fix válido — ${files.length} arquivo(s) gerado(s)`,
-        detail: files.map((f) => `- ${f}`).join('\n'),
-      },
       fs,
-    );
+      audit,
+      command: '/validate',
+      specId: fix.metadata.id,
+      specTitle: fix.metadata.title,
+      specType: 'fix',
+      gate: fix.metadata.gate,
+      outcome: `✅ Fix válido — ${files.length} arquivo(s) gerado(s)`,
+      detail: files.map((f) => `- ${f}`).join('\n'),
+      llmResponseReceived: true,
+    });
 
     stream.markdown(`✅ **${files.length} arquivo(s) gerado(s):**\n\n${fileList}\n\n---\n\n`);
 

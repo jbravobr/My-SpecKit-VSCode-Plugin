@@ -132,7 +132,8 @@ Ao concluir o Gate 2 com sucesso (0 falhas + cobertura ≥ 80%):
    - Se o commit falhar por erro operacional, tente \`@speckit /commit\` sem mensagem.
    - Só peça ação manual ao usuário se as duas tentativas falharem.
 2. **Persista a troca de gate via comando (obrigatório):**
-  - Execute: \`@speckit /review-auto\`
+  - Se ainda não houver consentimento batch ativo nesta sessão, execute:\n+    \`@speckit /review-auto --batch-consent\` e confirme o intent retornado.
+  - Depois execute: \`@speckit /review-auto --auto\`
   - O comando deve persistir \`gate: 3\` e \`status: review\` e emitir a transição no chat.
 3. Se não conseguir persistir a transição, **interrompa** e solicite ação do usuário. Não inicie Gate 3 sem essa atualização.
 4. Emita no chat o bloco de handoff obrigatório:
@@ -144,14 +145,14 @@ Ao concluir o Gate 2 com sucesso (0 falhas + cobertura ≥ 80%):
 6. Releia \`.speckit/STORY-${storyId}.md\` do zero.
 7. Execute \`git diff develop...HEAD --name-only\` para obter a lista atualizada de arquivos.
 8. Leia cada arquivo modificado com olhar crítico de revisão.
-9. Execute \`@speckit /review-auto\` para orquestrar a revisão automática e consolidar evidências.
+9. Execute \`@speckit /review-auto --auto\` para orquestrar a revisão automática e consolidar evidências.
 10. **Sem aguardar novo comando do usuário, inicie e conclua o Gate 3 do MODO REVISOR no mesmo fluxo:**
   - Execute todo o checklist do Gate 3 (funcionalidade, arquitetura, qualidade, testes, segurança, observabilidade, NFR, git, DoD)
   - Emita veredito completo (APROVADO ou ALTERAÇÕES SOLICITADAS)
   - Se houver bloqueantes, liste cada item com evidência objetiva (arquivo/critério)
 11. Após emitir o veredito, persista a transição correspondente:
-  - Se APROVADO: execute \`@speckit /review-auto --approved\` (Gate 3 → Gate 4)
-  - Se ALTERAÇÕES SOLICITADAS: execute \`@speckit /review-auto --changes-requested\` (Gate 3 → Gate 2)
+  - Se APROVADO: execute \`@speckit /review-auto --approved --auto\` (Gate 3 → Gate 4)
+  - Se ALTERAÇÕES SOLICITADAS: execute \`@speckit /review-auto --changes-requested --auto\` (Gate 3 → Gate 2)
 12. Em qualquer transição acima, confirme no chat o bloco Markdown de transição de gate/status.
 13. **Proibido encerrar a resposta somente com handoff.** O handoff só é válido quando acompanhado da execução efetiva da revisão Gate 3.
 
@@ -169,7 +170,7 @@ Quando o MODO REVISOR emitir veredito **ALTERAÇÕES SOLICITADAS**:
    [ ] FIX-2: ...
    \`\`\`
 2. Informe ao usuário: "🔄 Retornando ao MODO IMPLEMENTADOR para aplicar N correção(ões)."
-3. Se a transição de retorno ainda não foi persistida nesta rodada, execute \`@speckit /review-auto --changes-requested\` para registrar Gate 3 → Gate 2/status in-progress.
+3. Se a transição de retorno ainda não foi persistida nesta rodada, execute \`@speckit /review-auto --changes-requested --auto\` para registrar Gate 3 → Gate 2/status in-progress.
 4. **Aguarde confirmação** do usuário ("ok", "sim", "confirmar", "pode ir").
 5. Entre no **MODO IMPLEMENTADOR**:
    - Aplique **SOMENTE** os fixes listados (não implemente nada novo, não refatore)
