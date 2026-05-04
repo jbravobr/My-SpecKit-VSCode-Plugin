@@ -33,6 +33,7 @@ coverage/**
 
 # Asset diagrams
 assets/diagrams/**
+assets/presentation/**
 
 # Source maps (debug only)
 **/*.js.map

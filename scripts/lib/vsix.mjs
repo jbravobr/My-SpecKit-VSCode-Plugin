@@ -5,6 +5,7 @@ import process from 'process';
 export const FORBIDDEN_VSIX_PATHS = [
   'extension/coverage/',
   'extension/assets/diagrams/',
+  'extension/assets/presentation/',
   'extension/tests/',
   'extension/src/',
   'extension/scripts/',
