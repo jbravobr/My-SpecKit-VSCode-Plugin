@@ -24,6 +24,19 @@ const ALL_STATUSES: SpecStatus[] = [
   'cancelled',
 ];
 
+function emitChatQuickActionButton(
+  stream: vscode.ChatResponseStream,
+  title: string,
+  query: string,
+): void {
+  if (typeof stream.button !== 'function') return;
+  stream.button({
+    title,
+    command: 'speckit.openChatWithQuery',
+    arguments: [query],
+  });
+}
+
 function renderRules(): string {
   const lines: string[] = [
     '## 🚪 Regras de Gate & Status\n',
@@ -70,6 +83,14 @@ export async function handleGateCommand(
 
   if (!args || args === 'rules') {
     stream.markdown(renderRules());
+    stream.markdown(
+      '### Comandos disponíveis agora (contextuais)\n' +
+        '- `@speckit /gate check gate <de> <para>` (validar transição de gate)\n' +
+        '- `@speckit /gate check status <de> <para>` (validar transição de status)\n' +
+        '- `@speckit /status` (ver situação atual das specs)\n\n' +
+        '> Para checks com parâmetros variáveis, continue digitando no chat com os valores desejados.\n',
+    );
+    emitChatQuickActionButton(stream, '📊 Ver Status das Specs', '@speckit /status');
     return;
   }
 
@@ -82,6 +103,13 @@ export async function handleGateCommand(
         '- `@speckit /gate check gate 0 1` — Validar transição de gate\n' +
         '- `@speckit /gate check status open review` — Validar transição de status\n',
     );
+    stream.markdown(
+      '### Comandos disponíveis agora (contextuais)\n' +
+        '- `@speckit /gate` (mostrar regras completas)\n' +
+        '- `@speckit /gate check gate 0 1` (exemplo válido de gate)\n' +
+        '- `@speckit /gate check status open in-progress` (exemplo válido de status)\n',
+    );
+    emitChatQuickActionButton(stream, '🚪 Mostrar Regras de Gate', '@speckit /gate');
     return;
   }
 
@@ -94,6 +122,12 @@ export async function handleGateCommand(
     const toGate = parseGateNum(to);
     if (fromGate === undefined || toGate === undefined) {
       stream.markdown('❌ Gates devem ser números de 0 a 4.\n');
+      stream.markdown(
+        '### Comandos disponíveis agora (contextuais)\n' +
+          '- `@speckit /gate check gate 0 1` (validar avanço padrão)\n' +
+          '- `@speckit /gate` (consultar regras completas)\n',
+      );
+      emitChatQuickActionButton(stream, '▶ Validar Gate 0 → 1', '@speckit /gate check gate 0 1');
       return;
     }
     const result = validateGateTransition(fromGate, toGate);
@@ -104,6 +138,20 @@ export async function handleGateCommand(
         (result.reason ? `\n> ${result.reason}` : '') +
         `\n\n**Próximos gates válidos a partir de ${fromGate}:** ${next.map((g) => `${g} (${GATE_LABELS[g]})`).join(', ') || '—'}\n`,
     );
+    stream.markdown(
+      '### Comandos disponíveis agora (contextuais)\n' +
+        `- \`@speckit /gate check gate ${fromGate} <para>\` (testar outro destino de gate)\n` +
+        '- `@speckit /gate check status <de> <para>` (testar regra de status)\n' +
+        '- `@speckit /status` (ver status real das specs)\n',
+    );
+    for (const candidateGate of next) {
+      emitChatQuickActionButton(
+        stream,
+        `▶ Validar ${fromGate} → ${candidateGate}`,
+        `@speckit /gate check gate ${fromGate} ${candidateGate}`,
+      );
+    }
+    emitChatQuickActionButton(stream, '📊 Ver Status das Specs', '@speckit /status');
     return;
   }
 
@@ -111,6 +159,16 @@ export async function handleGateCommand(
     if (!isValidStatus(from) || !isValidStatus(to)) {
       stream.markdown(
         `❌ Status inválido. Valores aceitos: ${ALL_STATUSES.map((s) => `\`${s}\``).join(', ')}\n`,
+      );
+      stream.markdown(
+        '### Comandos disponíveis agora (contextuais)\n' +
+          '- `@speckit /gate check status open in-progress` (exemplo válido de status)\n' +
+          '- `@speckit /gate` (consultar matriz de transições)\n',
+      );
+      emitChatQuickActionButton(
+        stream,
+        '▶ Validar Status open → in-progress',
+        '@speckit /gate check status open in-progress',
       );
       return;
     }
@@ -122,6 +180,20 @@ export async function handleGateCommand(
         (result.reason ? `\n> ${result.reason}` : '') +
         `\n\n**Próximos statuses válidos a partir de \`${from}\`:** ${next.map((s) => `\`${s}\``).join(', ') || '🔒 terminal'}\n`,
     );
+    stream.markdown(
+      '### Comandos disponíveis agora (contextuais)\n' +
+        `- \`@speckit /gate check status ${from} <para>\` (testar outro destino de status)\n` +
+        '- `@speckit /gate check gate <de> <para>` (testar regra de gate)\n' +
+        '- `@speckit /status` (ver status real das specs)\n',
+    );
+    for (const candidateStatus of next) {
+      emitChatQuickActionButton(
+        stream,
+        `▶ Validar ${from} → ${candidateStatus}`,
+        `@speckit /gate check status ${from} ${candidateStatus}`,
+      );
+    }
+    emitChatQuickActionButton(stream, '📊 Ver Status das Specs', '@speckit /status');
     return;
   }
 
@@ -129,4 +201,11 @@ export async function handleGateCommand(
     '❌ Tipo inválido. Use `gate` ou `status`.\n' +
       '**Exemplo:** `@speckit /gate check gate 0 1`\n',
   );
+  stream.markdown(
+    '### Comandos disponíveis agora (contextuais)\n' +
+      '- `@speckit /gate` (mostrar regras de gate/status)\n' +
+      '- `@speckit /gate check gate 0 1` (exemplo válido de gate)\n' +
+      '- `@speckit /gate check status open in-progress` (exemplo válido de status)\n',
+  );
+  emitChatQuickActionButton(stream, '🚪 Mostrar Regras de Gate', '@speckit /gate');
 }

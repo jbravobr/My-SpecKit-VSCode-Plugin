@@ -1,0 +1,36 @@
+SpecKit — Novidades para usuários — 0.3.21
+==========================================
+Data: 04/05/2026
+
+Resumo
+------
+O fluxo de gate/status ficou mais guiado e consistente: em mais situações o chat agora mostra exatamente o próximo comando contextual e oferece botões quando a continuidade é simples.
+
+Novas features
+--------------
+- Ajuda detalhada para `/gate` em `@speckit /help gate`.
+- Bloco de comandos contextuais no `/help` geral e por tópico.
+- Botões de ação rápida no `/help` para abrir fluxos comuns (`/status`, `/review-auto`, `/gate`).
+
+Melhorias de experiência
+------------------------
+- Mensagens de erro em `/status` e `/gate` agora incluem próximos passos claros.
+- Em cenários inválidos, o usuário recebe caminhos de recuperação sem precisar memorizar sintaxe.
+- No `/review-auto`, os desfechos e bloqueios têm orientação contextual consistente no chat.
+
+Correções e segurança de release
+--------------------------------
+- Redução de falhas operacionais por flags inválidas em comandos de gate/status.
+- Preservação do protocolo de confirmação explícita por intent-id onde obrigatório.
+- Manutenção dos guardrails e da rastreabilidade nas transições de gate/status.
+
+Como usar rapidamente
+---------------------
+1. Execute `@speckit /help` para ver atalhos e botões de fluxo.
+2. Para regras de transição, use `@speckit /gate` ou `@speckit /help gate`.
+3. Para acompanhar progresso, use `@speckit /status` (ou `--all`).
+4. Para revisão automática, use `@speckit /review-auto` e siga os comandos contextuais exibidos.
+
+Artefato
+--------
+- publish/0.3.21/vscode-plugin-speckit-0.3.21.vsix

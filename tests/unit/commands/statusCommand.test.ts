@@ -69,6 +69,35 @@ describe('handleStatusCommand', () => {
     expect(output).toContain('Parâmetro(s) inválido(s)');
     expect(output).toContain('--all');
     expect(output).toContain('--closed');
+    expect(output).toContain('Comandos disponíveis agora (contextuais)');
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '📊 Executar /status',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /status'],
+    });
+  });
+
+  it('shows guidance when --confirm is missing intent-id', async () => {
+    const stream = createMockStream();
+    const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+    const fs = seedFs(completeStoryMd);
+
+    await handleStatusCommand(
+      createMockRequest('--confirm'),
+      stream,
+      createMockToken(),
+      fs,
+      workspace,
+    );
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Use `--confirm <intent-id>`');
+    expect(output).toContain('Comandos disponíveis agora (contextuais)');
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '🔁 Gerar Proposta de Retrofit',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /status --fix'],
+    });
   });
 
   it('shows story title in output', async () => {
@@ -120,6 +149,17 @@ describe('handleStatusCommand', () => {
 
     expect(stream.getAllMarkdown()).toContain('Stories abertas');
     expect(stream.getAllMarkdown()).toContain('Fixes abertos');
+    expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '📊 Atualizar Status',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /status'],
+    });
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '📦 Ver Status Completo (--all)',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /status --all'],
+    });
   });
 
   it('shows nenhum when no fixes exist', async () => {
@@ -396,6 +436,11 @@ describe('handleStatusCommand', () => {
     const intentId = extractIntentId(proposalOutput);
     expect(proposalOutput).toContain('Confirmação obrigatória para retrofit de gate');
     expect(intentId).toBeTruthy();
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '✅ Confirmar Retrofit Proposto',
+      command: 'speckit.openChatWithQuery',
+      arguments: [`@speckit /status --fix --confirm ${intentId}`],
+    });
 
     const unchanged = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
     expect(unchanged).toMatch(/^gate:\s*0$/m);
@@ -417,6 +462,29 @@ describe('handleStatusCommand', () => {
     expect(output).toContain('STORY-001.md');
     // --fix implies --all
     expect(output).toContain('Stories (1)');
+  });
+
+  it('--fix with invalid intent suggests generating a new retrofit proposal', async () => {
+    const stream = createMockStream();
+    const fs = seedFs(doneStoryAtGate0Md);
+    const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+
+    await handleStatusCommand(
+      createMockRequest('--fix --confirm invalid-intent-id'),
+      stream,
+      createMockToken(),
+      fs,
+      workspace,
+    );
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Intent-ID inválido ou expirado');
+    expect(output).toContain('Comandos disponíveis agora (contextuais)');
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '🔁 Gerar Nova Proposta de Retrofit',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /status --fix'],
+    });
   });
 
   it('--fix reports nothing to do when there are no stale done specs', async () => {

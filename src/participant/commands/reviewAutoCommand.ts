@@ -379,6 +379,22 @@ function emitChatQuickActionButton(
   });
 }
 
+interface ContextualCommand {
+  command: string;
+  description: string;
+}
+
+function emitContextualCommands(
+  stream: vscode.ChatResponseStream,
+  commands: ContextualCommand[],
+  note?: string,
+): void {
+  const lines = commands.map((item) => `- \`${item.command}\` (${item.description})`).join('\n');
+  stream.markdown(
+    '### Comandos disponíveis agora (contextuais)\n' + `${lines}\n` + (note ? `\n> ${note}\n` : ''),
+  );
+}
+
 export async function handleReviewAutoCommand(
   request: vscode.ChatRequest,
   stream: vscode.ChatResponseStream,
@@ -415,6 +431,14 @@ export async function handleReviewAutoCommand(
     stream.markdown(
       '❌ Nenhuma spec ativa encontrada. Execute `@speckit /status` e selecione uma story em andamento.\n',
     );
+    emitContextualCommands(stream, [
+      { command: '@speckit /status', description: 'listar stories/fixes e identificar a ativa' },
+      {
+        command: '@speckit /status --all',
+        description: 'incluir specs done/cancelled na listagem',
+      },
+    ]);
+    emitChatQuickActionButton(stream, '📊 Ver Status das Specs', '@speckit /status');
     return;
   }
   const activeStoryPath = activeSpecPath;
@@ -438,6 +462,11 @@ export async function handleReviewAutoCommand(
     });
 
     stream.markdown('❌ `/review-auto` está disponível apenas para Story no momento.\n');
+    emitContextualCommands(stream, [
+      { command: '@speckit /status', description: 'localizar e selecionar uma Story ativa' },
+      { command: '@speckit /status --all', description: 'inspecionar todas as specs da sessão' },
+    ]);
+    emitChatQuickActionButton(stream, '📊 Ver Status das Specs', '@speckit /status');
     return;
   }
 
@@ -468,6 +497,17 @@ export async function handleReviewAutoCommand(
         '- `@speckit /review-auto --batch-consent` (propõe consentimento único da sessão batch)\n' +
         '- `@speckit /review-auto --confirm <intent-id>` (confirma transição pendente)\n',
     );
+    emitContextualCommands(stream, [
+      { command: '@speckit /review-auto', description: 'orquestrar handoff para Gate 3' },
+      {
+        command: '@speckit /review-auto --batch-consent',
+        description: 'iniciar consentimento batch',
+      },
+      {
+        command: '@speckit /review-auto --confirm <intent-id>',
+        description: 'confirmar transição/consentimento pendente',
+      },
+    ]);
     return;
   }
 
@@ -498,6 +538,21 @@ export async function handleReviewAutoCommand(
       });
 
       stream.markdown(formatBatchConsentProposalMarkdown(consentIntent.id));
+      emitContextualCommands(
+        stream,
+        [
+          {
+            command: `@speckit /review-auto --batch-consent --confirm ${consentIntent.id}`,
+            description: 'confirmar consentimento proposto',
+          },
+          {
+            command: '@speckit /review-auto --batch-consent',
+            description: 'descartar intent atual e gerar novo',
+          },
+          { command: '@speckit /status', description: 'ver contexto atual antes de confirmar' },
+        ],
+        'Para trocar a estratégia de revisão, descreva no chat o motivo antes de confirmar.',
+      );
       emitChatQuickActionButton(
         stream,
         '✅ Confirmar Consentimento Batch',
@@ -531,6 +586,16 @@ export async function handleReviewAutoCommand(
       stream.markdown(
         `❌ Intent-ID inválido ou expirado: \`${control.confirmIntentId}\`. Gere um novo consentimento com \`@speckit /review-auto --batch-consent\`.\n`,
       );
+      emitContextualCommands(stream, [
+        {
+          command: '@speckit /review-auto --batch-consent',
+          description: 'gerar novo consentimento batch',
+        },
+        {
+          command: '@speckit /status',
+          description: 'revisar contexto antes de novo consentimento',
+        },
+      ]);
       emitChatQuickActionButton(
         stream,
         '🔁 Gerar Novo Consentimento Batch',
@@ -563,6 +628,20 @@ export async function handleReviewAutoCommand(
       '✅ Consentimento único da sessão batch registrado com sucesso.\n\n' +
         'Agora comandos com `--auto` podem executar handoffs automáticos durante esta sessão.\n',
     );
+    emitContextualCommands(stream, [
+      {
+        command: '@speckit /review-auto --auto',
+        description: 'executar handoff automático para Gate 3',
+      },
+      {
+        command: '@speckit /review-auto --changes-requested --auto',
+        description: 'registrar retrabalho automático no Gate 3',
+      },
+      {
+        command: '@speckit /review-auto --approved --auto',
+        description: 'registrar aprovação automática no Gate 3',
+      },
+    ]);
     emitChatQuickActionButton(
       stream,
       '🚀 Executar Handoff para Gate 3',
@@ -589,6 +668,11 @@ export async function handleReviewAutoCommand(
     stream.markdown(
       `❌ Story \`${story.metadata.id}\` já está em status terminal (\`${story.metadata.status}\`). Revisão automática não aplicável.\n`,
     );
+    emitContextualCommands(stream, [
+      { command: '@speckit /status --all', description: 'consultar histórico completo de specs' },
+      { command: '@speckit /status', description: 'selecionar outra story não terminal' },
+    ]);
+    emitChatQuickActionButton(stream, '📊 Ver Status das Specs', '@speckit /status');
     return;
   }
 
@@ -615,6 +699,16 @@ export async function handleReviewAutoCommand(
           'Execute e confirme:\n' +
           '- `@speckit /review-auto --batch-consent`\n',
       );
+      emitContextualCommands(stream, [
+        {
+          command: '@speckit /review-auto --batch-consent',
+          description: 'iniciar consentimento obrigatório da sessão',
+        },
+        {
+          command: '@speckit /review-auto --batch-consent --confirm <intent-id>',
+          description: 'confirmar consentimento pendente',
+        },
+      ]);
       emitChatQuickActionButton(
         stream,
         '✅ Iniciar Consentimento Batch',
@@ -670,6 +764,17 @@ export async function handleReviewAutoCommand(
           `${confirmCommand} ${intent.id}`,
         ),
       );
+      emitContextualCommands(stream, [
+        {
+          command: `${confirmCommand} ${intent.id}`,
+          description: 'confirmar transição proposta',
+        },
+        {
+          command: `@speckit ${proposal.commandLabel}`,
+          description: 'gerar nova proposta de transição',
+        },
+        { command: '@speckit /status', description: 'consultar estado antes de confirmar' },
+      ]);
       emitChatQuickActionButton(
         stream,
         '✅ Confirmar Transição Proposta',
@@ -707,6 +812,13 @@ export async function handleReviewAutoCommand(
         stream.markdown(
           `❌ Intent-ID inválido ou expirado: \`${control.confirmIntentId}\`. Gere nova proposta de transição e confirme novamente.\n`,
         );
+        emitContextualCommands(stream, [
+          {
+            command: `@speckit ${proposal.commandLabel}`,
+            description: 'gerar nova proposta de transição',
+          },
+          { command: '@speckit /status', description: 'consultar status antes da nova proposta' },
+        ]);
         emitChatQuickActionButton(
           stream,
           '🔁 Gerar Nova Proposta',
@@ -743,6 +855,16 @@ export async function handleReviewAutoCommand(
         stream.markdown(
           '❌ A story mudou após a proposta de transição. Gere uma nova proposta e confirme novamente para manter rastreabilidade consistente.\n',
         );
+        emitContextualCommands(stream, [
+          {
+            command: `@speckit ${proposal.commandLabel}`,
+            description: 'recriar proposta com estado atualizado da story',
+          },
+          {
+            command: '@speckit /status',
+            description: 'validar gate/status atual antes de reconfirmar',
+          },
+        ]);
         emitChatQuickActionButton(
           stream,
           '🔁 Gerar Nova Proposta',
@@ -791,6 +913,14 @@ export async function handleReviewAutoCommand(
       stream.markdown(
         `❌ Story \`${story.metadata.id}\` está no Gate ${story.metadata.gate}. O encerramento automático exige Gate 3 com revisão concluída.\n`,
       );
+      emitContextualCommands(stream, [
+        { command: '@speckit /status', description: 'consultar gate/status atual da story' },
+        {
+          command: '@speckit /review-auto',
+          description: 'executar revisão quando estiver em Gate 3/review',
+        },
+      ]);
+      emitChatQuickActionButton(stream, '📊 Ver Status das Specs', '@speckit /status');
       return;
     }
 
@@ -798,6 +928,13 @@ export async function handleReviewAutoCommand(
       const proposal = buildTransitionProposal('approved');
       if (!proposal) {
         stream.markdown('❌ Não foi possível montar a proposta de transição de aprovação.\n');
+        emitContextualCommands(stream, [
+          {
+            command: '@speckit /review-auto --approved',
+            description: 'tentar gerar nova proposta de aprovação',
+          },
+          { command: '@speckit /status', description: 'verificar estado atual da story' },
+        ]);
         return;
       }
 
@@ -810,6 +947,13 @@ export async function handleReviewAutoCommand(
         stream.markdown(
           '❌ A confirmação recebida não representa encerramento para Gate 4/status done.\n',
         );
+        emitContextualCommands(stream, [
+          {
+            command: '@speckit /review-auto --approved',
+            description: 'emitir nova proposta de aprovação',
+          },
+          { command: '@speckit /status', description: 'validar o estado atual da story' },
+        ]);
         return;
       }
 
@@ -834,10 +978,29 @@ export async function handleReviewAutoCommand(
           `- Faça o commit do metadata da story: \`git add .speckit/STORY-${story.metadata.id}.md\`\n` +
           `- Conclua com: \`git commit -m "chore(${story.metadata.id}): encerra story no speckit"\`\n`,
       );
+      emitContextualCommands(
+        stream,
+        [
+          { command: '@speckit /status --all', description: 'confirmar story em Gate 4 / done' },
+          { command: '@speckit /status', description: 'seguir para a próxima story ativa' },
+        ],
+        'Os comandos de git devem ser executados no terminal para persistir o fechamento.',
+      );
+      emitChatQuickActionButton(stream, '📦 Ver Status Completo (--all)', '@speckit /status --all');
       return;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       stream.markdown(`❌ ${msg}\n`);
+      emitContextualCommands(stream, [
+        {
+          command: '@speckit /review-auto --approved',
+          description: 'reexecutar fluxo de aprovação',
+        },
+        {
+          command: '@speckit /status',
+          description: 'inspecionar estado antes de tentar novamente',
+        },
+      ]);
       return;
     }
   }
@@ -861,6 +1024,14 @@ export async function handleReviewAutoCommand(
       stream.markdown(
         `❌ Story \`${story.metadata.id}\` está no Gate ${story.metadata.gate}. O retorno para retrabalho exige Gate 3.\n`,
       );
+      emitContextualCommands(stream, [
+        { command: '@speckit /status', description: 'consultar gate/status atual da story' },
+        {
+          command: '@speckit /review-auto',
+          description: 'executar revisão quando estiver em Gate 3/review',
+        },
+      ]);
+      emitChatQuickActionButton(stream, '📊 Ver Status das Specs', '@speckit /status');
       return;
     }
 
@@ -868,6 +1039,13 @@ export async function handleReviewAutoCommand(
       const proposal = buildTransitionProposal('changes-requested');
       if (!proposal) {
         stream.markdown('❌ Não foi possível montar a proposta de retorno para retrabalho.\n');
+        emitContextualCommands(stream, [
+          {
+            command: '@speckit /review-auto --changes-requested',
+            description: 'tentar gerar nova proposta de retrabalho',
+          },
+          { command: '@speckit /status', description: 'verificar estado atual da story' },
+        ]);
         return;
       }
 
@@ -880,6 +1058,13 @@ export async function handleReviewAutoCommand(
         stream.markdown(
           '❌ A confirmação recebida não representa retorno ao Gate 2/status in-progress.\n',
         );
+        emitContextualCommands(stream, [
+          {
+            command: '@speckit /review-auto --changes-requested',
+            description: 'emitir nova proposta de retorno para retrabalho',
+          },
+          { command: '@speckit /status', description: 'validar o estado atual da story' },
+        ]);
         return;
       }
 
@@ -904,6 +1089,17 @@ export async function handleReviewAutoCommand(
           '- Retorne ao modo implementador e aplique apenas os FIXes aprovados no plano de revisão.\n' +
           '- Após concluir os FIXes e revalidar testes/cobertura, execute `@speckit /review-auto` para novo ciclo de revisão.\n',
       );
+      emitContextualCommands(
+        stream,
+        [
+          {
+            command: '@speckit /review-auto',
+            description: 'abrir novo ciclo de revisão no Gate 3',
+          },
+          { command: '@speckit /status', description: 'confirmar retorno em Gate 2 / in-progress' },
+        ],
+        'A decisão de quais FIXes aplicar deve ser descrita no chat antes da nova execução.',
+      );
       emitChatQuickActionButton(
         stream,
         '🧪 Novo Ciclo de Revisão (Gate 3)',
@@ -913,6 +1109,16 @@ export async function handleReviewAutoCommand(
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       stream.markdown(`❌ ${msg}\n`);
+      emitContextualCommands(stream, [
+        {
+          command: '@speckit /review-auto --changes-requested',
+          description: 'reexecutar fluxo de retorno para retrabalho',
+        },
+        {
+          command: '@speckit /status',
+          description: 'inspecionar estado antes de tentar novamente',
+        },
+      ]);
       return;
     }
   }
@@ -935,6 +1141,14 @@ export async function handleReviewAutoCommand(
     stream.markdown(
       `❌ Story \`${story.metadata.id}\` está no Gate ${story.metadata.gate}. A revisão automática exige conclusão prévia dos Gates 0-2.\n`,
     );
+    emitContextualCommands(stream, [
+      { command: '@speckit /status', description: 'validar gate/status atual da story' },
+      {
+        command: '@speckit /review-auto',
+        description: 'reexecutar quando Gate 2 estiver concluído',
+      },
+    ]);
+    emitChatQuickActionButton(stream, '📊 Ver Status das Specs', '@speckit /status');
     return;
   }
 
@@ -956,6 +1170,14 @@ export async function handleReviewAutoCommand(
     stream.markdown(
       `❌ Story \`${story.metadata.id}\` está no Gate ${story.metadata.gate}. Para novos ciclos de revisão, retorne antes ao Gate 2 via fluxo de correções.\n`,
     );
+    emitContextualCommands(stream, [
+      {
+        command: '@speckit /review-auto --changes-requested',
+        description: 'propor retorno para Gate 2 quando aplicável',
+      },
+      { command: '@speckit /status --all', description: 'inspecionar estado geral das specs' },
+    ]);
+    emitChatQuickActionButton(stream, '📦 Ver Status Completo (--all)', '@speckit /status --all');
     return;
   }
 
@@ -973,6 +1195,13 @@ export async function handleReviewAutoCommand(
       const proposal = buildTransitionProposal('orchestrate');
       if (!proposal) {
         stream.markdown('❌ Não foi possível montar a proposta de handoff para revisão.\n');
+        emitContextualCommands(stream, [
+          {
+            command: '@speckit /review-auto',
+            description: 'tentar gerar nova proposta de handoff',
+          },
+          { command: '@speckit /status', description: 'verificar estado atual da story' },
+        ]);
         return;
       }
 
@@ -996,6 +1225,13 @@ export async function handleReviewAutoCommand(
       });
 
       stream.markdown(`❌ ${msg}\n`);
+      emitContextualCommands(stream, [
+        { command: '@speckit /review-auto', description: 'reexecutar fluxo de revisão automática' },
+        {
+          command: '@speckit /status',
+          description: 'inspecionar estado antes de tentar novamente',
+        },
+      ]);
       return;
     }
   }
@@ -1074,6 +1310,23 @@ export async function handleReviewAutoCommand(
   );
 
   stream.markdown('\nEscolha o próximo passo:\n\n');
+  emitContextualCommands(
+    stream,
+    [
+      { command: '@speckit /review-auto', description: 'iniciar revisão formal Gate 3' },
+      {
+        command: '@speckit /review-auto --changes-requested --auto',
+        description: 'registrar retrabalho automático',
+      },
+      {
+        command: '@speckit /review-auto --approved --auto',
+        description: 'registrar aprovação automática',
+      },
+      { command: '@speckit /status', description: 'verificar gate/status após decisão' },
+    ],
+    'Para intervenção complexa, descreva no chat as evidências do Gate 3 antes de decidir o veredito.',
+  );
+  emitChatQuickActionButton(stream, '▶ Iniciar Gate 3 (revisão formal)', '@speckit /review-auto');
   emitChatQuickActionButton(
     stream,
     '🔄 Registrar ALTERAÇÕES SOLICITADAS',

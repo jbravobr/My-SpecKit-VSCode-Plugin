@@ -34,6 +34,19 @@ interface RetrofitChange {
   toGate: Gate;
 }
 
+function emitChatQuickActionButton(
+  stream: vscode.ChatResponseStream,
+  title: string,
+  query: string,
+): void {
+  if (typeof stream.button !== 'function') return;
+  stream.button({
+    title,
+    command: 'speckit.openChatWithQuery',
+    arguments: [query],
+  });
+}
+
 function readFlagValue(tokens: string[], flag: string): string | undefined {
   const normalized = flag.toLowerCase();
   for (let idx = 0; idx < tokens.length; idx += 1) {
@@ -103,6 +116,12 @@ export async function handleStatusCommand(
     });
 
     stream.markdown('❌ Use `--confirm <intent-id>` para confirmar o retrofit pendente.\n');
+    stream.markdown(
+      '### Comandos disponíveis agora (contextuais)\n' +
+        '- `@speckit /status --fix` (gerar proposta de retrofit com novo intent-id)\n' +
+        '- `@speckit /status` (listar specs sem alteração)\n',
+    );
+    emitChatQuickActionButton(stream, '🔁 Gerar Proposta de Retrofit', '@speckit /status --fix');
     return;
   }
 
@@ -120,6 +139,13 @@ export async function handleStatusCommand(
         'Dica: use `--all` para incluir specs `done` e `cancelled`. ' +
         'Use `--fix` para propor retrofit e `--confirm` para aplicar o write.',
     );
+    stream.markdown(
+      '### Comandos disponíveis agora (contextuais)\n' +
+        '- `@speckit /status` (listar abertas com parâmetros válidos)\n' +
+        '- `@speckit /status --all` (incluir done/cancelled)\n' +
+        '- `@speckit /status --fix` (propor retrofit de gate)\n',
+    );
+    emitChatQuickActionButton(stream, '📊 Executar /status', '@speckit /status');
     return;
   }
 
@@ -166,6 +192,17 @@ export async function handleStatusCommand(
           `- \`@speckit /status --fix --confirm ${intent.id}\`\n\n` +
           'Sem confirmação, nenhuma spec será alterada.\n',
       );
+      stream.markdown(
+        '### Comandos disponíveis agora (contextuais)\n' +
+          `- \`@speckit /status --fix --confirm ${intent.id}\` (aplicar retrofit proposto)\n` +
+          '- `@speckit /status --fix` (descartar este intent e gerar nova proposta)\n' +
+          '- `@speckit /status` (consultar lista sem modificar arquivos)\n',
+      );
+      emitChatQuickActionButton(
+        stream,
+        '✅ Confirmar Retrofit Proposto',
+        `@speckit /status --fix --confirm ${intent.id}`,
+      );
       return;
     }
 
@@ -187,6 +224,16 @@ export async function handleStatusCommand(
 
         stream.markdown(
           `❌ Intent-ID inválido ou expirado: \`${confirmIntentId}\`. Gere nova proposta com \`@speckit /status --fix\`.\n`,
+        );
+        stream.markdown(
+          '### Comandos disponíveis agora (contextuais)\n' +
+            '- `@speckit /status --fix` (gerar novo intent de retrofit)\n' +
+            '- `@speckit /status` (ver estado atual das specs)\n',
+        );
+        emitChatQuickActionButton(
+          stream,
+          '🔁 Gerar Nova Proposta de Retrofit',
+          '@speckit /status --fix',
         );
         return;
       }
@@ -240,6 +287,15 @@ export async function handleStatusCommand(
     stream.markdown(formatRetrofitReport(retrofitChanges) + '\n\n');
   }
   stream.markdown(`${storyHeader}\n${storySection}\n\n` + `${fixHeader}\n${fixSection}\n`);
+  stream.markdown(
+    '\n### Comandos disponíveis agora (contextuais)\n' +
+      '- `@speckit /status` (atualizar lista de abertas)\n' +
+      '- `@speckit /status --all` (incluir done/cancelled)\n' +
+      '- `@speckit /status --fix` (propor retrofit de gate para specs done)\n\n' +
+      '> Para confirmação de retrofit, use o comando com `--confirm <intent-id>` que o próprio @speckit informar.\n',
+  );
+  emitChatQuickActionButton(stream, '📊 Atualizar Status', '@speckit /status');
+  emitChatQuickActionButton(stream, '📦 Ver Status Completo (--all)', '@speckit /status --all');
 }
 
 function formatRetrofitReport(changes: RetrofitChange[]): string {

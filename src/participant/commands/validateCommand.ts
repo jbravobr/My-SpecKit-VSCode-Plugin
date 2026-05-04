@@ -27,6 +27,19 @@ import { handleCommandError, requireWorkspace } from './CommandHelpers';
 /** Threshold in bytes above which a spec size warning is emitted. ~50 KB ≈ 12k tokens. */
 const SPEC_SIZE_WARN_BYTES = 50_000;
 
+function emitChatQuickActionButton(
+  stream: vscode.ChatResponseStream,
+  title: string,
+  query: string,
+): void {
+  if (typeof stream.button !== 'function') return;
+  stream.button({
+    title,
+    command: 'speckit.openChatWithQuery',
+    arguments: [query],
+  });
+}
+
 export async function handleValidateCommand(
   request: vscode.ChatRequest,
   stream: vscode.ChatResponseStream,
@@ -142,6 +155,12 @@ async function validateStory_(
         `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#gap-fill.prompt.md\` no campo de mensagem\n\n` +
         `Após preencher todas as lacunas, volte ao chat do **@speckit** e execute \`@speckit /validate\` para revalidar.\n`,
     );
+    stream.markdown(
+      '### Comandos disponíveis agora (contextuais)\n' +
+        '- `@speckit /validate` (revalidar após preencher lacunas)\n' +
+        '- `@speckit /status` (consultar gate/status da spec)\n\n' +
+        '> Esta etapa depende do conteúdo que você precisa digitar no chat para completar a spec.\n',
+    );
     await recordTrace(
       workspaceRoot,
       story.metadata.id,
@@ -228,6 +247,18 @@ async function validateStory_(
       '12. Se veredito for APROVADO, execute `@speckit /review-auto --approved` e confirme com `--confirm <intent-id>`\n\n' +
       'Agentes em `.github/agents/`. Skills em `.github/skills/`.\n',
   );
+
+  stream.markdown(
+    '### Comandos disponíveis agora (contextuais)\n' +
+      '- `@speckit /status` (acompanhar gate/status da story)\n' +
+      '- `@speckit /review-auto` (quando Gate 2 fechar, propor Gate 3)\n' +
+      '- `@speckit /review-auto --confirm <intent-id>` (confirmar transição proposta)\n' +
+      '- `@speckit /review-auto --changes-requested` (Gate 3 → Gate 2)\n' +
+      '- `@speckit /review-auto --approved` (Gate 3 → Gate 4)\n\n' +
+      '> Para decisões de revisão/plano, continue digitando no chat do agente com o contexto da story.\n',
+  );
+  emitChatQuickActionButton(stream, '📊 Ver Status das Specs', '@speckit /status');
+  emitChatQuickActionButton(stream, '▶ Propor Gate 3 (após Gate 2)', '@speckit /review-auto');
 }
 
 async function validateFix_(
@@ -277,6 +308,12 @@ async function validateFix_(
         `- **Opção A (recomendada):** Com o arquivo aberto no editor, clique no ícone **▶ Run in Copilot Chat** na barra de título → selecione **Novo Chat**\n` +
         `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#gap-fill.prompt.md\` no campo de mensagem\n\n` +
         `Após preencher todas as lacunas, volte ao chat do **@speckit** e execute \`@speckit /validate\` para revalidar.\n`,
+    );
+    stream.markdown(
+      '### Comandos disponíveis agora (contextuais)\n' +
+        '- `@speckit /validate` (revalidar após preencher lacunas)\n' +
+        '- `@speckit /status` (consultar gate/status do fix)\n\n' +
+        '> Esta etapa depende das informações que você precisa digitar no chat para completar o fix.\n',
     );
     await recordTrace(
       workspaceRoot,
@@ -349,6 +386,14 @@ async function validateFix_(
       '6. Revisão e encerramento do fix\n\n' +
       'Agentes em `.github/agents/`. Skills em `.github/skills/`.\n',
   );
+
+  stream.markdown(
+    '### Comandos disponíveis agora (contextuais)\n' +
+      '- `@speckit /status` (acompanhar gate/status do fix)\n' +
+      '- `@speckit /validate` (revalidar a spec ativa, se necessário)\n\n' +
+      '> Se precisar ajustar plano técnico da correção, continue a conversa no chat do agente implementador/revisor.\n',
+  );
+  emitChatQuickActionButton(stream, '📊 Ver Status das Specs', '@speckit /status');
 }
 
 // ─── DevTools offer ──────────────────────────────────────────────────────────

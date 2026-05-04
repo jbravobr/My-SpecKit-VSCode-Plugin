@@ -1,0 +1,47 @@
+SpecKit — Changelog 0.3.21
+===========================
+Data: 04/05/2026
+Branch base: main
+
+PATCH — Cobertura final de UX contextual em gate/status
+-------------------------------------------------------
+Esta release consolida o padrão de continuidade guiada no chat para comandos de gate/status, incluindo mensagens de recuperação em cenários inválidos e ajuda contextual com ações rápidas.
+
+Resumo da release
+-----------------
+Foi concluída a padronização da experiência de transição entre gates e status para reduzir digitação manual e erro operacional. Agora os fluxos críticos encerram com comandos contextuais e botões para continuidade simples.
+
+Mudanças técnicas
+-----------------
+- `/review-auto` recebeu cobertura contextual ampla em ramos de erro, bloqueio, proposta com intent, confirmação e encerramento.
+- `/status` ganhou orientação e botão de recuperação em `--confirm` sem `intent-id` e em flags inválidas.
+- `/gate` ganhou orientação e ação rápida em uso inválido, gate/status inválidos e tipo de check inválido.
+- `/help` foi enriquecido com:
+  - novo tópico detalhado para `/gate`
+  - bloco contextual com próximos comandos por tópico
+  - botões de continuidade para ações simples
+  - recuperação guiada em tópico desconhecido
+- Suites unitárias de `help`, `status`, `gate`, `review-auto` e `validate` atualizadas para validar os novos blocos contextuais e botões.
+
+Documentação
+------------
+- Changelog técnico e changelog de usuário da versão 0.3.21 adicionados em `publish/0.3.21/`.
+- Conteúdo de ajuda operacional atualizado para refletir os novos fluxos contextuais de gate/status.
+
+Testes adicionados
+------------------
+- Novos asserts de UX contextual em `tests/unit/commands/helpCommand.test.ts`.
+- Novos asserts para cenários inválidos guiados em `tests/unit/commands/statusCommand.test.ts`.
+- Novos asserts para cenários inválidos guiados em `tests/unit/commands/gateCommand.test.ts`.
+- Reforço de cobertura contextual em `tests/unit/commands/reviewAutoCommand.test.ts` e `tests/unit/commands/validateCommand.test.ts`.
+
+Validação executada antes do release
+------------------------------------
+- npx vitest run tests/unit/commands/helpCommand.test.ts tests/unit/commands/statusCommand.test.ts tests/unit/commands/gateCommand.test.ts tests/unit/commands/reviewAutoCommand.test.ts tests/unit/commands/validateCommand.test.ts -> 92/92 passando
+- npx tsc --noEmit -> 0 erros
+- npm run lint -> concluído sem erros
+- npm run build -> concluído
+
+Artefato gerado
+---------------
+- publish/0.3.21/vscode-plugin-speckit-0.3.21.vsix

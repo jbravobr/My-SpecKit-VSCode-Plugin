@@ -18,7 +18,10 @@ vi.mock('../../../src/generator/utils/EnvironmentChecker', () => ({
   formatEnvCheckInline: vi.fn().mockReturnValue(''),
 }));
 
-import { checkEnvironment, formatEnvCheckInline } from '../../../src/generator/utils/EnvironmentChecker';
+import {
+  checkEnvironment,
+  formatEnvCheckInline,
+} from '../../../src/generator/utils/EnvironmentChecker';
 
 const fixturesDir = resolve(__dirname, '../../fixtures');
 const completeStoryMd = readFileSync(resolve(fixturesDir, 'story-complete.md'), 'utf-8');
@@ -113,6 +116,17 @@ describe('handleValidateCommand', () => {
 
     expect(stream.getAllMarkdown()).toContain('speckit-revisor');
     expect(stream.getAllMarkdown()).toContain('Sessão B');
+    expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '📊 Ver Status das Specs',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /status'],
+    });
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '▶ Propor Gate 3 (após Gate 2)',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /review-auto'],
+    });
   });
 
   // ── Fix branches ──────────────────────────────────────────────────────────
@@ -154,6 +168,12 @@ describe('handleValidateCommand', () => {
 
     expect(stream.getAllMarkdown()).toContain('speckit-fix-implementador');
     expect(stream.getAllMarkdown()).toContain('Sessão B');
+    expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '📊 Ver Status das Specs',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /status'],
+    });
   });
 
   it('streams error and returns early when generateFixCopilotConfig throws', async () => {

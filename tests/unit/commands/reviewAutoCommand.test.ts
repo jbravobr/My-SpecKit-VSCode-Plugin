@@ -73,6 +73,12 @@ describe('handleReviewAutoCommand', () => {
     await handleReviewAutoCommand(createMockRequest(''), stream, token, ws, fs, fakeGit());
 
     expect(stream.getAllMarkdown()).toContain('exige conclusão prévia dos Gates 0-2');
+    expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '📊 Ver Status das Specs',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /status'],
+    });
   });
 
   it('rejects non-story specs', async () => {
@@ -140,6 +146,11 @@ describe('handleReviewAutoCommand', () => {
     expect(output).toContain(
       'Veredito orquestrado:** REVISÃO GATE 3 EXECUTADA (sem bloqueios automáticos)',
     );
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '▶ Iniciar Gate 3 (revisão formal)',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /review-auto'],
+    });
     expect(stream.button).toHaveBeenCalledWith({
       title: '🔄 Registrar ALTERAÇÕES SOLICITADAS',
       command: 'speckit.openChatWithQuery',
@@ -235,9 +246,15 @@ describe('handleReviewAutoCommand', () => {
     expect(output).toContain('Encerramento Orquestrado');
     expect(output).toContain('| Gate | `3` | `4` |');
     expect(output).toContain('| Status | `review` | `done` |');
+    expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(storyContent).toContain('gate: 4');
     expect(storyContent).toContain('status: done');
     expect(auditContent).toContain('/review-auto --approved: ✅ Veredito APROVADO');
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '📦 Ver Status Completo (--all)',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /status --all'],
+    });
 
     const trace = JSON.parse(traceRaw as string) as {
       entries: Array<{ description: string; data: { command: string } }>;
@@ -322,6 +339,7 @@ describe('handleReviewAutoCommand', () => {
     );
 
     expect(stream.getAllMarkdown()).toContain('Flags conflitantes');
+    expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
   });
 
   it('offers quick action to confirm batch consent intent', async () => {
@@ -343,6 +361,7 @@ describe('handleReviewAutoCommand', () => {
     const intentId = extractIntentId(output);
 
     expect(output).toContain('Consentimento único obrigatório');
+    expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(intentId).toBeTruthy();
     expect(stream.button).toHaveBeenCalledWith({
       title: '✅ Confirmar Consentimento Batch',

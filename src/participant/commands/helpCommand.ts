@@ -8,6 +8,12 @@ interface HelpTopic {
   aliases?: string[];
 }
 
+interface ContextualHelpAction {
+  command: string;
+  description: string;
+  buttonTitle?: string;
+}
+
 const HELP_TOPICS: Record<string, HelpTopic> = {
   status: {
     title: '/status',
@@ -82,6 +88,20 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       '--auto para handoff automático somente quando consentimento batch estiver ativo',
     ],
   },
+  gate: {
+    title: '/gate',
+    summary: 'Exibe regras de transição e valida cenários de gate/status.',
+    usage: [
+      '@speckit /gate',
+      '@speckit /gate rules',
+      '@speckit /gate check gate 0 1',
+      '@speckit /gate check status open in-progress',
+    ],
+    options: [
+      'check gate <de> <para> (valida transição entre gates 0..4)',
+      'check status <de> <para> (valida transição de status)',
+    ],
+  },
 };
 
 const TOPIC_ALIASES: Record<string, string> = {
@@ -97,12 +117,101 @@ function normalizeTopic(raw: string): string {
   return TOPIC_ALIASES[cleaned] ?? cleaned;
 }
 
+function emitChatQuickActionButton(
+  stream: vscode.ChatResponseStream,
+  title: string,
+  query: string,
+): void {
+  if (typeof stream.button !== 'function') return;
+  stream.button({
+    title,
+    command: 'speckit.openChatWithQuery',
+    arguments: [query],
+  });
+}
+
+function renderContextualHelp(actions: ContextualHelpAction[], note?: string): string {
+  const lines = actions.map((item) => `- \`${item.command}\` (${item.description})`).join('\n');
+  return (
+    '### Comandos disponíveis agora (contextuais)\n' + `${lines}\n` + (note ? `\n> ${note}\n` : '')
+  );
+}
+
+const GENERAL_CONTEXTUAL_ACTIONS: ContextualHelpAction[] = [
+  {
+    command: '@speckit /status',
+    description: 'listar specs ativas no workspace',
+    buttonTitle: '📊 Ver Status das Specs',
+  },
+  {
+    command: '@speckit /review-auto',
+    description: 'orquestrar revisão/transições da story ativa',
+    buttonTitle: '▶ Abrir Fluxo de Revisão',
+  },
+  {
+    command: '@speckit /gate',
+    description: 'consultar regras de transição de gate/status',
+    buttonTitle: '🚪 Ver Regras de Gate',
+  },
+];
+
+const TOPIC_CONTEXTUAL_ACTIONS: Record<string, ContextualHelpAction[]> = {
+  status: [
+    {
+      command: '@speckit /status',
+      description: 'listar specs abertas',
+      buttonTitle: '📊 Atualizar Status',
+    },
+    {
+      command: '@speckit /status --all',
+      description: 'incluir done/cancelled',
+      buttonTitle: '📦 Ver Status Completo (--all)',
+    },
+    {
+      command: '@speckit /status --fix',
+      description: 'propor retrofit de gate para specs done',
+    },
+  ],
+  'review-auto': [
+    {
+      command: '@speckit /review-auto',
+      description: 'orquestrar revisão Gate 3',
+      buttonTitle: '▶ Iniciar Revisão Automática',
+    },
+    {
+      command: '@speckit /review-auto --batch-consent',
+      description: 'iniciar consentimento batch para fluxos --auto',
+    },
+    {
+      command: '@speckit /review-auto --confirm <intent-id>',
+      description: 'confirmar transição proposta por intent',
+    },
+  ],
+  gate: [
+    {
+      command: '@speckit /gate',
+      description: 'mostrar matriz de transições gate/status',
+      buttonTitle: '🚪 Mostrar Regras de Gate',
+    },
+    {
+      command: '@speckit /gate check gate 0 1',
+      description: 'exemplo de validação de transição de gate',
+      buttonTitle: '▶ Validar Gate 0 → 1',
+    },
+    {
+      command: '@speckit /gate check status open in-progress',
+      description: 'exemplo de validação de transição de status',
+    },
+  ],
+};
+
 function renderGeneralHelp(): string {
   return (
     '**SpecKit — Ajuda rápida**\n\n' +
     '**Comandos com parâmetros mais usados:**\n' +
     '- `/status [--all|--closed] [--fix] [--confirm <intent-id>]`\n' +
     '- `/batch [--generate|--gen] [--unified]`\n' +
+    '- `/gate [check gate <de> <para>|check status <de> <para>]`\n' +
     '- `/validate [--devtools]`\n' +
     '- `/review-auto [--approved|--changes-requested] [--confirm <intent-id>]`\n' +
     '- `/draft [--fix|--refactoring|--spike]`\n\n' +
@@ -115,6 +224,7 @@ function renderGeneralHelp(): string {
     '**Ajuda detalhada:**\n' +
     '- `@speckit /help status`\n' +
     '- `@speckit /help batch`\n' +
+    '- `@speckit /help gate`\n' +
     '- `@speckit /help validate`\n' +
     '- `@speckit /help draft`\n'
   );
@@ -146,6 +256,17 @@ export async function handleHelpCommand(
   const rawTopic = (request.prompt ?? '').trim();
   if (!rawTopic) {
     stream.markdown(renderGeneralHelp());
+    stream.markdown(
+      renderContextualHelp(
+        GENERAL_CONTEXTUAL_ACTIONS,
+        'Use os botões para continuidade simples e digite parâmetros quando precisar de validações específicas.',
+      ),
+    );
+    for (const action of GENERAL_CONTEXTUAL_ACTIONS) {
+      if (action.buttonTitle) {
+        emitChatQuickActionButton(stream, action.buttonTitle, action.command);
+      }
+    }
     return;
   }
 
@@ -154,11 +275,31 @@ export async function handleHelpCommand(
   if (!topic) {
     stream.markdown(
       `❌ Comando não reconhecido em /help: \`${rawTopic}\`\n\n` +
-        '**Tópicos disponíveis:** status, batch, validate, review-auto, draft, help\n' +
+        '**Tópicos disponíveis:** status, batch, gate, validate, review-auto, draft, help\n' +
         'Use `@speckit /help` para ver a ajuda geral.',
     );
+    stream.markdown(
+      renderContextualHelp([
+        { command: '@speckit /help', description: 'abrir ajuda geral' },
+        { command: '@speckit /help status', description: 'abrir ajuda detalhada de status' },
+        {
+          command: '@speckit /help review-auto',
+          description: 'abrir ajuda detalhada de review-auto',
+        },
+      ]),
+    );
+    emitChatQuickActionButton(stream, '📘 Abrir Ajuda Geral', '@speckit /help');
     return;
   }
 
   stream.markdown(renderTopicHelp(topic));
+  const contextualActions = TOPIC_CONTEXTUAL_ACTIONS[topicKey];
+  if (contextualActions && contextualActions.length > 0) {
+    stream.markdown(renderContextualHelp(contextualActions));
+    for (const action of contextualActions) {
+      if (action.buttonTitle) {
+        emitChatQuickActionButton(stream, action.buttonTitle, action.command);
+      }
+    }
+  }
 }
