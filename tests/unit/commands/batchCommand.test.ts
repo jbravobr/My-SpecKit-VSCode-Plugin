@@ -138,6 +138,16 @@ describe('handleBatchCommand', () => {
     await handleBatchCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
     expect(stream.getAllMarkdown()).toContain('--generate');
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '⚙️ Gerar Configuração do Lote',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /batch --generate'],
+    });
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '🤖 Gerar Lote Unificado',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /batch --generate --unified'],
+    });
   });
 
   it('generates config when --generate flag provided', async () => {
@@ -248,6 +258,11 @@ describe('handleBatchCommand', () => {
       expect(output).toContain('use uma branch única do lote');
       expect(output).toContain('gate: 3');
       expect(output).toContain('status: review');
+      expect(stream.button).toHaveBeenCalledWith({
+        title: '✅ Iniciar Consentimento Batch',
+        command: 'speckit.openChatWithQuery',
+        arguments: ['@speckit /review-auto --batch-consent'],
+      });
       expect(fs.hasFile('speckit-story-001.agent.md')).toBe(true);
       expect(fs.hasFile('copilot-instructions.md')).toBe(true);
 

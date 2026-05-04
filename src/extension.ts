@@ -6,20 +6,30 @@ import { registerSpeckitParticipant } from './participant/speckitParticipant';
 import { Framework, Language } from './story/Story';
 import { createSpecFileWatcher } from './workflow/SpecFileWatcher';
 
+async function openCopilotChatWithQuery(query: string): Promise<void> {
+  await vscode.commands.executeCommand('workbench.action.chat.open', { query });
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   registerSpeckitParticipant(context);
   createSpecFileWatcher(context);
 
   context.subscriptions.push(
     vscode.commands.registerCommand('speckit.newStory', async () => {
-      await vscode.commands.executeCommand('workbench.action.chat.open', {
-        query: '@speckit /new',
-      });
+      await openCopilotChatWithQuery('@speckit /new');
     }),
     vscode.commands.registerCommand('speckit.fixStory', async () => {
-      await vscode.commands.executeCommand('workbench.action.chat.open', {
-        query: '@speckit /fix',
-      });
+      await openCopilotChatWithQuery('@speckit /fix');
+    }),
+    vscode.commands.registerCommand('speckit.openChatWithQuery', async (query: string) => {
+      if (typeof query !== 'string' || query.trim().length === 0) {
+        vscode.window.showErrorMessage(
+          'SpecKit: Não foi possível executar a ação rápida (query inválida).',
+        );
+        return;
+      }
+
+      await openCopilotChatWithQuery(query.trim());
     }),
     vscode.commands.registerCommand(
       'speckit.addDevToolsSkill',

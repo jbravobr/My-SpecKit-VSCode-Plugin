@@ -366,6 +366,19 @@ function formatBatchConsentProposalMarkdown(intentId: string): string {
   );
 }
 
+function emitChatQuickActionButton(
+  stream: vscode.ChatResponseStream,
+  title: string,
+  query: string,
+): void {
+  if (typeof stream.button !== 'function') return;
+  stream.button({
+    title,
+    command: 'speckit.openChatWithQuery',
+    arguments: [query],
+  });
+}
+
 export async function handleReviewAutoCommand(
   request: vscode.ChatRequest,
   stream: vscode.ChatResponseStream,
@@ -485,6 +498,11 @@ export async function handleReviewAutoCommand(
       });
 
       stream.markdown(formatBatchConsentProposalMarkdown(consentIntent.id));
+      emitChatQuickActionButton(
+        stream,
+        '✅ Confirmar Consentimento Batch',
+        `@speckit /review-auto --batch-consent --confirm ${consentIntent.id}`,
+      );
       return;
     }
 
@@ -513,6 +531,11 @@ export async function handleReviewAutoCommand(
       stream.markdown(
         `❌ Intent-ID inválido ou expirado: \`${control.confirmIntentId}\`. Gere um novo consentimento com \`@speckit /review-auto --batch-consent\`.\n`,
       );
+      emitChatQuickActionButton(
+        stream,
+        '🔁 Gerar Novo Consentimento Batch',
+        '@speckit /review-auto --batch-consent',
+      );
       return;
     }
 
@@ -539,6 +562,11 @@ export async function handleReviewAutoCommand(
     stream.markdown(
       '✅ Consentimento único da sessão batch registrado com sucesso.\n\n' +
         'Agora comandos com `--auto` podem executar handoffs automáticos durante esta sessão.\n',
+    );
+    emitChatQuickActionButton(
+      stream,
+      '🚀 Executar Handoff para Gate 3',
+      '@speckit /review-auto --auto',
     );
     return;
   }
@@ -586,6 +614,11 @@ export async function handleReviewAutoCommand(
         '❌ Transição automática bloqueada: consentimento único da sessão batch não encontrado.\n\n' +
           'Execute e confirme:\n' +
           '- `@speckit /review-auto --batch-consent`\n',
+      );
+      emitChatQuickActionButton(
+        stream,
+        '✅ Iniciar Consentimento Batch',
+        '@speckit /review-auto --batch-consent',
       );
       return;
     }
@@ -637,6 +670,11 @@ export async function handleReviewAutoCommand(
           `${confirmCommand} ${intent.id}`,
         ),
       );
+      emitChatQuickActionButton(
+        stream,
+        '✅ Confirmar Transição Proposta',
+        `${confirmCommand} ${intent.id}`,
+      );
       return { applied: false };
     }
 
@@ -669,6 +707,11 @@ export async function handleReviewAutoCommand(
         stream.markdown(
           `❌ Intent-ID inválido ou expirado: \`${control.confirmIntentId}\`. Gere nova proposta de transição e confirme novamente.\n`,
         );
+        emitChatQuickActionButton(
+          stream,
+          '🔁 Gerar Nova Proposta',
+          `@speckit ${proposal.commandLabel}`,
+        );
         return { applied: false };
       }
 
@@ -699,6 +742,11 @@ export async function handleReviewAutoCommand(
 
         stream.markdown(
           '❌ A story mudou após a proposta de transição. Gere uma nova proposta e confirme novamente para manter rastreabilidade consistente.\n',
+        );
+        emitChatQuickActionButton(
+          stream,
+          '🔁 Gerar Nova Proposta',
+          `@speckit ${proposal.commandLabel}`,
         );
         return { applied: false };
       }
@@ -855,6 +903,11 @@ export async function handleReviewAutoCommand(
           '### Próximo passo\n' +
           '- Retorne ao modo implementador e aplique apenas os FIXes aprovados no plano de revisão.\n' +
           '- Após concluir os FIXes e revalidar testes/cobertura, execute `@speckit /review-auto` para novo ciclo de revisão.\n',
+      );
+      emitChatQuickActionButton(
+        stream,
+        '🧪 Novo Ciclo de Revisão (Gate 3)',
+        '@speckit /review-auto',
       );
       return;
     } catch (err: unknown) {
@@ -1018,5 +1071,17 @@ export async function handleReviewAutoCommand(
       `${blockerSection}\n\n` +
       `**Veredito orquestrado:** ${verdict}\n\n` +
       `> Próximo passo obrigatório: no mesmo fluxo do chat, emita o checklist completo do Gate 3 com evidências por item e decisão final (APROVADO ou ALTERAÇÕES SOLICITADAS).\n`,
+  );
+
+  stream.markdown('\nEscolha o próximo passo:\n\n');
+  emitChatQuickActionButton(
+    stream,
+    '🔄 Registrar ALTERAÇÕES SOLICITADAS',
+    '@speckit /review-auto --changes-requested --auto',
+  );
+  emitChatQuickActionButton(
+    stream,
+    '✅ Registrar APROVADO',
+    '@speckit /review-auto --approved --auto',
   );
 }

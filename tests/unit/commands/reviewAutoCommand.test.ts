@@ -106,6 +106,11 @@ describe('handleReviewAutoCommand', () => {
     const intentId = extractIntentId(proposalOutput);
     expect(proposalOutput).toContain('Confirmação obrigatória de transição');
     expect(intentId).toBeTruthy();
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '✅ Confirmar Transição Proposta',
+      command: 'speckit.openChatWithQuery',
+      arguments: [`@speckit /review-auto --confirm ${intentId}`],
+    });
 
     const afterProposal = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
     expect(afterProposal).toContain('gate: 2');
@@ -135,6 +140,16 @@ describe('handleReviewAutoCommand', () => {
     expect(output).toContain(
       'Veredito orquestrado:** REVISÃO GATE 3 EXECUTADA (sem bloqueios automáticos)',
     );
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '🔄 Registrar ALTERAÇÕES SOLICITADAS',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /review-auto --changes-requested --auto'],
+    });
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '✅ Registrar APROVADO',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /review-auto --approved --auto'],
+    });
     expect(storyContent).toContain('gate: 3');
     expect(storyContent).toContain('status: review');
 
@@ -193,6 +208,11 @@ describe('handleReviewAutoCommand', () => {
     const intentId = extractIntentId(proposalOutput);
     expect(proposalOutput).toContain('Confirmação obrigatória de transição');
     expect(intentId).toBeTruthy();
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '✅ Confirmar Transição Proposta',
+      command: 'speckit.openChatWithQuery',
+      arguments: [`@speckit /review-auto --confirm ${intentId}`],
+    });
 
     const contentAfterProposal = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
     expect(contentAfterProposal).toContain('gate: 3');
@@ -247,6 +267,11 @@ describe('handleReviewAutoCommand', () => {
     const intentId = extractIntentId(proposalOutput);
     expect(proposalOutput).toContain('Confirmação obrigatória de transição');
     expect(intentId).toBeTruthy();
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '✅ Confirmar Transição Proposta',
+      command: 'speckit.openChatWithQuery',
+      arguments: [`@speckit /review-auto --confirm ${intentId}`],
+    });
 
     const contentAfterProposal = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
     expect(contentAfterProposal).toContain('gate: 3');
@@ -297,5 +322,32 @@ describe('handleReviewAutoCommand', () => {
     );
 
     expect(stream.getAllMarkdown()).toContain('Flags conflitantes');
+  });
+
+  it('offers quick action to confirm batch consent intent', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub();
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyWithMeta(2, 'in-progress'));
+
+    await handleReviewAutoCommand(
+      createMockRequest('--batch-consent'),
+      stream,
+      token,
+      ws,
+      fs,
+      fakeGit(),
+    );
+
+    const output = stream.getAllMarkdown();
+    const intentId = extractIntentId(output);
+
+    expect(output).toContain('Consentimento único obrigatório');
+    expect(intentId).toBeTruthy();
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '✅ Confirmar Consentimento Batch',
+      command: 'speckit.openChatWithQuery',
+      arguments: [`@speckit /review-auto --batch-consent --confirm ${intentId}`],
+    });
   });
 });

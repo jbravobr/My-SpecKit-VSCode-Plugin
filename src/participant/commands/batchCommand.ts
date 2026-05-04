@@ -44,6 +44,19 @@ interface SpecEntry {
   error?: string;
 }
 
+function emitChatQuickActionButton(
+  stream: vscode.ChatResponseStream,
+  title: string,
+  query: string,
+): void {
+  if (typeof stream.button !== 'function') return;
+  stream.button({
+    title,
+    command: 'speckit.openChatWithQuery',
+    arguments: [query],
+  });
+}
+
 export async function handleBatchCommand(
   request: vscode.ChatRequest,
   stream: vscode.ChatResponseStream,
@@ -130,6 +143,19 @@ export async function handleBatchCommand(
         '💡 Para gerar agentes unificados (implementador + revisor por story):\n' +
         '`@speckit /batch --generate --unified`\n',
     );
+
+    stream.markdown('\nAções rápidas:\n\n');
+    emitChatQuickActionButton(
+      stream,
+      '⚙️ Gerar Configuração do Lote',
+      '@speckit /batch --generate',
+    );
+    emitChatQuickActionButton(
+      stream,
+      '🤖 Gerar Lote Unificado',
+      '@speckit /batch --generate --unified',
+    );
+
     await emitCommandTelemetry({
       workspaceRoot,
       fs,
@@ -576,6 +602,13 @@ Ao concluir Gate 2 com sucesso, execute \`@speckit /review-auto --auto\` para pe
 Se o veredito do Gate 3 for ALTERAÇÕES SOLICITADAS, execute \`@speckit /review-auto --changes-requested --auto\`.
 Se o veredito do Gate 3 for APROVADO, execute \`@speckit /review-auto --approved --auto\`.
 `);
+
+  stream.markdown('\nAção sugerida agora:\n\n');
+  emitChatQuickActionButton(
+    stream,
+    '✅ Iniciar Consentimento Batch',
+    '@speckit /review-auto --batch-consent',
+  );
 }
 
 async function recordBatchPhaseEvents(

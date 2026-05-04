@@ -1,0 +1,46 @@
+SpecKit — Changelog 0.3.20
+===========================
+Data: 04/05/2026
+Branch base: main
+
+PATCH — Ações rápidas no chat para fluxo unificado
+-------------------------------------------------
+Esta release elimina a dependência de memorização de comandos em pontos críticos do fluxo unificado, adicionando ações rápidas clicáveis no chat com contexto orientado por etapa.
+
+Resumo da release
+-----------------
+A principal melhoria é a experiência guiada no chat para os comandos de batch unificado e review automático. Em vez de depender de digitação manual, o usuário agora recebe botões contextuais no momento certo para confirmar consentimento, avançar handoff e registrar o veredito final.
+
+Mudanças técnicas
+-----------------
+- Novo comando de extensão `speckit.openChatWithQuery` para abrir o Copilot Chat com query pré-preenchida.
+- `/batch` passou a oferecer botões de ação rápida para geração em lote e modo unificado.
+- `/batch --generate --unified` passou a oferecer botão imediato para iniciar consentimento batch.
+- `/review-auto` passou a emitir botões contextuais para:
+  - confirmar consentimento batch com intent-id
+  - iniciar consentimento quando ausente
+  - confirmar transições propostas com intent-id
+  - registrar outcomes de Gate 3 (alterações solicitadas/aprovado)
+  - retomar ciclo de revisão após retrabalho
+- Registro do comando novo no manifesto da extensão (`contributes.commands`).
+
+Documentação
+------------
+- Changelog técnico e changelog de usuário da versão 0.3.20 adicionados em `publish/0.3.20/`.
+- Mensagens do fluxo no chat atualizadas para explicações por etapa junto das ações rápidas.
+
+Testes adicionados
+------------------
+- Testes unitários de `/batch` ampliados para validar botões de ação rápida em cenários de guidance e modo unificado.
+- Testes unitários de `/review-auto` ampliados para validar botões de confirmação e botões de decisão final no Gate 3.
+
+Validação executada antes do release
+------------------------------------
+- npx tsc --noEmit -> 0 erros
+- npm run build -> concluído
+- npx vitest run tests/unit/commands/batchCommand.test.ts tests/unit/commands/reviewAutoCommand.test.ts -> 25/25 passando
+- npm run package -> changelog validado, VSIX gerado e verificado
+
+Artefato gerado
+---------------
+- publish/0.3.20/vscode-plugin-speckit-0.3.20.vsix

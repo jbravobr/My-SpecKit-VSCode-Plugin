@@ -1,0 +1,37 @@
+SpecKit — Novidades para usuários — 0.3.20
+==========================================
+Data: 04/05/2026
+
+Resumo
+------
+O fluxo unificado ficou mais prático: agora o chat mostra ações rápidas clicáveis exatamente nos pontos em que sua intervenção é necessária, evitando a necessidade de lembrar e digitar comandos manualmente.
+
+Novas features
+--------------
+- Botões de ação rápida no fluxo `/batch` para iniciar geração padrão e geração unificada.
+- Botão direto após `/batch --generate --unified` para iniciar consentimento batch.
+- Botões contextuais em `/review-auto` para confirmar consentimento e confirmar transições com intent-id.
+- Botões de decisão final no Gate 3 para registrar `ALTERAÇÕES SOLICITADAS` ou `APROVADO` no mesmo fluxo.
+
+Melhorias de experiência
+------------------------
+- Menos fricção operacional: o usuário clica no próximo passo em vez de memorizar comandos.
+- Orientação por etapa no chat com texto explicativo acoplado às ações.
+- Fluxo mais previsível no modo unificado do início ao desfecho.
+
+Correções e segurança de release
+--------------------------------
+- Redução de erro operacional por comando digitado incorretamente em transições críticas.
+- Continuidade do protocolo de confirmação explícita (intent-id) com acesso por botão.
+- Mantida a rastreabilidade de mudanças de gate/status com os mesmos controles de governança.
+
+Como usar rapidamente
+---------------------
+1. Execute `@speckit /batch --generate --unified`.
+2. Clique em `Iniciar Consentimento Batch` para abrir a ação certa no chat.
+3. Em `/review-auto`, use os botões de confirmação quando houver intent-id.
+4. Ao final do Gate 3, clique no botão do desfecho desejado (`ALTERAÇÕES SOLICITADAS` ou `APROVADO`).
+
+Artefato
+--------
+- publish/0.3.20/vscode-plugin-speckit-0.3.20.vsix
