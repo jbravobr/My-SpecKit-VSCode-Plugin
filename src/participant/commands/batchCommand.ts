@@ -133,7 +133,7 @@ export async function handleBatchCommand(
   if (control.flags.includes('--story') && !control.storyId) {
     stream.markdown(
       '❌ Use `--story <id>` para filtrar uma story específica no modo unificado.\n\n' +
-        '**Uso recomendado:** `@speckit /batch --generate --unified --story <id>`',
+        '**Exemplo de uso:** `@speckit /batch --generate --unified --story <id>`',
     );
     return;
   }
@@ -141,7 +141,7 @@ export async function handleBatchCommand(
   if (control.storyId && !(control.generateConfigs && control.useUnified)) {
     stream.markdown(
       '❌ A flag `--story` só pode ser usada com `--generate --unified`.\n\n' +
-        '**Uso recomendado:** `@speckit /batch --generate --unified --story <id>`',
+        '**Exemplo de uso:** `@speckit /batch --generate --unified --story <id>`',
     );
     return;
   }
@@ -224,16 +224,16 @@ export async function handleBatchCommand(
   if (!generateConfigs) {
     stream.markdown(
       '\n---\n\n' +
-        '💡 **Próximo passo recomendado:** gere os agentes unificados para todas as specs válidas:\n' +
-        '`@speckit /batch --generate --unified`\n\n' +
-        '> Cada story recebe um agente `.agent.md` que cobre implementação e revisão no mesmo fluxo.\n' +
-        '> Para validar e gerar config de uma única spec ativa, use: `@speckit /validate`\n',
+        '💡 **O que fazer agora?**\n\n' +
+        '- **Trabalhando em uma story ou fix individual:** use `@speckit /validate` para validar a spec ativa e iniciar o ciclo de implementação.\n' +
+        '- **Tem um backlog completo de stories já escritas:** use `@speckit /batch --generate --unified` para gerar agentes para todas em lote.\n' +
+        '- **Refactoring ou debug sem spec:** inicie um agente diretamente no Copilot Chat, sem precisar de story.\n',
     );
 
     stream.markdown('\nAções rápidas:\n\n');
     emitChatQuickActionButton(
       stream,
-      '🤖 Gerar Lote Unificado (recomendado)',
+      '🤖 Gerar Lote Unificado',
       '@speckit /batch --generate --unified',
     );
     emitChatQuickActionButton(stream, '📋 Validar Spec Ativa', '@speckit /validate');
@@ -375,7 +375,7 @@ export async function handleBatchCommand(
       '\n⚠️ **Nota:** A última spec processada define o `copilot-instructions.md` ativo. ' +
       'Use `/validate` em uma spec específica para ativá-la individualmente.\n\n' +
       '> ⚠️ **Modo legado:** `/batch --generate` (sem `--unified`) gera configs separadas por spec e não cria agentes `.agent.md`.\n' +
-      '> O fluxo recomendado é `@speckit /batch --generate --unified`, que gera um agente unificado por story cobrindo implementação e revisão no mesmo contexto.\n',
+      '> Para múltiplas stories pré-escritas em lote, prefira `@speckit /batch --generate --unified` — gera um agente por story cobrindo implementação e revisão no mesmo contexto.\n',
   );
 }
 

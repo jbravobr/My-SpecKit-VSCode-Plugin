@@ -140,7 +140,7 @@ describe('handleBatchCommand', () => {
 
     expect(stream.getAllMarkdown()).toContain('--generate --unified');
     expect(stream.button).toHaveBeenCalledWith({
-      title: '🤖 Gerar Lote Unificado (recomendado)',
+      title: '🤖 Gerar Lote Unificado',
       command: 'speckit.openChatWithQuery',
       arguments: ['@speckit /batch --generate --unified'],
     });

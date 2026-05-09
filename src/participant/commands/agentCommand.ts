@@ -208,9 +208,9 @@ export async function handleAgentCommand(
       );
       if (hasUnifiedAgents) {
         stream.markdown(
-          `> ⚠️ **Agentes unificados detectados em \`.github/agents/\`.**\n` +
-            `> No fluxo \`/batch --generate --unified\`, implementação e revisão acontecem no mesmo agente — troca para modo \`${mode}\` não é necessária.\n` +
-            `> Abra o agente da story desejada no dropdown do Copilot Chat em vez de trocar o modo aqui.\n\n`,
+          `> ℹ️ **Agentes unificados detectados em \`.github/agents/\`.**\n` +
+            `> No fluxo \`/batch --generate --unified\`, implementação e revisão acontecem no mesmo agente — a troca de modo é automática e já está coberta pelo agente da story.\n` +
+            `> Se preferir, abra o agente da story desejada diretamente no dropdown do Copilot Chat.\n\n`,
         );
       }
     } catch {
