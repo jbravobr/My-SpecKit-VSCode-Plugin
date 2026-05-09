@@ -82,12 +82,26 @@ export async function getActiveSpecPath(): Promise<string | undefined> {
     }),
   );
 
-  const openFiles = statusResults.filter(({ status }) => status === 'open').map(({ name }) => name);
+  // Priority order for "active" spec: review > in-progress > blocked > open
+  // Terminal statuses (done, cancelled) are excluded — they are not actionable.
+  const STATUS_PRIORITY: Record<string, number> = {
+    review: 4,
+    'in-progress': 3,
+    blocked: 2,
+    open: 1,
+  };
 
-  if (openFiles.length === 0) return undefined;
+  const activeFiles = statusResults
+    .filter(({ status }) => status in STATUS_PRIORITY)
+    .map(({ name, status }) => ({ name, priority: STATUS_PRIORITY[status] ?? 0 }));
 
-  openFiles.sort((a, b) => specSortKey(b) - specSortKey(a));
-  return path.join(specDir, openFiles[0]);
+  if (activeFiles.length === 0) return undefined;
+
+  activeFiles.sort((a, b) => {
+    if (b.priority !== a.priority) return b.priority - a.priority;
+    return specSortKey(b.name) - specSortKey(a.name);
+  });
+  return path.join(specDir, activeFiles[0].name);
 }
 
 export async function detectTechStack(): Promise<TechStackDetection> {
