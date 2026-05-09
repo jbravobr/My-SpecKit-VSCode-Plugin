@@ -1,0 +1,47 @@
+SpecKit — Novidades para usuários — 0.3.24
+==========================================
+Data: 09/05/2026
+
+Resumo
+------
+Esta versão melhora a clareza das mensagens de orientação do plugin, que
+anteriormente sugeriam que o fluxo `/batch` era o caminho recomendado para
+todos os usuários. Agora o plugin apresenta os três fluxos de forma neutra,
+ajudando cada usuário a escolher o caminho certo para seu objetivo.
+
+Novas features
+--------------
+- Novo bloco "Qual fluxo usar?" no comando `/help`, apresentando as três
+  formas de usar o SpecKit de acordo com o objetivo do desenvolvedor.
+
+Melhorias de experiência
+------------------------
+- O comando `/help` agora abre com orientação clara sobre qual fluxo escolher:
+  - 📝 **Story ou fix individual:** `/new` ou `/fix` → preencha a spec →
+    `/validate` → ciclo agente implementador/revisor até concluído
+  - 📦 **Backlog completo (múltiplas specs já escritas):** `/batch --generate --unified`
+  - 🔧 **Refactoring, debug ou análise de código:** agente direto, sem spec
+- Descrição do comando `/batch` na ajuda agora deixa claro que é indicado
+  para "múltiplas stories ou fixes já escritos" — evitando confusão com o
+  fluxo individual.
+- Mensagens de orientação contextual do `/batch` não sugerem mais que gerar
+  em lote é sempre o "próximo passo recomendado".
+- Aviso de agentes unificados no `/agent` agora é informativo (`ℹ️`) e não
+  prescritivo (`⚠️`).
+
+Correções e segurança de release
+---------------------------------
+- Removidas 5 instâncias de linguagem prescritiva ("recomendado", "próximo
+  passo recomendado") que direcionavam para o batch independente do contexto.
+
+Como usar rapidamente
+---------------------
+1. Digite `@speckit /help` para ver o bloco "Qual fluxo usar?".
+2. Escolha o fluxo que se aplica ao seu objetivo atual.
+3. Para story individual: `/new` → preencha → `/validate` → siga o agente.
+4. Para backlog pronto: `/batch --generate --unified`.
+5. Para refactoring/debug: abra um agente no Copilot Chat diretamente.
+
+Artefato
+--------
+- publish/0.3.24/vscode-plugin-speckit-0.3.24.vsix

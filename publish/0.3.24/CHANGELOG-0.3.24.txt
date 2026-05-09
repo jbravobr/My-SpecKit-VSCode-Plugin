@@ -1,0 +1,70 @@
+SpecKit — Changelog 0.3.24
+==========================
+Data: 09/05/2026
+Branch base: main
+
+PATCH — Remoção do viés de "batch como fluxo ideal" nas mensagens do plugin
+----------------------------------------------------------------------------
+Esta release corrige o posicionamento do plugin em suas mensagens de ajuda e
+orientação contextual, que apresentavam o fluxo `/batch --generate --unified`
+como O fluxo recomendado para qualquer usuário. O batch é adequado apenas para
+o cenário de backlog completo pré-escrito; o fluxo mais comum é story/fix
+individual via `/new` ou `/fix` → `/validate` → ciclo agente.
+
+Resumo da release
+-----------------
+Removidas todas as ocorrências de linguagem prescritiva ("recomendado",
+"próximo passo recomendado") que apontavam para o fluxo batch de forma
+genérica. O help geral ganhou um bloco "Qual fluxo usar?" que apresenta
+os três fluxos suportados de forma neutra e contextual, guiando o usuário
+para o caminho correto conforme seu objetivo.
+
+Mudanças técnicas
+-----------------
+- `src/participant/commands/batchCommand.ts`:
+  - Mensagens de erro de uso da flag `--story`: `**Uso recomendado:**`
+    substituído por `**Exemplo de uso:**` (2 ocorrências).
+  - Bloco "Próximo passo recomendado: gere os agentes unificados" removido.
+    Substituído por orientação neutra com três opções: validar spec individual,
+    gerar batch para backlog completo, ou usar agente direto sem spec.
+  - Botão de ação rápida: label `🤖 Gerar Lote Unificado (recomendado)`
+    simplificado para `🤖 Gerar Lote Unificado`.
+  - Nota sobre modo legado: `O fluxo recomendado é /batch --generate --unified`
+    substituído por contextualização de que batch é indicado para múltiplas
+    stories em lote.
+
+- `src/participant/commands/agentCommand.ts`:
+  - Aviso de agentes unificados detectados: ícone `⚠️` → `ℹ️`; texto suavizado
+    para não implicar que batch é o caminho padrão. Agora apenas informa que
+    no fluxo unificado a troca de modo é automática e sugere abrir o agente
+    diretamente.
+
+- `src/participant/commands/helpCommand.ts`:
+  - Sumário do tópico `/batch` atualizado: inclui "múltiplas stories ou fixes
+    já escritos" e nova opção `--story <id>` documentada.
+  - `renderGeneralHelp()` ganhou bloco **"Qual fluxo usar?"** no topo:
+    - 📝 Story/fix individual → `/new` ou `/fix` → preencher spec → `/validate`
+      → ciclo agente implementador/revisor
+    - 📦 Backlog completo (múltiplas specs pré-escritas) → `/batch --generate --unified`
+    - 🔧 Refactoring, debug ou análise → agente direto, sem spec
+
+Documentação
+------------
+- Changelogs técnico e de usuário 0.3.24 adicionados em `publish/0.3.24/`.
+
+Testes adicionados
+------------------
+- Nenhum teste novo. Apenas atualização do assert de label de botão em
+  `tests/unit/commands/batchCommand.test.ts` (linha 143: remoção de
+  `(recomendado)` do título esperado do botão).
+
+Validação executada antes do release
+-------------------------------------
+- npx vitest run -> 1089/1089 passando
+- npx tsc --noEmit -> 0 erros
+- npm run lint -> concluído sem erros
+- npm run package -> concluído
+
+Artefato gerado
+---------------
+- publish/0.3.24/vscode-plugin-speckit-0.3.24.vsix
