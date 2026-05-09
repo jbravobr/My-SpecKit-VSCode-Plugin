@@ -35,13 +35,19 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
   },
   batch: {
     title: '/batch',
-    summary: 'Processa specs em lote e pode gerar configs/agentes.',
+    summary:
+      'Processa specs em lote. Use quando você já tem múltiplas stories ou fixes escritos e quer gerar configs/agentes para todos de uma vez.',
     usage: [
       '@speckit /batch',
       '@speckit /batch --generate',
       '@speckit /batch --generate --unified',
+      '@speckit /batch --generate --unified --story <id>',
     ],
-    options: ['--generate (ou --gen)', '--unified (junto com --generate)'],
+    options: [
+      '--generate (ou --gen)',
+      '--unified (junto com --generate) — gera agente implementador/revisor por story',
+      '--story <id> (filtra uma story específica, requer --generate --unified)',
+    ],
     aliases: ['/batch-generate', '/batch-unified'],
   },
   validate: {
@@ -208,9 +214,13 @@ const TOPIC_CONTEXTUAL_ACTIONS: Record<string, ContextualHelpAction[]> = {
 function renderGeneralHelp(): string {
   return (
     '**SpecKit — Ajuda rápida**\n\n' +
+    '**Qual fluxo usar?**\n' +
+    '- 📝 **Story ou fix individual:** `/new` ou `/fix` → preencha a spec → `/validate` → ciclo agente implementador/revisor\n' +
+    '- 📦 **Backlog completo (múltiplas specs já escritas):** `/batch --generate --unified` → agentes para todas em lote\n' +
+    '- 🔧 **Refactoring, debug ou análise:** abra um agente diretamente no Copilot Chat — sem necessidade de spec\n\n' +
     '**Comandos com parâmetros mais usados:**\n' +
     '- `/status [--all|--closed] [--fix] [--confirm <intent-id>]`\n' +
-    '- `/batch [--generate|--gen] [--unified]`\n' +
+    '- `/batch [--generate|--gen] [--unified] [--story <id>]`\n' +
     '- `/gate [check gate <de> <para>|check status <de> <para>]`\n' +
     '- `/validate [--devtools]`\n' +
     '- `/review-auto [--approved|--changes-requested] [--confirm <intent-id>]`\n' +
