@@ -1,0 +1,56 @@
+SpecKit — Novidades para usuários — 0.3.23
+==========================================
+Data: 09/05/2026
+
+Resumo
+------
+Esta versão corrige quatro problemas que afetavam a confiabilidade do plugin em
+sessões reais: stories que chegavam ao final do fluxo mas não tinham seu status
+atualizado, um bug de sincronização de git causado pelo botão Keep do Copilot
+Edits, orientação confusa em alguns comandos, e erros causados pelos agentes
+gerados tentando executar comandos SpecKit no terminal.
+
+Novas features
+--------------
+- Botão `📦 Commitar Código Gerado` disponível diretamente no chat ao atingir
+  gate 4, para confirmar e commitar o código gerado com um clique.
+- Notificação automática após salvar arquivos pós-gate 4: o plugin detecta git
+  com alterações pendentes e oferece o botão de commit sem precisar de ação
+  manual do usuário.
+
+Melhorias de experiência
+------------------------
+- Mensagens de gate 4 reestruturadas com instrução clara em dois passos:
+  1. Clique em Keep para aceitar o código gerado pelo Copilot.
+  2. Clique no botão "Commitar agora" que aparece logo após.
+- Comandos legados (/batch, /agent) orientam o usuário para o fluxo unificado
+  mais eficiente, evitando uso acidental de modos descontinuados.
+- /gate agora informa explicitamente que é um comando de consulta, não de
+  transição, reduzindo confusão sobre quando usá-lo.
+- /audit e /trace indicam o caminho correto para rastreabilidade via /history.
+
+Correções e segurança de release
+---------------------------------
+- Corrigido: stories que finalizavam o fluxo batch unificado com status "review"
+  (gate 3) não tinham metadata atualizado para gate 4/done. O spec file agora é
+  localizado corretamente independente do status atual da story.
+- Corrigido: o spec metadata (.speckit/STORY-X.md) agora é commitado
+  automaticamente a cada transição de gate, em commit separado dos arquivos de
+  código. Isso evita que o botão Keep do Copilot Edits (que pode disparar
+  formatadores e alterar arquivos) cause inconsistências no histórico git.
+- Corrigido: os agentes gerados (.agent.md) agora instruem o LLM a escrever
+  comandos @speckit no chat, e não no terminal. Isso elimina o erro de parser
+  "splatting operator" que ocorria no PowerShell ao tentar executar @speckit
+  diretamente no terminal.
+
+Como usar rapidamente
+---------------------
+1. Rode o fluxo normal: @speckit /batch --generate --unified
+2. Abra o agente gerado e siga as instruções — os comandos @speckit serão
+   enviados para o chat automaticamente.
+3. Ao atingir gate 4: clique em Keep no Copilot Edits e depois no botão
+   "📦 Commitar Código Gerado" que aparece no chat.
+
+Artefato
+--------
+- publish/0.3.23/vscode-plugin-speckit-0.3.23.vsix

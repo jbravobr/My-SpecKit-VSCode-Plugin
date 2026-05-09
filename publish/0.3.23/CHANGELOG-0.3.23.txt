@@ -1,0 +1,118 @@
+SpecKit — Changelog 0.3.23
+==========================
+Data: 09/05/2026
+Branch base: main
+
+PATCH — Correções críticas de fluxo, metadata e instrução de agentes
+---------------------------------------------------------------------
+Esta release consolida quatro correções independentes identificadas durante análise
+de sessões reais: falha silenciosa de persistência de gate em stories no status
+review, desync de git causado pelo botão Keep do Copilot Edits, orientação ambígua
+de comandos no fluxo 0→4, e instruções de agente que provocavam tentativas de
+executar @speckit no terminal PowerShell.
+
+Resumo da release
+-----------------
+Quatro áreas corrigidas nesta release:
+
+1. Bug em `getActiveSpecPath` que tornava stories invisíveis no gate 3 (status review),
+   impedindo a persistência do metadata em gate 4/done no fluxo `--generate --unified`.
+2. UX de comandos reforçada para guiar o usuário no fluxo canonical 0→4 unificado,
+   sinalizando comandos legados e orientando para a sequência correta.
+3. Desync de git causado pelo botão Keep do VS Code Copilot Edits: spec metadata agora
+   é auto-commitado atomicamente a cada transição de gate, e o usuário recebe notificação
+   para commitar o código gerado após clicar em Keep.
+4. Instruções dos agentes gerados (.agent.md) corrigidas para usar `escreva no chat:`
+   em vez de `execute` antes de comandos `@speckit`, evitando parser error no PowerShell.
+
+Mudanças técnicas
+-----------------
+- `src/generator/utils/workspace.ts`:
+  - `getActiveSpecPath()` substituiu filtro `status === 'open'` por mapa de prioridade
+    ordenado: review(4) > in-progress(3) > blocked(2) > open(1).
+  - Stories com status terminal (done/cancelled) continuam excluídas.
+
+- `src/workflow/GitOperations.ts`:
+  - Novo método `commitFile(cwd, filePath, message)` adicionado à interface `IGitOps`
+    e à implementação `gitOps`.
+  - Usa `git add -- <filePath>` (não `-A`) para isolar o commit do spec metadata.
+
+- `src/workflow/PostSaveCommitNotifier.ts` (novo):
+  - Função pura `checkPostSavePendingCommit(deps)` extrai lógica de detecção de gate 4
+    + dirty git state.
+  - Exibe notificação VS Code com botão "Commitar agora" ao detectar código não commitado
+    após gate 4/done.
+
+- `src/extension.ts`:
+  - Listener `workspace.onDidSaveTextDocument` com debounce de 2s.
+  - Chama `checkPostSavePendingCommit` para notificar o usuário após salvar arquivos
+    com git em estado sujo post-gate 4.
+
+- `src/participant/commands/reviewAutoCommand.ts`:
+  - `proposeOrApplyTransition` chama `commitFile` após cada `fs.writeFile` de metadata.
+  - Mensagem de gate 4 atualizada: instrução em dois passos (Keep → botão commit).
+  - Botão rápido `📦 Commitar Código Gerado` adicionado ao output do gate 4.
+  - Instruções manuais de git removidas da mensagem de gate 4 (agora automatizadas).
+
+- `src/participant/commands/batchCommand.ts`:
+  - `/batch` sem flags: recomenda `--unified`.
+  - `/batch --generate` sem `--unified`: deprecation warning.
+
+- `src/participant/commands/agentCommand.ts`:
+  - Avisa quando agentes unificados já existem para a story ativa.
+
+- `src/participant/commands/gateCommand.ts`:
+  - Clarifica que o comando é informativo; não executa transições.
+
+- `src/participant/commands/auditCommand.ts` e `traceCommand.ts`:
+  - Footer aponta para `/history` como fonte canônica de rastreabilidade.
+
+- `src/generator/agent/StoryUnifiedAgentGenerator.ts`:
+  - 7 ocorrências de `execute`/`tente` antes de `@speckit` substituídas por
+    `escreva no chat:`.
+
+- `src/generator/agent/StoryImplementadorAgentGenerator.ts`:
+  - 6 ocorrências de `execute`/`tente` antes de `@speckit` substituídas por
+    `escreva no chat:`.
+
+- `src/generator/agent/StoryRevisorAgentGenerator.ts`:
+  - 2 ocorrências de `execute` antes de variáveis de comando substituídas por
+    `escreva no chat:`.
+  - Bloco redundante `git add .speckit/STORY-X.md && git commit` removido (agora
+    gerenciado pelo `commitFile` auto-commit via `@speckit /review-auto`).
+
+- `src/generator/fix/FixPromptsGenerator.ts`:
+  - 1 ocorrência de `Execute \`@speckit /validate\`` substituída por
+    `Escreva no chat: \`@speckit /validate\``.
+
+Documentação
+------------
+- Changelogs técnico e de usuário 0.3.23 adicionados em `publish/0.3.23/`.
+
+Testes adicionados
+------------------
+- `tests/unit/workflow/PostSaveCommitNotifier.test.ts` (novo):
+  - 7 testes cobrindo todas as condições de guarda de `checkPostSavePendingCommit`:
+    gate não concluído, status não-done, git limpo, git com sujo, debounce, path nulo.
+
+- `tests/unit/commands/reviewAutoCommand.test.ts`:
+  - 4 novos testes de transição de gate com `commitFile` spy.
+  - Teste de regressão para `getActiveSpecPath` com `status: review`.
+  - `fakeGit()` atualizado com `commitFile: async () => ''`.
+
+- `tests/unit/commands/commitCommand.test.ts` e `diffCommand.test.ts`:
+  - `fakeGit()` atualizado com `commitFile: async () => ''`.
+
+- `tests/unit/commands/batchCommand.test.ts`:
+  - Asserts de label de botão atualizados para refletir o novo texto de UX.
+
+Validação executada antes do release
+-------------------------------------
+- npx vitest run -> 1089/1089 passando
+- npx tsc --noEmit -> 0 erros
+- npm run lint -> concluído sem erros
+- npm run package -> concluído
+
+Artefato gerado
+---------------
+- publish/0.3.23/vscode-plugin-speckit-0.3.23.vsix
