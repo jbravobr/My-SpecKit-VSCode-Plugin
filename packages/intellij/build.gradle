@@ -1,0 +1,35 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.intellij' version '1.17.3'
+}
+
+group = 'io.speckit'
+version = '0.3.25'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+intellij {
+    version = '2024.1'
+    type = 'IC'
+    plugins = []
+    updateSinceUntilBuild = false
+}
+
+patchPluginXml {
+    version = '0.3.25'
+    sinceBuild = '241'
+    untilBuild = ''
+}
+
+compileJava {
+    sourceCompatibility = '17'
+    targetCompatibility = '17'
+}

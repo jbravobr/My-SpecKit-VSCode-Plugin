@@ -1,0 +1,29 @@
+<idea-plugin>
+    <id>io.speckit.intellij</id>
+    <name>SpecKit</name>
+    <vendor email="speckit@local" url="">SpecKit</vendor>
+    <description><![CDATA[
+        SpecKit — Spec Driven Development for IntelliJ IDEA.<br/>
+        Use the SpecKit tool window to create stories, validate specs,
+        and orchestrate AI-assisted development cycles via a local chat interface.
+    ]]></description>
+    <version>0.3.25</version>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow
+            id="SpecKit"
+            anchor="right"
+            factoryClass="io.speckit.toolwindow.SpeckitToolWindowFactory"
+            icon="/icons/speckit_16.png"
+        />
+    </extensions>
+
+    <applicationListeners>
+        <listener
+            class="io.speckit.server.CoreServerStartupListener"
+            topic="com.intellij.ide.AppLifecycleListener"
+        />
+    </applicationListeners>
+</idea-plugin>
