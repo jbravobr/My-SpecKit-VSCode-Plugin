@@ -1,0 +1,79 @@
+SpecKit — Changelog 0.3.25
+==========================
+Data: 12/06/2025
+Branch base: main
+
+MINOR — Disciplina de testes comportamentais como primário + CRAP score como gate de entrega
+---------------------------------------------------------------------------------------------
+Esta release redefine a hierarquia de qualidade de testes nos agentes e instruções gerados
+pelo SpecKit. Cobertura ≥80% deixa de ser O critério de entrega e passa a ser terciário.
+CRAP score (Change Risk Anti-Patterns) é introduzido como gate bloqueante. Testes
+comportamentais passam a ser o critério primário e inegociável de qualidade.
+
+Resumo da release
+-----------------
+Sete arquivos de geração de instruções foram atualizados para refletir a hierarquia correta:
+(1) testes comportamentais validam o que o sistema FAZ — primário e inegociável;
+(2) CRAP ≤ 30 para funções com CC > 5 — gate bloqueante com diagnóstico acionável;
+(3) cobertura ≥ 80% como evidência de abrangência — terciário, subproduto dos bons testes.
+O CRAP score estava completamente ausente do codebase e agora é documentado com fórmula,
+tabela de referência, ferramentas por stack e protocolo de diagnóstico para os agentes.
+
+Mudanças técnicas
+-----------------
+- `src/generator/baseline/TestingStandardsGenerator.ts`:
+  - Seção "Regra absoluta de entrega" reescrita como hierarquia de 3 níveis.
+  - Nova seção "CRAP Score — Métrica de Qualidade Real" com fórmula completa:
+    CRAP(f) = comp²(f) × (1 − cov/100)³ + comp(f), tabela de referência,
+    ferramentas por stack (eslint+istanbul, JaCoCo, radon, SonarQube) e
+    protocolo de 5 passos para diagnóstico quando CRAP > 30.
+  - "O que NÃO é aceitável": adicionados "Cobertura sem testes comportamentais"
+    e "CRAP > 30 em qualquer função da lógica de negócio".
+
+- `src/generator/baseline/AgentIntegrityGenerator.ts`:
+  - "Portão de entrega" atualizado: 3 critérios ordenados (comportamental >
+    CRAP ≤ 30 > cobertura como evidência). CRAP > 30 agora bloqueia o gate.
+
+- `src/generator/agent/StoryImplementadorAgentGenerator.ts`:
+  - Gate 1→2: removida "Cobertura ≥ 80%" como pré-condição prematura de avanço.
+  - Gate 2: nova seção "Hierarquia de qualidade de testes" com instrução de CRAP
+    check, fórmula e instrução de estimativa de CC integradas.
+
+- `src/generator/agent/StoryRevisorAgentGenerator.ts`:
+  - Checklist "Testes": adicionado "CRAP ≤ 30 para todas as funções com CC > 5
+    (bloqueante de gate)" e "Testes comportamentais presentes para cada critério
+    de aceite" acima de "cobertura %".
+
+- `src/generator/agent/StoryUnifiedAgentGenerator.ts`:
+  - Critério de handoff Gate 2 → Gate 3 atualizado de "0 falhas + cobertura ≥ 80%"
+    para "testes comportamentais passando + CRAP ≤30 + cobertura ≥80%".
+
+- `src/generator/agent/FixImplementadorAgentGenerator.ts`:
+  - Gate 2: cobertura renomeada para "evidência" + CRAP ≤ 30 adicionado como gate.
+
+- `src/generator/agent/FixRevisorAgentGenerator.ts`:
+  - Checklist "Testes": adicionado "CRAP ≤ 30 para toda função modificada com CC > 5".
+
+Documentação
+------------
+- Changelogs técnico e de usuário 0.3.25 adicionados em `publish/0.3.25/`.
+- Referência canônica: https://testing.googleblog.com/2011/02/this-code-is-crap.html
+
+Testes adicionados
+------------------
+- Nenhum teste novo de comportamento. Os 1089 testes existentes cobrem os generators
+  e validam que o conteúdo gerado compila e transforma sem erros de sintaxe.
+  Os backticks em template literals foram corrigidos durante a implementação
+  (3 ocorrências em TestingStandardsGenerator, AgentIntegrityGenerator e
+  StoryImplementadorAgentGenerator).
+
+Validação executada antes do release
+-------------------------------------
+- npx vitest run -> 1089/1089 passando
+- npx tsc --noEmit -> 0 erros
+- npm run lint -> concluído sem erros
+- node esbuild.js --production -> concluído sem erros
+
+Artefato gerado
+---------------
+- publish/0.3.25/vscode-plugin-speckit-0.3.25.vsix

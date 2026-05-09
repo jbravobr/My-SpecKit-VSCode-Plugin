@@ -1,0 +1,47 @@
+SpecKit — Novidades para usuários — 0.3.25
+==========================================
+Data: 12/06/2025
+
+Resumo
+------
+Esta versão torna os agentes do SpecKit mais exigentes com a qualidade real dos testes.
+Cobertura de código continua obrigatória, mas deixa de ser O critério principal. O que
+importa agora é que cada critério de aceite da sua story tenha um teste que valide o
+comportamento do sistema — não apenas que as linhas foram executadas.
+
+Novas features
+--------------
+- Introdução do CRAP Score como gate de entrega: funções complexas com cobertura
+  insuficiente são identificadas antes que a story seja marcada como concluída.
+  O agente informa qual função está problemática e o caminho mais rápido para resolver.
+- Fórmula CRAP documentada nas instruções geradas para cada story: os desenvolvedores
+  sabem exatamente o que está sendo medido e como calcular por stack (TypeScript,
+  Java, Python, C#).
+
+Melhorias de experiência
+------------------------
+- O agente agora distingue entre "cobertura alta com mocks de domínio" (ineficaz) e
+  "testes comportamentais reais" (o que importa). Você recebe feedback mais preciso
+  sobre a qualidade dos seus testes.
+- Quando CRAP > 30 é detectado, o agente apresenta dois caminhos claros:
+  adicionar testes comportamentais OU simplificar/decompor a função — com estimativa
+  de qual é mais rápido no seu contexto.
+- O checklist de revisão (agente revisor) agora inclui verificação de CRAP como item
+  bloqueante, ao lado dos checks de segurança e cobertura.
+
+Correções e segurança de release
+---------------------------------
+- Nenhuma correção de bug nesta release. Mudanças são todas nas instruções geradas
+  pelos agentes — sem impacto em dados ou estado de stories existentes.
+
+Como usar rapidamente
+---------------------
+1. Continue usando o fluxo normal — as mudanças são nas instruções do agente.
+2. No Gate 2 (Testes), o agente vai verificar CRAP além da cobertura.
+3. Se CRAP > 30 for detectado: o agente mostra qual função e o que fazer.
+4. Para funções simples (maioria do código): nenhum impacto — CRAP é naturalmente baixo.
+5. Referência: https://testing.googleblog.com/2011/02/this-code-is-crap.html
+
+Artefato
+--------
+- publish/0.3.25/vscode-plugin-speckit-0.3.25.vsix
