@@ -30822,7 +30822,14 @@ router14.post("/batch", async (req, res) => {
 
 > \u2139\uFE0F Flag \`--unified\` detectada. Agentes unificados n\xE3o suportados via Core Server \u2014 use o plugin VS Code.`;
     }
-    res.json({ results, validCount, invalidCount, generate: !!generate, unified: !!unified, markdown });
+    res.json({
+      results,
+      validCount,
+      invalidCount,
+      generate: !!generate,
+      unified: !!unified,
+      markdown
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });
@@ -30906,7 +30913,10 @@ router16.post("/review-auto", async (req, res) => {
     const validation = validateStory(story);
     const currentGate = story.metadata.gate ?? 0;
     const currentStatus = story.metadata.status ?? "open";
-    const gateTransition = validateGateTransition(currentGate, Math.min(currentGate + 1, 4));
+    const gateTransition = validateGateTransition(
+      currentGate,
+      Math.min(currentGate + 1, 4)
+    );
     const statusTransition = validateStatusTransition(currentStatus, "review");
     const canAdvance = validation.valid && currentGate < 4;
     let markdown;

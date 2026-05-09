@@ -212,4 +212,4 @@ Por favor envie feedback e problemas encontrados diretamente no canal do Teams d
 
 ---
 
-*SpecKit v0.3.25 — Banco Pan Engenharia de Software — Distribuição Interna Beta*
+*SpecKit v0.3.25 — Banco Pan Arquitetura de Solução — Distribuição Interna Beta*
