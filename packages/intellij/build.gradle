@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'io.speckit'
-version = '0.3.25'
+version = '0.3.26'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -29,7 +29,7 @@ intellij {
 }
 
 patchPluginXml {
-    version = '0.3.25'
+    version = '0.3.26'
     sinceBuild = '241'
     untilBuild = ''
 }

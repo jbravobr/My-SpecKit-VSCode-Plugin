@@ -7,6 +7,7 @@ import com.intellij.ui.components.JBTextField;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
 import io.speckit.client.CoreServerClient;
+import io.speckit.llm.LLMBridge;
 import io.speckit.server.CoreServerManager;
 
 import javax.swing.*;
@@ -227,7 +228,7 @@ public class SpeckitToolWindow {
         title.setFont(fontHeader());
         title.setForeground(Color.WHITE);
 
-        JLabel sub = new JLabel("  Spec Driven Development  v0.3.25");
+        JLabel sub = new JLabel("  Spec Driven Development  v0.3.26");
         sub.setFont(fontSmall());
         sub.setForeground(new Color(0xCCDDFF));
 
@@ -810,7 +811,15 @@ public class SpeckitToolWindow {
 
         switch (command) {
             case "/new":      return client.createNew(finalRoot).markdown;
-            case "/validate": return client.validate(finalRoot).markdown;
+            case "/validate": {
+                CoreServerClient.ServerResponse resp = client.validate(finalRoot);
+                // If valid, extract specPath and trigger AI Chat
+                if (resp.isSuccess() && resp.raw.has("valid") && resp.raw.get("valid").getAsBoolean()) {
+                    String specPath = resp.raw.has("specPath") ? resp.raw.get("specPath").getAsString() : null;
+                    LLMBridge.openSpecInAIChat(project, specPath, finalRoot);
+                }
+                return resp.markdown;
+            }
             case "/status":
                 return client.getStatus(finalRoot, input.contains("--all") || input.contains("--closed")).markdown;
             case "/commit":
@@ -830,8 +839,16 @@ public class SpeckitToolWindow {
             case "/trace":    return client.getTrace(finalRoot, null).markdown;
             case "/history":  return client.getHistory(finalRoot, 50, "all").markdown;
             case "/doctor":   return client.getDoctor(finalRoot).markdown;
-            case "/batch":
-                return client.batch(finalRoot, input.contains("--generate"), input.contains("--unified")).markdown;
+            case "/batch": {
+                boolean generate = input.contains("--generate");
+                boolean unified  = input.contains("--unified");
+                CoreServerClient.ServerResponse batchResp = client.batch(finalRoot, generate, unified);
+                // After a generate --unified, suggest opening AI Chat for each valid spec
+                if (generate && batchResp.isSuccess()) {
+                    LLMBridge.openSpecInAIChat(project, null, finalRoot);
+                }
+                return batchResp.markdown;
+            }
             case "/init":     return client.init(finalRoot).markdown;
             case "/review-auto": return client.reviewAuto(finalRoot, null).markdown;
             case "/context":  return client.getContext(finalRoot).markdown;
