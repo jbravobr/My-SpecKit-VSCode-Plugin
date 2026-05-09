@@ -889,6 +889,14 @@ export async function handleReviewAutoCommand(
 
     if (patch.changed) {
       await fs.writeFile(activeStoryPath, patch.content);
+      // Commit spec metadata atomically so gate state is captured in git before
+      // the user interacts with Keep/Undo on the Copilot Edits bar.
+      const metaCommitMsg =
+        `chore(speckit/${story.metadata.id}): gate ${summary.fromGate}→${summary.toGate}` +
+        ` [${summary.toStatus}]`;
+      await git.commitFile(workspaceRootPath, activeStoryPath, metaCommitMsg).catch(() => {
+        // Silent: git may be unavailable or the file may already be committed.
+      });
     }
 
     return { applied: true, summary };
@@ -974,19 +982,20 @@ export async function handleReviewAutoCommand(
       stream.markdown(
         `## ✅ Encerramento Orquestrado — STORY-${story.metadata.id}\n\n` +
           `${formatTransitionMarkdown(summary)}\n\n` +
-          '### Próximo passo\n' +
-          `- Faça o commit do metadata da story: \`git add .speckit/STORY-${story.metadata.id}.md\`\n` +
-          `- Conclua com: \`git commit -m "chore(${story.metadata.id}): encerra story no speckit"\`\n`,
+          '### O que aconteceu\n' +
+          '- ✅ Metadata da story atualizado para **Gate 4 / done**\n' +
+          '- ✅ Metadata commitado automaticamente no git\n\n' +
+          '### Próximo passo — Commitar o código gerado\n\n' +
+          '> O código criado durante esta story ainda aguarda sua aceitação.\n' +
+          '> **1.** Clique em **Keep** na barra acima para aceitar os arquivos gerados\n' +
+          '> **2.** Clique no botão abaixo para commitar tudo e fechar o ciclo\n',
       );
-      emitContextualCommands(
-        stream,
-        [
-          { command: '@speckit /status --all', description: 'confirmar story em Gate 4 / done' },
-          { command: '@speckit /status', description: 'seguir para a próxima story ativa' },
-        ],
-        'Os comandos de git devem ser executados no terminal para persistir o fechamento.',
-      );
-      emitChatQuickActionButton(stream, '📦 Ver Status Completo (--all)', '@speckit /status --all');
+      emitContextualCommands(stream, [
+        { command: '@speckit /commit', description: 'commitar código gerado após clicar Keep' },
+        { command: '@speckit /status --all', description: 'confirmar story em Gate 4 / done' },
+      ]);
+      emitChatQuickActionButton(stream, '📦 Commitar Código Gerado', '@speckit /commit');
+      emitChatQuickActionButton(stream, '📊 Ver Status Completo', '@speckit /status --all');
       return;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

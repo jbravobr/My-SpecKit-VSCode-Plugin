@@ -3,6 +3,7 @@ import { execFile } from 'child_process';
 export interface IGitOps {
   diff(cwd: string, full: boolean): Promise<string>;
   commit(cwd: string, message: string): Promise<string>;
+  commitFile(cwd: string, filePath: string, message: string): Promise<string>;
   hasChanges(cwd: string): Promise<boolean>;
   isRepository(cwd: string): Promise<boolean>;
   init(cwd: string): Promise<string>;
@@ -51,6 +52,11 @@ export const gitOps: IGitOps = {
 
   async commit(cwd: string, message: string): Promise<string> {
     await execGit(['add', '-A'], cwd);
+    return execGit(['commit', '-m', message], cwd);
+  },
+
+  async commitFile(cwd: string, filePath: string, message: string): Promise<string> {
+    await execGit(['add', '--', filePath], cwd);
     return execGit(['commit', '-m', message], cwd);
   },
 

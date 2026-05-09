@@ -2,9 +2,14 @@ import * as vscode from 'vscode';
 import { generateDevToolsSkill } from './generator/skill/DevToolsSkillGenerator';
 import { DevToolsAssessment } from './generator/utils/DevToolsAssessor';
 import { vscodeFileSystem } from './generator/utils/VscodeFileSystem';
+import { vscodeWorkspace } from './generator/utils/VscodeWorkspace';
 import { registerSpeckitParticipant } from './participant/speckitParticipant';
 import { Framework, Language } from './story/Story';
 import { createSpecFileWatcher } from './workflow/SpecFileWatcher';
+import { gitOps } from './workflow/GitOperations';
+import { checkPostSavePendingCommit } from './workflow/PostSaveCommitNotifier';
+
+const POST_SAVE_DEBOUNCE_MS = 2000;
 
 async function openCopilotChatWithQuery(query: string): Promise<void> {
   await vscode.commands.executeCommand('workbench.action.chat.open', { query });
@@ -14,6 +19,39 @@ export function activate(context: vscode.ExtensionContext): void {
   registerSpeckitParticipant(context);
   createSpecFileWatcher(context);
 
+  // ---------------------------------------------------------------------------
+  // Post-save commit nudge — fires after the user clicks Keep on Copilot Edits
+  // ---------------------------------------------------------------------------
+  let postSaveTimer: ReturnType<typeof setTimeout> | undefined;
+
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(() => {
+      if (postSaveTimer) clearTimeout(postSaveTimer);
+      postSaveTimer = setTimeout(() => {
+        void checkPostSavePendingCommit({
+          workspace: vscodeWorkspace,
+          fs: vscodeFileSystem,
+          git: gitOps,
+          notify: async (specId) => {
+            const action = await vscode.window.showInformationMessage(
+              `SpecKit: STORY-${specId} encerrada em Gate 4 — há mudanças pendentes após Keep.`,
+              'Commitar agora',
+              'Mais tarde',
+            );
+            if (action === 'Commitar agora') {
+              await openCopilotChatWithQuery('@speckit /commit');
+              return true;
+            }
+            return false;
+          },
+        });
+      }, POST_SAVE_DEBOUNCE_MS);
+    }),
+  );
+
+  // ---------------------------------------------------------------------------
+  // Commands
+  // ---------------------------------------------------------------------------
   context.subscriptions.push(
     vscode.commands.registerCommand('speckit.newStory', async () => {
       await openCopilotChatWithQuery('@speckit /new');

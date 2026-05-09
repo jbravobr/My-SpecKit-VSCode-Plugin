@@ -14,6 +14,7 @@ function fakeGit(overrides: Partial<IGitOps> = {}): IGitOps {
   return {
     diff: async () => '',
     commit: async () => '',
+    commitFile: async () => '',
     hasChanges: async () => false,
     isRepository: async () => true,
     init: async () => '',
