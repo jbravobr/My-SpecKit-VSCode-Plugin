@@ -6,6 +6,11 @@ plugins {
 group = 'io.speckit'
 version = '0.3.25'
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
 repositories {
     mavenCentral()
 }
