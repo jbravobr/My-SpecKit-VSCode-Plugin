@@ -128,10 +128,10 @@ O fluxo unificado deve continuar imediatamente para o protocolo de transição (
     - Se houver alterações, execute:
       \`git add -A\`
       \`git commit -m "test(${storyId}): fechamento do gate 2"\`
-    - Se falhar por erro operacional, tente \`@speckit /commit\` sem mensagem
+    - Se falhar por erro operacional, escreva no chat: \`@speckit /commit\` sem mensagem
     - Só peça ação manual ao usuário se as duas tentativas falharem
-  2. Se ainda não houver consentimento batch ativo nesta sessão, execute \`@speckit /review-auto --batch-consent\` e confirme o intent retornado.
-  3. Execute \`@speckit /review-auto --auto\` para persistir a transição Gate 2 → Gate 3 com evidência no chat.
+  2. Se ainda não houver consentimento batch ativo nesta sessão, escreva no chat: \`@speckit /review-auto --batch-consent\` e confirme o intent retornado.
+  3. Escreva no chat: \`@speckit /review-auto --auto\` para persistir a transição Gate 2 → Gate 3 com evidência no chat.
   4. Emita no chat o handoff explícito:
     - "✅ Gates 0-2 concluídos"
     - "🔁 Handoff: IMPLEMENTADOR → REVISOR"
@@ -153,10 +153,10 @@ Não selecione outro agente neste ponto.
     - Se houver alterações, execute:
       \`git add -A\`
       \`git commit -m "test(${storyId}): fechamento do gate 2"\`
-    - Se falhar por erro operacional, tente \`@speckit /commit\` sem mensagem
+    - Se falhar por erro operacional, escreva no chat: \`@speckit /commit\` sem mensagem
     - Só peça ação manual ao usuário se as duas tentativas falharem
-  2. Execute \`@speckit /review-auto\` para **propor** a transição \`gate: 3\` e \`status: review\`.
-  3. Confirme explicitamente a transição usando \`@speckit /review-auto --confirm <intent-id>\`.
+  2. Escreva no chat: \`@speckit /review-auto\` para **propor** a transição \`gate: 3\` e \`status: review\`.
+  3. Escreva no chat: \`@speckit /review-auto --confirm <intent-id>\` para confirmar a transição.
   4. Emita no chat o handoff explícito:
     - "✅ Gates 0-2 concluídos"
     - "🔁 Handoff: IMPLEMENTADOR → REVISOR"

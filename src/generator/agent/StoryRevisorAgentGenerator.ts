@@ -186,11 +186,11 @@ ${dodList || '- [ ] (não especificado)'}
 3. **Melhorias**: recomendados mas não bloqueantes
 4. **Sugestões fora de escopo**: registre, não implemente
 
-**Se veredito for APROVADO:** execute ${approvedCommand} para persistir Gate 3 → Gate 4/status done antes de concluir o Gate 4.
+**Se veredito for APROVADO:** escreva no chat: ${approvedCommand} para persistir Gate 3 → Gate 4/status done antes de concluir o Gate 4.
 
 **Se veredito for ALTERAÇÕES SOLICITADAS:**
 
-1. Execute ${changesRequestedCommand} para persistir Gate 3 → Gate 2/status in-progress.
+1. Escreva no chat: ${changesRequestedCommand} para persistir Gate 3 → Gate 2/status in-progress.
 2. Registre a transição no chat usando o bloco Markdown obrigatório.
 3. Converta os bloqueantes em tarefas atômicas:
 
@@ -270,11 +270,6 @@ No chat, execute:
 ${approvedCommand}
 
 O comando persiste o metadata com \`gate: 4\` e \`status: done\` e emite a transição no chat.
-
-\`\`\`bash
-git add .speckit/STORY-${storyId}.md
-git commit -m "chore(${storyId}): encerra story no speckit"
-\`\`\`
 
 ---
 

@@ -368,6 +368,6 @@ Conduza uma conversa estruturada para preencher cada lacuna acima:
 
 ## Após todas as lacunas resolvidas
 
-> Todas as lacunas foram preenchidas. Execute \`@speckit /validate\` para gerar os arquivos de configuração e iniciar a correção.
+> Todas as lacunas foram preenchidas. Escreva no chat: \`@speckit /validate\` para gerar os arquivos de configuração e iniciar a correção.
 `;
 }
