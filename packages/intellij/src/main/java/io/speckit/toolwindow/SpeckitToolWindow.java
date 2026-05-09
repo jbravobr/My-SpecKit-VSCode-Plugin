@@ -48,11 +48,22 @@ public class SpeckitToolWindow {
     private static final Color   C_AMBER        = new Color(0xE67E22);
     private static final Color   C_RED          = new Color(0xE74C3C);
 
-    // Fonts
-    private static Font fontHeader() { return UIUtil.getLabelFont().deriveFont(Font.BOLD, 15f); }
-    private static Font fontBody()   { return UIUtil.getLabelFont().deriveFont(12f); }
-    private static Font fontSmall()  { return UIUtil.getLabelFont().deriveFont(10f); }
-    private static Font fontCmd()    { return UIUtil.getLabelFont().deriveFont(Font.BOLD, 11f); }
+    // Fonts — always relative to IDE label font so scaling (100%/125%/150%) works correctly
+    private static Font fontHeader() {
+        Font base = JBUI.Fonts.label();
+        return base.deriveFont(Font.BOLD, base.getSize() + JBUI.scale(2));
+    }
+    private static Font fontBody() {
+        return JBUI.Fonts.label();          // IDE default — do not override size
+    }
+    private static Font fontSmall() {
+        Font base = JBUI.Fonts.label();
+        return base.deriveFont((float) Math.max(10, base.getSize() - JBUI.scale(1)));
+    }
+    private static Font fontCmd() {
+        Font base = JBUI.Fonts.label();
+        return base.deriveFont(Font.BOLD, (float) Math.max(10, base.getSize() - JBUI.scale(1)));
+    }
 
     // Commands organized in groups: {label, command, group}
     private static final String[][] COMMANDS = {
@@ -285,19 +296,45 @@ public class SpeckitToolWindow {
 
     private JButton buildCommandButton(String label, String command) {
         JButton btn = new JButton(label) {
-            private boolean hovered = false;
+            private boolean hovered  = false;
+            private boolean pressed  = false;
             { addMouseListener(new MouseAdapter() {
                 @Override public void mouseEntered(MouseEvent e) { hovered = true;  repaint(); }
-                @Override public void mouseExited(MouseEvent e)  { hovered = false; repaint(); }
+                @Override public void mouseExited(MouseEvent e)  { hovered = false; pressed = false; repaint(); }
+                @Override public void mousePressed(MouseEvent e) { pressed = true;  repaint(); }
+                @Override public void mouseReleased(MouseEvent e){ pressed = false; repaint(); }
             }); }
             @Override protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(hovered ? C_BTN_HOVER : UIUtil.getPanelBackground());
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-                g2.setColor(C_BTN_BORDER);
+                int w = getWidth(), h = getHeight(), r = 7;
+
+                // Base gradient: lighter top → slightly darker bottom (3D raise)
+                Color base   = hovered ? C_BTN_HOVER : UIUtil.getPanelBackground();
+                Color top    = base.brighter();
+                Color bottom = base.darker();
+                if (pressed) { top = bottom; bottom = base; }  // invert on press
+                g2.setPaint(new GradientPaint(0, 0, top, 0, h, bottom));
+                g2.fillRoundRect(0, 0, w, h, r, r);
+
+                // Bottom shadow (gives depth)
+                if (!pressed) {
+                    g2.setColor(new Color(0, 0, 0, 35));
+                    g2.fillRoundRect(1, 3, w - 2, h - 1, r, r);
+                    g2.fillRoundRect(0, 0, w, h, r, r);  // re-fill to cover shadow bleed on top
+                    g2.setPaint(new GradientPaint(0, 0, top, 0, h, bottom));
+                    g2.fillRoundRect(0, 0, w, h - 1, r, r);
+                }
+
+                // Top highlight gloss
+                g2.setColor(new Color(255, 255, 255, pressed ? 0 : 55));
+                g2.fillRoundRect(1, 1, w - 2, h / 2, r, r);
+
+                // Border
+                g2.setColor(hovered ? C_BTN_BORDER : new JBColor(new Color(0xBBCCDD), new Color(0x4A5A6A)));
                 g2.setStroke(new BasicStroke(1f));
-                g2.drawRoundRect(0, 0, getWidth()-1, getHeight()-1, 8, 8);
+                g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
+
                 g2.dispose();
                 super.paintComponent(g);
             }
@@ -308,7 +345,7 @@ public class SpeckitToolWindow {
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
         btn.setOpaque(false);
-        btn.setMargin(JBUI.insets(3, 4, 3, 4));
+        btn.setMargin(JBUI.insets(4, 6, 4, 6));
         btn.setToolTipText(command);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.addActionListener(e -> { inputField.setText(command); handleSend(); });
@@ -318,16 +355,33 @@ public class SpeckitToolWindow {
     private JButton buildSendButton() {
         JButton btn = new JButton("Enviar ↵") {
             private boolean hovered = false;
+            private boolean pressed = false;
             { addMouseListener(new MouseAdapter() {
                 @Override public void mouseEntered(MouseEvent e) { hovered = true;  repaint(); }
-                @Override public void mouseExited(MouseEvent e)  { hovered = false; repaint(); }
+                @Override public void mouseExited(MouseEvent e)  { hovered = false; pressed = false; repaint(); }
+                @Override public void mousePressed(MouseEvent e) { pressed = true;  repaint(); }
+                @Override public void mouseReleased(MouseEvent e){ pressed = false; repaint(); }
             }); }
             @Override protected void paintComponent(Graphics g) {
+                if (!isEnabled()) { super.paintComponent(g); return; }
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(!isEnabled() ? UIUtil.getPanelBackground()
-                        : hovered ? C_USER_BUBBLE.brighter() : C_USER_BUBBLE);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                int w = getWidth(), h = getHeight(), r = 10;
+                Color base = hovered ? C_USER_BUBBLE.brighter() : C_USER_BUBBLE;
+                // Shadow
+                if (!pressed) {
+                    g2.setColor(new Color(0, 0, 0, 50));
+                    g2.fillRoundRect(1, 3, w - 2, h - 1, r, r);
+                }
+                // Gradient body
+                g2.setPaint(new GradientPaint(0, 0,
+                        pressed ? base : base.brighter(),
+                        0, h,
+                        pressed ? base.brighter() : base.darker()));
+                g2.fillRoundRect(0, 0, w, pressed ? h : h - 1, r, r);
+                // Top gloss
+                g2.setColor(new Color(255, 255, 255, pressed ? 0 : 50));
+                g2.fillRoundRect(1, 1, w - 2, h / 2, r, r);
                 g2.dispose();
                 super.paintComponent(g);
             }
@@ -338,7 +392,7 @@ public class SpeckitToolWindow {
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
         btn.setOpaque(false);
-        btn.setPreferredSize(new Dimension(90, 30));
+        btn.setPreferredSize(new Dimension(JBUI.scale(90), JBUI.scale(30)));
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.addActionListener(e -> handleSend());
         return btn;
@@ -347,16 +401,30 @@ public class SpeckitToolWindow {
     private JButton buildStartServerButton() {
         JButton btn = new JButton("▶ Start Server") {
             private boolean hovered = false;
+            private boolean pressed = false;
             { addMouseListener(new MouseAdapter() {
                 @Override public void mouseEntered(MouseEvent e) { hovered = true;  repaint(); }
-                @Override public void mouseExited(MouseEvent e)  { hovered = false; repaint(); }
+                @Override public void mouseExited(MouseEvent e)  { hovered = false; pressed = false; repaint(); }
+                @Override public void mousePressed(MouseEvent e) { pressed = true;  repaint(); }
+                @Override public void mouseReleased(MouseEvent e){ pressed = false; repaint(); }
             }); }
             @Override protected void paintComponent(Graphics g) {
+                if (!isEnabled()) { super.paintComponent(g); return; }
                 Graphics2D g2 = (Graphics2D) g.create();
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(!isEnabled() ? UIUtil.getPanelBackground()
-                        : hovered ? C_GREEN.brighter() : C_GREEN);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+                int w = getWidth(), h = getHeight(), r = 8;
+                Color base = hovered ? C_GREEN.brighter() : C_GREEN;
+                if (!pressed) {
+                    g2.setColor(new Color(0, 0, 0, 45));
+                    g2.fillRoundRect(1, 3, w - 2, h - 1, r, r);
+                }
+                g2.setPaint(new GradientPaint(0, 0,
+                        pressed ? base : base.brighter(),
+                        0, h,
+                        pressed ? base.brighter() : base.darker()));
+                g2.fillRoundRect(0, 0, w, pressed ? h : h - 1, r, r);
+                g2.setColor(new Color(255, 255, 255, pressed ? 0 : 50));
+                g2.fillRoundRect(1, 1, w - 2, h / 2, r, r);
                 g2.dispose();
                 super.paintComponent(g);
             }
@@ -483,9 +551,12 @@ public class SpeckitToolWindow {
         bubble.setBorder(JBUI.Borders.empty(7, 12));
         bubble.add(area, BorderLayout.CENTER);
 
-        JPanel outer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        // BorderLayout outer: strut on WEST pushes bubble to the right and gives it real width
+        JPanel outer = new JPanel(new BorderLayout());
         outer.setOpaque(false);
-        outer.add(bubble);
+        outer.setBorder(JBUI.Borders.emptyRight(4));
+        outer.add(Box.createHorizontalStrut(JBUI.scale(60)), BorderLayout.WEST);
+        outer.add(bubble, BorderLayout.CENTER);
         return outer;
     }
 
@@ -494,8 +565,8 @@ public class SpeckitToolWindow {
         area.setBackground(C_BOT_BUBBLE);
 
         JLabel avatar = new JLabel("🤖");
-        avatar.setFont(fontBody().deriveFont(14f));
-        avatar.setBorder(JBUI.Borders.emptyRight(6));
+        avatar.setFont(fontBody().deriveFont((float)(fontBody().getSize() + JBUI.scale(2))));
+        avatar.setBorder(JBUI.Borders.emptyRight(JBUI.scale(6)));
         avatar.setVerticalAlignment(SwingConstants.TOP);
 
         JPanel bubble = new JPanel(new BorderLayout()) {
@@ -511,14 +582,17 @@ public class SpeckitToolWindow {
         bubble.setBorder(JBUI.Borders.empty(7, 12));
         bubble.add(area, BorderLayout.CENTER);
 
-        JPanel inner = new JPanel(new BorderLayout(4, 0));
+        JPanel inner = new JPanel(new BorderLayout(JBUI.scale(4), 0));
         inner.setOpaque(false);
         inner.add(avatar, BorderLayout.WEST);
         inner.add(bubble, BorderLayout.CENTER);
 
-        JPanel outer = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        // BorderLayout outer: strut on EAST pushes bubble to the left and gives it real width
+        JPanel outer = new JPanel(new BorderLayout());
         outer.setOpaque(false);
-        outer.add(inner);
+        outer.setBorder(JBUI.Borders.emptyLeft(4));
+        outer.add(inner, BorderLayout.CENTER);
+        outer.add(Box.createHorizontalStrut(JBUI.scale(60)), BorderLayout.EAST);
         return outer;
     }
 
