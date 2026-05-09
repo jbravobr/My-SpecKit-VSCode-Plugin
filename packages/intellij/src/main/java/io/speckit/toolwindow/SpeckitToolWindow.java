@@ -42,8 +42,10 @@ public class SpeckitToolWindow {
     private static final JBColor C_SYSTEM_TEXT  = new JBColor(new Color(0x888888), new Color(0x888888));
     private static final JBColor C_HEADER_BG    = new JBColor(new Color(0x2B5EA7), new Color(0x1E3D6F));
     private static final JBColor C_INPUT_BORDER = new JBColor(new Color(0x4C78CC), new Color(0x3A6BBF));
-    private static final JBColor C_BTN_HOVER    = new JBColor(new Color(0xDDE8FF), new Color(0x2D4F8A));
+    private static final JBColor C_BTN_HOVER    = new JBColor(new Color(0xDDE8FF), new Color(0x4A6FA5));
     private static final JBColor C_BTN_BORDER   = new JBColor(new Color(0x4C78CC), new Color(0x3A6BBF));
+    // Button surface: light theme = white/light-blue tint; dark theme = medium blue-gray (readable)
+    private static final JBColor C_BTN_SURFACE  = new JBColor(new Color(0xF0F4FC), new Color(0x3E4D6C));
     private static final Color   C_GREEN        = new Color(0x27AE60);
     private static final Color   C_AMBER        = new Color(0xE67E22);
     private static final Color   C_RED          = new Color(0xE74C3C);
@@ -295,6 +297,9 @@ public class SpeckitToolWindow {
     }
 
     private JButton buildCommandButton(String label, String command) {
+        // Foreground: on dark theme use white, on light theme use dark blue
+        final JBColor btnFg = new JBColor(new Color(0x1A2A4A), Color.WHITE);
+
         JButton btn = new JButton(label) {
             private boolean hovered  = false;
             private boolean pressed  = false;
@@ -309,38 +314,45 @@ public class SpeckitToolWindow {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 int w = getWidth(), h = getHeight(), r = 7;
 
-                // Base gradient: lighter top → slightly darker bottom (3D raise)
-                Color base   = hovered ? C_BTN_HOVER : UIUtil.getPanelBackground();
-                Color top    = base.brighter();
-                Color bottom = base.darker();
-                if (pressed) { top = bottom; bottom = base; }  // invert on press
-                g2.setPaint(new GradientPaint(0, 0, top, 0, h, bottom));
-                g2.fillRoundRect(0, 0, w, h, r, r);
+                // Surface color: use C_BTN_SURFACE (visible on both themes), brighter on hover
+                Color base = hovered ? C_BTN_HOVER : C_BTN_SURFACE;
 
-                // Bottom shadow (gives depth)
+                // Subtle gradient: +12 brightness on top half
+                int br = Math.min(255, base.getRed()   + (pressed ? -10 : 12));
+                int bg = Math.min(255, base.getGreen() + (pressed ? -10 : 12));
+                int bb = Math.min(255, base.getBlue()  + (pressed ? -10 : 12));
+                Color top    = pressed ? new Color(Math.max(0, base.getRed()-10), Math.max(0, base.getGreen()-10), Math.max(0, base.getBlue()-10)) : new Color(br, bg, bb);
+                Color bottom = pressed ? new Color(br, bg, bb) : new Color(Math.max(0, base.getRed()-8), Math.max(0, base.getGreen()-8), Math.max(0, base.getBlue()-8));
+
+                // Shadow offset (skip when pressed)
                 if (!pressed) {
-                    g2.setColor(new Color(0, 0, 0, 35));
-                    g2.fillRoundRect(1, 3, w - 2, h - 1, r, r);
-                    g2.fillRoundRect(0, 0, w, h, r, r);  // re-fill to cover shadow bleed on top
-                    g2.setPaint(new GradientPaint(0, 0, top, 0, h, bottom));
-                    g2.fillRoundRect(0, 0, w, h - 1, r, r);
+                    g2.setColor(new Color(0, 0, 0, UIUtil.isUnderDarcula() ? 60 : 30));
+                    g2.fillRoundRect(0, 2, w, h, r, r);
                 }
 
-                // Top highlight gloss
-                g2.setColor(new Color(255, 255, 255, pressed ? 0 : 55));
-                g2.fillRoundRect(1, 1, w - 2, h / 2, r, r);
+                // Gradient body
+                g2.setPaint(new GradientPaint(0, 0, top, 0, h, bottom));
+                g2.fillRoundRect(0, 0, w, pressed ? h : h - 1, r, r);
+
+                // Top gloss (light theme only — dark theme already has good contrast)
+                if (!UIUtil.isUnderDarcula() && !pressed) {
+                    g2.setColor(new Color(255, 255, 255, 70));
+                    g2.fillRoundRect(1, 1, w - 2, h / 2, r, r);
+                }
 
                 // Border
-                g2.setColor(hovered ? C_BTN_BORDER : new JBColor(new Color(0xBBCCDD), new Color(0x4A5A6A)));
+                Color border = hovered ? C_BTN_BORDER
+                        : new JBColor(new Color(0x9AB0D0), new Color(0x5A7BAF));
+                g2.setColor(border);
                 g2.setStroke(new BasicStroke(1f));
-                g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
+                g2.drawRoundRect(0, 0, w - 1, pressed ? h - 1 : h - 2, r, r);
 
                 g2.dispose();
                 super.paintComponent(g);
             }
         };
         btn.setFont(fontCmd());
-        btn.setForeground(C_BOT_TEXT);
+        btn.setForeground(btnFg);
         btn.setContentAreaFilled(false);
         btn.setBorderPainted(false);
         btn.setFocusPainted(false);
