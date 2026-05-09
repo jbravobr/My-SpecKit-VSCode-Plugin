@@ -197,6 +197,27 @@ export async function handleAgentCommand(
 
   const mode: AgentModeName = modeToken;
   const currentMode = getActiveAgentMode();
+
+  // Warn if unified agents exist — mode switching is not needed in the unified flow
+  if (workspaceRoot && (mode === 'implementador' || mode === 'revisor')) {
+    try {
+      const agentsDir = `${workspaceRoot}/.github/agents`;
+      const agentFiles = await fs.listDir(agentsDir).catch(() => [] as string[]);
+      const hasUnifiedAgents = agentFiles.some(
+        (f) => f.startsWith('speckit-story-') && f.endsWith('.agent.md'),
+      );
+      if (hasUnifiedAgents) {
+        stream.markdown(
+          `> ⚠️ **Agentes unificados detectados em \`.github/agents/\`.**\n` +
+            `> No fluxo \`/batch --generate --unified\`, implementação e revisão acontecem no mesmo agente — troca para modo \`${mode}\` não é necessária.\n` +
+            `> Abra o agente da story desejada no dropdown do Copilot Chat em vez de trocar o modo aqui.\n\n`,
+        );
+      }
+    } catch {
+      // best-effort: se falhar ao listar, não bloqueia a troca de modo
+    }
+  }
+
   if (mode === currentMode) {
     stream.markdown(`ℹ️ O modo \`${mode}\` já está ativo. Nenhuma transição foi aplicada.\n`);
     emitQuickActions(stream, [{ title: '📊 Ver Status das Specs', query: '@speckit /status' }]);

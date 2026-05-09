@@ -224,23 +224,19 @@ export async function handleBatchCommand(
   if (!generateConfigs) {
     stream.markdown(
       '\n---\n\n' +
-        '💡 Para gerar configuração Copilot para todas as specs válidas, execute:\n' +
-        '`@speckit /batch --generate`\n\n' +
-        '💡 Para gerar agentes unificados (implementador + revisor por story):\n' +
-        '`@speckit /batch --generate --unified`\n',
+        '💡 **Próximo passo recomendado:** gere os agentes unificados para todas as specs válidas:\n' +
+        '`@speckit /batch --generate --unified`\n\n' +
+        '> Cada story recebe um agente `.agent.md` que cobre implementação e revisão no mesmo fluxo.\n' +
+        '> Para validar e gerar config de uma única spec ativa, use: `@speckit /validate`\n',
     );
 
     stream.markdown('\nAções rápidas:\n\n');
     emitChatQuickActionButton(
       stream,
-      '⚙️ Gerar Configuração do Lote',
-      '@speckit /batch --generate',
-    );
-    emitChatQuickActionButton(
-      stream,
-      '🤖 Gerar Lote Unificado',
+      '🤖 Gerar Lote Unificado (recomendado)',
       '@speckit /batch --generate --unified',
     );
+    emitChatQuickActionButton(stream, '📋 Validar Spec Ativa', '@speckit /validate');
 
     await emitCommandTelemetry({
       workspaceRoot,
@@ -377,7 +373,9 @@ export async function handleBatchCommand(
       `- 📄 ${totalFiles} arquivo(s) gerado(s) no total\n` +
       (failed.length > 0 ? `- ❌ ${failed.length} falha(s)\n` : '') +
       '\n⚠️ **Nota:** A última spec processada define o `copilot-instructions.md` ativo. ' +
-      'Use `/validate` em uma spec específica para ativá-la individualmente.\n',
+      'Use `/validate` em uma spec específica para ativá-la individualmente.\n\n' +
+      '> ⚠️ **Modo legado:** `/batch --generate` (sem `--unified`) gera configs separadas por spec e não cria agentes `.agent.md`.\n' +
+      '> O fluxo recomendado é `@speckit /batch --generate --unified`, que gera um agente unificado por story cobrindo implementação e revisão no mesmo contexto.\n',
   );
 }
 

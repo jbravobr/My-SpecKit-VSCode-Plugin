@@ -84,7 +84,9 @@ export async function handleGateCommand(
   if (!args || args === 'rules') {
     stream.markdown(renderRules());
     stream.markdown(
-      '### Comandos disponíveis agora (contextuais)\n' +
+      '> ℹ️ `/gate` é um comando informacional. Para ver o estado real das specs, use `@speckit /status`.\n' +
+        '> Para documentação completa, use `@speckit /help gate`.\n\n' +
+        '### Comandos disponíveis agora (contextuais)\n' +
         '- `@speckit /gate check gate <de> <para>` (validar transição de gate)\n' +
         '- `@speckit /gate check status <de> <para>` (validar transição de status)\n' +
         '- `@speckit /status` (ver situação atual das specs)\n\n' +
