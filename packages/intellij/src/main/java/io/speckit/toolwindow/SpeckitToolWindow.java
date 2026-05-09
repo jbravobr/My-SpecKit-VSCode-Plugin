@@ -110,6 +110,7 @@ public class SpeckitToolWindow {
     private final JButton          sendButton;
     private final JLabel           statusLabel;
     private final JButton          startServerBtn;
+    private final JButton          stopServerBtn;
     private final StatusDot        statusDot;
     private final JPanel           cmdPanel;
     private final JLabel           cmdToggleLabel;
@@ -167,13 +168,19 @@ public class SpeckitToolWindow {
         statusLabel.setForeground(C_SYSTEM_TEXT);
 
         startServerBtn = buildStartServerButton();
+        stopServerBtn  = buildStopServerButton();
+
+        JPanel serverBtns = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        serverBtns.setOpaque(false);
+        serverBtns.add(stopServerBtn);
+        serverBtns.add(startServerBtn);
 
         JPanel serverBar = new JPanel(new BorderLayout(6, 0));
         serverBar.setOpaque(false);
         serverBar.setBorder(JBUI.Borders.empty(3, 8, 3, 8));
-        serverBar.add(statusDot,     BorderLayout.WEST);
-        serverBar.add(statusLabel,   BorderLayout.CENTER);
-        serverBar.add(startServerBtn, BorderLayout.EAST);
+        serverBar.add(statusDot,   BorderLayout.WEST);
+        serverBar.add(statusLabel, BorderLayout.CENTER);
+        serverBar.add(serverBtns,  BorderLayout.EAST);
 
         // Header
         JPanel header = buildHeader();
@@ -452,6 +459,49 @@ public class SpeckitToolWindow {
         return btn;
     }
 
+    private JButton buildStopServerButton() {
+        JButton btn = new JButton("⏹ Stop") {
+            private boolean hovered = false;
+            private boolean pressed = false;
+            { addMouseListener(new MouseAdapter() {
+                @Override public void mouseEntered(MouseEvent e) { hovered = true;  repaint(); }
+                @Override public void mouseExited(MouseEvent e)  { hovered = false; pressed = false; repaint(); }
+                @Override public void mousePressed(MouseEvent e) { pressed = true;  repaint(); }
+                @Override public void mouseReleased(MouseEvent e){ pressed = false; repaint(); }
+            }); }
+            @Override protected void paintComponent(Graphics g) {
+                if (!isEnabled()) { super.paintComponent(g); return; }
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                int w = getWidth(), h = getHeight(), r = 8;
+                Color base = hovered ? C_RED.brighter() : C_RED;
+                if (!pressed) {
+                    g2.setColor(new Color(0, 0, 0, 45));
+                    g2.fillRoundRect(1, 3, w - 2, h - 1, r, r);
+                }
+                g2.setPaint(new GradientPaint(0, 0,
+                        pressed ? base : base.brighter(),
+                        0, h,
+                        pressed ? base.brighter() : base.darker()));
+                g2.fillRoundRect(0, 0, w, pressed ? h : h - 1, r, r);
+                g2.setColor(new Color(255, 255, 255, pressed ? 0 : 50));
+                g2.fillRoundRect(1, 1, w - 2, h / 2, r, r);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        btn.setFont(fontSmall().deriveFont(Font.BOLD));
+        btn.setForeground(Color.WHITE);
+        btn.setContentAreaFilled(false);
+        btn.setBorderPainted(false);
+        btn.setFocusPainted(false);
+        btn.setOpaque(false);
+        btn.setVisible(false);  // only shown when server is ONLINE
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btn.addActionListener(e -> handleStopServer());
+        return btn;
+    }
+
     // Command panel toggle
 
     private void toggleCommandPanel() {
@@ -636,7 +686,7 @@ public class SpeckitToolWindow {
         });
     }
 
-    private enum ServerStatus { ONLINE, OFFLINE, STARTING }
+    private enum ServerStatus { ONLINE, OFFLINE, STARTING, STOPPING }
 
     private void applyServerStatus(ServerStatus s) {
         switch (s) {
@@ -646,6 +696,9 @@ public class SpeckitToolWindow {
                 statusLabel.setForeground(C_GREEN);
                 startServerBtn.setEnabled(false);
                 startServerBtn.setVisible(false);
+                stopServerBtn.setText("⏹ Stop");
+                stopServerBtn.setEnabled(true);
+                stopServerBtn.setVisible(true);
                 break;
             case OFFLINE:
                 statusDot.setStatus(C_RED, false);
@@ -654,6 +707,7 @@ public class SpeckitToolWindow {
                 startServerBtn.setText("▶ Start Server");
                 startServerBtn.setEnabled(true);
                 startServerBtn.setVisible(true);
+                stopServerBtn.setVisible(false);
                 break;
             case STARTING:
                 statusDot.setStatus(C_AMBER, true);
@@ -662,6 +716,16 @@ public class SpeckitToolWindow {
                 startServerBtn.setText("⏳ Aguarde…");
                 startServerBtn.setEnabled(false);
                 startServerBtn.setVisible(true);
+                stopServerBtn.setVisible(false);
+                break;
+            case STOPPING:
+                statusDot.setStatus(C_AMBER, true);
+                statusLabel.setText("Encerrando Core Server…");
+                statusLabel.setForeground(C_AMBER);
+                startServerBtn.setVisible(false);
+                stopServerBtn.setText("⏳ Parando…");
+                stopServerBtn.setEnabled(false);
+                stopServerBtn.setVisible(true);
                 break;
         }
     }
@@ -675,7 +739,24 @@ public class SpeckitToolWindow {
             SwingUtilities.invokeLater(() -> {
                 applyServerStatus(up ? ServerStatus.ONLINE : ServerStatus.OFFLINE);
                 if (up) addSystemMessage("✅ Core Server iniciado com sucesso!");
-                else    addSystemMessage("❌ Falha ao iniciar. Verifique se Node.js está instalado\ne packages/core-server/dist/server.js existe.");
+                else    addSystemMessage("❌ Falha ao iniciar. Verifique se Node.js está instalado.");
+            });
+        });
+    }
+
+    private void handleStopServer() {
+        applyServerStatus(ServerStatus.STOPPING);
+        addSystemMessage("🛑 Encerrando Core Server…");
+        executor.submit(() -> {
+            CoreServerManager.getInstance().stop();
+            // Wait up to 3s for server to actually stop
+            for (int i = 0; i < 6; i++) {
+                try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+                if (!client.isHealthy()) break;
+            }
+            SwingUtilities.invokeLater(() -> {
+                applyServerStatus(ServerStatus.OFFLINE);
+                addSystemMessage("✅ Core Server encerrado.");
             });
         });
     }
