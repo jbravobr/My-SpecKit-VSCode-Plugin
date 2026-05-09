@@ -138,16 +138,16 @@ describe('handleBatchCommand', () => {
 
     await handleBatchCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
 
-    expect(stream.getAllMarkdown()).toContain('--generate');
+    expect(stream.getAllMarkdown()).toContain('--generate --unified');
     expect(stream.button).toHaveBeenCalledWith({
-      title: '⚙️ Gerar Configuração do Lote',
-      command: 'speckit.openChatWithQuery',
-      arguments: ['@speckit /batch --generate'],
-    });
-    expect(stream.button).toHaveBeenCalledWith({
-      title: '🤖 Gerar Lote Unificado',
+      title: '🤖 Gerar Lote Unificado (recomendado)',
       command: 'speckit.openChatWithQuery',
       arguments: ['@speckit /batch --generate --unified'],
+    });
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '📋 Validar Spec Ativa',
+      command: 'speckit.openChatWithQuery',
+      arguments: ['@speckit /validate'],
     });
   });
 

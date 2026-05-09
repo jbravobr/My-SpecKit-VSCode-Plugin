@@ -43,8 +43,11 @@ export async function handleAuditCommand(
       shown.join('\n') +
       '\n```\n',
   );
+  stream.markdown(
+    '\n> 💡 Para uma visão consolidada de audit + trace + log por sessão, use `@speckit /history`.\n',
+  );
   emitContextualCommands(stream, [
-    { command: '@speckit /history audit', description: 'abrir visão agregada de auditoria' },
+    { command: '@speckit /history audit', description: 'visão agregada de auditoria por sessão' },
     { command: '@speckit /trace list', description: 'correlacionar audit com rastreabilidade' },
   ]);
   emitQuickActions(stream, [

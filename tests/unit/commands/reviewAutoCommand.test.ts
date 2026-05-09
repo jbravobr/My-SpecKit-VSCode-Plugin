@@ -342,6 +342,52 @@ describe('handleReviewAutoCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
   });
 
+  it('applies --approved --auto transition when activeSpecPath points to a story in review status (batch unified flow)', async () => {
+    // Regression test: getActiveSpecPath used to filter only status=open, which meant
+    // stories in status=review (gate 3) were never returned as "active", causing the
+    // --approved transition to silently skip the metadata update.
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub({
+      activeSpecPath: 'C:/workspace/.speckit/STORY-001.md',
+    });
+
+    // Story is at gate 3 / status review — the state just before --approved
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyWithMeta(3, 'review'));
+
+    // Set up batch session consent required by --auto mode
+    const futureExpiry = new Date(Date.now() + 60 * 60_000).toISOString();
+    await fs.writeFile(
+      'C:/workspace/.speckit/governance/transition-state.json',
+      JSON.stringify({
+        version: 1,
+        intents: [],
+        batchSessionConsent: {
+          id: 'session-test-001',
+          createdAt: new Date().toISOString(),
+          expiresAt: futureExpiry,
+          note: 'test consent',
+        },
+      }),
+    );
+
+    await handleReviewAutoCommand(
+      createMockRequest('--approved --auto'),
+      stream,
+      token,
+      ws,
+      fs,
+      fakeGit(),
+    );
+
+    const storyContent = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
+    const output = stream.getAllMarkdown();
+
+    expect(output).toContain('Encerramento Orquestrado');
+    expect(storyContent).toContain('gate: 4');
+    expect(storyContent).toContain('status: done');
+  });
+
   it('offers quick action to confirm batch consent intent', async () => {
     const stream = createMockStream();
     const fs = new InMemoryFileSystem();
