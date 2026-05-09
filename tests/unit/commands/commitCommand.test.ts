@@ -15,6 +15,7 @@ function fakeGit(overrides: Partial<IGitOps> = {}): IGitOps {
   return {
     diff: async () => '',
     commit: async () => '[main abc1234] speckit: test\n 1 file changed, 2 insertions',
+    commitFile: async () => '',
     hasChanges: async () => true,
     isRepository: async () => true,
     init: async () => 'Initialized empty Git repository',

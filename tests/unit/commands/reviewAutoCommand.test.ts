@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { handleReviewAutoCommand } from '../../../src/participant/commands/reviewAutoCommand';
 import { IGitOps } from '../../../src/workflow/GitOperations';
 import {
@@ -19,6 +19,7 @@ function fakeGit(overrides: Partial<IGitOps> = {}): IGitOps {
   return {
     diff: async () => '',
     commit: async () => '',
+    commitFile: async () => '',
     hasChanges: async () => false,
     isRepository: async () => true,
     init: async () => '',
@@ -251,9 +252,9 @@ describe('handleReviewAutoCommand', () => {
     expect(storyContent).toContain('status: done');
     expect(auditContent).toContain('/review-auto --approved: ✅ Veredito APROVADO');
     expect(stream.button).toHaveBeenCalledWith({
-      title: '📦 Ver Status Completo (--all)',
+      title: '📦 Commitar Código Gerado',
       command: 'speckit.openChatWithQuery',
-      arguments: ['@speckit /status --all'],
+      arguments: ['@speckit /commit'],
     });
 
     const trace = JSON.parse(traceRaw as string) as {
@@ -386,6 +387,143 @@ describe('handleReviewAutoCommand', () => {
     expect(output).toContain('Encerramento Orquestrado');
     expect(storyContent).toContain('gate: 4');
     expect(storyContent).toContain('status: done');
+  });
+
+  it('auto-commits spec metadata after --approved --auto gate 3->4 transition', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub({
+      activeSpecPath: 'C:/workspace/.speckit/STORY-001.md',
+    });
+
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyWithMeta(3, 'review'));
+
+    const futureExpiry = new Date(Date.now() + 60 * 60_000).toISOString();
+    await fs.writeFile(
+      'C:/workspace/.speckit/governance/transition-state.json',
+      JSON.stringify({
+        version: 1,
+        intents: [],
+        batchSessionConsent: {
+          id: 'session-test-002',
+          createdAt: new Date().toISOString(),
+          expiresAt: futureExpiry,
+          note: 'test consent',
+        },
+      }),
+    );
+
+    const commitFileSpy = vi.fn().mockResolvedValue('');
+    await handleReviewAutoCommand(
+      createMockRequest('--approved --auto'),
+      stream,
+      token,
+      ws,
+      fs,
+      fakeGit({ commitFile: commitFileSpy }),
+    );
+
+    expect(commitFileSpy).toHaveBeenCalledOnce();
+    const [_cwd, filePath, message] = commitFileSpy.mock.calls[0];
+    expect(filePath).toContain('STORY-001.md');
+    expect(message).toContain('gate 3→4');
+    expect(message).toContain('done');
+  });
+
+  it('does not call commitFile when patch has no changes', async () => {
+    // If the story is already at gate 4/done, applyStoryTransition returns patch.changed=false
+    // and neither writeFile nor commitFile should be called.
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub({
+      activeSpecPath: 'C:/workspace/.speckit/STORY-001.md',
+    });
+
+    // Story already at gate 4/done — transition is a no-op
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyWithMeta(4, 'done'));
+
+    const futureExpiry = new Date(Date.now() + 60 * 60_000).toISOString();
+    await fs.writeFile(
+      'C:/workspace/.speckit/governance/transition-state.json',
+      JSON.stringify({
+        version: 1,
+        intents: [],
+        batchSessionConsent: {
+          id: 'session-test-003',
+          createdAt: new Date().toISOString(),
+          expiresAt: futureExpiry,
+          note: 'test consent',
+        },
+      }),
+    );
+
+    const commitFileSpy = vi.fn().mockResolvedValue('');
+    await handleReviewAutoCommand(
+      createMockRequest('--approved --auto'),
+      stream,
+      token,
+      ws,
+      fs,
+      fakeGit({ commitFile: commitFileSpy }),
+    );
+
+    // Gate 4 is blocked because gate must be 3 for --approved
+    // So commitFile should never be called
+    expect(commitFileSpy).not.toHaveBeenCalled();
+  });
+
+  it('gate 4 success message shows "Commitar Código Gerado" button and not manual git instructions', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub({
+      activeSpecPath: 'C:/workspace/.speckit/STORY-001.md',
+    });
+
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyWithMeta(3, 'review'));
+
+    const futureExpiry = new Date(Date.now() + 60 * 60_000).toISOString();
+    await fs.writeFile(
+      'C:/workspace/.speckit/governance/transition-state.json',
+      JSON.stringify({
+        version: 1,
+        intents: [],
+        batchSessionConsent: {
+          id: 'session-test-004',
+          createdAt: new Date().toISOString(),
+          expiresAt: futureExpiry,
+          note: 'test consent',
+        },
+      }),
+    );
+
+    await handleReviewAutoCommand(
+      createMockRequest('--approved --auto'),
+      stream,
+      token,
+      ws,
+      fs,
+      fakeGit(),
+    );
+
+    const output = stream.getAllMarkdown();
+
+    // New guided message
+    expect(output).toContain('Metadata commitado automaticamente');
+    expect(output).toContain('Clique em **Keep**');
+    expect(output).toContain('Commitar o código gerado');
+
+    // Old manual git instruction should be gone
+    expect(output).not.toContain('git add .speckit');
+    expect(output).not.toContain('git commit -m');
+
+    // Commit button should be present
+    expect(stream.button).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: '📦 Commitar Código Gerado',
+        command: 'speckit.openChatWithQuery',
+        arguments: ['@speckit /commit'],
+      }),
+    );
   });
 
   it('offers quick action to confirm batch consent intent', async () => {
