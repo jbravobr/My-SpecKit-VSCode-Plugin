@@ -1,0 +1,66 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.intellij' version '1.17.3'
+}
+
+group = 'io.speckit'
+version = '0.3.25'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+intellij {
+    version = '2024.1'
+    type = 'IC'
+    plugins = []
+    updateSinceUntilBuild = false
+}
+
+patchPluginXml {
+    version = '0.3.25'
+    sinceBuild = '241'
+    untilBuild = ''
+}
+
+compileJava {
+    sourceCompatibility = '17'
+    targetCompatibility = '17'
+    options.encoding = 'UTF-8'
+}
+
+// Ensure the bundled Core Server is up-to-date before building the plugin.
+// If npm / node are not on PATH (CI without Node), skip gracefully.
+task bundleCoreServer(type: Exec) {
+    workingDir "${rootDir}/../../"  // repo root
+    def isWindows = System.getProperty('os.name').toLowerCase().contains('win')
+    commandLine isWindows ? ['cmd', '/c', 'npm', 'run', 'bundle', '--prefix', 'packages/core-server']
+                          : ['npm', 'run', 'bundle', '--prefix', 'packages/core-server']
+    ignoreExitValue = true   // don't fail the build if Node not present
+    doLast {
+        def bundle = file("${rootDir}/src/main/resources/server/server.bundle.js")
+        def built  = file("${rootDir}/../../packages/core-server/dist/server.bundle.js")
+        if (built.exists()) {
+            bundle.parentFile.mkdirs()
+            built.withInputStream { ins -> bundle.bytes = ins.bytes }
+            println "[SpecKit] Core Server bundle copied (${bundle.length() / 1024} KB)"
+        } else {
+            println "[SpecKit] WARN: Core Server bundle not found — using existing resource if present."
+        }
+    }
+}
+
+// Wire it before processResources so the bundle is available when Gradle packages the JAR
+processResources.dependsOn bundleCoreServer
+
