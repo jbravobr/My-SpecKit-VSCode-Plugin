@@ -77,9 +77,10 @@ Só inicie o checklist após concluir os 4 passos acima.
 - [ ] Sem código morto ou debug statements
 
 ### Testes
-- [ ] Teste de regressão principal presente e passando
+- [ ] Teste de regressão principal presente e passando (falha sem o fix, passa com o fix)
 - [ ] 0 (zero) falhas (evidência: relatório da Sessão A)
-- [ ] Cobertura ≥ 80% nas linhas modificadas
+- [ ] CRAP ≤ 30 para toda função modificada com CC > 5 (bloqueante de gate)
+- [ ] Cobertura ≥ 80% nas linhas modificadas (relatório obrigatório)
 - [ ] Edge cases cobertos
 
 ### Segurança (verifique se o bug estava relacionado a)

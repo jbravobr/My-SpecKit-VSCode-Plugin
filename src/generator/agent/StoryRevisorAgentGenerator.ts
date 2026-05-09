@@ -151,7 +151,9 @@ ${criteria || '- [ ] (critérios não especificados)'}
 
 ### Testes
 - [ ] 0 (zero) falhas (evidência: relatório da Sessão A)
-- [ ] Cobertura ≥ 80% (relatório obrigatório)
+- [ ] Testes comportamentais presentes para cada critério de aceite — validam o **comportamento real**, não apenas a execução interna
+- [ ] CRAP ≤ 30 para todas as funções com complexidade ciclomática > 5 (bloqueante de gate)
+- [ ] Cobertura ≥ 80% (evidência de abrangência — relatório obrigatório)
 - [ ] Happy path coberto para cada critério de aceite
 - [ ] Edge cases cobertos (null, vazio, limites)
 - [ ] Error cases cobertos (not found, inválido, permissão)

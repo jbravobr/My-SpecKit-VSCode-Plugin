@@ -117,7 +117,7 @@ ANTES de iniciar o Gate 0, execute **obrigatoriamente**:
 function generateTransitionProtocol(storyId: string): string {
   return `## PROTOCOLO DE TRANSIÇÃO (Gate 2 → Gate 3)
 
-Ao concluir o Gate 2 com sucesso (0 falhas + cobertura ≥ 80%):
+Ao concluir o Gate 2 com sucesso (testes comportamentais passando + CRAP ≤ 30 + cobertura ≥ 80%):
 
 1. **Finalize commit local pendente do Gate 2 (obrigatório):**
    - Execute:

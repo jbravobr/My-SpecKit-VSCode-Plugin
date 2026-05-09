@@ -8,11 +8,58 @@ export function generateTestingStandards(story?: Story): string {
   return `---
 applyTo: "**"
 ---
-# Testing Standards — Qualidade e Cobertura Obrigatória
+# Testing Standards — Qualidade e Disciplina de Testes
+
+## Hierarquia de qualidade (ordem de prioridade inegociável)
+
+### PRIMÁRIO — Testes comportamentais
+- Testes validam **o que o sistema FAZ**, não como está implementado internamente
+- Cada critério de aceite da story deve ter ao menos um teste comportamental que o verifica diretamente
+- Um teste comportamental falha quando o sistema produz um resultado errado **para o usuário** — não quando uma implementação interna muda
+- Nunca substitua testes comportamentais por mocks de lógica de domínio
+
+### SECUNDÁRIO — CRAP Score (Change Risk Anti-Patterns)
+- CRAP é a métrica que valida se a cobertura tem valor real
+- **Fórmula:** \`CRAP(f) = comp²(f) × (1 − cov(f)/100)³ + comp(f)\`
+  - \`comp(f)\` = complexidade ciclomática (número de caminhos de decisão + 1)
+  - \`cov(f)\` = cobertura de teste em % (0–100)
+- **CRAP > 30 = bloqueante de gate** — função complexa com cobertura insuficiente
+- Referência: https://testing.googleblog.com/2011/02/this-code-is-crap.html
+
+#### Tabela de referência CRAP
+| Complexidade ciclomática | Cobertura mínima para CRAP ≤ 30 |
+|---|---|
+| 1–4 | 0% (CRAP naturalmente baixo) |
+| 5 | 57% |
+| 10 | 84% |
+| 15 | 90% |
+| 25 | 95% |
+| 50+ | **Impossível — refatoração obrigatória antes de testar** |
+
+#### Como calcular por stack
+- **TypeScript/JavaScript:** eslint rule \`complexity\` (estimar CC) + istanbul/c8 (cobertura)
+- **Java:** JaCoCo (cobertura) + PMD/SonarQube (CC)
+- **Python:** \`radon cc\` (CC) + \`pytest --cov\` (cobertura)
+- **C#:** \`dotnet-coverage\` + SonarQube / Visual Studio CC analyzer
+
+#### Protocolo quando CRAP > 30
+Quando detectar função com CRAP > 30, o agente deve:
+1. Identificar a função (nome + arquivo + linha)
+2. Estimar complexidade ciclomática (contar: \`if\`, \`else\`, \`for\`, \`while\`, \`case\`, \`&&\`, \`||\`, \`catch\` — cada um +1, base=1)
+3. Calcular a cobertura necessária para CRAP ≤ 30 usando a tabela acima
+4. Apresentar dois caminhos: (a) adicionar testes comportamentais suficientes OU (b) decompor a função
+5. Recomendar o caminho de menor custo dado o contexto
+
+### TERCIÁRIO — Cobertura ≥ 80% (como validação, não objetivo)
+- Cobertura é **subproduto** de bons testes comportamentais, nunca o objetivo em si
+- Uma cobertura de 90% com mocks de domínio é pior que 70% com testes comportamentais reais
+- Cobertura < 80% indica lacuna de testes — corrija com testes comportamentais, não com testes artificiais
 
 ## Regra absoluta de entrega
-- Uma story só pode ser marcada como CONCLUÍDA quando 100% dos testes passam
-- Cobertura mínima de 80% é condição sine qua non — não negocie isso
+- Uma story só pode ser marcada como CONCLUÍDA quando:
+  1. 100% dos testes passam
+  2. CRAP ≤ 30 para todas as funções com complexidade ciclomática > 5
+  3. Cobertura ≥ 80% como evidência de abrangência
 - Nunca declare uma implementação como pronta sem executar os testes e apresentar o resultado
 - Se qualquer teste falhar: corrija a implementação ou o teste antes de prosseguir
 
@@ -43,6 +90,8 @@ ${perfSection}
 - **"Build passou, então funciona"** — build com transpiladores (esbuild, swc, tsc emit) NÃO verifica tipos. Execute \`tsc --noEmit\` (TS), \`mypy\` (Python), \`dotnet build\` (C#) como gate separado
 - Testes que cobrem apenas o happy path — edge e error cases são obrigatórios
 - Testes sem assertivas (\`expect\`, \`assert\`, \`verify\`)
+- **Cobertura sem testes comportamentais** — mocks de domínio geram cobertura artificial que não valida comportamento real
+- **CRAP > 30** em qualquer função da lógica de negócio — função complexa com cobertura insuficiente é risco real de regressão
 - Mocks que ocultam comportamento real de lógica de domínio
 - \`skip\`, \`xtest\`, \`@Ignore\`, \`xit\` sem comentário explicando o motivo e issue de rastreamento
 - Cobertura abaixo de 80% — nenhuma exceção sem aprovação explícita do time

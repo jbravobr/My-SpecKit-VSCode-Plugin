@@ -27,8 +27,11 @@ applyTo: "**"
 
 ## Portão de entrega — inegociável
 - Uma story só pode ser declarada como CONCLUÍDA quando TODOS os testes passam
-- Cobertura mínima de 80% é requisito obrigatório para encerramento
+- **PRIMÁRIO:** Testes comportamentais passando — cada critério de aceite tem ao menos um teste que valida o comportamento real
+- **SECUNDÁRIO:** CRAP ≤ 30 para todas as funções com complexidade ciclomática > 5 (fórmula: \`comp²(f) × (1 − cov/100)³ + comp(f)\`)
+- **TERCIÁRIO:** Cobertura ≥ 80% como evidência de abrangência dos testes comportamentais
 - Nunca declare "pronto" sem apresentar o resultado da execução dos testes
 - Se qualquer teste falhar: corrija antes de prosseguir — não ignore, não pule
+- CRAP > 30 em qualquer função de lógica de negócio bloqueia o gate — apresente diagnóstico e caminho de resolução
 `;
 }

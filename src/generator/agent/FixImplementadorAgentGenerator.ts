@@ -105,9 +105,11 @@ git commit -m "fix(${fixId}): <descrição da correção>"
 
 ## Gate 2 — Testes de Regressão
 
-### Cobertura obrigatória
-- **Mínimo: 80%** nas linhas modificadas
-- O cenário que causou o bug deve ter um teste explícito
+### Cobertura e CRAP obrigatórios
+- **Mínimo: 80%** nas linhas modificadas (evidência de abrangência)
+- **CRAP ≤ 30** para toda função modificada com complexidade ciclomática > 5 — bloqueante de gate
+  - Fórmula: \`CRAP(f) = comp²(f) × (1 − cov/100)³ + comp(f)\`
+- O cenário que causou o bug deve ter um teste explícito (comportamental — falha sem o fix, passa com o fix)
 
 ### Testes obrigatórios
 1. **Teste de regressão principal** — o cenário exato que causava o bug deve falhar sem o fix e passar com o fix

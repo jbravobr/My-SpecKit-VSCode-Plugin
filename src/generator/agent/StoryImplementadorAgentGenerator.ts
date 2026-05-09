@@ -311,8 +311,8 @@ git commit -m "feat(${storyId}): TASK-N — <descrição>"
 Só avance para a próxima tarefa após o commit ser concluído sem erros.
 
 **Não avance para o Gate 2 sem:**
-- [ ] Todos os testes passando
-- [ ] Cobertura ≥ 80%
+- [ ] Todos os testes pré-existentes passando
+- [ ] Implementação compilando sem erros
 
 ---
 
@@ -331,9 +331,23 @@ Formato obrigatório:
 [ ] TEST-2: ...
 \`\`\`
 
-### Cobertura obrigatória
-- **Mínimo: 80%** — condição obrigatória para encerramento da story
-- Meta ideal: ≥ 90% para lógica de domínio e casos de uso
+### Hierarquia de qualidade de testes (siga nesta ordem)
+
+**PRIMÁRIO — Testes comportamentais:** cada critério de aceite deve ter ao menos um teste que valida o comportamento do sistema do ponto de vista do usuário. Mocks de lógica de domínio não contam.
+
+**SECUNDÁRIO — CRAP Score:** para toda função com complexidade ciclomática > 5, calcule:
+\`\`\`
+CRAP(f) = comp²(f) × (1 − cov(f)/100)³ + comp(f)
+\`\`\`
+- CRAP > 30 = **bloqueante de gate** — adicione testes ou decomponha a função
+- Estime CC contando: \`if\`, \`else\`, \`for\`, \`while\`, \`case\`, \`&&\`, \`||\`, \`catch\` — cada um +1, base=1
+- Referência: https://testing.googleblog.com/2011/02/this-code-is-crap.html
+
+**TERCIÁRIO — Cobertura ≥ 80%:** cobertura é subproduto de bons testes comportamentais — apresente o relatório como evidência de abrangência
+
+### Cobertura e CRAP obrigatórios
+- **Meta:** cobertura ≥ 80% como evidência — mas a prioridade é que os testes testem comportamento real
+- **Condição de gate:** CRAP ≤ 30 para todas as funções com CC > 5
 - Apresente o relatório de cobertura ao final deste gate
 
 ### Cenários obrigatórios
