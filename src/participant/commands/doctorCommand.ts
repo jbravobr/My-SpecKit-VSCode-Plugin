@@ -4,7 +4,7 @@ import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
-import { requireWorkspace } from './CommandHelpers';
+import { emitContextualCommands, emitQuickActions, requireWorkspace } from './CommandHelpers';
 
 interface DiagResult {
   label: string;
@@ -65,4 +65,13 @@ export async function handleDoctorCommand(
       `| Status | Item |\n|--------|------|\n${lines.join('\n')}\n\n` +
       `**Resultado:** ${healthy}/${total} verificações OK\n`,
   );
+  emitContextualCommands(stream, [
+    { command: '@speckit /init', description: 'inicializar e consolidar estrutura .speckit' },
+    { command: '@speckit /status', description: 'inspecionar stories/fixes detectados' },
+    { command: '@speckit /help', description: 'consultar comandos para corrigir gaps' },
+  ]);
+  emitQuickActions(stream, [
+    { title: '🚀 Executar Inicialização (/init)', query: '@speckit /init' },
+    { title: '📊 Ver Status das Specs', query: '@speckit /status' },
+  ]);
 }

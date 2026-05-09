@@ -11,7 +11,12 @@ import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { createCorrelationId } from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
-import { handleCommandError, requireWorkspace } from './CommandHelpers';
+import {
+  emitContextualCommands,
+  emitQuickActions,
+  handleCommandError,
+  requireWorkspace,
+} from './CommandHelpers';
 
 export async function handleNewCommand(
   _request: vscode.ChatRequest,
@@ -75,9 +80,10 @@ export async function handleNewCommand(
       : '';
 
   stream.markdown(
-    `✅ História criada: \`.speckit/${fileName}\`\n${defaultsNote}\n` +
+    `## ✅ História criada\n\n` +
+      `Arquivo: \`.speckit/${fileName}\`\n${defaultsNote}\n` +
       'Preencha todas as seções marcadas com `<!-- TODO -->`. Quando terminar, use `/validate` para verificar completude.\n\n' +
-      '**Seções a preencher:**\n' +
+      '### Seções obrigatórias\n' +
       '- Requisito de Negócio\n' +
       '- Especificação Funcional (User Stories + Critérios de Aceite)\n' +
       '- Especificação Não-Funcional\n' +
@@ -85,4 +91,13 @@ export async function handleNewCommand(
       '- DoR (Definition of Ready)\n' +
       '- DoD (Definition of Done)\n',
   );
+  emitContextualCommands(stream, [
+    { command: '@speckit /validate', description: 'validar completude da story ativa' },
+    { command: '@speckit /status', description: 'listar specs abertas e estado atual' },
+    { command: '@speckit /help', description: 'abrir referência de comandos do participant' },
+  ]);
+  emitQuickActions(stream, [
+    { title: '✅ Validar Story Ativa', query: '@speckit /validate' },
+    { title: '📊 Ver Status das Specs', query: '@speckit /status' },
+  ]);
 }

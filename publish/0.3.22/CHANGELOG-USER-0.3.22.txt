@@ -1,0 +1,35 @@
+SpecKit — Novidades para usuários — 0.3.22
+==========================================
+Data: 08/05/2026
+
+Resumo
+------
+O modo unificado do batch agora permite gerar o agente de implementação/revisão de apenas uma story específica, sem precisar regenerar todo o lote.
+
+Novas features
+--------------
+- Novo parâmetro no batch unificado: `--story <id>`.
+- Comando suportado: `@speckit /batch --generate --unified --story <id>`.
+- Geração focada apenas na story selecionada (quando válida e ativa).
+
+Melhorias de experiência
+------------------------
+- Retomada mais rápida de stories reabertas que ficaram fora do último batch.
+- Menos ruído no workspace ao evitar recriação de agentes de stories não relacionadas.
+- Mensagens de uso orientadas quando `--story` é usado de forma inválida.
+
+Correções e segurança de release
+--------------------------------
+- Prevenção de execução ambígua com validação de combinação de flags.
+- Rastreabilidade com comando efetivo incluindo `--story <id>`.
+- Mantidos os mesmos guardrails de validação antes da geração.
+
+Como usar rapidamente
+---------------------
+1. Reabra a story (status não terminal) no metadata.
+2. Execute `@speckit /batch --generate --unified --story <id>`.
+3. Abra o agente `speckit-story-<id>` gerado e siga o fluxo normal.
+
+Artefato
+--------
+- publish/0.3.22/vscode-plugin-speckit-0.3.22.vsix

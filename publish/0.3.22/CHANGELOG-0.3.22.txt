@@ -1,0 +1,43 @@
+SpecKit — Changelog 0.3.22
+===========================
+Data: 08/05/2026
+Branch base: feat/participant-chat-renderer-unification
+
+PATCH — Filtro de story no batch unificado
+------------------------------------------
+Esta release adiciona geração seletiva de agente unificado por ID de story no comando `/batch --generate --unified`, resolvendo o cenário de story reaberta que ficou fora de uma execução em lote anterior.
+
+Resumo da release
+-----------------
+O fluxo de batch unificado agora permite filtrar uma única story via parâmetro explícito, evitando regeneração desnecessária de todo o lote quando o objetivo é retomar somente uma story específica.
+
+Mudanças técnicas
+-----------------
+- Inclusão do parse e validação da flag `--story <id>` em `batchCommand`.
+- Restrição de uso da flag para o modo `--generate --unified`.
+- Filtro do conjunto de specs processadas para apenas a story alvo quando informada.
+- Ajuste de telemetria/rastreabilidade para registrar o comando efetivo com `--story <id>`.
+- Novos cenários unitários cobrindo erro de uso, restrição de combinação e geração seletiva por ID.
+
+Documentação
+------------
+- README atualizado com o novo uso: `@speckit /batch --generate --unified --story <id>`.
+- Regra de filtro por story documentada na seção de modo unificado do `/batch`.
+
+Testes adicionados
+------------------
+- `tests/unit/commands/batchCommand.test.ts`:
+  - validação de `--story` sem valor;
+  - validação de `--story` fora de `--generate --unified`;
+  - geração de agente unificado somente para a story selecionada.
+
+Validação executada antes do release
+------------------------------------
+- npx vitest run tests/unit/commands/batchCommand.test.ts -> 19/19 passando
+- npx tsc --noEmit -> 0 erros
+- npm run lint -> concluído sem erros
+- npm run package -> concluído
+
+Artefato gerado
+---------------
+- publish/0.3.22/vscode-plugin-speckit-0.3.22.vsix

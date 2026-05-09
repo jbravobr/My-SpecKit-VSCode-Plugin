@@ -73,6 +73,7 @@ describe('handleBatchCommand', () => {
     expect(output).toContain('Parâmetro(s) inválido(s)');
     expect(output).toContain('--generate');
     expect(output).toContain('--unified');
+    expect(output).toContain('--story <id>');
   });
 
   it('validates all specs in parallel and shows summary', async () => {
@@ -228,6 +229,38 @@ describe('handleBatchCommand', () => {
   });
 
   describe('--unified flag', () => {
+    it('requires value when --story is provided without id', async () => {
+      const fs = seedFs([{ fileName: 'STORY-001.md', content: completeStoryMd }]);
+      const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+      const stream = createMockStream();
+
+      await handleBatchCommand(
+        createMockRequest('--generate --unified --story'),
+        stream,
+        createMockToken(),
+        fs,
+        workspace,
+      );
+
+      expect(stream.getAllMarkdown()).toContain('Use `--story <id>`');
+    });
+
+    it('allows --story only with --generate --unified', async () => {
+      const fs = seedFs([{ fileName: 'STORY-001.md', content: completeStoryMd }]);
+      const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+      const stream = createMockStream();
+
+      await handleBatchCommand(
+        createMockRequest('--story 001'),
+        stream,
+        createMockToken(),
+        fs,
+        workspace,
+      );
+
+      expect(stream.getAllMarkdown()).toContain('só pode ser usada com `--generate --unified`');
+    });
+
     it('shows hint for --unified when only --generate is used', async () => {
       const fs = seedFs([{ fileName: 'STORY-001.md', content: completeStoryMd }]);
       const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
@@ -269,6 +302,39 @@ describe('handleBatchCommand', () => {
       const sessionContent = fs.contentFor('session-');
       expect(sessionContent).toContain('LLMResponseReceived: true');
       expect(sessionContent).not.toContain('LLMResponseReceived: false');
+    });
+
+    it('generates unified agent for only the selected story id', async () => {
+      const story002Md = completeStoryMd
+        .replace('id: 001', 'id: 002')
+        .replace('História 001', 'História 002');
+      const fs = seedFs([
+        { fileName: 'STORY-001.md', content: completeStoryMd },
+        { fileName: 'STORY-002.md', content: story002Md },
+      ]);
+      const workspace = new WorkspaceStub({
+        storyFiles: ['STORY-001.md', 'STORY-002.md'],
+        fixFiles: [],
+      });
+      const stream = createMockStream();
+
+      await handleBatchCommand(
+        createMockRequest('--generate --unified --story 002'),
+        stream,
+        createMockToken(),
+        fs,
+        workspace,
+      );
+
+      const output = stream.getAllMarkdown();
+      expect(output).toContain('Filtro aplicado');
+      expect(output).toContain('`002`');
+      expect(fs.hasFile('speckit-story-002.agent.md')).toBe(true);
+      expect(fs.hasFile('speckit-story-001.agent.md')).toBe(false);
+
+      const traceRaw = fs.contentFor('traceability/002.json');
+      expect(traceRaw).toBeDefined();
+      expect(traceRaw as string).toContain('/batch --generate --unified --story 002');
     });
 
     it('records validation and unified generation events in traceability with effective command', async () => {

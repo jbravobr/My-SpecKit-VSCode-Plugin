@@ -6,7 +6,7 @@ import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { AuditLogger } from '../../workflow/AuditLogger';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
-import { requireWorkspace } from './CommandHelpers';
+import { emitContextualCommands, emitQuickActions, requireWorkspace } from './CommandHelpers';
 
 type HistorySource = 'audit' | 'trace' | 'log';
 type HistoryFilter = HistorySource | 'all';
@@ -74,6 +74,7 @@ export async function handleHistoryCommand(
   const filtered = filter === 'all' ? all : all.filter((event) => event.source === filter);
   if (filtered.length === 0) {
     stream.markdown('🕘 Nenhum evento de history encontrado para o filtro informado.\n');
+    emitQuickActions(stream, [{ title: '📋 Ver Audit Log', query: '@speckit /audit' }]);
     return;
   }
 
@@ -81,6 +82,9 @@ export async function handleHistoryCommand(
     const summary = emitSessionSummary(stream, filtered, limit);
     if (summary.length === 0) {
       stream.markdown('🕘 Nenhuma sessão canônica encontrada para o filtro informado.\n');
+      emitQuickActions(stream, [
+        { title: '🕘 Ver Eventos de History', query: '@speckit /history' },
+      ]);
       return;
     }
 
@@ -88,6 +92,10 @@ export async function handleHistoryCommand(
       'Use `@speckit /history session "<alias>"` para expandir uma sessão específica.\n' +
         'Exemplo: `@speckit /history session implementador trace 30`.\n',
     );
+    emitQuickActions(stream, [
+      { title: '🕘 Ver Eventos (modo padrão)', query: '@speckit /history' },
+      { title: '📋 Filtrar Audit', query: '@speckit /history audit 50' },
+    ]);
     return;
   }
 
@@ -100,6 +108,9 @@ export async function handleHistoryCommand(
           'Exemplo: `@speckit /history session implementador`\n\n',
       );
       emitSessionSummary(stream, filtered, DEFAULT_SESSION_SUMMARY_LIMIT);
+      emitQuickActions(stream, [
+        { title: '🕘 Listar Sessões', query: '@speckit /history sessions 8' },
+      ]);
       return;
     }
 
@@ -108,6 +119,9 @@ export async function handleHistoryCommand(
         `⚠️ Nenhuma sessão canônica encontrada para \`${escapeCell(selection.query)}\`.\n\n`,
       );
       emitSessionSummary(stream, filtered, DEFAULT_SESSION_SUMMARY_LIMIT);
+      emitQuickActions(stream, [
+        { title: '🕘 Listar Sessões', query: '@speckit /history sessions 8' },
+      ]);
       return;
     }
 
@@ -119,6 +133,9 @@ export async function handleHistoryCommand(
         stream.markdown(`- ${escapeCell(alias)}\n`);
       }
       stream.markdown('\n');
+      emitQuickActions(stream, [
+        { title: '🕘 Listar Sessões', query: '@speckit /history sessions 8' },
+      ]);
       return;
     }
 
@@ -148,6 +165,13 @@ export async function handleHistoryCommand(
     stream.markdown(
       '\nUso: `@speckit /history session "<alias>"`, `@speckit /history session implementador trace 30`.\n',
     );
+    emitContextualCommands(stream, [
+      { command: '@speckit /history sessions 8', description: 'listar sessões canônicas recentes' },
+      { command: '@speckit /history audit 50', description: 'focar em eventos de auditoria' },
+    ]);
+    emitQuickActions(stream, [
+      { title: '🕘 Listar Sessões', query: '@speckit /history sessions 8' },
+    ]);
     return;
   }
 
@@ -172,6 +196,15 @@ export async function handleHistoryCommand(
   stream.markdown(
     '\nUso: `@speckit /history`, `@speckit /history audit`, `@speckit /history trace 50`, `@speckit /history log 100`, `@speckit /history sessions 8`, `@speckit /history session implementador`.\n',
   );
+  emitContextualCommands(stream, [
+    { command: '@speckit /history sessions 8', description: 'agrupar por sessão canônica' },
+    { command: '@speckit /history audit 50', description: 'focar nos eventos de audit' },
+    { command: '@speckit /history trace 50', description: 'focar nas trilhas de trace' },
+  ]);
+  emitQuickActions(stream, [
+    { title: '🕘 Agrupar por Sessões', query: '@speckit /history sessions 8' },
+    { title: '📋 Filtrar Audit', query: '@speckit /history audit 50' },
+  ]);
 }
 
 function parseHistoryArgs(raw: string): HistoryArgs {

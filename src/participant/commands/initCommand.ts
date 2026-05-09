@@ -9,7 +9,7 @@ import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { createCorrelationId } from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
-import { requireWorkspace } from './CommandHelpers';
+import { emitContextualCommands, emitQuickActions, requireWorkspace } from './CommandHelpers';
 
 export async function handleInitCommand(
   _request: vscode.ChatRequest,
@@ -55,10 +55,19 @@ export async function handleInitCommand(
 
   if (toMove.length === 0) {
     stream.markdown(
-      `✅ Workspace inicializado.\n\n` +
+      `## ✅ Workspace inicializado\n\n` +
         `📁 \`.speckit/\` — ${dirStatus}\n` +
         `📄 Nenhum arquivo de estória encontrado fora de \`.speckit/\`.\n`,
     );
+    emitContextualCommands(stream, [
+      { command: '@speckit /new', description: 'criar uma nova story no template padrão' },
+      { command: '@speckit /fix', description: 'criar um novo fix no template padrão' },
+      { command: '@speckit /status', description: 'validar estado atual das specs' },
+    ]);
+    emitQuickActions(stream, [
+      { title: '📝 Criar Nova Story', query: '@speckit /new' },
+      { title: '📊 Ver Status das Specs', query: '@speckit /status' },
+    ]);
     await emitCommandTelemetry({
       ...telemetryBase,
       command: '/init',
@@ -109,6 +118,15 @@ export async function handleInitCommand(
   }
 
   stream.markdown(report);
+  emitContextualCommands(stream, [
+    { command: '@speckit /status --all', description: 'inspecionar specs após consolidação' },
+    { command: '@speckit /validate', description: 'validar a spec ativa após ajustes' },
+    { command: '@speckit /trace', description: 'verificar rastreabilidade da spec ativa' },
+  ]);
+  emitQuickActions(stream, [
+    { title: '📦 Ver Status Completo (--all)', query: '@speckit /status --all' },
+    { title: '✅ Validar Spec Ativa', query: '@speckit /validate' },
+  ]);
 
   await emitCommandTelemetry({
     ...telemetryBase,

@@ -155,6 +155,16 @@ Ambos os caminhos convergem para o mesmo `.speckit/STORY-XXX.md` ou `FIX-XXX.md`
 
 ## Comandos
 
+### Padrão de resposta unificado no chat
+
+Os comandos do participant seguem um padrão unificado de resposta:
+
+- bloco principal em Markdown (resultado, contexto e orientação),
+- seção **Comandos disponíveis agora (contextuais)** quando aplicável,
+- quick actions via botão (`stream.button`) com `speckit.openChatWithQuery`.
+
+Isso vale também para fallback/default do participant, reduzindo respostas “sem próximo passo” e melhorando a navegação entre fluxos no chat.
+
 ### `@speckit /draft`
 
 Converte texto livre em um prompt de elicitação que guia o Copilot a entrevistar você e montar a spec completa — Story ou Fix — sem que você precise conhecer os campos obrigatórios de antemão.
@@ -829,6 +839,7 @@ Processa **todas** as specs em `.speckit/` em lote — validação paralela + ge
 @speckit /batch                        → Valida todas as specs e mostra resumo
 @speckit /batch --generate             → Valida + gera config Copilot para cada spec válida
 @speckit /batch --generate --unified   → Gera agentes unificados (implementador + revisor por story)
+@speckit /batch --generate --unified --story <id> → Gera agente unificado apenas da story informada
 @speckit /batch-generate               → Atalho para /batch --generate
 @speckit /batch-unified                → Atalho para /batch --generate --unified
 ```
@@ -867,6 +878,7 @@ Gera um **agente unificado por story** — cada agente contém o protocolo compl
 5. **Execução imediata da revisão** — após o handoff, o próprio agente deve acionar `@speckit /review-auto --auto` e executar o checklist completo do Gate 3 no mesmo fluxo (sem aguardar novo comando do usuário), emitindo veredito
 6. **Handoff explícito** — a transição Gate 2 → Gate 3 deve emitir no chat o bloco de handoff (`IMPLEMENTADOR → REVISOR`) com gate/status atualizados
 7. **Outcomes explícitos no chat** — após o veredito, o agente deve executar `@speckit /review-auto --changes-requested --auto` (Gate 3 → 2) ou `@speckit /review-auto --approved --auto` (Gate 3 → 4)
+8. **Filtro por story** — use `--story <id>` em conjunto com `--generate --unified` para gerar somente o agente da story reaberta/selecionada
 
 > Referências narrativas a outras stories ou fixes dentro do corpo da história não entram na análise de dependências. Para bloquear uma story, declare explicitamente o ID no campo `depends-on` do metadata.
 

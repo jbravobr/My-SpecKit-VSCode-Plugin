@@ -11,7 +11,7 @@ import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { gitOps, IGitOps } from '../../workflow/GitOperations';
 import { createCorrelationId } from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
-import { requireWorkspace } from './CommandHelpers';
+import { emitContextualCommands, emitQuickActions, requireWorkspace } from './CommandHelpers';
 
 interface ActiveSpecCommitContext {
   specType?: 'story' | 'fix';
@@ -98,6 +98,14 @@ export async function handleCommitCommand(
         '❌ Forneça uma mensagem de commit.\n\n' +
           '**Exemplo:** `@speckit /commit refactor: extrair validação de gate`\n',
       );
+      emitContextualCommands(stream, [
+        { command: '@speckit /diff', description: 'inspecionar alterações pendentes' },
+        {
+          command: '@speckit /commit feat: descrição da mudança',
+          description: 'informar mensagem manual',
+        },
+      ]);
+      emitQuickActions(stream, [{ title: '🔎 Ver Diff Atual', query: '@speckit /diff' }]);
       return;
     }
 
@@ -110,6 +118,7 @@ export async function handleCommitCommand(
     });
 
     stream.markdown(`ℹ️ Mensagem não informada. Usando padrão automático: \`${message}\`.\n\n`);
+    emitQuickActions(stream, [{ title: '🔎 Ver Diff Atual', query: '@speckit /diff' }]);
   }
 
   try {
@@ -128,6 +137,7 @@ export async function handleCommitCommand(
       });
 
       stream.markdown('✅ Nada para commitar — working tree limpa.\n');
+      emitQuickActions(stream, [{ title: '📊 Ver Status das Specs', query: '@speckit /status' }]);
       return;
     }
 
@@ -146,7 +156,15 @@ export async function handleCommitCommand(
       },
     });
 
-    stream.markdown(`✅ **Commit realizado:**\n\n\`\`\`\n${output.trim()}\n\`\`\`\n`);
+    stream.markdown(`## ✅ Commit realizado\n\n\`\`\`\n${output.trim()}\n\`\`\`\n`);
+    emitContextualCommands(stream, [
+      { command: '@speckit /status --all', description: 'validar estágio atual das specs' },
+      { command: '@speckit /trace', description: 'inspecionar rastreabilidade após commit' },
+    ]);
+    emitQuickActions(stream, [
+      { title: '📦 Ver Status Completo (--all)', query: '@speckit /status --all' },
+      { title: '🔗 Ver Trace', query: '@speckit /trace' },
+    ]);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
 
@@ -158,5 +176,10 @@ export async function handleCommitCommand(
     });
 
     stream.markdown(`❌ **Erro ao executar git commit:** ${msg}\n`);
+    emitContextualCommands(stream, [
+      { command: '@speckit /diff --full', description: 'inspecionar detalhes do erro de commit' },
+      { command: '@speckit /doctor', description: 'diagnosticar ambiente do workspace' },
+    ]);
+    emitQuickActions(stream, [{ title: '🔎 Ver Diff Completo', query: '@speckit /diff --full' }]);
   }
 }

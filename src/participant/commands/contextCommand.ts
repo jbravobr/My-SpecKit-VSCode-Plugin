@@ -4,7 +4,7 @@ import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { ContextManager } from '../../workflow/ContextManager';
-import { requireWorkspace } from './CommandHelpers';
+import { emitContextualCommands, emitQuickActions, requireWorkspace } from './CommandHelpers';
 
 export async function handleContextCommand(
   request: vscode.ChatRequest,
@@ -26,13 +26,26 @@ export async function handleContextCommand(
         '📂 Nenhum arquivo de contexto adicionado.\n\n' +
           '**Uso:** `@speckit /context add <caminho-relativo>`\n',
       );
+      emitContextualCommands(stream, [
+        {
+          command: '@speckit /context add src/caminho/arquivo.ts',
+          description: 'adicionar primeiro arquivo ao contexto',
+        },
+        { command: '@speckit /context', description: 'relistar contexto ativo' },
+      ]);
+      emitQuickActions(stream, [{ title: '📂 Relistar Contexto', query: '@speckit /context' }]);
       return;
     }
     stream.markdown(
-      `**📂 Contexto ativo** — ${files.length} arquivo(s)\n\n` +
+      `## 📂 Contexto ativo\n\n${files.length} arquivo(s) selecionados.\n\n` +
         files.map((f) => `- \`${f}\``).join('\n') +
         '\n',
     );
+    emitContextualCommands(stream, [
+      { command: '@speckit /context remove <caminho>', description: 'remover arquivo específico' },
+      { command: '@speckit /context clear', description: 'limpar contexto por completo' },
+    ]);
+    emitQuickActions(stream, [{ title: '🧹 Limpar Contexto', query: '@speckit /context clear' }]);
     return;
   }
 
@@ -45,23 +58,28 @@ export async function handleContextCommand(
       stream.markdown(
         '❌ Forneça o caminho do arquivo.\n**Exemplo:** `@speckit /context add src/auth/service.ts`\n',
       );
+      emitQuickActions(stream, [{ title: '📂 Ver Contexto Atual', query: '@speckit /context' }]);
       return;
     }
     const result = await cm.add(filePath);
     switch (result) {
       case 'added':
         stream.markdown(`✅ Adicionado: \`${filePath}\`\n`);
+        emitQuickActions(stream, [{ title: '📂 Ver Contexto Atual', query: '@speckit /context' }]);
         return;
       case 'already':
         stream.markdown(`ℹ️ Já está no contexto: \`${filePath}\`\n`);
+        emitQuickActions(stream, [{ title: '📂 Ver Contexto Atual', query: '@speckit /context' }]);
         return;
       case 'outside':
         stream.markdown(
           '❌ Caminho inválido — não é permitido referenciar arquivos fora do workspace.\n',
         );
+        emitQuickActions(stream, [{ title: '📘 Ajuda de Contexto', query: '@speckit /help' }]);
         return;
       case 'not-found':
         stream.markdown(`❌ Arquivo não encontrado: \`${filePath}\`\n`);
+        emitQuickActions(stream, [{ title: '📂 Ver Contexto Atual', query: '@speckit /context' }]);
         return;
     }
   }
@@ -69,13 +87,16 @@ export async function handleContextCommand(
   if (action === 'remove') {
     if (!filePath) {
       stream.markdown('❌ Forneça o caminho do arquivo a remover.\n');
+      emitQuickActions(stream, [{ title: '📂 Ver Contexto Atual', query: '@speckit /context' }]);
       return;
     }
     const removed = await cm.remove(filePath);
     if (removed) {
       stream.markdown(`✅ Removido: \`${filePath}\`\n`);
+      emitQuickActions(stream, [{ title: '📂 Ver Contexto Atual', query: '@speckit /context' }]);
     } else {
       stream.markdown(`⚠️ Não encontrado no contexto: \`${filePath}\`\n`);
+      emitQuickActions(stream, [{ title: '📂 Ver Contexto Atual', query: '@speckit /context' }]);
     }
     return;
   }
@@ -83,6 +104,7 @@ export async function handleContextCommand(
   if (action === 'clear') {
     await cm.clear();
     stream.markdown('✅ Contexto limpo.\n');
+    emitQuickActions(stream, [{ title: '📂 Ver Contexto Atual', query: '@speckit /context' }]);
     return;
   }
 
@@ -94,4 +116,5 @@ export async function handleContextCommand(
       '- `@speckit /context remove <caminho>` — Remover arquivo\n' +
       '- `@speckit /context clear` — Limpar tudo\n',
   );
+  emitQuickActions(stream, [{ title: '📘 Abrir Ajuda', query: '@speckit /help' }]);
 }
