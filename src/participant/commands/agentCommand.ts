@@ -23,6 +23,7 @@ import {
   isValidAgentMode,
   setActiveAgentMode,
 } from '../AgentMode';
+import { emitContextualCommands, emitQuickActions } from './CommandHelpers';
 
 function readFlagValue(tokens: string[], flag: string): string | undefined {
   const normalized = flag.toLowerCase();
@@ -66,11 +67,15 @@ export async function handleAgentCommand(
         AGENT_MODES.map((m) => `- \`${m}\` — ${getAgentModeLabel(m)}`).join('\n') +
         '\n\n**Uso:** `@speckit /agent debugger`\n',
     );
+    emitQuickActions(stream, [
+      { title: '🔁 Trocar para debugger', query: '@speckit /agent debugger' },
+    ]);
     return;
   }
 
   if (tokens.includes('--confirm') && !confirmIntentId) {
     stream.markdown('❌ Use `--confirm <intent-id>` para confirmar uma troca de modo pendente.\n');
+    emitQuickActions(stream, [{ title: '📘 Abrir Ajuda', query: '@speckit /help' }]);
     return;
   }
 
@@ -78,6 +83,7 @@ export async function handleAgentCommand(
     stream.markdown(
       '❌ Informe um modo alvo ou confirme um intent pendente com `--confirm <intent-id>`.\n',
     );
+    emitQuickActions(stream, [{ title: '📘 Ver Modos Disponíveis', query: '@speckit /agent' }]);
     return;
   }
 
@@ -88,6 +94,7 @@ export async function handleAgentCommand(
   if (confirmIntentId) {
     if (!workspaceRoot) {
       stream.markdown('❌ Nenhum workspace aberto para confirmar troca de modo.');
+      emitQuickActions(stream, [{ title: '🩺 Executar Doctor', query: '@speckit /doctor' }]);
       return;
     }
 
@@ -115,6 +122,9 @@ export async function handleAgentCommand(
       stream.markdown(
         `❌ Intent-ID inválido ou expirado: \`${confirmIntentId}\`. Gere nova proposta com \`@speckit /agent <modo>\`.\n`,
       );
+      emitQuickActions(stream, [
+        { title: '🔁 Gerar Nova Proposta', query: '@speckit /agent debugger' },
+      ]);
       return;
     }
 
@@ -123,6 +133,9 @@ export async function handleAgentCommand(
       stream.markdown(
         '❌ Intent pendente possui modo inválido. Gere nova proposta de troca de modo.\n',
       );
+      emitQuickActions(stream, [
+        { title: '🔁 Gerar Nova Proposta', query: '@speckit /agent debugger' },
+      ]);
       return;
     }
 
@@ -130,6 +143,7 @@ export async function handleAgentCommand(
       stream.markdown(
         `❌ O modo informado (\`${modeToken}\`) não corresponde ao intent confirmado (\`${targetMode}\`).\n`,
       );
+      emitQuickActions(stream, [{ title: '📘 Ver Modos Disponíveis', query: '@speckit /agent' }]);
       return;
     }
 
@@ -162,6 +176,11 @@ export async function handleAgentCommand(
         `- Intent-ID: \`${intent.id}\`\n\n` +
         `---\n\n${prompt}\n`,
     );
+    emitContextualCommands(stream, [
+      { command: '@speckit /status', description: 'inspecionar estado atual das specs' },
+      { command: '@speckit /help', description: 'consultar comandos conforme modo ativo' },
+    ]);
+    emitQuickActions(stream, [{ title: '📊 Ver Status das Specs', query: '@speckit /status' }]);
     return;
   }
 
@@ -172,6 +191,7 @@ export async function handleAgentCommand(
         AGENT_MODES.map((m) => `- \`${m}\` — ${getAgentModeLabel(m)}`).join('\n') +
         '\n',
     );
+    emitQuickActions(stream, [{ title: '📘 Ver Modos Disponíveis', query: '@speckit /agent' }]);
     return;
   }
 
@@ -179,6 +199,7 @@ export async function handleAgentCommand(
   const currentMode = getActiveAgentMode();
   if (mode === currentMode) {
     stream.markdown(`ℹ️ O modo \`${mode}\` já está ativo. Nenhuma transição foi aplicada.\n`);
+    emitQuickActions(stream, [{ title: '📊 Ver Status das Specs', query: '@speckit /status' }]);
     return;
   }
 
@@ -223,10 +244,14 @@ export async function handleAgentCommand(
         `- \`@speckit /agent --confirm ${intent.id}\`\n\n` +
         'Sem confirmação, a troca de modo não será aplicada.\n',
     );
+    emitQuickActions(stream, [
+      { title: '✅ Confirmar Troca de Modo', query: `@speckit /agent --confirm ${intent.id}` },
+    ]);
     return;
   }
 
   stream.markdown('❌ Nenhum workspace aberto para propor troca de modo.');
+  emitQuickActions(stream, [{ title: '🩺 Executar Doctor', query: '@speckit /doctor' }]);
 }
 
 async function resolveActiveSpecContext(

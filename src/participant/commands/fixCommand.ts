@@ -10,7 +10,12 @@ import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { createCorrelationId } from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
-import { handleCommandError, requireWorkspace } from './CommandHelpers';
+import {
+  emitContextualCommands,
+  emitQuickActions,
+  handleCommandError,
+  requireWorkspace,
+} from './CommandHelpers';
 
 export async function handleFixCommand(
   _request: vscode.ChatRequest,
@@ -68,9 +73,10 @@ export async function handleFixCommand(
   });
 
   stream.markdown(
-    `✅ Fix criado: \`.speckit/${fileName}\`\n\n` +
+    `## ✅ Fix criado\n\n` +
+      `Arquivo: \`.speckit/${fileName}\`\n\n` +
       'Preencha as seções marcadas com `<!-- TODO -->`. Quando terminar, use `/validate` para verificar completude e gerar os arquivos de configuração.\n\n' +
-      '**Seções a preencher:**\n' +
+      '### Seções obrigatórias\n' +
       '- Bug Description (título, sintomas, passos para reproduzir)\n' +
       '- Root Cause Hypothesis (hipótese, arquivos/componentes suspeitos)\n' +
       '- Impact Assessment (severidade)\n' +
@@ -78,4 +84,13 @@ export async function handleFixCommand(
       '- DoF (Definition of Fixed)\n\n' +
       '> A stack técnica é detectada automaticamente do workspace — não é necessário especificá-la.\n',
   );
+  emitContextualCommands(stream, [
+    { command: '@speckit /validate', description: 'validar completude do fix ativo' },
+    { command: '@speckit /status', description: 'listar specs abertas e estado atual' },
+    { command: '@speckit /trace', description: 'consultar rastreabilidade da spec ativa' },
+  ]);
+  emitQuickActions(stream, [
+    { title: '✅ Validar Fix Ativo', query: '@speckit /validate' },
+    { title: '📊 Ver Status das Specs', query: '@speckit /status' },
+  ]);
 }

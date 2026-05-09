@@ -20,6 +20,7 @@ import { handleReviewAutoCommand } from './commands/reviewAutoCommand';
 import { handleStatusCommand } from './commands/statusCommand';
 import { handleTraceCommand } from './commands/traceCommand';
 import { handleValidateCommand } from './commands/validateCommand';
+import { emitQuickActions } from './commands/CommandHelpers';
 
 const LLM_HISTORY_COMMANDS = new Set<string>([
   'new',
@@ -177,6 +178,12 @@ export async function handleSpeckitRequest(
             '- `/review-auto` — Orquestrar transição para Gate 3 e executar revisão automática\n' +
             '- `/init` — Inicializar workspace e consolidar specs em .speckit/\n',
         );
+        emitQuickActions(stream, [
+          { title: '📘 Ajuda de Comandos', query: '@speckit /help' },
+          { title: '📊 Ver Status das Specs', query: '@speckit /status' },
+          { title: '📝 Criar Story (/new)', query: '@speckit /new' },
+          { title: '🐛 Criar Fix (/fix)', query: '@speckit /fix' },
+        ]);
     }
 
     if (audit && command && LLM_HISTORY_COMMANDS.has(command)) {

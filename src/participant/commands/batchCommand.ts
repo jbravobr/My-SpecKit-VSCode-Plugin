@@ -44,6 +44,14 @@ interface SpecEntry {
   error?: string;
 }
 
+interface BatchCommandControl {
+  flags: string[];
+  invalidFlags: string[];
+  generateConfigs: boolean;
+  useUnified: boolean;
+  storyId?: string;
+}
+
 function emitChatQuickActionButton(
   stream: vscode.ChatResponseStream,
   title: string,
@@ -57,6 +65,49 @@ function emitChatQuickActionButton(
   });
 }
 
+function readFlagValue(tokens: string[], flag: string): string | undefined {
+  const normalized = flag.toLowerCase();
+  for (let idx = 0; idx < tokens.length; idx += 1) {
+    const token = tokens[idx];
+    const lowered = token.toLowerCase();
+
+    if (lowered === normalized) {
+      const next = tokens[idx + 1];
+      if (next && !next.startsWith('--')) return next.trim();
+      return undefined;
+    }
+
+    if (lowered.startsWith(`${normalized}=`)) {
+      return token.slice(normalized.length + 1).trim();
+    }
+  }
+  return undefined;
+}
+
+function parseBatchControl(prompt: string | undefined): BatchCommandControl {
+  const tokens = (prompt ?? '').trim().split(/\s+/).filter(Boolean);
+  const normalizedTokens = tokens.map((token) => token.toLowerCase());
+  const flags = normalizedTokens
+    .filter((token) => token.startsWith('--'))
+    .map((token) => token.split('=')[0]);
+
+  const allowedFlags = new Set(['--generate', '--gen', '--unified', '--story']);
+  const invalidFlags = flags.filter((flag) => !allowedFlags.has(flag));
+
+  const generateConfigs =
+    normalizedTokens.includes('--generate') || normalizedTokens.includes('--gen');
+  const useUnified = normalizedTokens.includes('--unified');
+  const storyId = readFlagValue(tokens, '--story');
+
+  return {
+    flags,
+    invalidFlags,
+    generateConfigs,
+    useUnified,
+    storyId: storyId && storyId.length > 0 ? storyId : undefined,
+  };
+}
+
 export async function handleBatchCommand(
   request: vscode.ChatRequest,
   stream: vscode.ChatResponseStream,
@@ -67,16 +118,30 @@ export async function handleBatchCommand(
   const workspaceRoot = requireWorkspace(workspace, stream);
   if (!workspaceRoot) return;
 
-  const prompt = (request.prompt ?? '').toLowerCase();
-  const flags = prompt.split(/\s+/).filter((token) => token.startsWith('--'));
-  const allowedFlags = new Set(['--generate', '--gen', '--unified']);
-  const invalidFlags = flags.filter((flag) => !allowedFlags.has(flag));
+  const prompt = request.prompt ?? '';
+  const control = parseBatchControl(prompt);
 
-  if (invalidFlags.length > 0) {
+  if (control.invalidFlags.length > 0) {
     stream.markdown(
-      `❌ Parâmetro(s) inválido(s) em /batch: ${invalidFlags.map((flag) => `\`${flag}\``).join(', ')}\n\n` +
-        '**Uso:** `@speckit /batch [--generate|--gen] [--unified]`\n' +
+      `❌ Parâmetro(s) inválido(s) em /batch: ${control.invalidFlags.map((flag) => `\`${flag}\``).join(', ')}\n\n` +
+        '**Uso:** `@speckit /batch [--generate|--gen] [--unified] [--story <id>]`\n' +
         'Dica: para modo unificado, use `@speckit /batch --generate --unified`.',
+    );
+    return;
+  }
+
+  if (control.flags.includes('--story') && !control.storyId) {
+    stream.markdown(
+      '❌ Use `--story <id>` para filtrar uma story específica no modo unificado.\n\n' +
+        '**Uso recomendado:** `@speckit /batch --generate --unified --story <id>`',
+    );
+    return;
+  }
+
+  if (control.storyId && !(control.generateConfigs && control.useUnified)) {
+    stream.markdown(
+      '❌ A flag `--story` só pode ser usada com `--generate --unified`.\n\n' +
+        '**Uso recomendado:** `@speckit /batch --generate --unified --story <id>`',
     );
     return;
   }
@@ -107,14 +172,32 @@ export async function handleBatchCommand(
 
   stream.markdown(`⏳ Processando **${allFiles.length}** spec(s) em paralelo...\n\n`);
 
-  const generateConfigs = prompt.includes('--generate') || prompt.includes('--gen');
-  const useUnified = prompt.includes('--unified');
-  const phaseCommand = resolveBatchCommandLabel(generateConfigs, useUnified);
+  const { generateConfigs, useUnified, storyId } = control;
+  const phaseCommand = resolveBatchCommandLabel(generateConfigs, useUnified, storyId);
 
   // Phase 1: Parse + Validate all specs in parallel (read-only, safe)
-  const entries = await Promise.all(
+  const allEntries = await Promise.all(
     allFiles.map(({ name, hint }) => processSpec(name, hint, specDir, fs)),
   );
+
+  const entries = storyId
+    ? allEntries.filter(
+        (entry) => entry.specType === 'story' && entry.id.toLowerCase() === storyId.toLowerCase(),
+      )
+    : allEntries;
+
+  if (storyId && entries.length === 0) {
+    const availableStories = allEntries
+      .filter((entry) => entry.specType === 'story')
+      .map((entry) => `\`${entry.id}\``);
+    stream.markdown(
+      `❌ Story \`${storyId}\` não encontrada no lote atual.\n` +
+        (availableStories.length > 0
+          ? `\nStories disponíveis: ${availableStories.join(', ')}\n`
+          : '\nNenhuma story encontrada em `.speckit/`.\n'),
+    );
+    return;
+  }
 
   const valid = entries.filter((e) => e.valid && !isTerminal(e.status));
   const invalid = entries.filter((e) => !e.valid && !e.error && !isTerminal(e.status));
@@ -134,6 +217,9 @@ export async function handleBatchCommand(
 
   // Phase 2: Report validation summary
   emitSummary(stream, entries, valid, invalid, errored, skipped);
+  if (storyId) {
+    stream.markdown(`\n🎯 Filtro aplicado: somente story \`${storyId}\`.\n`);
+  }
 
   if (!generateConfigs) {
     stream.markdown(
@@ -190,13 +276,14 @@ export async function handleBatchCommand(
       tracer,
       commandExecutionId,
       batchId,
+      phaseCommand,
     );
     await emitCommandTelemetry({
       workspaceRoot,
       fs,
       audit,
       tracer,
-      command: '/batch --generate --unified',
+      command: phaseCommand,
       outcome: `Agentes unificados gerados para ${valid.length} spec(s)`,
       commandExecutionId,
       batchId,
@@ -429,6 +516,7 @@ async function handleUnifiedGenerate(
   tracer: TraceabilityManager,
   commandExecutionId: string,
   batchId: string,
+  commandLabel: string,
 ): Promise<void> {
   stream.markdown('\n---\n\n⏳ Gerando agentes unificados + análise de dependências...\n\n');
 
@@ -458,7 +546,7 @@ async function handleUnifiedGenerate(
         tracer,
         commandExecutionId,
         batchId,
-        '/batch --generate --unified',
+        commandLabel,
       );
     }
   }
@@ -519,7 +607,7 @@ async function handleUnifiedGenerate(
         tracer,
         commandExecutionId,
         batchId,
-        '/batch --generate --unified',
+        commandLabel,
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -534,7 +622,7 @@ async function handleUnifiedGenerate(
         tracer,
         commandExecutionId,
         batchId,
-        '/batch --generate --unified',
+        commandLabel,
       );
     }
   }
@@ -565,7 +653,7 @@ async function handleUnifiedGenerate(
         tracer,
         commandExecutionId,
         batchId,
-        '/batch --generate --unified',
+        commandLabel,
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -580,7 +668,7 @@ async function handleUnifiedGenerate(
         tracer,
         commandExecutionId,
         batchId,
-        '/batch --generate --unified',
+        commandLabel,
       );
     }
   }
@@ -697,7 +785,14 @@ async function recordBatchEvent(
   });
 }
 
-function resolveBatchCommandLabel(generateConfigs: boolean, useUnified: boolean): string {
+function resolveBatchCommandLabel(
+  generateConfigs: boolean,
+  useUnified: boolean,
+  storyId?: string,
+): string {
+  if (generateConfigs && useUnified && storyId) {
+    return `/batch --generate --unified --story ${storyId}`;
+  }
   if (generateConfigs && useUnified) return '/batch --generate --unified';
   if (generateConfigs) return '/batch --generate';
   return '/batch';

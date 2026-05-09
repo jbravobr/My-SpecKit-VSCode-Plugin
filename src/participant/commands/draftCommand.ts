@@ -13,7 +13,12 @@ import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { createCorrelationId, inferAgentModeFromGate } from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
-import { handleCommandError, requireWorkspace } from './CommandHelpers';
+import {
+  emitContextualCommands,
+  emitQuickActions,
+  handleCommandError,
+  requireWorkspace,
+} from './CommandHelpers';
 
 const FIX_KEYWORDS =
   /\bquebrad|\b(bug|erro|error|falha|falhou|broke|broken|crash|regression|regress[aã]o|corrigir|corre[cç][aã]o|n[aã]o funciona)\b/i;
@@ -46,6 +51,15 @@ export async function handleDraftCommand(
         '- `@speckit /draft Migrar módulo de pagamento para hexagonal --refactoring`\n' +
         '- `@speckit /draft Avaliar viabilidade de SSR com Next.js --spike`\n',
     );
+    emitContextualCommands(stream, [
+      { command: '@speckit /help', description: 'consultar parâmetros e exemplos de uso' },
+      { command: '@speckit /new', description: 'criar story manualmente sem elicitação guiada' },
+      { command: '@speckit /fix', description: 'criar fix manualmente sem elicitação guiada' },
+    ]);
+    emitQuickActions(stream, [
+      { title: '📘 Abrir Ajuda', query: '@speckit /help' },
+      { title: '📝 Criar Story Manual (/new)', query: '@speckit /new' },
+    ]);
     return;
   }
 
@@ -104,14 +118,25 @@ export async function handleDraftCommand(
     await vscode.window.showTextDocument(doc);
 
     stream.markdown(
-      `✅ Prompt de elicitação criado: \`.speckit/${fileName}\`\n\n` +
-        `**Próximo passo:** O arquivo foi aberto no editor. Para iniciar a elicitação:\n\n` +
+      `## ✅ Prompt de elicitação criado\n\n` +
+        `Arquivo: \`.speckit/${fileName}\`\n\n` +
+        `### Próximo passo\n` +
+        `O arquivo foi aberto no editor. Para iniciar a elicitação:\n\n` +
         `- **Opção A (recomendada):** Com o arquivo aberto no editor, clique no ícone **▶ Run in Copilot Chat** na barra de título → selecione **Novo Chat**\n` +
         `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#${fileName}\` no campo de mensagem\n\n` +
         `> Use **Novo Chat** para garantir contexto limpo — o agente de elicitação precisa de uma sessão dedicada.\n\n` +
         `O Copilot vai conduzir uma entrevista guiada e gerar o \`${specId}.md\` completo.\n\n` +
         `Quando o arquivo estiver pronto, use \`@speckit /validate\` para verificar completude e gerar a configuração do Copilot.\n`,
     );
+    emitContextualCommands(stream, [
+      { command: '@speckit /validate', description: 'validar a spec após concluir a elicitação' },
+      { command: '@speckit /status', description: 'acompanhar estado das specs abertas' },
+      { command: '@speckit /help', description: 'consultar fluxos alternativos do participant' },
+    ]);
+    emitQuickActions(stream, [
+      { title: '✅ Validar Spec Ativa', query: '@speckit /validate' },
+      { title: '📊 Ver Status das Specs', query: '@speckit /status' },
+    ]);
   } else {
     const specType: SpecType =
       intent === 'refactoring' ? 'refactoring' : intent === 'spike' ? 'spike' : 'story';
@@ -156,13 +181,24 @@ export async function handleDraftCommand(
     await vscode.window.showTextDocument(doc);
 
     stream.markdown(
-      `✅ Prompt de elicitação criado: \`.speckit/${fileName}\`\n\n` +
-        `**Próximo passo:** O arquivo foi aberto no editor. Para iniciar a elicitação:\n\n` +
+      `## ✅ Prompt de elicitação criado\n\n` +
+        `Arquivo: \`.speckit/${fileName}\`\n\n` +
+        `### Próximo passo\n` +
+        `O arquivo foi aberto no editor. Para iniciar a elicitação:\n\n` +
         `- **Opção A (recomendada):** Com o arquivo aberto no editor, clique no ícone **▶ Run in Copilot Chat** na barra de título → selecione **Novo Chat**\n` +
         `- **Opção B:** Abra o Copilot Chat (\`Ctrl+Alt+I\`), mude para modo **Agente**, e escreva \`#${fileName}\` no campo de mensagem\n\n` +
         `> Use **Novo Chat** para garantir contexto limpo — o agente de elicitação precisa de uma sessão dedicada.\n\n` +
         `O Copilot vai conduzir uma entrevista guiada e gerar o \`${specId}.md\` completo.\n\n` +
         `Quando o arquivo estiver pronto, use \`@speckit /validate\` para verificar completude e gerar a configuração do Copilot.\n`,
     );
+    emitContextualCommands(stream, [
+      { command: '@speckit /validate', description: 'validar a spec após concluir a elicitação' },
+      { command: '@speckit /status', description: 'acompanhar estado das specs abertas' },
+      { command: '@speckit /help', description: 'consultar fluxos alternativos do participant' },
+    ]);
+    emitQuickActions(stream, [
+      { title: '✅ Validar Spec Ativa', query: '@speckit /validate' },
+      { title: '📊 Ver Status das Specs', query: '@speckit /status' },
+    ]);
   }
 }
