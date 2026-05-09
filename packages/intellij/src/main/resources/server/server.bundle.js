@@ -17438,11 +17438,11 @@ var require_mime_types = __commonJS({
       }
       return exts[0];
     }
-    function lookup(path4) {
-      if (!path4 || typeof path4 !== "string") {
+    function lookup(path15) {
+      if (!path15 || typeof path15 !== "string") {
         return false;
       }
-      var extension2 = extname("x." + path4).toLowerCase().substr(1);
+      var extension2 = extname("x." + path15).toLowerCase().substr(1);
       if (!extension2) {
         return false;
       }
@@ -21805,7 +21805,7 @@ var require_path_to_regexp = __commonJS({
   "../../node_modules/path-to-regexp/index.js"(exports2, module2) {
     module2.exports = pathToRegexp;
     var MATCHING_GROUP_REGEXP = /\\.|\((?:\?<(.*?)>)?(?!\?)/g;
-    function pathToRegexp(path4, keys, options) {
+    function pathToRegexp(path15, keys, options) {
       options = options || {};
       keys = keys || [];
       var strict = options.strict;
@@ -21819,8 +21819,8 @@ var require_path_to_regexp = __commonJS({
       var pos = 0;
       var backtrack = "";
       var m;
-      if (path4 instanceof RegExp) {
-        while (m = MATCHING_GROUP_REGEXP.exec(path4.source)) {
+      if (path15 instanceof RegExp) {
+        while (m = MATCHING_GROUP_REGEXP.exec(path15.source)) {
           if (m[0][0] === "\\") continue;
           keys.push({
             name: m[1] || name++,
@@ -21828,18 +21828,18 @@ var require_path_to_regexp = __commonJS({
             offset: m.index
           });
         }
-        return path4;
+        return path15;
       }
-      if (Array.isArray(path4)) {
-        path4 = path4.map(function(value) {
+      if (Array.isArray(path15)) {
+        path15 = path15.map(function(value) {
           return pathToRegexp(value, keys, options).source;
         });
-        return new RegExp(path4.join("|"), flags);
+        return new RegExp(path15.join("|"), flags);
       }
-      if (typeof path4 !== "string") {
+      if (typeof path15 !== "string") {
         throw new TypeError("path must be a string, array of strings, or regular expression");
       }
-      path4 = path4.replace(
+      path15 = path15.replace(
         /\\.|(\/)?(\.)?:(\w+)(\(.*?\))?(\*)?(\?)?|[.*]|\/\(/g,
         function(match, slash, format, key, capture, star, optional, offset) {
           if (match[0] === "\\") {
@@ -21856,7 +21856,7 @@ var require_path_to_regexp = __commonJS({
           if (slash || format) {
             backtrack = "";
           } else {
-            backtrack += path4.slice(pos, offset);
+            backtrack += path15.slice(pos, offset);
           }
           pos = offset + match.length;
           if (match === "*") {
@@ -21886,7 +21886,7 @@ var require_path_to_regexp = __commonJS({
           return result;
         }
       );
-      while (m = MATCHING_GROUP_REGEXP.exec(path4)) {
+      while (m = MATCHING_GROUP_REGEXP.exec(path15)) {
         if (m[0][0] === "\\") continue;
         if (keysOffset + i === keys.length || keys[keysOffset + i].offset > m.index) {
           keys.splice(keysOffset + i, 0, {
@@ -21898,13 +21898,13 @@ var require_path_to_regexp = __commonJS({
         }
         i++;
       }
-      path4 += strict ? "" : path4[path4.length - 1] === "/" ? "?" : "/?";
+      path15 += strict ? "" : path15[path15.length - 1] === "/" ? "?" : "/?";
       if (end) {
-        path4 += "$";
-      } else if (path4[path4.length - 1] !== "/") {
-        path4 += lookahead ? "(?=/|$)" : "(?:/|$)";
+        path15 += "$";
+      } else if (path15[path15.length - 1] !== "/") {
+        path15 += lookahead ? "(?=/|$)" : "(?:/|$)";
       }
-      return new RegExp("^" + path4, flags);
+      return new RegExp("^" + path15, flags);
     }
   }
 });
@@ -21917,19 +21917,19 @@ var require_layer = __commonJS({
     var debug = require_src3()("express:router:layer");
     var hasOwnProperty = Object.prototype.hasOwnProperty;
     module2.exports = Layer;
-    function Layer(path4, options, fn) {
+    function Layer(path15, options, fn) {
       if (!(this instanceof Layer)) {
-        return new Layer(path4, options, fn);
+        return new Layer(path15, options, fn);
       }
-      debug("new %o", path4);
+      debug("new %o", path15);
       var opts = options || {};
       this.handle = fn;
       this.name = fn.name || "<anonymous>";
       this.params = void 0;
       this.path = void 0;
-      this.regexp = pathRegexp(path4, this.keys = [], opts);
-      this.regexp.fast_star = path4 === "*";
-      this.regexp.fast_slash = path4 === "/" && opts.end === false;
+      this.regexp = pathRegexp(path15, this.keys = [], opts);
+      this.regexp.fast_star = path15 === "*";
+      this.regexp.fast_slash = path15 === "/" && opts.end === false;
     }
     Layer.prototype.handle_error = function handle_error(error, req, res, next) {
       var fn = this.handle;
@@ -21953,20 +21953,20 @@ var require_layer = __commonJS({
         next(err);
       }
     };
-    Layer.prototype.match = function match(path4) {
+    Layer.prototype.match = function match(path15) {
       var match2;
-      if (path4 != null) {
+      if (path15 != null) {
         if (this.regexp.fast_slash) {
           this.params = {};
           this.path = "";
           return true;
         }
         if (this.regexp.fast_star) {
-          this.params = { "0": decode_param(path4) };
-          this.path = path4;
+          this.params = { "0": decode_param(path15) };
+          this.path = path15;
           return true;
         }
-        match2 = this.regexp.exec(path4);
+        match2 = this.regexp.exec(path15);
       }
       if (!match2) {
         this.params = void 0;
@@ -22059,10 +22059,10 @@ var require_route = __commonJS({
     var slice = Array.prototype.slice;
     var toString = Object.prototype.toString;
     module2.exports = Route;
-    function Route(path4) {
-      this.path = path4;
+    function Route(path15) {
+      this.path = path15;
       this.stack = [];
-      debug("new %o", path4);
+      debug("new %o", path15);
       this.methods = {};
     }
     Route.prototype._handles_method = function _handles_method(method) {
@@ -22192,17 +22192,17 @@ var require_router = __commonJS({
     var toString = Object.prototype.toString;
     var proto = module2.exports = function(options) {
       var opts = options || {};
-      function router7(req, res, next) {
-        router7.handle(req, res, next);
+      function router20(req, res, next) {
+        router20.handle(req, res, next);
       }
-      setPrototypeOf(router7, proto);
-      router7.params = {};
-      router7._params = [];
-      router7.caseSensitive = opts.caseSensitive;
-      router7.mergeParams = opts.mergeParams;
-      router7.strict = opts.strict;
-      router7.stack = [];
-      return router7;
+      setPrototypeOf(router20, proto);
+      router20.params = {};
+      router20._params = [];
+      router20.caseSensitive = opts.caseSensitive;
+      router20.mergeParams = opts.mergeParams;
+      router20.strict = opts.strict;
+      router20.stack = [];
+      return router20;
     };
     proto.param = function param(name, fn) {
       if (typeof name === "function") {
@@ -22274,8 +22274,8 @@ var require_router = __commonJS({
         if (++sync > 100) {
           return setImmediate(next, err);
         }
-        var path4 = getPathname(req);
-        if (path4 == null) {
+        var path15 = getPathname(req);
+        if (path15 == null) {
           return done(layerError);
         }
         var layer;
@@ -22283,7 +22283,7 @@ var require_router = __commonJS({
         var route;
         while (match !== true && idx < stack.length) {
           layer = stack[idx++];
-          match = matchLayer(layer, path4);
+          match = matchLayer(layer, path15);
           route = layer.route;
           if (typeof match !== "boolean") {
             layerError = layerError || match;
@@ -22321,18 +22321,18 @@ var require_router = __commonJS({
           } else if (route) {
             layer.handle_request(req, res, next);
           } else {
-            trim_prefix(layer, layerError, layerPath, path4);
+            trim_prefix(layer, layerError, layerPath, path15);
           }
           sync = 0;
         });
       }
-      function trim_prefix(layer, layerError, layerPath, path4) {
+      function trim_prefix(layer, layerError, layerPath, path15) {
         if (layerPath.length !== 0) {
-          if (layerPath !== path4.slice(0, layerPath.length)) {
+          if (layerPath !== path15.slice(0, layerPath.length)) {
             next(layerError);
             return;
           }
-          var c = path4[layerPath.length];
+          var c = path15[layerPath.length];
           if (c && c !== "/" && c !== ".") return next(layerError);
           debug("trim prefix (%s) from url %s", layerPath, req.url);
           removed = layerPath;
@@ -22410,7 +22410,7 @@ var require_router = __commonJS({
     };
     proto.use = function use(fn) {
       var offset = 0;
-      var path4 = "/";
+      var path15 = "/";
       if (typeof fn !== "function") {
         var arg = fn;
         while (Array.isArray(arg) && arg.length !== 0) {
@@ -22418,7 +22418,7 @@ var require_router = __commonJS({
         }
         if (typeof arg !== "function") {
           offset = 1;
-          path4 = fn;
+          path15 = fn;
         }
       }
       var callbacks = flatten(slice.call(arguments, offset));
@@ -22430,8 +22430,8 @@ var require_router = __commonJS({
         if (typeof fn !== "function") {
           throw new TypeError("Router.use() requires a middleware function but got a " + gettype(fn));
         }
-        debug("use %o %s", path4, fn.name || "<anonymous>");
-        var layer = new Layer(path4, {
+        debug("use %o %s", path15, fn.name || "<anonymous>");
+        var layer = new Layer(path15, {
           sensitive: this.caseSensitive,
           strict: false,
           end: false
@@ -22441,9 +22441,9 @@ var require_router = __commonJS({
       }
       return this;
     };
-    proto.route = function route(path4) {
-      var route2 = new Route(path4);
-      var layer = new Layer(path4, {
+    proto.route = function route(path15) {
+      var route2 = new Route(path15);
+      var layer = new Layer(path15, {
         sensitive: this.caseSensitive,
         strict: this.strict,
         end: true
@@ -22453,8 +22453,8 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      proto[method] = function(path4) {
-        var route = this.route(path4);
+      proto[method] = function(path15) {
+        var route = this.route(path15);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
       };
@@ -22490,9 +22490,9 @@ var require_router = __commonJS({
       }
       return toString.call(obj).replace(objectRegExp, "$1");
     }
-    function matchLayer(layer, path4) {
+    function matchLayer(layer, path15) {
       try {
-        return layer.match(path4);
+        return layer.match(path15);
       } catch (err) {
         return err;
       }
@@ -23493,13 +23493,13 @@ var require_view = __commonJS({
   "../../node_modules/express/lib/view.js"(exports2, module2) {
     "use strict";
     var debug = require_src3()("express:view");
-    var path4 = require("path");
+    var path15 = require("path");
     var fs = require("fs");
-    var dirname = path4.dirname;
-    var basename = path4.basename;
-    var extname = path4.extname;
-    var join4 = path4.join;
-    var resolve = path4.resolve;
+    var dirname3 = path15.dirname;
+    var basename2 = path15.basename;
+    var extname = path15.extname;
+    var join14 = path15.join;
+    var resolve = path15.resolve;
     module2.exports = View;
     function View(name, options) {
       var opts = options || {};
@@ -23528,17 +23528,17 @@ var require_view = __commonJS({
       this.path = this.lookup(fileName);
     }
     View.prototype.lookup = function lookup(name) {
-      var path5;
+      var path16;
       var roots = [].concat(this.root);
       debug('lookup "%s"', name);
-      for (var i = 0; i < roots.length && !path5; i++) {
+      for (var i = 0; i < roots.length && !path16; i++) {
         var root = roots[i];
         var loc = resolve(root, name);
-        var dir = dirname(loc);
-        var file = basename(loc);
-        path5 = this.resolve(dir, file);
+        var dir = dirname3(loc);
+        var file = basename2(loc);
+        path16 = this.resolve(dir, file);
       }
-      return path5;
+      return path16;
     };
     View.prototype.render = function render(options, callback) {
       debug('render "%s"', this.path);
@@ -23546,21 +23546,21 @@ var require_view = __commonJS({
     };
     View.prototype.resolve = function resolve2(dir, file) {
       var ext = this.ext;
-      var path5 = join4(dir, file);
-      var stat = tryStat(path5);
+      var path16 = join14(dir, file);
+      var stat = tryStat(path16);
       if (stat && stat.isFile()) {
-        return path5;
+        return path16;
       }
-      path5 = join4(dir, basename(file, ext), "index" + ext);
-      stat = tryStat(path5);
+      path16 = join14(dir, basename2(file, ext), "index" + ext);
+      stat = tryStat(path16);
       if (stat && stat.isFile()) {
-        return path5;
+        return path16;
       }
     };
-    function tryStat(path5) {
-      debug('stat "%s"', path5);
+    function tryStat(path16) {
+      debug('stat "%s"', path16);
       try {
-        return fs.statSync(path5);
+        return fs.statSync(path16);
       } catch (e) {
         return void 0;
       }
@@ -23690,7 +23690,7 @@ var require_content_disposition = __commonJS({
     "use strict";
     module2.exports = contentDisposition;
     module2.exports.parse = parse;
-    var basename = require("path").basename;
+    var basename2 = require("path").basename;
     var Buffer2 = require_safe_buffer2().Buffer;
     var ENCODE_URL_ATTR_CHAR_REGEXP = /[\x00-\x20"'()*,/:;<=>?@[\\\]{}\x7f]/g;
     var HEX_ESCAPE_REGEXP = /%[0-9A-Fa-f]{2}/;
@@ -23726,9 +23726,9 @@ var require_content_disposition = __commonJS({
       if (typeof fallback === "string" && NON_LATIN1_REGEXP.test(fallback)) {
         throw new TypeError("fallback must be ISO-8859-1 string");
       }
-      var name = basename(filename);
+      var name = basename2(filename);
       var isQuotedString = TEXT_REGEXP.test(name);
-      var fallbackName = typeof fallback !== "string" ? fallback && getlatin1(name) : basename(fallback);
+      var fallbackName = typeof fallback !== "string" ? fallback && getlatin1(name) : basename2(fallback);
       var hasFallback = typeof fallbackName === "string" && fallbackName !== name;
       if (hasFallback || !isQuotedString || HEX_ESCAPE_REGEXP.test(name)) {
         params["filename*"] = name;
@@ -24396,7 +24396,7 @@ var require_types = __commonJS({
 // ../../node_modules/mime/mime.js
 var require_mime = __commonJS({
   "../../node_modules/mime/mime.js"(exports2, module2) {
-    var path4 = require("path");
+    var path15 = require("path");
     var fs = require("fs");
     function Mime() {
       this.types = /* @__PURE__ */ Object.create(null);
@@ -24426,8 +24426,8 @@ var require_mime = __commonJS({
       this.define(map);
       this._loading = null;
     };
-    Mime.prototype.lookup = function(path5, fallback) {
-      var ext = path5.replace(/^.*[\.\/\\]/, "").toLowerCase();
+    Mime.prototype.lookup = function(path16, fallback) {
+      var ext = path16.replace(/^.*[\.\/\\]/, "").toLowerCase();
       return this.types[ext] || fallback || this.default_type;
     };
     Mime.prototype.extension = function(mimeType) {
@@ -24661,28 +24661,28 @@ var require_send = __commonJS({
     var ms = require_ms5();
     var onFinished = require_on_finished();
     var parseRange = require_range_parser();
-    var path4 = require("path");
+    var path15 = require("path");
     var statuses = require_statuses();
     var Stream = require("stream");
     var util = require("util");
-    var extname = path4.extname;
-    var join4 = path4.join;
-    var normalize = path4.normalize;
-    var resolve = path4.resolve;
-    var sep = path4.sep;
+    var extname = path15.extname;
+    var join14 = path15.join;
+    var normalize = path15.normalize;
+    var resolve = path15.resolve;
+    var sep = path15.sep;
     var BYTES_RANGE_REGEXP = /^ *bytes=/;
     var MAX_MAXAGE = 60 * 60 * 24 * 365 * 1e3;
     var UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
     module2.exports = send;
     module2.exports.mime = mime;
-    function send(req, path5, options) {
-      return new SendStream(req, path5, options);
+    function send(req, path16, options) {
+      return new SendStream(req, path16, options);
     }
-    function SendStream(req, path5, options) {
+    function SendStream(req, path16, options) {
       Stream.call(this);
       var opts = options || {};
       this.options = opts;
-      this.path = path5;
+      this.path = path16;
       this.req = req;
       this._acceptRanges = opts.acceptRanges !== void 0 ? Boolean(opts.acceptRanges) : true;
       this._cacheControl = opts.cacheControl !== void 0 ? Boolean(opts.cacheControl) : true;
@@ -24728,8 +24728,8 @@ var require_send = __commonJS({
       this._index = index2;
       return this;
     }, "send.index: pass index as option");
-    SendStream.prototype.root = function root(path5) {
-      this._root = resolve(String(path5));
+    SendStream.prototype.root = function root(path16) {
+      this._root = resolve(String(path16));
       debug("root %s", this._root);
       return this;
     };
@@ -24842,10 +24842,10 @@ var require_send = __commonJS({
       var lastModified = this.res.getHeader("Last-Modified");
       return parseHttpDate(lastModified) <= parseHttpDate(ifRange);
     };
-    SendStream.prototype.redirect = function redirect(path5) {
+    SendStream.prototype.redirect = function redirect(path16) {
       var res = this.res;
       if (hasListeners(this, "directory")) {
-        this.emit("directory", res, path5);
+        this.emit("directory", res, path16);
         return;
       }
       if (this.hasTrailingSlash()) {
@@ -24865,42 +24865,42 @@ var require_send = __commonJS({
     SendStream.prototype.pipe = function pipe(res) {
       var root = this._root;
       this.res = res;
-      var path5 = decode(this.path);
-      if (path5 === -1) {
+      var path16 = decode(this.path);
+      if (path16 === -1) {
         this.error(400);
         return res;
       }
-      if (~path5.indexOf("\0")) {
+      if (~path16.indexOf("\0")) {
         this.error(400);
         return res;
       }
       var parts;
       if (root !== null) {
-        if (path5) {
-          path5 = normalize("." + sep + path5);
+        if (path16) {
+          path16 = normalize("." + sep + path16);
         }
-        if (UP_PATH_REGEXP.test(path5)) {
-          debug('malicious path "%s"', path5);
+        if (UP_PATH_REGEXP.test(path16)) {
+          debug('malicious path "%s"', path16);
           this.error(403);
           return res;
         }
-        parts = path5.split(sep);
-        path5 = normalize(join4(root, path5));
+        parts = path16.split(sep);
+        path16 = normalize(join14(root, path16));
       } else {
-        if (UP_PATH_REGEXP.test(path5)) {
-          debug('malicious path "%s"', path5);
+        if (UP_PATH_REGEXP.test(path16)) {
+          debug('malicious path "%s"', path16);
           this.error(403);
           return res;
         }
-        parts = normalize(path5).split(sep);
-        path5 = resolve(path5);
+        parts = normalize(path16).split(sep);
+        path16 = resolve(path16);
       }
       if (containsDotFile(parts)) {
         var access2 = this._dotfiles;
         if (access2 === void 0) {
           access2 = parts[parts.length - 1][0] === "." ? this._hidden ? "allow" : "ignore" : "allow";
         }
-        debug('%s dotfile "%s"', access2, path5);
+        debug('%s dotfile "%s"', access2, path16);
         switch (access2) {
           case "allow":
             break;
@@ -24914,13 +24914,13 @@ var require_send = __commonJS({
         }
       }
       if (this._index.length && this.hasTrailingSlash()) {
-        this.sendIndex(path5);
+        this.sendIndex(path16);
         return res;
       }
-      this.sendFile(path5);
+      this.sendFile(path16);
       return res;
     };
-    SendStream.prototype.send = function send2(path5, stat) {
+    SendStream.prototype.send = function send2(path16, stat) {
       var len = stat.size;
       var options = this.options;
       var opts = {};
@@ -24932,9 +24932,9 @@ var require_send = __commonJS({
         this.headersAlreadySent();
         return;
       }
-      debug('pipe "%s"', path5);
-      this.setHeader(path5, stat);
-      this.type(path5);
+      debug('pipe "%s"', path16);
+      this.setHeader(path16, stat);
+      this.type(path16);
       if (this.isConditionalGET()) {
         if (this.isPreconditionFailure()) {
           this.error(412);
@@ -24983,26 +24983,26 @@ var require_send = __commonJS({
         res.end();
         return;
       }
-      this.stream(path5, opts);
+      this.stream(path16, opts);
     };
-    SendStream.prototype.sendFile = function sendFile(path5) {
+    SendStream.prototype.sendFile = function sendFile(path16) {
       var i = 0;
       var self = this;
-      debug('stat "%s"', path5);
-      fs.stat(path5, function onstat(err, stat) {
-        if (err && err.code === "ENOENT" && !extname(path5) && path5[path5.length - 1] !== sep) {
+      debug('stat "%s"', path16);
+      fs.stat(path16, function onstat(err, stat) {
+        if (err && err.code === "ENOENT" && !extname(path16) && path16[path16.length - 1] !== sep) {
           return next(err);
         }
         if (err) return self.onStatError(err);
-        if (stat.isDirectory()) return self.redirect(path5);
-        self.emit("file", path5, stat);
-        self.send(path5, stat);
+        if (stat.isDirectory()) return self.redirect(path16);
+        self.emit("file", path16, stat);
+        self.send(path16, stat);
       });
       function next(err) {
         if (self._extensions.length <= i) {
           return err ? self.onStatError(err) : self.error(404);
         }
-        var p = path5 + "." + self._extensions[i++];
+        var p = path16 + "." + self._extensions[i++];
         debug('stat "%s"', p);
         fs.stat(p, function(err2, stat) {
           if (err2) return next(err2);
@@ -25012,7 +25012,7 @@ var require_send = __commonJS({
         });
       }
     };
-    SendStream.prototype.sendIndex = function sendIndex(path5) {
+    SendStream.prototype.sendIndex = function sendIndex(path16) {
       var i = -1;
       var self = this;
       function next(err) {
@@ -25020,7 +25020,7 @@ var require_send = __commonJS({
           if (err) return self.onStatError(err);
           return self.error(404);
         }
-        var p = join4(path5, self._index[i]);
+        var p = join14(path16, self._index[i]);
         debug('stat "%s"', p);
         fs.stat(p, function(err2, stat) {
           if (err2) return next(err2);
@@ -25031,10 +25031,10 @@ var require_send = __commonJS({
       }
       next();
     };
-    SendStream.prototype.stream = function stream(path5, options) {
+    SendStream.prototype.stream = function stream(path16, options) {
       var self = this;
       var res = this.res;
-      var stream2 = fs.createReadStream(path5, options);
+      var stream2 = fs.createReadStream(path16, options);
       this.emit("stream", stream2);
       stream2.pipe(res);
       function cleanup() {
@@ -25049,10 +25049,10 @@ var require_send = __commonJS({
         self.emit("end");
       });
     };
-    SendStream.prototype.type = function type(path5) {
+    SendStream.prototype.type = function type(path16) {
       var res = this.res;
       if (res.getHeader("Content-Type")) return;
-      var type2 = mime.lookup(path5);
+      var type2 = mime.lookup(path16);
       if (!type2) {
         debug("no content-type");
         return;
@@ -25061,9 +25061,9 @@ var require_send = __commonJS({
       debug("content-type %s", type2);
       res.setHeader("Content-Type", type2 + (charset ? "; charset=" + charset : ""));
     };
-    SendStream.prototype.setHeader = function setHeader(path5, stat) {
+    SendStream.prototype.setHeader = function setHeader(path16, stat) {
       var res = this.res;
-      this.emit("headers", res, path5, stat);
+      this.emit("headers", res, path16, stat);
       if (this._acceptRanges && !res.getHeader("Accept-Ranges")) {
         debug("accept ranges");
         res.setHeader("Accept-Ranges", "bytes");
@@ -25122,9 +25122,9 @@ var require_send = __commonJS({
       }
       return err instanceof Error ? createError(status, err, { expose: false }) : createError(status, err);
     }
-    function decode(path5) {
+    function decode(path16) {
       try {
-        return decodeURIComponent(path5);
+        return decodeURIComponent(path16);
       } catch (err) {
         return -1;
       }
@@ -26033,10 +26033,10 @@ var require_utils3 = __commonJS({
     var querystring = require("querystring");
     exports2.etag = createETagGenerator({ weak: false });
     exports2.wetag = createETagGenerator({ weak: true });
-    exports2.isAbsolute = function(path4) {
-      if ("/" === path4[0]) return true;
-      if (":" === path4[1] && ("\\" === path4[2] || "/" === path4[2])) return true;
-      if ("\\\\" === path4.substring(0, 2)) return true;
+    exports2.isAbsolute = function(path15) {
+      if ("/" === path15[0]) return true;
+      if (":" === path15[1] && ("\\" === path15[2] || "/" === path15[2])) return true;
+      if ("\\\\" === path15.substring(0, 2)) return true;
     };
     exports2.flatten = deprecate.function(
       flatten,
@@ -26159,7 +26159,7 @@ var require_application = __commonJS({
   "../../node_modules/express/lib/application.js"(exports2, module2) {
     "use strict";
     var finalhandler = require_finalhandler();
-    var Router7 = require_router();
+    var Router20 = require_router();
     var methods = require_methods();
     var middleware = require_init();
     var query = require_query();
@@ -26224,7 +26224,7 @@ var require_application = __commonJS({
     };
     app2.lazyrouter = function lazyrouter() {
       if (!this._router) {
-        this._router = new Router7({
+        this._router = new Router20({
           caseSensitive: this.enabled("case sensitive routing"),
           strict: this.enabled("strict routing")
         });
@@ -26233,21 +26233,21 @@ var require_application = __commonJS({
       }
     };
     app2.handle = function handle(req, res, callback) {
-      var router7 = this._router;
+      var router20 = this._router;
       var done = callback || finalhandler(req, res, {
         env: this.get("env"),
         onerror: logerror.bind(this)
       });
-      if (!router7) {
+      if (!router20) {
         debug("no routes defined on app");
         done();
         return;
       }
-      router7.handle(req, res, done);
+      router20.handle(req, res, done);
     };
     app2.use = function use(fn) {
       var offset = 0;
-      var path4 = "/";
+      var path15 = "/";
       if (typeof fn !== "function") {
         var arg = fn;
         while (Array.isArray(arg) && arg.length !== 0) {
@@ -26255,7 +26255,7 @@ var require_application = __commonJS({
         }
         if (typeof arg !== "function") {
           offset = 1;
-          path4 = fn;
+          path15 = fn;
         }
       }
       var fns = flatten(slice.call(arguments, offset));
@@ -26263,15 +26263,15 @@ var require_application = __commonJS({
         throw new TypeError("app.use() requires a middleware function");
       }
       this.lazyrouter();
-      var router7 = this._router;
+      var router20 = this._router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router7.use(path4, fn2);
+          return router20.use(path15, fn2);
         }
-        debug(".use app under %s", path4);
-        fn2.mountpath = path4;
+        debug(".use app under %s", path15);
+        fn2.mountpath = path15;
         fn2.parent = this;
-        router7.use(path4, function mounted_app(req, res, next) {
+        router20.use(path15, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             setPrototypeOf(req, orig.request);
@@ -26283,9 +26283,9 @@ var require_application = __commonJS({
       }, this);
       return this;
     };
-    app2.route = function route(path4) {
+    app2.route = function route(path15) {
       this.lazyrouter();
-      return this._router.route(path4);
+      return this._router.route(path15);
     };
     app2.engine = function engine(ext, fn) {
       if (typeof fn !== "function") {
@@ -26336,7 +26336,7 @@ var require_application = __commonJS({
       }
       return this;
     };
-    app2.path = function path4() {
+    app2.path = function path15() {
       return this.parent ? this.parent.path() + this.mountpath : "";
     };
     app2.enabled = function enabled(setting) {
@@ -26352,19 +26352,19 @@ var require_application = __commonJS({
       return this.set(setting, false);
     };
     methods.forEach(function(method) {
-      app2[method] = function(path4) {
+      app2[method] = function(path15) {
         if (method === "get" && arguments.length === 1) {
-          return this.set(path4);
+          return this.set(path15);
         }
         this.lazyrouter();
-        var route = this._router.route(path4);
+        var route = this._router.route(path15);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
       };
     });
-    app2.all = function all(path4) {
+    app2.all = function all(path15) {
       this.lazyrouter();
-      var route = this._router.route(path4);
+      var route = this._router.route(path15);
       var args = slice.call(arguments, 1);
       for (var i = 0; i < methods.length; i++) {
         route[methods[i]].apply(route, args);
@@ -27123,7 +27123,7 @@ var require_request = __commonJS({
       var subdomains2 = !isIP(hostname) ? hostname.split(".").reverse() : [hostname];
       return subdomains2.slice(offset);
     });
-    defineGetter(req, "path", function path4() {
+    defineGetter(req, "path", function path15() {
       return parse(this).pathname;
     });
     defineGetter(req, "hostname", function hostname() {
@@ -27445,7 +27445,7 @@ var require_response = __commonJS({
     var http = require("http");
     var isAbsolute = require_utils3().isAbsolute;
     var onFinished = require_on_finished();
-    var path4 = require("path");
+    var path15 = require("path");
     var statuses = require_statuses();
     var merge = require_utils_merge();
     var sign = require_cookie_signature().sign;
@@ -27454,9 +27454,9 @@ var require_response = __commonJS({
     var setCharset = require_utils3().setCharset;
     var cookie = require_cookie();
     var send = require_send();
-    var extname = path4.extname;
+    var extname = path15.extname;
     var mime = send.mime;
-    var resolve = path4.resolve;
+    var resolve = path15.resolve;
     var vary = require_vary();
     var res = Object.create(http.ServerResponse.prototype);
     module2.exports = res;
@@ -27633,26 +27633,26 @@ var require_response = __commonJS({
       this.type("txt");
       return this.send(body);
     };
-    res.sendFile = function sendFile(path5, options, callback) {
+    res.sendFile = function sendFile(path16, options, callback) {
       var done = callback;
       var req = this.req;
       var res2 = this;
       var next = req.next;
       var opts = options || {};
-      if (!path5) {
+      if (!path16) {
         throw new TypeError("path argument is required to res.sendFile");
       }
-      if (typeof path5 !== "string") {
+      if (typeof path16 !== "string") {
         throw new TypeError("path must be a string to res.sendFile");
       }
       if (typeof options === "function") {
         done = options;
         opts = {};
       }
-      if (!opts.root && !isAbsolute(path5)) {
+      if (!opts.root && !isAbsolute(path16)) {
         throw new TypeError("path must be absolute or specify root to res.sendFile");
       }
-      var pathname = encodeURI(path5);
+      var pathname = encodeURI(path16);
       var file = send(req, pathname, opts);
       sendfile(res2, file, opts, function(err) {
         if (done) return done(err);
@@ -27662,7 +27662,7 @@ var require_response = __commonJS({
         }
       });
     };
-    res.sendfile = function(path5, options, callback) {
+    res.sendfile = function(path16, options, callback) {
       var done = callback;
       var req = this.req;
       var res2 = this;
@@ -27672,7 +27672,7 @@ var require_response = __commonJS({
         done = options;
         opts = {};
       }
-      var file = send(req, path5, opts);
+      var file = send(req, path16, opts);
       sendfile(res2, file, opts, function(err) {
         if (done) return done(err);
         if (err && err.code === "EISDIR") return next();
@@ -27685,7 +27685,7 @@ var require_response = __commonJS({
       res.sendfile,
       "res.sendfile: Use res.sendFile instead"
     );
-    res.download = function download(path5, filename, options, callback) {
+    res.download = function download(path16, filename, options, callback) {
       var done = callback;
       var name = filename;
       var opts = options || null;
@@ -27702,7 +27702,7 @@ var require_response = __commonJS({
         opts = filename;
       }
       var headers = {
-        "Content-Disposition": contentDisposition(name || path5)
+        "Content-Disposition": contentDisposition(name || path16)
       };
       if (opts && opts.headers) {
         var keys = Object.keys(opts.headers);
@@ -27715,7 +27715,7 @@ var require_response = __commonJS({
       }
       opts = Object.create(opts);
       opts.headers = headers;
-      var fullPath = !opts.root ? resolve(path5) : path5;
+      var fullPath = !opts.root ? resolve(path16) : path16;
       return this.sendFile(fullPath, opts, done);
     };
     res.contentType = res.type = function contentType(type) {
@@ -28016,11 +28016,11 @@ var require_serve_static = __commonJS({
         }
         var forwardError = !fallthrough;
         var originalUrl = parseUrl.original(req);
-        var path4 = parseUrl(req).pathname;
-        if (path4 === "/" && originalUrl.pathname.substr(-1) !== "/") {
-          path4 = "";
+        var path15 = parseUrl(req).pathname;
+        if (path15 === "/" && originalUrl.pathname.substr(-1) !== "/") {
+          path15 = "";
         }
-        var stream = send(req, path4, opts);
+        var stream = send(req, path15, opts);
         stream.on("directory", onDirectory);
         if (setHeaders) {
           stream.on("headers", setHeaders);
@@ -28088,7 +28088,7 @@ var require_express = __commonJS({
     var mixin = require_merge_descriptors();
     var proto = require_application();
     var Route = require_route();
-    var Router7 = require_router();
+    var Router20 = require_router();
     var req = require_request();
     var res = require_response();
     exports2 = module2.exports = createApplication;
@@ -28111,7 +28111,7 @@ var require_express = __commonJS({
     exports2.request = req;
     exports2.response = res;
     exports2.Route = Route;
-    exports2.Router = Router7;
+    exports2.Router = Router20;
     exports2.json = bodyParser.json;
     exports2.query = require_query();
     exports2.raw = bodyParser.raw;
@@ -28440,7 +28440,7 @@ __export(server_exports, {
   app: () => app
 });
 module.exports = __toCommonJS(server_exports);
-var import_express7 = __toESM(require_express2());
+var import_express20 = __toESM(require_express2());
 var import_cors = __toESM(require_lib5());
 
 // src/routes/statusRoute.ts
@@ -29890,11 +29890,1244 @@ router6.get("/help", (_req, res) => {
 });
 var helpRoute_default = router6;
 
+// src/routes/fixRoute.ts
+var import_express7 = __toESM(require_express2());
+var path5 = __toESM(require("path"));
+
+// ../../src/fix/FixTemplate.ts
+function generateFixTemplate(id) {
+  const now = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  return `# Fix ${id}
+
+<!-- metadata
+id: ${id}
+title: <!-- TODO -->
+createdAt: ${now}
+version: 1
+type: fix
+status: open
+gate: 0
+-->
+
+## Bug Description
+
+### T\xEDtulo do Bug
+<!-- TODO -->
+
+### Sintomas
+<!-- TODO: descreva o comportamento incorreto observado -->
+
+### Passos para Reproduzir
+<!-- TODO:
+- Passo 1
+- Passo 2
+-->
+-
+
+### Ambiente Afetado
+<!-- TODO: vers\xE3o, OS, browser, ambiente (prod/staging/local) -->
+
+### Frequ\xEAncia de Ocorr\xEAncia
+<!-- TODO: sempre | intermitente | apenas em condi\xE7\xE3o X -->
+
+---
+
+## Root Cause Hypothesis
+
+### Hip\xF3tese
+<!-- TODO: sua melhor hip\xF3tese sobre a causa raiz -->
+
+### Arquivos/Componentes Suspeitos
+<!-- TODO:
+- src/path/to/file.ts
+- ComponentName
+-->
+-
+
+---
+
+## Impact Assessment
+
+### Severidade
+<!-- TODO: critical | high | medium | low -->
+
+### Usu\xE1rios/Sistemas Afetados
+<!-- TODO -->
+
+### Risco de Regress\xE3o
+<!-- TODO: \xE1reas que podem ser impactadas pela corre\xE7\xE3o -->
+
+---
+
+## Regression Prevention
+
+### Testes a Adicionar
+<!-- TODO:
+- Teste que verifica cen\xE1rio X (que causava o bug)
+- Teste para edge case Y
+-->
+-
+
+---
+
+## Contexto T\xE9cnico
+
+### Messaging
+<!-- TODO: Kafka | NA -->
+
+### Banco de Dados / Cloud
+<!-- TODO: DynamoDB | Aurora MySQL | NA -->
+
+---
+
+## DoF \u2014 Definition of Fixed
+
+- [ ] Bug n\xE3o reproduz mais com os passos documentados
+- [ ] Root cause endere\xE7ado (n\xE3o apenas patched)
+- [ ] Testes de regress\xE3o adicionados e passando
+- [ ] Cobertura \u2265 80%
+- [ ] Commit local na branch \`fix/${id}-<slug>\`
+`;
+}
+
+// ../../src/generator/utils/SpecIdGenerator.ts
+var path4 = __toESM(require("path"));
+var MAX_COLLISION_ATTEMPTS = 60;
+function normalizeAAA(workspaceRoot) {
+  const dirName = path4.basename(workspaceRoot);
+  return dirName.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 10);
+}
+function formatTimestamp(date) {
+  const yyyy = date.getFullYear().toString();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${yyyy}${mm}${dd}-${hh}${min}`;
+}
+function resolveCollision(prefix, aaa, existingFiles, now) {
+  const existingSet = new Set(existingFiles.map((f) => f.replace(/\.md$/i, "")));
+  for (let attempt = 0; attempt < MAX_COLLISION_ATTEMPTS; attempt++) {
+    const candidate = new Date(now.getTime() + attempt * 6e4);
+    const id = `${prefix}-${aaa}-${formatTimestamp(candidate)}`;
+    if (!existingSet.has(id)) return id;
+  }
+  throw new Error(
+    `N\xE3o foi poss\xEDvel gerar um ID \xFAnico ap\xF3s ${MAX_COLLISION_ATTEMPTS} tentativas. Tente novamente em alguns minutos.`
+  );
+}
+function generateStoryId(workspaceRoot, existingFiles, now = /* @__PURE__ */ new Date()) {
+  const aaa = normalizeAAA(workspaceRoot);
+  return resolveCollision("US", aaa, existingFiles, now);
+}
+function generateFixId(workspaceRoot, existingFiles, now = /* @__PURE__ */ new Date()) {
+  const aaa = normalizeAAA(workspaceRoot);
+  return resolveCollision("FIX", aaa, existingFiles, now);
+}
+
+// src/routes/fixRoute.ts
+var router7 = (0, import_express7.Router)();
+router7.post("/fix", async (req, res) => {
+  const { workspaceRoot } = req.body;
+  if (!workspaceRoot) {
+    res.status(400).json({ error: "workspaceRoot is required" });
+    return;
+  }
+  try {
+    const workspace = createNodeWorkspace(workspaceRoot);
+    const specDir = path5.join(workspaceRoot, ".speckit");
+    await nodeFileSystem.ensureDir(specDir);
+    const existing = await workspace.listFixFiles(specDir);
+    const specId = generateFixId(workspaceRoot, existing);
+    const fileName = `${specId}.md`;
+    const filePath = path5.join(specDir, fileName);
+    const content = generateFixTemplate(specId);
+    await nodeFileSystem.writeFile(filePath, content);
+    res.json({
+      specId,
+      fileName,
+      filePath,
+      content,
+      markdown: `\u2705 Fix criado: \`${fileName}\`
+
+Preencha as se\xE7\xF5es marcadas com \`<!-- TODO -->\`. Quando terminar, use \`/validate\` para verificar completude.
+
+### Se\xE7\xF5es obrigat\xF3rias
+- Bug Description (t\xEDtulo, sintomas, passos para reproduzir)
+- Root Cause Hypothesis (hip\xF3tese)
+- Impact Assessment (severidade)
+- Regression Prevention (testes a adicionar)
+- DoF (Definition of Fixed)`
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+var fixRoute_default = router7;
+
+// src/routes/draftRoute.ts
+var import_express8 = __toESM(require_express2());
+var path6 = __toESM(require("path"));
+var router8 = (0, import_express8.Router)();
+var FIX_KEYWORDS = /\bquebrad|\b(bug|erro|error|falha|falhou|broke|broken|crash|regression|corrigir|corre[cç][aã]o|n[aã]o funciona)\b/i;
+function detectIntent(description) {
+  if (/--fix\b|--bug\b/i.test(description)) return "fix";
+  if (FIX_KEYWORDS.test(description)) return "fix";
+  return "story";
+}
+router8.post("/draft", async (req, res) => {
+  const { workspaceRoot, type, description } = req.body;
+  if (!workspaceRoot) {
+    res.status(400).json({ error: "workspaceRoot is required" });
+    return;
+  }
+  if (!description || !description.trim()) {
+    res.status(400).json({ error: "description is required" });
+    return;
+  }
+  try {
+    const workspace = createNodeWorkspace(workspaceRoot);
+    const specDir = path6.join(workspaceRoot, ".speckit");
+    await nodeFileSystem.ensureDir(specDir);
+    const intent = type ?? detectIntent(description);
+    const cleanInput = description.replace(/\s*--(fix|bug|story)\b/gi, "").trim();
+    if (intent === "fix") {
+      const existing = await workspace.listFixFiles(specDir);
+      const specId = generateFixId(workspaceRoot, existing);
+      const now = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+      const content = `# Fix ${specId}
+
+<!-- metadata
+id: ${specId}
+title: ${cleanInput.slice(0, 80)}
+createdAt: ${now}
+version: 1
+type: fix
+status: open
+gate: 0
+-->
+
+## Bug Description
+
+### T\xEDtulo do Bug
+${cleanInput}
+
+### Sintomas
+<!-- TODO: descreva o comportamento incorreto observado -->
+
+### Passos para Reproduzir
+<!-- TODO:
+- Passo 1
+- Passo 2
+-->
+-
+
+### Ambiente Afetado
+<!-- TODO: vers\xE3o, OS, browser, ambiente (prod/staging/local) -->
+
+### Frequ\xEAncia de Ocorr\xEAncia
+<!-- TODO: sempre | intermitente | apenas em condi\xE7\xE3o X -->
+
+---
+
+## Root Cause Hypothesis
+
+### Hip\xF3tese
+<!-- TODO: sua melhor hip\xF3tese sobre a causa raiz -->
+
+### Arquivos/Componentes Suspeitos
+<!-- TODO:
+- src/path/to/file.ts
+-->
+-
+
+---
+
+## Impact Assessment
+
+### Severidade
+<!-- TODO: critical | high | medium | low -->
+
+### Usu\xE1rios/Sistemas Afetados
+<!-- TODO -->
+
+### Risco de Regress\xE3o
+<!-- TODO: \xE1reas que podem ser impactadas pela corre\xE7\xE3o -->
+
+---
+
+## Regression Prevention
+
+### Testes a Adicionar
+<!-- TODO:
+- Teste que verifica cen\xE1rio X
+-->
+-
+
+---
+
+## DoF \u2014 Definition of Fixed
+
+- [ ] Bug n\xE3o reproduz mais com os passos documentados
+- [ ] Root cause endere\xE7ado
+- [ ] Testes de regress\xE3o adicionados e passando
+- [ ] Cobertura \u2265 80%
+`;
+      res.json({
+        specId,
+        type: "fix",
+        intent,
+        content,
+        markdown: `## \u{1F4DD} Rascunho de Fix \u2014 \`${specId}\`
+
+Rascunho gerado a partir da descri\xE7\xE3o. Revise e salve como \`${specId}.md\` em \`.speckit/\`.
+
+Use \`/validate\` ap\xF3s salvar.`
+      });
+    } else {
+      const existing = await workspace.listStoryFiles(specDir);
+      const specId = generateStoryId(workspaceRoot, existing);
+      const now = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+      const content = `# Story ${specId}
+
+<!-- metadata
+id: ${specId}
+title: ${cleanInput.slice(0, 80)}
+createdAt: ${now}
+version: 1
+type: story
+status: open
+gate: 0
+-->
+
+## Objetivo
+
+${cleanInput}
+
+---
+
+## Contexto e Motiva\xE7\xE3o
+
+<!-- TODO: Por que essa feature \xE9 necess\xE1ria? Qual problema resolve? -->
+
+---
+
+## Crit\xE9rios de Aceite
+
+<!-- TODO:
+- [ ] Crit\xE9rio 1
+- [ ] Crit\xE9rio 2
+-->
+- [ ]
+
+---
+
+## Escopo T\xE9cnico
+
+### Linguagem / Framework
+<!-- TODO: detectado automaticamente pelo /validate -->
+
+### Arquitetura
+<!-- TODO: mvc | hexagonal | clean | serverless -->
+
+### Componentes Afetados
+<!-- TODO: lista de m\xF3dulos, servi\xE7os ou arquivos -->
+-
+
+---
+
+## DoD \u2014 Definition of Done
+
+- [ ] Implementa\xE7\xE3o completa e funcionando
+- [ ] Testes cobrindo cen\xE1rios principais
+- [ ] Cobertura \u2265 80%
+- [ ] Code review aprovado
+`;
+      res.json({
+        specId,
+        type: "story",
+        intent,
+        content,
+        markdown: `## \u{1F4DD} Rascunho de Story \u2014 \`${specId}\`
+
+Rascunho gerado a partir da descri\xE7\xE3o. Revise e salve como \`${specId}.md\` em \`.speckit/\`.
+
+Use \`/validate\` ap\xF3s salvar.`
+      });
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+var draftRoute_default = router8;
+
+// src/routes/gateRoute.ts
+var import_express9 = __toESM(require_express2());
+
+// ../../src/workflow/GateEnforcer.ts
+var STATUS_TRANSITIONS = {
+  open: ["in-progress", "blocked", "cancelled"],
+  "in-progress": ["review", "blocked", "cancelled"],
+  review: ["done", "in-progress", "blocked", "cancelled"],
+  blocked: ["in-progress", "cancelled"],
+  done: [],
+  cancelled: []
+};
+function validateGateTransition(from, to) {
+  if (from === to) return { allowed: false, reason: `Gate is already at ${from}` };
+  const diff = to - from;
+  if (diff === 1) return { allowed: true };
+  if (diff === -1) return { allowed: true, reason: "Rework: gate regressed by 1" };
+  if (diff > 1)
+    return { allowed: false, reason: `Cannot skip gates: ${from} \u2192 ${to} (max advance is +1)` };
+  return {
+    allowed: false,
+    reason: `Cannot regress more than 1 gate: ${from} \u2192 ${to} (max regress is -1)`
+  };
+}
+function validateStatusTransition(from, to) {
+  if (from === to) return { allowed: false, reason: `Status is already '${from}'` };
+  const allowed = STATUS_TRANSITIONS[from];
+  if (!allowed || allowed.length === 0)
+    return { allowed: false, reason: `Cannot transition from terminal status '${from}'` };
+  if (allowed.includes(to)) return { allowed: true };
+  return {
+    allowed: false,
+    reason: `Invalid transition: '${from}' \u2192 '${to}'. Allowed: ${allowed.join(", ")}`
+  };
+}
+function getValidNextStatuses(current) {
+  return STATUS_TRANSITIONS[current] ?? [];
+}
+function getValidNextGates(current) {
+  const result = [];
+  if (current < 4) result.push(current + 1);
+  if (current > 0) result.push(current - 1);
+  return result;
+}
+
+// src/routes/gateRoute.ts
+var router9 = (0, import_express9.Router)();
+var GATE_LABELS = {
+  0: "Alinhamento",
+  1: "Implementa\xE7\xE3o",
+  2: "Testes",
+  3: "Revis\xE3o",
+  4: "Entrega"
+};
+var ALL_STATUSES = [
+  "open",
+  "in-progress",
+  "review",
+  "blocked",
+  "done",
+  "cancelled"
+];
+router9.get("/gate", (_req, res) => {
+  const gateTransitions = [];
+  for (let g = 0; g <= 4; g++) {
+    const next = getValidNextGates(g);
+    gateTransitions.push({ from: g, fromLabel: GATE_LABELS[g], validNext: next });
+  }
+  const statusTransitions = ALL_STATUSES.map((s) => ({
+    from: s,
+    validNext: getValidNextStatuses(s)
+  }));
+  const markdown = "## \u{1F6AA} Regras de Gate & Status\n\n### Transi\xE7\xF5es de Gate\n\n| De | Para | Permitido |\n|---|---|---|\n" + gateTransitions.map((g) => {
+    const targets = g.validNext.map((n) => `Gate ${n} \u2014 ${GATE_LABELS[n]}`).join(", ") || "\u2014";
+    return `| Gate ${g.from} \u2014 ${g.fromLabel} | ${targets} | \u2705 |`;
+  }).join("\n") + "\n\n> Avan\xE7o m\xE1ximo: +1. Regress\xE3o m\xE1xima: -1 (retrabalho).\n\n### Transi\xE7\xF5es de Status\n\n| De | Pr\xF3ximos v\xE1lidos |\n|---|---|\n" + statusTransitions.map(
+    (s) => `| \`${s.from}\` | ${s.validNext.length > 0 ? s.validNext.map((n) => `\`${n}\``).join(", ") : "\u{1F512} terminal"} |`
+  ).join("\n");
+  res.json({
+    gateTransitions,
+    statusTransitions,
+    gateLabels: GATE_LABELS,
+    markdown
+  });
+});
+var gateRoute_default = router9;
+
+// src/routes/auditRoute.ts
+var import_express10 = __toESM(require_express2());
+
+// ../../src/workflow/AuditLogger.ts
+var path7 = __toESM(require("path"));
+var AuditLogger = class {
+  constructor(workspaceRoot, fs) {
+    this.fs = fs;
+    this.logPath = path7.join(workspaceRoot, ".speckit", "audit.log");
+  }
+  fs;
+  logPath;
+  writeQueue = Promise.resolve();
+  async log(event, detail, context) {
+    this.writeQueue = this.writeQueue.then(() => this.doLog(event, detail, context));
+    return this.writeQueue;
+  }
+  async doLog(event, detail, context) {
+    const withContext = serializeContext(detail, context);
+    const entry = { timestamp: (/* @__PURE__ */ new Date()).toISOString(), event, detail: withContext };
+    const line = `[${entry.timestamp}] ${entry.event}: ${entry.detail}
+`;
+    try {
+      await this.fs.ensureDir(path7.dirname(this.logPath));
+      let existing = "";
+      try {
+        existing = await this.fs.readFile(this.logPath);
+      } catch {
+      }
+      await this.fs.writeFile(this.logPath, existing + line);
+    } catch {
+    }
+  }
+  async readLog() {
+    try {
+      const exists = await this.fs.fileExists(this.logPath);
+      if (!exists) return [];
+      const content = await this.fs.readFile(this.logPath);
+      return content.split("\n").filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+  getLogPath() {
+    return this.logPath;
+  }
+};
+function serializeContext(detail, context) {
+  if (!context) return detail;
+  const parts = Object.entries(context).filter(([, value]) => value !== void 0).map(([key, value]) => `${key}="${String(value).replace(/"/g, '\\"')}"`);
+  if (parts.length === 0) return detail;
+  return `${detail} | ${parts.join(" ")}`;
+}
+
+// src/routes/auditRoute.ts
+var router10 = (0, import_express10.Router)();
+router10.get("/audit", async (req, res) => {
+  const workspaceRoot = req.query.workspaceRoot;
+  if (!workspaceRoot) {
+    res.status(400).json({ error: "workspaceRoot is required" });
+    return;
+  }
+  const limit = Math.max(1, Math.min(200, parseInt(req.query.limit ?? "50", 10) || 50));
+  try {
+    const audit = new AuditLogger(workspaceRoot, nodeFileSystem);
+    const lines = await audit.readLog();
+    if (lines.length === 0) {
+      res.json({
+        entries: [],
+        total: 0,
+        shown: 0,
+        markdown: "## \u{1F4CB} Audit Log\n\nNenhum registro de auditoria encontrado."
+      });
+      return;
+    }
+    const shown = lines.slice(-limit);
+    res.json({
+      entries: shown,
+      total: lines.length,
+      shown: shown.length,
+      markdown: `## \u{1F4CB} Audit Log
+
+\xDAltimas ${shown.length} de ${lines.length} entradas.
+
+\`\`\`
+` + shown.join("\n") + "\n```"
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+var auditRoute_default = router10;
+
+// src/routes/traceRoute.ts
+var import_express11 = __toESM(require_express2());
+
+// ../../src/workflow/TraceabilityManager.ts
+var path8 = __toESM(require("path"));
+var TraceabilityManager = class {
+  constructor(workspaceRoot, fs) {
+    this.fs = fs;
+    this.traceDir = path8.join(workspaceRoot, ".speckit", "traceability");
+  }
+  fs;
+  traceDir;
+  traceFilePath(specId) {
+    const safe = specId.replace(/[^a-zA-Z0-9_-]/g, "_");
+    return path8.join(this.traceDir, `${safe}.json`);
+  }
+  async record(specId, specType, entry) {
+    await this.fs.ensureDir(this.traceDir);
+    const existing = await this.load(specId);
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const fullEntry = { ...entry, timestamp: now };
+    const trace = existing ? { ...existing, updatedAt: now, entries: [...existing.entries, fullEntry] } : { specId, specType, createdAt: now, updatedAt: now, entries: [fullEntry] };
+    await this.fs.writeFile(this.traceFilePath(specId), JSON.stringify(trace, null, 2));
+    return trace;
+  }
+  async load(specId) {
+    const filePath = this.traceFilePath(specId);
+    const exists = await this.fs.fileExists(filePath);
+    if (!exists) return null;
+    try {
+      const content = await this.fs.readFile(filePath);
+      return JSON.parse(content);
+    } catch {
+      return null;
+    }
+  }
+  async list() {
+    await this.fs.ensureDir(this.traceDir);
+    const files = await this.fs.listDir(this.traceDir);
+    const jsonFiles = files.filter((f) => f.endsWith(".json"));
+    const traces = [];
+    for (const file of jsonFiles) {
+      const specId = file.replace(".json", "");
+      const trace = await this.load(specId);
+      if (trace) traces.push(trace);
+    }
+    return traces.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+  async getEntriesByType(specId, type) {
+    const trace = await this.load(specId);
+    if (!trace) return [];
+    return trace.entries.filter((e) => e.type === type);
+  }
+};
+
+// src/routes/traceRoute.ts
+var router11 = (0, import_express11.Router)();
+router11.get("/trace", async (req, res) => {
+  const workspaceRoot = req.query.workspaceRoot;
+  if (!workspaceRoot) {
+    res.status(400).json({ error: "workspaceRoot is required" });
+    return;
+  }
+  const specId = req.query.specId;
+  try {
+    const tm = new TraceabilityManager(workspaceRoot, nodeFileSystem);
+    if (specId) {
+      const trace = await tm.load(specId);
+      if (!trace) {
+        res.status(404).json({
+          error: `Nenhum trace encontrado para ${specId}`,
+          markdown: `\u274C Nenhum trace encontrado para \`${specId}\`.`
+        });
+        return;
+      }
+      res.json({
+        trace,
+        markdown: `## \u{1F517} Trace \u2014 \`${trace.specId}\`
+
+| Campo | Valor |
+|---|---|
+| Tipo | ${trace.specType} |
+| Criado | ${trace.createdAt} |
+| Atualizado | ${trace.updatedAt} |
+| Entradas | ${trace.entries.length} |
+
+### Hist\xF3rico
+
+` + trace.entries.map((e) => {
+          const data = Object.entries(e.data).map(([k, v]) => `${k}: ${v}`).join(", ");
+          return `- **${e.timestamp}** \u2014 \`${e.type}\`: ${e.description}${data ? ` (${data})` : ""}`;
+        }).join("\n")
+      });
+      return;
+    }
+    const traces = await tm.list();
+    if (traces.length === 0) {
+      res.json({
+        traces: [],
+        markdown: "## \u{1F517} Rastreabilidade\n\nNenhum registro de rastreabilidade encontrado."
+      });
+      return;
+    }
+    res.json({
+      traces: traces.map((t) => ({
+        specId: t.specId,
+        specType: t.specType,
+        entryCount: t.entries.length,
+        updatedAt: t.updatedAt
+      })),
+      markdown: `## \u{1F517} Rastreabilidade
+
+${traces.length} spec(s) com trilha registrada.
+
+| Spec ID | Tipo | Entradas | \xDAltima atualiza\xE7\xE3o |
+|---|---|---|---|
+` + traces.map((t) => `| \`${t.specId}\` | ${t.specType} | ${t.entries.length} | ${t.updatedAt} |`).join("\n")
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+var traceRoute_default = router11;
+
+// src/routes/historyRoute.ts
+var import_express12 = __toESM(require_express2());
+var path9 = __toESM(require("path"));
+var router12 = (0, import_express12.Router)();
+router12.get("/history", async (req, res) => {
+  const workspaceRoot = req.query.workspaceRoot;
+  if (!workspaceRoot) {
+    res.status(400).json({ error: "workspaceRoot is required" });
+    return;
+  }
+  const limit = Math.max(1, Math.min(200, parseInt(req.query.limit ?? "50", 10) || 50));
+  const filter = req.query.filter ?? "all";
+  try {
+    const events = [];
+    const audit = new AuditLogger(workspaceRoot, nodeFileSystem);
+    const auditLines = await audit.readLog();
+    for (const line of auditLines) {
+      const match = line.match(/^\[(.+?)\]\s+([^:]+):\s*(.*)$/);
+      if (!match) continue;
+      events.push({
+        timestamp: match[1],
+        source: "audit",
+        summary: `${match[2].trim()}: ${match[3].trim()}`
+      });
+    }
+    const tm = new TraceabilityManager(workspaceRoot, nodeFileSystem);
+    const traces = await tm.list();
+    for (const trace of traces) {
+      for (const entry of trace.entries) {
+        events.push({
+          timestamp: entry.timestamp,
+          source: "trace",
+          summary: `${entry.type}: ${entry.description}`,
+          specId: trace.specId,
+          command: entry.data.command
+        });
+      }
+    }
+    try {
+      const logsDir = path9.join(workspaceRoot, ".speckit", "logs");
+      const logFiles = await nodeFileSystem.listDir(logsDir);
+      for (const file of logFiles.filter((f) => f.startsWith("session-") && f.endsWith(".md"))) {
+        try {
+          const content = await nodeFileSystem.readFile(path9.join(logsDir, file));
+          const sections = content.split("\n## ").slice(1);
+          for (const section of sections) {
+            const lines = `## ${section}`.split("\n");
+            const headerMatch = lines[0].match(/^##\s+(.+?)\s+—\s+@speckit\s+(.+)$/);
+            if (!headerMatch) continue;
+            events.push({
+              timestamp: headerMatch[1].trim(),
+              source: "log",
+              summary: `${headerMatch[2].trim()}`
+            });
+          }
+        } catch {
+        }
+      }
+    } catch {
+    }
+    events.sort((a, b) => {
+      const ta = Date.parse(a.timestamp) || 0;
+      const tb = Date.parse(b.timestamp) || 0;
+      return tb - ta;
+    });
+    const filtered = filter === "all" ? events : events.filter((e) => e.source === filter);
+    const shown = filtered.slice(0, limit);
+    res.json({
+      events: shown,
+      total: filtered.length,
+      shown: shown.length,
+      filter,
+      markdown: `## \u{1F558} History
+
+${shown.length} de ${filtered.length} evento(s) (filtro: \`${filter}\`)
+
+| Timestamp | Tipo | Resumo |
+|---|---|---|
+` + shown.map(
+        (e) => `| ${e.timestamp} | ${e.source} | ${e.summary.replace(/\|/g, "\\|").slice(0, 100)} |`
+      ).join("\n")
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+var historyRoute_default = router12;
+
+// src/routes/doctorRoute.ts
+var import_express13 = __toESM(require_express2());
+var path10 = __toESM(require("path"));
+var router13 = (0, import_express13.Router)();
+router13.get("/doctor", async (req, res) => {
+  const workspaceRoot = req.query.workspaceRoot;
+  if (!workspaceRoot) {
+    res.status(400).json({ error: "workspaceRoot is required" });
+    return;
+  }
+  try {
+    const workspace = createNodeWorkspace(workspaceRoot);
+    const specDir = path10.join(workspaceRoot, ".speckit");
+    const githubDir = path10.join(workspaceRoot, ".github");
+    const defaultsPath = path10.join(specDir, "defaults.yml");
+    const [speckitExists, githubExists, defaultsExists, storyFiles, fixFiles, techStack] = await Promise.all([
+      nodeFileSystem.fileExists(specDir),
+      nodeFileSystem.fileExists(githubDir),
+      nodeFileSystem.fileExists(defaultsPath),
+      workspace.listStoryFiles(specDir).catch(() => []),
+      workspace.listFixFiles(specDir).catch(() => []),
+      workspace.detectTechStack().catch(() => null)
+    ]);
+    const checks = [
+      { label: ".speckit/", ok: speckitExists },
+      { label: ".github/", ok: githubExists },
+      { label: "defaults.yml", ok: defaultsExists },
+      {
+        label: "Stories",
+        ok: storyFiles.length > 0,
+        detail: `${storyFiles.length} encontrada(s)`
+      },
+      { label: "Fixes", ok: fixFiles.length > 0, detail: `${fixFiles.length} encontrado(s)` },
+      {
+        label: "Tech Stack",
+        ok: techStack !== null,
+        detail: techStack ? `${techStack.language} / ${techStack.framework} (${techStack.confidence})` : "n\xE3o detectado"
+      }
+    ];
+    const healthy = checks.filter((c) => c.ok).length;
+    const total = checks.length;
+    const lines = checks.map((c) => {
+      const icon = c.ok ? "\u2705" : "\u274C";
+      const detail = c.detail ? ` \u2014 ${c.detail}` : "";
+      return `| ${icon} | ${c.label}${detail} |`;
+    });
+    res.json({
+      checks,
+      healthy,
+      total,
+      markdown: `## \u{1FA7A} Diagn\xF3stico do Workspace
+
+| Status | Item |
+|--------|------|
+${lines.join("\n")}
+
+**Resultado:** ${healthy}/${total} verifica\xE7\xF5es OK`
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+var doctorRoute_default = router13;
+
+// src/routes/batchRoute.ts
+var import_express14 = __toESM(require_express2());
+var path11 = __toESM(require("path"));
+var router14 = (0, import_express14.Router)();
+router14.post("/batch", async (req, res) => {
+  const { workspaceRoot, generate, unified } = req.body;
+  if (!workspaceRoot) {
+    res.status(400).json({ error: "workspaceRoot is required" });
+    return;
+  }
+  try {
+    const workspace = createNodeWorkspace(workspaceRoot);
+    const specDir = path11.join(workspaceRoot, ".speckit");
+    const [storyFiles, fixFiles] = await Promise.all([
+      workspace.listStoryFiles(specDir),
+      workspace.listFixFiles(specDir)
+    ]);
+    const results = [];
+    for (const name of storyFiles.sort()) {
+      try {
+        const content = await nodeFileSystem.readFile(path11.join(specDir, name));
+        const story = parseStory(content);
+        if (story.metadata.status === "done" || story.metadata.status === "cancelled") continue;
+        const result = validateStory(story);
+        results.push({
+          fileName: name,
+          specType: "story",
+          valid: result.valid,
+          gaps: result.gaps,
+          title: story.metadata.title || "",
+          id: story.metadata.id || name,
+          gate: story.metadata.gate ?? 0,
+          status: story.metadata.status || "open"
+        });
+      } catch (e) {
+        results.push({
+          fileName: name,
+          specType: "story",
+          valid: false,
+          gaps: ["Erro ao processar arquivo"],
+          title: "",
+          id: name,
+          gate: 0,
+          status: "open",
+          error: e instanceof Error ? e.message : "Unknown error"
+        });
+      }
+    }
+    for (const name of fixFiles.sort()) {
+      try {
+        const content = await nodeFileSystem.readFile(path11.join(specDir, name));
+        const fix = parseFix(content);
+        if (fix.metadata.status === "done" || fix.metadata.status === "cancelled") continue;
+        const result = validateFix(fix);
+        results.push({
+          fileName: name,
+          specType: "fix",
+          valid: result.valid,
+          gaps: result.gaps,
+          title: fix.metadata.title || "",
+          id: fix.metadata.id || name,
+          gate: fix.metadata.gate ?? 0,
+          status: fix.metadata.status || "open"
+        });
+      } catch (e) {
+        results.push({
+          fileName: name,
+          specType: "fix",
+          valid: false,
+          gaps: ["Erro ao processar arquivo"],
+          title: "",
+          id: name,
+          gate: 0,
+          status: "open",
+          error: e instanceof Error ? e.message : "Unknown error"
+        });
+      }
+    }
+    const validCount = results.filter((r) => r.valid).length;
+    const invalidCount = results.filter((r) => !r.valid).length;
+    let markdown = `## \u{1F4E6} Batch \u2014 ${results.length} spec(s) processada(s)
+
+\u2705 V\xE1lidas: ${validCount} | \u274C Inv\xE1lidas: ${invalidCount}
+
+| Arquivo | Tipo | Status | Gate | V\xE1lida | Lacunas |
+|---|---|---|---|---|---|
+` + results.map(
+      (r) => `| \`${r.fileName}\` | ${r.specType} | ${r.status} | ${r.gate} | ${r.valid ? "\u2705" : "\u274C"} | ${r.gaps.length} |`
+    ).join("\n");
+    if (generate) {
+      markdown += `
+
+> \u2139\uFE0F Flag \`--generate\` detectada. Gera\xE7\xE3o de config Copilot n\xE3o suportada via Core Server \u2014 use o plugin VS Code para gerar \`.github/copilot-instructions.md\`.`;
+    }
+    if (unified) {
+      markdown += `
+
+> \u2139\uFE0F Flag \`--unified\` detectada. Agentes unificados n\xE3o suportados via Core Server \u2014 use o plugin VS Code.`;
+    }
+    res.json({ results, validCount, invalidCount, generate: !!generate, unified: !!unified, markdown });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+var batchRoute_default = router14;
+
+// src/routes/initRoute.ts
+var import_express15 = __toESM(require_express2());
+var path12 = __toESM(require("path"));
+var router15 = (0, import_express15.Router)();
+router15.post("/init", async (req, res) => {
+  const { workspaceRoot } = req.body;
+  if (!workspaceRoot) {
+    res.status(400).json({ error: "workspaceRoot is required" });
+    return;
+  }
+  try {
+    const specDir = path12.join(workspaceRoot, ".speckit");
+    const speckitExisted = await nodeFileSystem.fileExists(specDir);
+    await nodeFileSystem.ensureDir(specDir);
+    const subDirs = ["traceability", "logs", "context"];
+    const created = [];
+    if (!speckitExisted) {
+      created.push(".speckit/");
+    }
+    for (const sub of subDirs) {
+      const subPath = path12.join(specDir, sub);
+      const existed = await nodeFileSystem.fileExists(subPath);
+      if (!existed) {
+        await nodeFileSystem.ensureDir(subPath);
+        created.push(`.speckit/${sub}/`);
+      }
+    }
+    const defaultsPath = path12.join(specDir, "defaults.yml");
+    const defaultsExisted = await nodeFileSystem.fileExists(defaultsPath);
+    if (!defaultsExisted) {
+      await nodeFileSystem.writeFile(
+        defaultsPath,
+        "# SpecKit defaults \u2014 customize as needed\n# language: typescript\n# framework: react\n# architecture: hexagonal\n"
+      );
+      created.push(".speckit/defaults.yml");
+    }
+    const dirStatus = speckitExisted ? "j\xE1 existia" : "criado";
+    const markdown = `## \u2705 Workspace inicializado
+
+\u{1F4C1} \`.speckit/\` \u2014 ${dirStatus}
+` + (created.length > 0 ? `
+\u{1F4C4} Criados:
+${created.map((c) => `- \`${c}\``).join("\n")}
+` : "\nNenhum arquivo novo criado.\n") + "\nUse `/new` para criar uma nova story ou `/fix` para criar um fix.";
+    res.json({ created, specDir, markdown });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+var initRoute_default = router15;
+
+// src/routes/reviewAutoRoute.ts
+var import_express16 = __toESM(require_express2());
+var router16 = (0, import_express16.Router)();
+router16.post("/review-auto", async (req, res) => {
+  const { workspaceRoot, specFile } = req.body;
+  if (!workspaceRoot) {
+    res.status(400).json({ error: "workspaceRoot is required" });
+    return;
+  }
+  try {
+    const workspace = createNodeWorkspace(workspaceRoot);
+    const activeSpecPath = specFile ?? await workspace.getActiveSpecPath();
+    if (!activeSpecPath) {
+      res.status(404).json({
+        error: "Nenhuma spec ativa encontrada",
+        markdown: "\u274C Nenhuma spec ativa encontrada. Use `/new` para criar uma."
+      });
+      return;
+    }
+    const content = await nodeFileSystem.readFile(activeSpecPath);
+    const story = parseStory(content);
+    const validation = validateStory(story);
+    const currentGate = story.metadata.gate ?? 0;
+    const currentStatus = story.metadata.status ?? "open";
+    const gateTransition = validateGateTransition(currentGate, Math.min(currentGate + 1, 4));
+    const statusTransition = validateStatusTransition(currentStatus, "review");
+    const canAdvance = validation.valid && currentGate < 4;
+    let markdown;
+    if (!validation.valid) {
+      markdown = `## \u274C Review Auto \u2014 Bloqueado
+
+Spec: \`${activeSpecPath}\`
+
+A spec possui ${validation.gaps.length} lacuna(s) \u2014 complete antes de avan\xE7ar para revis\xE3o:
+
+` + validation.gaps.map((g) => `- ${g}`).join("\n");
+    } else if (currentGate >= 3) {
+      markdown = `## \u2705 Review Auto \u2014 Em Revis\xE3o
+
+Spec: \`${activeSpecPath}\`
+
+Gate atual: ${currentGate}. Status: \`${currentStatus}\`.
+
+A spec j\xE1 est\xE1 em fase de revis\xE3o/entrega.`;
+    } else {
+      markdown = `## \u{1F504} Review Auto \u2014 Pronta para Avan\xE7o
+
+Spec: \`${activeSpecPath}\`
+
+Gate atual: ${currentGate} \u2192 Gate ${currentGate + 1}
+Status: \`${currentStatus}\`
+
+\u2705 Spec v\xE1lida. ${gateTransition.allowed ? "Transi\xE7\xE3o de gate permitida." : gateTransition.reason ?? ""}
+\u2705 ${statusTransition.allowed ? "Transi\xE7\xE3o de status para `review` permitida." : statusTransition.reason ?? ""}`;
+    }
+    res.json({
+      specPath: activeSpecPath,
+      valid: validation.valid,
+      gaps: validation.gaps,
+      currentGate,
+      currentStatus,
+      canAdvance,
+      markdown
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+var reviewAutoRoute_default = router16;
+
+// src/routes/contextRoute.ts
+var import_express17 = __toESM(require_express2());
+
+// ../../src/workflow/ContextManager.ts
+var path13 = __toESM(require("path"));
+var ContextManager = class {
+  constructor(workspaceRoot, fs) {
+    this.workspaceRoot = workspaceRoot;
+    this.fs = fs;
+    this.contextPath = path13.join(workspaceRoot, ".speckit", "context.json");
+  }
+  workspaceRoot;
+  fs;
+  contextPath;
+  async list() {
+    try {
+      const exists = await this.fs.fileExists(this.contextPath);
+      if (!exists) return [];
+      const content = await this.fs.readFile(this.contextPath);
+      const parsed = JSON.parse(content);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  async add(relativePath) {
+    const normalized = relativePath.replace(/\\/g, "/");
+    if (normalized.includes("..")) return "outside";
+    const fullPath = path13.join(this.workspaceRoot, normalized);
+    const exists = await this.fs.fileExists(fullPath);
+    if (!exists) return "not-found";
+    const current = await this.list();
+    if (current.includes(normalized)) return "already";
+    current.push(normalized);
+    await this.save(current);
+    return "added";
+  }
+  async remove(relativePath) {
+    const normalized = relativePath.replace(/\\/g, "/");
+    const current = await this.list();
+    const idx = current.indexOf(normalized);
+    if (idx === -1) return false;
+    current.splice(idx, 1);
+    await this.save(current);
+    return true;
+  }
+  async clear() {
+    await this.save([]);
+  }
+  async save(files) {
+    await this.fs.ensureDir(path13.dirname(this.contextPath));
+    await this.fs.writeFile(this.contextPath, JSON.stringify(files, null, 2));
+  }
+};
+
+// src/routes/contextRoute.ts
+var router17 = (0, import_express17.Router)();
+router17.get("/context", async (req, res) => {
+  const workspaceRoot = req.query.workspaceRoot;
+  if (!workspaceRoot) {
+    res.status(400).json({ error: "workspaceRoot is required" });
+    return;
+  }
+  try {
+    const cm = new ContextManager(workspaceRoot, nodeFileSystem);
+    const files = await cm.list();
+    if (files.length === 0) {
+      res.json({
+        files: [],
+        markdown: "## \u{1F4C2} Contexto\n\nNenhum arquivo de contexto adicionado.\n\nUse `/context add <caminho>` para adicionar arquivos."
+      });
+      return;
+    }
+    res.json({
+      files,
+      markdown: `## \u{1F4C2} Contexto ativo
+
+${files.length} arquivo(s) selecionados.
+
+` + files.map((f) => `- \`${f}\``).join("\n")
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+var contextRoute_default = router17;
+
+// src/routes/statusFixRoute.ts
+var import_express18 = __toESM(require_express2());
+var path14 = __toESM(require("path"));
+var router18 = (0, import_express18.Router)();
+router18.get("/status-fix", async (req, res) => {
+  const workspaceRoot = req.query.workspaceRoot || process.cwd();
+  const includeClosed = req.query.all === "true";
+  try {
+    const workspace = createNodeWorkspace(workspaceRoot);
+    const specDir = path14.join(workspaceRoot, ".speckit");
+    const fixFiles = await workspace.listFixFiles(specDir);
+    const fixes = await Promise.all(
+      fixFiles.sort().map(async (name) => {
+        try {
+          const content = await nodeFileSystem.readFile(path14.join(specDir, name));
+          const fix = parseFix(content);
+          const isClosed = fix.metadata.status === "done" || fix.metadata.status === "cancelled";
+          if (isClosed && !includeClosed) return null;
+          return {
+            name,
+            title: fix.metadata.title,
+            status: fix.metadata.status,
+            gate: fix.metadata.gate,
+            severity: fix.impactAssessment.severity
+          };
+        } catch {
+          return null;
+        }
+      })
+    );
+    const filtered = fixes.filter(Boolean);
+    res.json({
+      fixes: filtered,
+      markdown: filtered.length === 0 ? "## \u{1F41B} Fixes\n\nNenhum fix encontrado." : `## \u{1F41B} Fixes (${filtered.length})
+
+| Arquivo | T\xEDtulo | Status | Gate | Severidade |
+|---|---|---|---|---|
+` + filtered.map(
+        (f) => `| \`${f.name}\` | ${f.title || "\u2014"} | ${f.status} | ${f.gate} | ${f.severity || "\u2014"} |`
+      ).join("\n")
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+var statusFixRoute_default = router18;
+
+// src/routes/agentRoute.ts
+var import_express19 = __toESM(require_express2());
+
+// ../../src/participant/AgentMode.ts
+var AGENT_MODES = [
+  "default",
+  "implementador",
+  "revisor",
+  "debugger",
+  "refactor"
+];
+function getAgentModeLabel(mode) {
+  const labels = {
+    default: "Default (conversacional)",
+    implementador: "Implementador (Gates 0-2: spec \u2192 plan \u2192 implement \u2192 test)",
+    revisor: "Revisor (Gates 3-4: checklist de qualidade \u2192 seguran\xE7a \u2192 entrega)",
+    debugger: "Debugger (hip\xF3tese \u2192 evid\xEAncia \u2192 fix \u2192 verifica\xE7\xE3o)",
+    refactor: "Refactor (snapshot \u2192 refatorar \u2192 validar \u2192 rollback se falhar)"
+  };
+  return labels[mode];
+}
+
+// src/routes/agentRoute.ts
+var router19 = (0, import_express19.Router)();
+router19.get("/agent", (_req, res) => {
+  const modes = AGENT_MODES.map((mode) => ({
+    mode,
+    label: getAgentModeLabel(mode)
+  }));
+  const markdown = "## \u{1F916} Agent Modes\n\n| Modo | Descri\xE7\xE3o |\n|---|---|\n" + modes.map((m) => `| \`${m.mode}\` | ${m.label} |`).join("\n") + "\n\nUse `/agent <modo>` para alternar o modo ativo.";
+  res.json({ modes, markdown });
+});
+var agentRoute_default = router19;
+
 // src/server.ts
 var PORT = parseInt(process.env.SPECKIT_PORT ?? "4815", 10);
-var app = (0, import_express7.default)();
+var app = (0, import_express20.default)();
 app.use((0, import_cors.default)());
-app.use(import_express7.default.json());
+app.use(import_express20.default.json());
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", version: "0.3.25", service: "speckit-core-server" });
 });
@@ -29904,6 +31137,19 @@ app.use(validateRoute_default);
 app.use(commitRoute_default);
 app.use(diffRoute_default);
 app.use(helpRoute_default);
+app.use(fixRoute_default);
+app.use(draftRoute_default);
+app.use(gateRoute_default);
+app.use(auditRoute_default);
+app.use(traceRoute_default);
+app.use(historyRoute_default);
+app.use(doctorRoute_default);
+app.use(batchRoute_default);
+app.use(initRoute_default);
+app.use(reviewAutoRoute_default);
+app.use(contextRoute_default);
+app.use(statusFixRoute_default);
+app.use(agentRoute_default);
 app.use((_req, res) => {
   res.status(404).json({ error: "Route not found. See GET /help for available routes." });
 });

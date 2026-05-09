@@ -6,6 +6,19 @@ import validateRoute from './routes/validateRoute';
 import commitRoute from './routes/commitRoute';
 import diffRoute from './routes/diffRoute';
 import helpRoute from './routes/helpRoute';
+import fixRoute from './routes/fixRoute';
+import draftRoute from './routes/draftRoute';
+import gateRoute from './routes/gateRoute';
+import auditRoute from './routes/auditRoute';
+import traceRoute from './routes/traceRoute';
+import historyRoute from './routes/historyRoute';
+import doctorRoute from './routes/doctorRoute';
+import batchRoute from './routes/batchRoute';
+import initRoute from './routes/initRoute';
+import reviewAutoRoute from './routes/reviewAutoRoute';
+import contextRoute from './routes/contextRoute';
+import statusFixRoute from './routes/statusFixRoute';
+import agentRoute from './routes/agentRoute';
 
 const PORT = parseInt(process.env.SPECKIT_PORT ?? '4815', 10);
 
@@ -26,6 +39,19 @@ app.use(validateRoute);
 app.use(commitRoute);
 app.use(diffRoute);
 app.use(helpRoute);
+app.use(fixRoute);
+app.use(draftRoute);
+app.use(gateRoute);
+app.use(auditRoute);
+app.use(traceRoute);
+app.use(historyRoute);
+app.use(doctorRoute);
+app.use(batchRoute);
+app.use(initRoute);
+app.use(reviewAutoRoute);
+app.use(contextRoute);
+app.use(statusFixRoute);
+app.use(agentRoute);
 
 // 404 fallback
 app.use((_req, res) => {

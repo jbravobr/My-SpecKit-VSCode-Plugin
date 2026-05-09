@@ -54,17 +54,36 @@ public class SpeckitToolWindow {
     private static Font fontSmall()  { return UIUtil.getLabelFont().deriveFont(10f); }
     private static Font fontCmd()    { return UIUtil.getLabelFont().deriveFont(Font.BOLD, 11f); }
 
-    // Commands
+    // Commands organized in groups: {label, command, group}
     private static final String[][] COMMANDS = {
-            {"📄 /new",          "/new"},
-            {"✅ /validate",     "/validate"},
-            {"📊 /status",       "/status"},
-            {"📊 /status --all", "/status --all"},
-            {"🔍 /diff",         "/diff"},
-            {"💾 /commit",       "/commit"},
-            {"🐛 /fix",          "/fix"},
-            {"📜 /history",      "/history"},
-            {"❓ /help",         "/help"},
+            // Group 1 — Workspace
+            {"🚀 /init",            "/init",                       "Workspace"},
+            {"🩺 /doctor",          "/doctor",                     "Workspace"},
+            {"🤖 /agent",           "/agent",                      "Workspace"},
+            // Group 2 — Specs
+            {"📄 /new",             "/new",                        "Specs"},
+            {"🐛 /fix",             "/fix",                        "Specs"},
+            {"📝 /draft",           "/draft",                      "Specs"},
+            {"📊 /status",          "/status",                     "Specs"},
+            {"📊 /status --all",    "/status --all",               "Specs"},
+            {"🔧 /status-fix",      "/status-fix",                 "Specs"},
+            // Group 3 — Workflow
+            {"✅ /validate",        "/validate",                   "Workflow"},
+            {"🚪 /gate",            "/gate",                       "Workflow"},
+            {"📦 /batch",           "/batch",                      "Workflow"},
+            {"⚙ /batch --generate", "/batch --generate",           "Workflow"},
+            {"⚙ /batch --unified",  "/batch --generate --unified", "Workflow"},
+            {"🔄 /review-auto",     "/review-auto",                "Workflow"},
+            // Group 4 — History & Context
+            {"📋 /audit",           "/audit",                      "History & Context"},
+            {"🔗 /trace",           "/trace",                      "History & Context"},
+            {"🕘 /history",         "/history",                    "History & Context"},
+            {"📂 /context",         "/context",                    "History & Context"},
+            // Group 5 — Git
+            {"🔍 /diff",            "/diff",                       "Git"},
+            {"💾 /commit",          "/commit",                     "Git"},
+            // Group 6 — Info
+            {"❓ /help",            "/help",                       "Info"},
     };
 
     private enum MessageType { USER, BOT, SYSTEM }
@@ -207,13 +226,61 @@ public class SpeckitToolWindow {
     }
 
     private JPanel buildCommandGrid() {
+        JPanel outer = new JPanel();
+        outer.setLayout(new BoxLayout(outer, BoxLayout.Y_AXIS));
+        outer.setOpaque(false);
+        outer.setBorder(JBUI.Borders.empty(2, 8, 4, 8));
+
+        // Collect unique groups in order
+        List<String> groups = new ArrayList<>();
+        for (String[] e : COMMANDS) {
+            String g = e[2];
+            if (!groups.contains(g)) groups.add(g);
+        }
+
+        for (String groupName : groups) {
+            // Collect commands for this group
+            List<String[]> groupCmds = new ArrayList<>();
+            for (String[] e : COMMANDS) {
+                if (e[2].equals(groupName)) groupCmds.add(e);
+            }
+
+            // Build collapsible section
+            JPanel section = buildCollapsibleGroup(groupName, groupCmds);
+            outer.add(section);
+            outer.add(Box.createVerticalStrut(2));
+        }
+        return outer;
+    }
+
+    private JPanel buildCollapsibleGroup(String groupName, List<String[]> cmds) {
         int cols = 3;
-        int rows = (int) Math.ceil((double) COMMANDS.length / cols);
+        int rows = (int) Math.ceil((double) cmds.size() / cols);
         JPanel grid = new JPanel(new GridLayout(rows, cols, 4, 4));
         grid.setOpaque(false);
-        grid.setBorder(JBUI.Borders.empty(2, 8, 4, 8));
-        for (String[] e : COMMANDS) grid.add(buildCommandButton(e[0], e[1]));
-        return grid;
+        for (String[] e : cmds) grid.add(buildCommandButton(e[0], e[1]));
+
+        JLabel toggle = new JLabel("▾ " + groupName);
+        toggle.setFont(fontSmall().deriveFont(Font.BOLD));
+        toggle.setForeground(C_SYSTEM_TEXT);
+        toggle.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        toggle.setBorder(JBUI.Borders.empty(2, 0, 1, 0));
+        toggle.addMouseListener(new MouseAdapter() {
+            boolean visible = true;
+            @Override public void mouseClicked(MouseEvent e) {
+                visible = !visible;
+                grid.setVisible(visible);
+                toggle.setText((visible ? "▾ " : "▸ ") + groupName);
+            }
+            @Override public void mouseEntered(MouseEvent e) { toggle.setForeground(C_USER_BUBBLE); }
+            @Override public void mouseExited(MouseEvent e)  { toggle.setForeground(C_SYSTEM_TEXT); }
+        });
+
+        JPanel section = new JPanel(new BorderLayout());
+        section.setOpaque(false);
+        section.add(toggle, BorderLayout.NORTH);
+        section.add(grid,   BorderLayout.CENTER);
+        return section;
     }
 
     private JButton buildCommandButton(String label, String command) {
@@ -583,14 +650,31 @@ public class SpeckitToolWindow {
                 return client.commit(finalRoot, parts.length > 1 ? parts[1] : null).markdown;
             case "/diff":
                 return client.getDiff(finalRoot, input.contains("--full")).markdown;
-            case "/history":
-                return "📜 Histórico de auditoria disponível em `.speckit/audit.log` no workspace.";
-            case "/fix":
-                return "🐛 Suporte a /fix dedicado em breve.\nUse /new e selecione o tipo Fix.";
             case "/help":     return client.getHelp().markdown;
+            case "/fix":      return client.createFix(finalRoot).markdown;
+            case "/draft": {
+                String desc = parts.length > 1 ? parts[1] : "";
+                if (desc.isEmpty()) return "❌ Forneça uma descrição.\nExemplo: /draft O login retorna 500 após expiração do token --fix";
+                String type = desc.contains("--fix") || desc.contains("--bug") ? "fix" : "story";
+                return client.draft(finalRoot, type, desc).markdown;
+            }
+            case "/gate":     return client.getGate().markdown;
+            case "/audit":    return client.getAudit(finalRoot, 50).markdown;
+            case "/trace":    return client.getTrace(finalRoot, null).markdown;
+            case "/history":  return client.getHistory(finalRoot, 50, "all").markdown;
+            case "/doctor":   return client.getDoctor(finalRoot).markdown;
+            case "/batch":
+                return client.batch(finalRoot, input.contains("--generate"), input.contains("--unified")).markdown;
+            case "/init":     return client.init(finalRoot).markdown;
+            case "/review-auto": return client.reviewAuto(finalRoot, null).markdown;
+            case "/context":  return client.getContext(finalRoot).markdown;
+            case "/status-fix": return client.getStatusFix(finalRoot).markdown;
+            case "/agent":    return client.getAgentModes().markdown;
             default:
                 return "❓ Comando desconhecido: `" + command + "`\n\n" +
-                        "Disponíveis: /new /fix /validate /status /status --all /diff /commit /history /help";
+                        "Disponíveis: /new /fix /draft /validate /status /status --all /status-fix\n" +
+                        "/gate /batch /review-auto /audit /trace /history /context\n" +
+                        "/diff /commit /init /doctor /agent /help";
         }
     }
 
