@@ -147,10 +147,10 @@ O fluxo unificado deve continuar imediatamente para o protocolo de transição (
     - Se houver alterações, execute:
       \`git add -A\`
       \`git commit -m "test(${storyId}): fechamento do gate 2"\`
-    - Se falhar por erro operacional, escreva no chat: \`@speckit /commit\` sem mensagem
+    - Se falhar por erro operacional, acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com argumento \`@speckit /commit\` (sem mensagem)
     - Só peça ação manual ao usuário se as duas tentativas falharem
-  2. Se ainda não houver consentimento batch ativo nesta sessão, escreva no chat: \`@speckit /review-auto --batch-consent\` e confirme o intent retornado.
-  3. Escreva no chat: \`@speckit /review-auto --auto\` para persistir a transição Gate 2 → Gate 3 com evidência no chat.
+  2. Se ainda não houver consentimento batch ativo nesta sessão, acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com argumento \`@speckit /review-auto --batch-consent\` e confirme o intent retornado.
+  3. Acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com argumento \`@speckit /review-auto --auto\` para persistir a transição Gate 2 → Gate 3 com evidência no chat.
   4. Emita no chat o handoff explícito:
     - "✅ Gates 0-2 concluídos"
     - "🔁 Handoff: IMPLEMENTADOR → REVISOR"
@@ -172,10 +172,10 @@ Não selecione outro agente neste ponto.
     - Se houver alterações, execute:
       \`git add -A\`
       \`git commit -m "test(${storyId}): fechamento do gate 2"\`
-    - Se falhar por erro operacional, escreva no chat: \`@speckit /commit\` sem mensagem
+    - Se falhar por erro operacional, acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com argumento \`@speckit /commit\` (sem mensagem)
     - Só peça ação manual ao usuário se as duas tentativas falharem
-  2. Escreva no chat: \`@speckit /review-auto\` para **propor** a transição \`gate: 3\` e \`status: review\`.
-  3. Escreva no chat: \`@speckit /review-auto --confirm <intent-id>\` para confirmar a transição.
+  2. Acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com argumento \`@speckit /review-auto\` para **propor** a transição \`gate: 3\` e \`status: review\`.
+  3. Acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com argumento \`@speckit /review-auto --confirm <intent-id>\` para confirmar a transição.
   4. Emita no chat o handoff explícito:
     - "✅ Gates 0-2 concluídos"
     - "🔁 Handoff: IMPLEMENTADOR → REVISOR"
@@ -206,6 +206,7 @@ NUNCA inicie implementação sem:
 2. Identificar e fechar lacunas (uma pergunta por vez, aguardar resposta)
 3. Apresentar plano com tarefas atômicas, riscos e critérios
 4. Receber aprovação explícita ("sim", "ok", "confirmar", "pode ir")
+5. Para comandos do participant (\`@speckit /...\`), **NUNCA** usar terminal/PowerShell; execute sempre via \`vscode/runCommand\` chamando \`speckit.runChatQuickAction\`.
 
 Se surgir ambiguidade durante execução → interromper e perguntar.
 Se o escopo mudar → replanejar antes de continuar.

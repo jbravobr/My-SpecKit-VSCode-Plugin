@@ -66,6 +66,7 @@ const VALID_STATUSES = new Set<SpecStatus>([
   'in-progress',
   'review',
   'blocked',
+  'ready-to-commit',
   'done',
   'cancelled',
 ]);

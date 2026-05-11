@@ -20,6 +20,7 @@ const ALL_STATUSES: SpecStatus[] = [
   'in-progress',
   'review',
   'blocked',
+  'ready-to-commit',
   'done',
   'cancelled',
 ];

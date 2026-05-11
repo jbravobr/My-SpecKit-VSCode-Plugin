@@ -23,7 +23,7 @@ export interface PostSaveNotifyDeps {
  * disk and formatters may introduce further changes. This function runs
  * (debounced, via onDidSaveTextDocument) to detect the situation and nudge the
  * user to run /commit if:
- *   - there is an active spec at gate 4 / status done, AND
+ *   - there is an active spec at gate 4 / status ready-to-commit, AND
  *   - git still has uncommitted changes.
  *
  * Extracted from extension.ts so it can be unit-tested without a VS Code host.
@@ -44,7 +44,7 @@ export async function checkPostSavePendingCommit(deps: PostSaveNotifyDeps): Prom
     if (specType !== 'story') return;
 
     const story = parseStory(content);
-    if (story.metadata.gate !== 4 || story.metadata.status !== 'done') return;
+    if (story.metadata.gate !== 4 || story.metadata.status !== 'ready-to-commit') return;
     specId = story.metadata.id;
   } catch {
     return;

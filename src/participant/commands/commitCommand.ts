@@ -9,13 +9,16 @@ import { parseStory } from '../../story/StoryParser';
 import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { gitOps, IGitOps } from '../../workflow/GitOperations';
+import { upsertMetadataFields } from '../../workflow/MetadataPatcher';
 import { createCorrelationId } from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
 import { emitContextualCommands, emitQuickActions, requireWorkspace } from './CommandHelpers';
 
 interface ActiveSpecCommitContext {
+  activeSpecPath?: string;
   specType?: 'story' | 'fix';
   specId?: string;
+  status?: string;
   gate?: number;
 }
 
@@ -32,11 +35,23 @@ async function resolveActiveSpecCommitContext(
 
     if (specType === 'fix') {
       const fix = parseFix(content);
-      return { specType: 'fix', specId: fix.metadata.id, gate: fix.metadata.gate };
+      return {
+        activeSpecPath,
+        specType: 'fix',
+        specId: fix.metadata.id,
+        status: fix.metadata.status,
+        gate: fix.metadata.gate,
+      };
     }
 
     const story = parseStory(content);
-    return { specType: 'story', specId: story.metadata.id, gate: story.metadata.gate };
+    return {
+      activeSpecPath,
+      specType: 'story',
+      specId: story.metadata.id,
+      status: story.metadata.status,
+      gate: story.metadata.gate,
+    };
   } catch {
     return {};
   }
@@ -122,6 +137,23 @@ export async function handleCommitCommand(
   }
 
   try {
+    if (
+      activeContext.specType === 'story' &&
+      activeContext.gate === 4 &&
+      activeContext.status === 'ready-to-commit' &&
+      activeContext.activeSpecPath
+    ) {
+      const activeSpecContent = await fs.readFile(activeContext.activeSpecPath);
+      const patch = upsertMetadataFields(activeSpecContent, { status: 'done' });
+      if (patch.changed) {
+        await fs.writeFile(activeContext.activeSpecPath, patch.content);
+        activeContext.status = 'done';
+        stream.markdown(
+          'ℹ️ STORY em Gate 4 finalizada para `done` e incluída no commit final.\n\n',
+        );
+      }
+    }
+
     const isRepository = await git.isRepository(workspaceRoot);
     if (!isRepository) {
       await git.init(workspaceRoot);

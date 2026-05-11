@@ -19,8 +19,9 @@ export interface TransitionResult {
 const STATUS_TRANSITIONS: Record<SpecStatus, SpecStatus[]> = {
   open: ['in-progress', 'blocked', 'cancelled'],
   'in-progress': ['review', 'blocked', 'cancelled'],
-  review: ['done', 'in-progress', 'blocked', 'cancelled'],
+  review: ['ready-to-commit', 'in-progress', 'blocked', 'cancelled'],
   blocked: ['in-progress', 'cancelled'],
+  'ready-to-commit': ['done', 'in-progress', 'blocked', 'cancelled'],
   done: [],
   cancelled: [],
 };

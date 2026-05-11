@@ -60,8 +60,12 @@ describe('GateEnforcer', () => {
       expect(validateStatusTransition('in-progress', 'review').allowed).toBe(true);
     });
 
-    it('allows review → done', () => {
-      expect(validateStatusTransition('review', 'done').allowed).toBe(true);
+    it('allows review → ready-to-commit', () => {
+      expect(validateStatusTransition('review', 'ready-to-commit').allowed).toBe(true);
+    });
+
+    it('allows ready-to-commit → done', () => {
+      expect(validateStatusTransition('ready-to-commit', 'done').allowed).toBe(true);
     });
 
     it('allows review → in-progress (rework)', () => {
@@ -73,13 +77,19 @@ describe('GateEnforcer', () => {
     });
 
     it('allows any active status → blocked', () => {
-      for (const from of ['open', 'in-progress', 'review'] as SpecStatus[]) {
+      for (const from of ['open', 'in-progress', 'review', 'ready-to-commit'] as SpecStatus[]) {
         expect(validateStatusTransition(from, 'blocked').allowed).toBe(true);
       }
     });
 
     it('allows any active status → cancelled', () => {
-      for (const from of ['open', 'in-progress', 'review', 'blocked'] as SpecStatus[]) {
+      for (const from of [
+        'open',
+        'in-progress',
+        'review',
+        'blocked',
+        'ready-to-commit',
+      ] as SpecStatus[]) {
         expect(validateStatusTransition(from, 'cancelled').allowed).toBe(true);
       }
     });
