@@ -28,9 +28,62 @@ interface CoverageInfo {
   linesFound: number;
 }
 
+interface LcovFileRecord {
+  sourcePath: string;
+  normalizedPath: string;
+  lineHits: Map<number, number>;
+  linesHit: number;
+  linesFound: number;
+}
+
+interface CoverageSummary extends CoverageInfo {
+  byFile: Map<string, LcovFileRecord>;
+}
+
+interface FunctionRange {
+  name: string;
+  startLine: number;
+  endLine: number;
+}
+
+type CrapAction = 'add-tests' | 'refactor';
+
+interface CrapFinding {
+  filePath: string;
+  functionName: string;
+  startLine: number;
+  complexity: number;
+  coverage: number;
+  crap: number;
+  action: CrapAction;
+}
+
+interface CrapAnalysis {
+  evaluatedFiles: number;
+  evaluatedFunctions: number;
+  findings: CrapFinding[];
+  triggerFiles: string[];
+  missingCoverageFiles: string[];
+  skippedFiles: string[];
+}
+
+interface MutationAssessment {
+  command?: string;
+  estimatedMinutesMin: number;
+  estimatedMinutesMax: number;
+  files: string[];
+}
+
+interface ReviewEvidence {
+  changedFiles: string[];
+  coverage: CoverageSummary;
+  crap: CrapAnalysis;
+  mutation?: MutationAssessment;
+}
+
 type MetadataPatchResult = import('../../workflow/MetadataPatcher').MetadataPatchResult;
 
-type ReviewAutoAction = 'orchestrate' | 'approved' | 'changes-requested';
+type ReviewAutoAction = 'orchestrate' | 'approved' | 'changes-requested' | 'mutation';
 
 interface ReviewAutoControl {
   action: ReviewAutoAction;
@@ -91,30 +144,420 @@ async function collectChangedFiles(workspaceRoot: string, git: IGitOps): Promise
   }
 }
 
-function parseCoverageFromLcov(content: string): CoverageInfo {
+const CRAP_SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.java', '.py', '.cs']);
+
+function normalizePathForCompare(value: string): string {
+  return value.replace(/\\/g, '/').replace(/^\.\//, '').toLowerCase();
+}
+
+function parseCoverageFromLcov(content: string): CoverageSummary {
   const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-  let linesFound = 0;
-  let linesHit = 0;
+  const byFile = new Map<string, LcovFileRecord>();
+  let currentRecord: LcovFileRecord | undefined;
+  let summaryLinesFound = 0;
+  let summaryLinesHit = 0;
 
   for (const line of lines) {
-    if (line.startsWith('LF:')) {
-      linesFound += Number.parseInt(line.slice(3), 10) || 0;
+    if (line.startsWith('SF:')) {
+      const sourcePath = line.slice(3).trim();
+      if (!sourcePath) {
+        currentRecord = undefined;
+        continue;
+      }
+      const normalizedPath = normalizePathForCompare(sourcePath);
+      currentRecord = {
+        sourcePath,
+        normalizedPath,
+        lineHits: new Map<number, number>(),
+        linesFound: 0,
+        linesHit: 0,
+      };
+      byFile.set(normalizedPath, currentRecord);
       continue;
     }
-    if (line.startsWith('LH:')) {
-      linesHit += Number.parseInt(line.slice(3), 10) || 0;
+
+    if (line === 'end_of_record') {
+      currentRecord = undefined;
+      continue;
+    }
+
+    if (!currentRecord || !line.startsWith('DA:')) {
+      if (line.startsWith('LF:')) {
+        summaryLinesFound += Number.parseInt(line.slice(3), 10) || 0;
+      } else if (line.startsWith('LH:')) {
+        summaryLinesHit += Number.parseInt(line.slice(3), 10) || 0;
+      }
+      continue;
+    }
+
+    const [rawLine, rawHits] = line.slice(3).split(',');
+    const lineNumber = Number.parseInt(rawLine ?? '', 10);
+    const hits = Number.parseInt(rawHits ?? '', 10);
+    if (!Number.isFinite(lineNumber) || lineNumber <= 0) {
+      continue;
+    }
+
+    const safeHits = Number.isFinite(hits) && hits > 0 ? hits : 0;
+    currentRecord.lineHits.set(lineNumber, safeHits);
+    currentRecord.linesFound += 1;
+    if (safeHits > 0) {
+      currentRecord.linesHit += 1;
     }
   }
 
-  if (linesFound <= 0) return { linesFound, linesHit };
+  let linesFound = 0;
+  let linesHit = 0;
+  for (const record of byFile.values()) {
+    linesFound += record.linesFound;
+    linesHit += record.linesHit;
+  }
+
+  if (linesFound <= 0 && summaryLinesFound > 0) {
+    linesFound = summaryLinesFound;
+    linesHit = summaryLinesHit;
+  }
+
+  if (linesFound <= 0) return { linesFound, linesHit, byFile };
   const percent = (linesHit / linesFound) * 100;
-  return { linesFound, linesHit, percent };
+  return { linesFound, linesHit, percent, byFile };
 }
 
-async function readCoverageEvidence(workspaceRoot: string, fs: IFileSystem): Promise<CoverageInfo> {
+function resolveCoverageRecord(
+  coverage: CoverageSummary,
+  relativeFilePath: string,
+): LcovFileRecord | undefined {
+  const normalized = normalizePathForCompare(relativeFilePath);
+  const exact = coverage.byFile.get(normalized);
+  if (exact) return exact;
+
+  const suffixMatches = [...coverage.byFile.values()].filter((record) =>
+    record.normalizedPath.endsWith(`/${normalized}`),
+  );
+  if (suffixMatches.length === 1) return suffixMatches[0];
+  if (suffixMatches.length > 1) return undefined;
+
+  if (!normalized.includes('/')) {
+    const basenameMatches = [...coverage.byFile.values()].filter(
+      (record) =>
+        record.normalizedPath === normalized || record.normalizedPath.endsWith(`/${normalized}`),
+    );
+    if (basenameMatches.length === 1) return basenameMatches[0];
+  }
+
+  return undefined;
+}
+
+function isCrapSupportedSourceFile(filePath: string): boolean {
+  return CRAP_SOURCE_EXTENSIONS.has(path.extname(filePath).toLowerCase());
+}
+
+function detectBraceFunctionName(trimmed: string): string | undefined {
+  if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('*')) {
+    return undefined;
+  }
+
+  const functionMatch = trimmed.match(
+    /^(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*(?:<[^>{}]+>)?\s*\([^)]*\)\s*(?::[^{}=]+)?\s*\{/,
+  );
+  if (functionMatch) return functionMatch[1];
+
+  const arrowMatch = trimmed.match(
+    /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*(?::[^=]+)?=>\s*\{/,
+  );
+  if (arrowMatch) return arrowMatch[1];
+
+  const methodMatch = trimmed.match(
+    /^(?:public|private|protected|internal|static|final|virtual|override|async|readonly|get|set|\s)*([A-Za-z_$][\w$]*)\s*\([^;{}]*\)\s*(?::[^{}=]+)?\s*\{/,
+  );
+  if (!methodMatch) return undefined;
+
+  const name = methodMatch[1];
+  if (['if', 'for', 'while', 'switch', 'catch', 'else', 'try', 'do'].includes(name)) {
+    return undefined;
+  }
+  return name;
+}
+
+function extractBraceFunctionRanges(content: string): FunctionRange[] {
+  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const ranges: FunctionRange[] = [];
+
+  for (let idx = 0; idx < lines.length; idx += 1) {
+    const name = detectBraceFunctionName(lines[idx].trim());
+    if (!name) continue;
+
+    let balance = 0;
+    let seenBrace = false;
+    let endLine = lines.length;
+
+    for (let cursor = idx; cursor < lines.length; cursor += 1) {
+      const current = lines[cursor];
+      for (const char of current) {
+        if (char === '{') {
+          balance += 1;
+          seenBrace = true;
+        } else if (char === '}') {
+          balance -= 1;
+        }
+      }
+
+      if (seenBrace && balance <= 0) {
+        endLine = cursor + 1;
+        break;
+      }
+    }
+
+    if (!seenBrace) continue;
+    ranges.push({ name, startLine: idx + 1, endLine });
+    idx = Math.max(idx, endLine - 1);
+  }
+
+  return ranges;
+}
+
+function extractPythonFunctionRanges(content: string): FunctionRange[] {
+  const lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const ranges: FunctionRange[] = [];
+
+  for (let idx = 0; idx < lines.length; idx += 1) {
+    const raw = lines[idx];
+    const match = raw.match(/^\s*(?:async\s+)?def\s+([A-Za-z_][\w]*)\s*\(/);
+    if (!match) continue;
+
+    const baseIndent = raw.match(/^\s*/)?.[0].length ?? 0;
+    let endLine = lines.length;
+
+    for (let cursor = idx + 1; cursor < lines.length; cursor += 1) {
+      const candidate = lines[cursor];
+      if (!candidate.trim()) continue;
+      const candidateIndent = candidate.match(/^\s*/)?.[0].length ?? 0;
+      if (candidateIndent <= baseIndent && !candidate.trim().startsWith('#')) {
+        endLine = cursor;
+        break;
+      }
+    }
+
+    ranges.push({ name: match[1], startLine: idx + 1, endLine });
+    idx = Math.max(idx, endLine - 1);
+  }
+
+  return ranges;
+}
+
+function extractFunctionRanges(content: string, relativeFilePath: string): FunctionRange[] {
+  const ext = path.extname(relativeFilePath).toLowerCase();
+  if (ext === '.py') {
+    return extractPythonFunctionRanges(content);
+  }
+  return extractBraceFunctionRanges(content);
+}
+
+function countOccurrences(content: string, pattern: RegExp): number {
+  return content.match(pattern)?.length ?? 0;
+}
+
+function estimateCyclomaticComplexity(content: string, relativeFilePath: string): number {
+  const ext = path.extname(relativeFilePath).toLowerCase();
+  let complexity = 1;
+
+  if (ext === '.py') {
+    complexity += countOccurrences(content, /\bif\b/g);
+    complexity += countOccurrences(content, /\belif\b/g);
+    complexity += countOccurrences(content, /\bfor\b/g);
+    complexity += countOccurrences(content, /\bwhile\b/g);
+    complexity += countOccurrences(content, /\bexcept\b/g);
+    complexity += countOccurrences(content, /\band\b/g);
+    complexity += countOccurrences(content, /\bor\b/g);
+    return complexity;
+  }
+
+  complexity += countOccurrences(content, /\bif\b/g);
+  complexity += countOccurrences(content, /\bfor\b/g);
+  complexity += countOccurrences(content, /\bwhile\b/g);
+  complexity += countOccurrences(content, /\bcase\b/g);
+  complexity += countOccurrences(content, /\bcatch\b/g);
+  complexity += countOccurrences(content, /&&/g);
+  complexity += countOccurrences(content, /\|\|/g);
+  return complexity;
+}
+
+function calculateFunctionCoverage(
+  record: LcovFileRecord,
+  startLine: number,
+  endLine: number,
+): { ratio: number; linesHit: number; linesFound: number } | undefined {
+  let linesFound = 0;
+  let linesHit = 0;
+
+  for (const [line, hits] of record.lineHits.entries()) {
+    if (line < startLine || line > endLine) continue;
+    linesFound += 1;
+    if (hits > 0) linesHit += 1;
+  }
+
+  if (linesFound <= 0) return undefined;
+  return { ratio: linesHit / linesFound, linesHit, linesFound };
+}
+
+function classifyCrapAction(crap: number, coverageRatio: number): CrapAction {
+  if (crap > 50) return 'refactor';
+  return coverageRatio < 0.8 ? 'add-tests' : 'refactor';
+}
+
+async function evaluateCrapForChangedFiles(
+  workspaceRoot: string,
+  changedFiles: string[],
+  coverage: CoverageSummary,
+  fs: IFileSystem,
+): Promise<CrapAnalysis> {
+  const findings: CrapFinding[] = [];
+  const triggerFiles = new Set<string>();
+  const missingCoverageFiles = new Set<string>();
+  const skippedFiles: string[] = [];
+  let evaluatedFiles = 0;
+  let evaluatedFunctions = 0;
+
+  for (const changedFile of changedFiles) {
+    if (!isCrapSupportedSourceFile(changedFile)) {
+      continue;
+    }
+
+    const absolutePath = path.join(workspaceRoot, changedFile);
+    if (!(await fs.fileExists(absolutePath))) {
+      skippedFiles.push(changedFile);
+      continue;
+    }
+
+    let source: string;
+    try {
+      source = await fs.readFile(absolutePath);
+    } catch {
+      skippedFiles.push(changedFile);
+      continue;
+    }
+
+    evaluatedFiles += 1;
+    const ranges = extractFunctionRanges(source, changedFile);
+    if (ranges.length === 0) continue;
+
+    const coverageRecord = resolveCoverageRecord(coverage, changedFile);
+    if (!coverageRecord) {
+      missingCoverageFiles.add(changedFile);
+      continue;
+    }
+
+    const sourceLines = source.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    for (const range of ranges) {
+      const startIndex = Math.max(range.startLine - 1, 0);
+      const endIndex = Math.min(range.endLine, sourceLines.length);
+      const snippet = sourceLines.slice(startIndex, endIndex).join('\n');
+      const complexity = estimateCyclomaticComplexity(snippet, changedFile);
+      if (complexity <= 5) continue;
+
+      evaluatedFunctions += 1;
+      const coverageSlice = calculateFunctionCoverage(
+        coverageRecord,
+        range.startLine,
+        range.endLine,
+      );
+      const coverageRatio = coverageSlice?.ratio ?? 0;
+      const crap = complexity ** 2 * (1 - coverageRatio) ** 3 + complexity;
+      if (crap <= 30) continue;
+
+      const action = classifyCrapAction(crap, coverageRatio);
+      findings.push({
+        filePath: changedFile,
+        functionName: range.name,
+        startLine: range.startLine,
+        complexity,
+        coverage: coverageRatio,
+        crap,
+        action,
+      });
+      triggerFiles.add(changedFile);
+    }
+  }
+
+  findings.sort((left, right) => right.crap - left.crap);
+  return {
+    evaluatedFiles,
+    evaluatedFunctions,
+    findings,
+    triggerFiles: [...triggerFiles],
+    missingCoverageFiles: [...missingCoverageFiles],
+    skippedFiles,
+  };
+}
+
+function formatCrapFindingLine(finding: CrapFinding): string {
+  return (
+    `${finding.filePath}:${finding.startLine} | ${finding.functionName} | ` +
+    `CRAP=${finding.crap.toFixed(2)} | complexity=${finding.complexity} | ` +
+    `coverage=${(finding.coverage * 100).toFixed(2)}% | ação=${finding.action}`
+  );
+}
+
+function estimateMutationWindow(files: string[]): { min: number; max: number } {
+  const count = Math.max(files.length, 1);
+  return {
+    min: 6 * count,
+    max: 18 * count,
+  };
+}
+
+function buildMutationCommand(language: string, files: string[]): string | undefined {
+  if (files.length === 0) return undefined;
+  const normalizedLanguage = language.trim().toLowerCase();
+  const fileList = files.join(',');
+
+  if (normalizedLanguage === 'typescript' || normalizedLanguage === 'javascript') {
+    return `npx stryker run --mutate "${fileList}"`;
+  }
+
+  if (normalizedLanguage === 'java') {
+    const targetClasses = files
+      .map((file) => file.replace(/\.[^.]+$/, '').replace(/[\\/]/g, '.'))
+      .join(',');
+    return `./mvnw org.pitest:pitest-maven:mutationCoverage -DtargetClasses="${targetClasses}"`;
+  }
+
+  if (
+    normalizedLanguage === 'csharp' ||
+    normalizedLanguage === 'dotnet' ||
+    normalizedLanguage === 'c#'
+  ) {
+    return `dotnet stryker --mutate "${fileList}"`;
+  }
+
+  if (normalizedLanguage === 'python') {
+    return `mutmut run --paths-to-mutate "${fileList}"`;
+  }
+
+  return undefined;
+}
+
+function buildMutationAssessment(
+  language: string,
+  crap: CrapAnalysis,
+): MutationAssessment | undefined {
+  if (crap.findings.length === 0) return undefined;
+  const files = crap.triggerFiles;
+  const estimate = estimateMutationWindow(files);
+  return {
+    files,
+    command: buildMutationCommand(language, files),
+    estimatedMinutesMin: estimate.min,
+    estimatedMinutesMax: estimate.max,
+  };
+}
+
+async function readCoverageEvidence(
+  workspaceRoot: string,
+  fs: IFileSystem,
+): Promise<CoverageSummary> {
   const lcovPath = path.join(workspaceRoot, 'coverage', 'lcov.info');
   const exists = await fs.fileExists(lcovPath);
-  if (!exists) return { linesFound: 0, linesHit: 0 };
+  if (!exists) return { linesFound: 0, linesHit: 0, byFile: new Map() };
   const content = await fs.readFile(lcovPath);
   return parseCoverageFromLcov(content);
 }
@@ -153,6 +596,7 @@ function parseReviewAutoControl(prompt: string | undefined): ReviewAutoControl {
     tokens.includes('--changes-requested') ||
     tokens.includes('--changes') ||
     tokens.includes('--rework');
+  const mutation = tokens.includes('--mutation') || tokens.includes('--mut');
   const auto = tokens.includes('--auto');
   const batchConsent = tokens.includes('--batch-consent');
   const confirmIntentId = readFlagValue(tokens, '--confirm');
@@ -195,10 +639,30 @@ function parseReviewAutoControl(prompt: string | undefined): ReviewAutoControl {
     };
   }
 
+  if (mutation && (approved || changesRequested || batchConsent)) {
+    return {
+      action: 'orchestrate',
+      auto,
+      batchConsent,
+      error:
+        'Use `--mutation` isoladamente para análise opcional de mutation testing após avaliação de CRAP.',
+    };
+  }
+
+  if (mutation && auto) {
+    return {
+      action: 'orchestrate',
+      auto,
+      batchConsent,
+      error: 'Flags incompatíveis: `--mutation` não pode ser combinado com `--auto`.',
+    };
+  }
+
   if (approved) return { action: 'approved', auto, batchConsent, confirmIntentId };
   if (changesRequested) {
     return { action: 'changes-requested', auto, batchConsent, confirmIntentId };
   }
+  if (mutation) return { action: 'mutation', auto, batchConsent, confirmIntentId };
   return { action: 'orchestrate', auto, batchConsent, confirmIntentId };
 }
 
@@ -371,12 +835,20 @@ function emitChatQuickActionButton(
   title: string,
   query: string,
 ): void {
-  if (typeof stream.button !== 'function') return;
-  stream.button({
+  const command: vscode.Command = {
     title,
-    command: 'speckit.openChatWithQuery',
+    command: 'speckit.runChatQuickAction',
     arguments: [query],
-  });
+  };
+
+  if (typeof stream.button === 'function') {
+    stream.button(command);
+    return;
+  }
+
+  if (typeof stream.push === 'function') {
+    stream.push(new vscode.ChatResponseCommandButtonPart(command));
+  }
 }
 
 interface ContextualCommand {
@@ -494,6 +966,7 @@ export async function handleReviewAutoCommand(
         '- `@speckit /review-auto` (orquestra Gate 2 → Gate 3 e revisão automática)\n' +
         '- `@speckit /review-auto --changes-requested` (Gate 3 → Gate 2 para retrabalho)\n' +
         '- `@speckit /review-auto --approved` (Gate 3 → Gate 4 com status done)\n' +
+        '- `@speckit /review-auto --mutation` (trilha opcional de mutation testing quando CRAP > 30)\n' +
         '- `@speckit /review-auto --batch-consent` (propõe consentimento único da sessão batch)\n' +
         '- `@speckit /review-auto --confirm <intent-id>` (confirma transição pendente)\n',
     );
@@ -509,6 +982,18 @@ export async function handleReviewAutoCommand(
       },
     ]);
     return;
+  }
+
+  let cachedEvidence: ReviewEvidence | undefined;
+  async function getReviewEvidence(): Promise<ReviewEvidence> {
+    if (cachedEvidence) return cachedEvidence;
+
+    const changedFiles = await collectChangedFiles(workspaceRootPath, git);
+    const coverage = await readCoverageEvidence(workspaceRootPath, fs);
+    const crap = await evaluateCrapForChangedFiles(workspaceRootPath, changedFiles, coverage, fs);
+    const mutation = buildMutationAssessment(story.technicalSpec.language ?? '', crap);
+    cachedEvidence = { changedFiles, coverage, crap, mutation };
+    return cachedEvidence;
   }
 
   if (control.batchConsent) {
@@ -1190,6 +1675,75 @@ export async function handleReviewAutoCommand(
     return;
   }
 
+  if (control.action === 'mutation') {
+    const evidence = await getReviewEvidence();
+    const findingsLines =
+      evidence.crap.findings.length > 0
+        ? evidence.crap.findings
+            .map((finding) => `- \`${formatCrapFindingLine(finding)}\``)
+            .join('\n')
+        : '- 🔵 Mutation dispensado: nenhum arquivo alterado com CRAP > 30.';
+
+    const mutationSection = evidence.mutation
+      ? `### 🧬 Mutation testing (opcional por decisão do usuário)\n` +
+        'Mutation testing cria pequenas alterações artificiais no código para validar se os testes detectam regressões reais.\n' +
+        `- Escopo sugerido (apenas arquivos com CRAP > 30): \`${evidence.mutation.files.join(', ')}\`\n` +
+        `- Estimativa de execução local: **${evidence.mutation.estimatedMinutesMin}–${evidence.mutation.estimatedMinutesMax} min**\n` +
+        `- Comando sugerido: \`${evidence.mutation.command ?? 'defina ferramenta de mutation da stack antes de executar'}\`\n\n` +
+        'Caminhos possíveis:\n' +
+        '1. **Continuar sem mutation agora:** seguir fluxo padrão de correção/revisão.\n' +
+        '2. **Aplicar mutation agora:** executar o comando sugerido, matar survivors críticos e revalidar Gate 3.\n'
+      : '### 🧬 Mutation testing (opcional)\n- 🔵 Dispensado neste ciclo: CRAP ≤ 30 em todos os arquivos avaliados.\n';
+
+    await recordReviewAutoEvent({
+      command: '/review-auto --mutation',
+      outcome:
+        evidence.crap.findings.length > 0
+          ? '🧬 trilha opcional de mutation apresentada'
+          : '🔵 mutation dispensado por ausência de gatilho CRAP',
+      detail:
+        `Arquivos alterados: ${evidence.changedFiles.length}\n` +
+        `CRAP findings: ${evidence.crap.findings.length}\n` +
+        `Arquivos com gatilho: ${evidence.crap.triggerFiles.length}`,
+      gate: story.metadata.gate,
+      commandExecutionId,
+      specId: story.metadata.id,
+      specTitle: story.metadata.title,
+      workspaceRoot: workspaceRootPath,
+      fs,
+      audit,
+      tracer,
+    });
+
+    stream.markdown(
+      `## 🧪 Avaliação de Mutation — STORY-${story.metadata.id}\n\n` +
+        `### Resultado CRAP (gatilho)\n` +
+        `- Funções avaliadas (CC > 5): ${evidence.crap.evaluatedFunctions}\n` +
+        `- Findings CRAP > 30: ${evidence.crap.findings.length}\n` +
+        `${findingsLines}\n\n` +
+        `${mutationSection}`,
+    );
+    emitContextualCommands(stream, [
+      {
+        command: '@speckit /review-auto --changes-requested',
+        description: 'seguir fluxo padrão sem mutation (retrabalho no Gate 2)',
+      },
+      {
+        command: '@speckit /review-auto',
+        description: 'seguir revisão formal Gate 3 sem mutation',
+      },
+      {
+        command: '@speckit /status',
+        description: 'inspecionar gate/status antes da decisão',
+      },
+    ]);
+
+    if (evidence.mutation) {
+      emitChatQuickActionButton(stream, '🔄 Continuar sem Mutation', '@speckit /review-auto');
+    }
+    return;
+  }
+
   let transitionSummary: StoryTransitionSummary = {
     fromGate: story.metadata.gate,
     toGate: story.metadata.gate,
@@ -1245,8 +1799,10 @@ export async function handleReviewAutoCommand(
     }
   }
 
-  const changedFiles = await collectChangedFiles(workspaceRootPath, git);
-  const coverage = await readCoverageEvidence(workspaceRootPath, fs);
+  const evidence = await getReviewEvidence();
+  const changedFiles = evidence.changedFiles;
+  const coverage = evidence.coverage;
+  const crap = evidence.crap;
 
   const blockers: string[] = [];
   if (changedFiles.length === 0) {
@@ -1263,6 +1819,16 @@ export async function handleReviewAutoCommand(
       `Cobertura abaixo do mínimo obrigatório: ${coverage.percent.toFixed(2)}% < 80.00%.`,
     );
   }
+  if (crap.missingCoverageFiles.length > 0) {
+    blockers.push(
+      `Evidência CRAP incompleta: cobertura por linha ausente para ${crap.missingCoverageFiles.length} arquivo(s) alterado(s) com código.`,
+    );
+  }
+  if (crap.findings.length > 0) {
+    blockers.push(
+      `CRAP gate bloqueante: ${crap.findings.length} função(ões) com CRAP > 30 em ${crap.triggerFiles.length} arquivo(s).`,
+    );
+  }
 
   const filesSection =
     changedFiles.length > 0
@@ -1273,6 +1839,24 @@ export async function handleReviewAutoCommand(
     blockers.length > 0
       ? blockers.map((b) => `- ❌ ${b}`).join('\n')
       : '- ✅ Nenhum bloqueio automático detectado';
+
+  const crapFindingsSection =
+    crap.findings.length > 0
+      ? crap.findings.map((finding) => `- \`${formatCrapFindingLine(finding)}\``).join('\n')
+      : '- ✅ Nenhuma função com CRAP > 30 detectada no escopo alterado';
+
+  const mutationOptionSection =
+    evidence.mutation && evidence.mutation.files.length > 0
+      ? `### 🧬 Mutation testing (opcional por decisão do usuário)\n` +
+        'Mutation testing valida se seus testes realmente detectam regressões comportamentais (não só execução).\n' +
+        `- Gatilho detectado: CRAP > 30 em ${evidence.mutation.files.length} arquivo(s)\n` +
+        `- Escopo sugerido: \`${evidence.mutation.files.join(', ')}\`\n` +
+        `- Estimativa local: **${evidence.mutation.estimatedMinutesMin}–${evidence.mutation.estimatedMinutesMax} min**\n` +
+        `- Comando sugerido: \`${evidence.mutation.command ?? 'defina a ferramenta de mutation da sua stack antes de executar'}\`\n\n` +
+        '**Caminhos possíveis:**\n' +
+        '1. **Continuar sem mutation agora:** seguir o fluxo padrão de revisão/correção.\n' +
+        '2. **Aplicar mutation agora:** executar `@speckit /review-auto --mutation` para detalhar e registrar essa trilha.\n\n'
+      : '### 🧬 Mutation testing\n- 🔵 Dispensado neste ciclo (nenhum gatilho CRAP > 30 no escopo alterado).\n\n';
 
   const verdict =
     blockers.length > 0
@@ -1287,6 +1871,8 @@ export async function handleReviewAutoCommand(
       `Status: ${transitionSummary.fromStatus} -> ${transitionSummary.toStatus}\n` +
       `Arquivos detectados: ${changedFiles.length}\n` +
       `Cobertura: ${formatCoverage(coverage)}\n` +
+      `CRAP findings: ${crap.findings.length}\n` +
+      `Arquivos com gatilho CRAP: ${crap.triggerFiles.length}\n` +
       `Bloqueios: ${blockers.length}`,
     gate: 3,
     commandExecutionId,
@@ -1303,15 +1889,22 @@ export async function handleReviewAutoCommand(
       `${formatTransitionMarkdown(transitionSummary)}\n\n` +
       `### Evidências coletadas\n` +
       `- Arquivos detectados para revisão: ${changedFiles.length}\n` +
-      `- Cobertura detectada: ${formatCoverage(coverage)}\n\n` +
+      `- Cobertura detectada: ${formatCoverage(coverage)}\n` +
+      `- CRAP avaliado em ${crap.evaluatedFiles} arquivo(s) e ${crap.evaluatedFunctions} função(ões) com CC > 5\n` +
+      `- Arquivos com gatilho CRAP > 30: ${crap.triggerFiles.length}\n` +
+      `${crap.skippedFiles.length > 0 ? `- Arquivos ignorados na avaliação CRAP (não disponíveis no workspace): ${crap.skippedFiles.length}\n` : ''}\n` +
       `**Arquivos candidatos à revisão**\n` +
       `${filesSection}\n\n` +
+      `### CRAP Gate (obrigatório)\n` +
+      `${crapFindingsSection}\n\n` +
       `### Guardrails executados (Gate 3)\n` +
       `- Funcionalidade vs critérios de aceite\n` +
       `- Arquitetura e fronteiras\n` +
       `- Qualidade de código e testes\n` +
+      `- CRAP por função (CC > 5) com ação determinística (add-tests/refactor)\n` +
       `- Segurança e observabilidade\n` +
       `- NFR e DoD\n\n` +
+      `${mutationOptionSection}` +
       `### Bloqueios automáticos\n` +
       `${blockerSection}\n\n` +
       `**Veredito orquestrado:** ${verdict}\n\n` +
@@ -1331,6 +1924,14 @@ export async function handleReviewAutoCommand(
         command: '@speckit /review-auto --approved --auto',
         description: 'registrar aprovação automática',
       },
+      ...(evidence.mutation
+        ? [
+            {
+              command: '@speckit /review-auto --mutation',
+              description: 'seguir trilha opcional de mutation testing',
+            },
+          ]
+        : []),
       { command: '@speckit /status', description: 'verificar gate/status após decisão' },
     ],
     'Para intervenção complexa, descreva no chat as evidências do Gate 3 antes de decidir o veredito.',
@@ -1346,4 +1947,11 @@ export async function handleReviewAutoCommand(
     '✅ Registrar APROVADO',
     '@speckit /review-auto --approved --auto',
   );
+  if (evidence.mutation) {
+    emitChatQuickActionButton(
+      stream,
+      '🧬 Avaliar via Mutation',
+      '@speckit /review-auto --mutation',
+    );
+  }
 }

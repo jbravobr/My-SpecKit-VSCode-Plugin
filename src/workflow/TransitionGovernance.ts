@@ -9,7 +9,8 @@ export type TransitionIntentKind =
   | 'gate-transition'
   | 'mode-switch'
   | 'status-retrofit'
-  | 'batch-consent';
+  | 'batch-consent'
+  | 'branch-governance';
 
 export interface TransitionIntent {
   id: string;
@@ -28,16 +29,34 @@ export interface BatchSessionConsent {
   note?: string;
 }
 
+export type BranchResolutionStrategy = 'session' | 'cited';
+export type BranchSessionSource = 'current' | 'created';
+
+export interface BranchSessionGovernance {
+  id: string;
+  sessionId: string;
+  strategy: BranchResolutionStrategy;
+  command: string;
+  createdAt: string;
+  updatedAt: string;
+  citedMentions: string[];
+  sessionBranch?: string;
+  sessionBranchSource?: BranchSessionSource;
+}
+
 interface GovernanceState {
   version: 1;
   intents: TransitionIntent[];
   batchSessionConsent?: BatchSessionConsent;
+  branchSessionGovernance?: BranchSessionGovernance;
 }
 
 const EMPTY_STATE: GovernanceState = {
   version: 1,
   intents: [],
 };
+
+const RUNTIME_SESSION_ID = createCorrelationId('session');
 
 function statePath(workspaceRoot: string): string {
   return path.join(workspaceRoot, GOVERNANCE_FILE);
@@ -70,6 +89,7 @@ async function loadState(workspaceRoot: string, fs: IFileSystem): Promise<Govern
       version: 1,
       intents: parsed.intents,
       batchSessionConsent: parsed.batchSessionConsent,
+      branchSessionGovernance: parsed.branchSessionGovernance,
     };
   } catch {
     return { ...EMPTY_STATE };
@@ -92,11 +112,16 @@ function pruneExpiredState(state: GovernanceState): GovernanceState {
     state.batchSessionConsent && !isExpired(state.batchSessionConsent.expiresAt)
       ? state.batchSessionConsent
       : undefined;
+  const branchSessionGovernance =
+    state.branchSessionGovernance?.sessionId === RUNTIME_SESSION_ID
+      ? state.branchSessionGovernance
+      : undefined;
 
   return {
     ...state,
     intents,
     batchSessionConsent,
+    branchSessionGovernance,
   };
 }
 
@@ -212,6 +237,71 @@ export async function clearBatchSessionConsent(
   const nextState: GovernanceState = {
     ...state,
     batchSessionConsent: undefined,
+  };
+  await saveState(workspaceRoot, fs, nextState);
+}
+
+export async function setBranchSessionGovernance(
+  workspaceRoot: string,
+  fs: IFileSystem,
+  input: {
+    strategy: BranchResolutionStrategy;
+    command: string;
+    citedMentions: string[];
+    sessionBranch?: string;
+    sessionBranchSource?: BranchSessionSource;
+  },
+): Promise<BranchSessionGovernance> {
+  if (input.strategy === 'session' && !input.sessionBranch) {
+    throw new Error(
+      'A governança de branch da sessão exige uma branch canônica resolvida antes de persistir a estratégia.',
+    );
+  }
+
+  const state = pruneExpiredState(await loadState(workspaceRoot, fs));
+  const createdAt = state.branchSessionGovernance?.createdAt ?? nowIso();
+  const governance: BranchSessionGovernance = {
+    id: state.branchSessionGovernance?.id ?? createCorrelationId('session'),
+    sessionId: RUNTIME_SESSION_ID,
+    strategy: input.strategy,
+    command: input.command,
+    createdAt,
+    updatedAt: nowIso(),
+    citedMentions: [...input.citedMentions],
+    sessionBranch: input.sessionBranch,
+    sessionBranchSource: input.sessionBranchSource,
+  };
+
+  const nextState: GovernanceState = {
+    ...state,
+    branchSessionGovernance: governance,
+  };
+  await saveState(workspaceRoot, fs, nextState);
+  return governance;
+}
+
+export async function getBranchSessionGovernance(
+  workspaceRoot: string,
+  fs: IFileSystem,
+): Promise<BranchSessionGovernance | undefined> {
+  const state = pruneExpiredState(await loadState(workspaceRoot, fs));
+  await saveState(workspaceRoot, fs, state);
+  return state.branchSessionGovernance;
+}
+
+export async function clearBranchSessionGovernance(
+  workspaceRoot: string,
+  fs: IFileSystem,
+): Promise<void> {
+  const state = pruneExpiredState(await loadState(workspaceRoot, fs));
+  if (!state.branchSessionGovernance) {
+    await saveState(workspaceRoot, fs, state);
+    return;
+  }
+
+  const nextState: GovernanceState = {
+    ...state,
+    branchSessionGovernance: undefined,
   };
   await saveState(workspaceRoot, fs, nextState);
 }

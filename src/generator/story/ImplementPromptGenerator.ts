@@ -1,10 +1,20 @@
 import { Story } from '../../story/Story';
+import {
+  detectStoryBranchMentions,
+  generateRuntimeBranchGovernanceSection,
+} from '../utils/BranchGovernance';
 
 export function generateImplementPrompt(story: Story): string {
   const storyId = story.metadata.id || '001';
   const criteria = story.functionalSpec.acceptanceCriteria.map((c) => `- [ ] ${c}`).join('\n');
   const criteriaList = story.functionalSpec.acceptanceCriteria.map((c) => `- ${c}`).join('\n');
   const dodList = story.dod.criteria.map((c) => `- [ ] ${c}`).join('\n');
+  const branchGovernanceSection = generateRuntimeBranchGovernanceSection({
+    mentions: detectStoryBranchMentions(story),
+    defaultSessionBranch: `feature/${storyId}-<slug>`,
+    sessionBranchLabel: 'a branch de trabalho confirmada para esta sessão',
+    noLoopExample: '`develop`, `main` ou outra branch citada',
+  });
 
   return `# Implement Story — Sessão A (Gates 0–2)
 
@@ -47,11 +57,18 @@ ${dodList || '   - (não especificado)'}
 > Aceite: "confirmar", "pode ir", "sim", "s", "ok" ou equivalente.
 > Se o usuário pedir ajustes: incorpore, reapresente o plano e aguarde nova confirmação.
 
----
+${branchGovernanceSection ? `${branchGovernanceSection}---\n\n` : '---\n\n'}
 
 ## Gate 1 — Implementação
 
 ### Setup git
+\`\`\`bash
+git rev-parse --is-inside-work-tree
+\`\`\`
+
+> Se a governança de branch acima tiver concluído por "usar branch da sessão", o padrão abaixo vale como branch de trabalho default desta sessão.
+> Se o usuário tiver decidido respeitar uma branch citada, substitua o alvo abaixo pela branch confirmada e não crie branch alternativa sem nova confirmação.
+
 \`\`\`bash
 git checkout develop && git pull
 git checkout -b feature/${storyId}-<slug>

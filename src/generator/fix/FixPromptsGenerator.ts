@@ -1,4 +1,8 @@
 import { Fix, FixGap, TechStackDetection } from '../../fix/Fix';
+import {
+  detectFixBranchMentions,
+  generateRuntimeBranchGovernanceSection,
+} from '../utils/BranchGovernance';
 
 const TEST_COMMANDS: Record<string, string> = {
   typescript: 'npx vitest run --coverage --coverage.thresholds.lines=80',
@@ -16,6 +20,12 @@ export function generateFixImplementPrompt(fix: Fix, stack: TechStackDetection):
   const fixId = fix.metadata.id || '001';
   const dofList =
     fix.dof.criteria.map((c) => `- [ ] ${c}`).join('\n') || '- [ ] (não especificado)';
+  const branchGovernanceSection = generateRuntimeBranchGovernanceSection({
+    mentions: detectFixBranchMentions(fix),
+    defaultSessionBranch: `fix/${fixId}-<slug>`,
+    sessionBranchLabel: 'a branch de trabalho confirmada para esta sessão',
+    noLoopExample: '`develop`, `main` ou outra branch citada',
+  });
 
   return `# Fix Implement — Sessão A (Gates 0–2)
 
@@ -53,11 +63,18 @@ Com base na leitura e inspeção:
 - [ ] Root cause confirmada e aceita pelo usuário
 - [ ] Escopo da mudança delimitado
 
----
+${branchGovernanceSection ? `${branchGovernanceSection}---\n\n` : '---\n\n'}
 
 ## Gate 1 — Implementação
 
 ### Setup git
+\`\`\`bash
+git rev-parse --is-inside-work-tree
+\`\`\`
+
+> Se a governança de branch acima tiver concluído por "usar branch da sessão", o padrão abaixo vale como branch de trabalho default desta sessão.
+> Se o usuário tiver decidido respeitar uma branch citada, substitua o alvo abaixo pela branch confirmada e não crie branch alternativa sem nova confirmação.
+
 \`\`\`bash
 git checkout develop && git pull
 git checkout -b fix/${fixId}-<slug>
@@ -131,6 +148,12 @@ export function generateFixReviewPrompt(fix: Fix, stack: TechStackDetection): st
   const fixId = fix.metadata.id || '001';
   const dofList =
     fix.dof.criteria.map((c) => `- [ ] ${c}`).join('\n') || '- [ ] (não especificado)';
+  const branchGovernanceSection = generateRuntimeBranchGovernanceSection({
+    mentions: detectFixBranchMentions(fix),
+    defaultSessionBranch: `fix/${fixId}-<slug>`,
+    sessionBranchLabel: 'a branch de trabalho confirmada no Gate 0',
+    noLoopExample: '`develop`, `main` ou outra branch citada',
+  });
 
   return `# Fix Review — Sessão B (Gates 3–4)
 
@@ -154,7 +177,7 @@ Stack detectada: ${stack.language} / ${stack.framework}${stack.architecture ? ` 
 
 Só inicie o checklist após concluir os 4 passos acima.
 
----
+${branchGovernanceSection ? `${branchGovernanceSection}---\n\n` : '---\n\n'}
 
 ## Gate 3 — Revisão
 
@@ -175,7 +198,7 @@ Só inicie o checklist após concluir os 4 passos acima.
 - [ ] Edge cases cobertos
 
 ### Git
-- [ ] Branch segue padrão \`fix/${fixId}-<slug>\`
+- [ ] Branch segue padrão \`fix/${fixId}-<slug>\` **ou** a branch explicitamente confirmada na governança inicial
 - [ ] Commits seguem Conventional Commits
 - [ ] Commit de implementação + commit de testes separados
 
@@ -240,7 +263,7 @@ git commit -m "chore(${fixId}): encerra fix no speckit"
 ## Declaração de conclusão
 
 > **Fix ${fixId} CONCLUÍDO.** Bug não reproduz. Testes: 100% passando. Cobertura: X%.
-> Commit local na branch \`fix/${fixId}-<slug>\`.
+> Commit local na branch da sessão confirmada para o fix (por padrão, \`fix/${fixId}-<slug>\`).
 `;
 }
 
@@ -248,6 +271,12 @@ export function generateFixRunPrompt(fix: Fix, stack: TechStackDetection): strin
   const fixId = fix.metadata.id || '001';
   const dofList =
     fix.dof.criteria.map((c) => `- [ ] ${c}`).join('\n') || '- [ ] (não especificado)';
+  const branchGovernanceSection = generateRuntimeBranchGovernanceSection({
+    mentions: detectFixBranchMentions(fix),
+    defaultSessionBranch: `fix/${fixId}-<slug>`,
+    sessionBranchLabel: 'a branch de trabalho confirmada para esta sessão',
+    noLoopExample: '`develop`, `main` ou outra branch citada',
+  });
 
   return `# Fix Run — Modo Monolítico
 
@@ -266,11 +295,18 @@ Leia \`.speckit/FIX-${fixId}.md\` e inspecione os arquivos suspeitos.
 Confirme root cause antes de escrever qualquer código.
 Aguarde confirmação do usuário.
 
----
+${branchGovernanceSection ? `${branchGovernanceSection}---\n\n` : '---\n\n'}
 
 ## Gate 1 — Implementação
 
 Setup git:
+\`\`\`bash
+git rev-parse --is-inside-work-tree
+\`\`\`
+
+> Se a governança de branch acima tiver concluído por "usar branch da sessão", o padrão abaixo vale como branch de trabalho default desta sessão.
+> Se o usuário tiver decidido respeitar uma branch citada, substitua o alvo abaixo pela branch confirmada e não crie branch alternativa sem nova confirmação.
+
 \`\`\`bash
 git checkout -b fix/${fixId}-<slug>
 \`\`\`
@@ -315,6 +351,9 @@ git commit -m "test(${fixId}): regressão"
 
 ### DoF
 ${dofList}
+
+### Git
+- [ ] Branch segue padrão \`fix/${fixId}-<slug>\` **ou** a branch explicitamente confirmada na governança inicial
 
 **Não avance para o Gate 4 sem todos os itens acima verificados.**
 

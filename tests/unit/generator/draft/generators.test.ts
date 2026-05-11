@@ -197,6 +197,13 @@ describe('generateStoryElicitPrompt', () => {
     const r = generateStoryElicitPrompt(roughInput, '001', 'story', {});
     expect(r).not.toContain('Defaults do workspace');
   });
+
+  it('adds branch governance question when the rough input cites a branch', () => {
+    const r = generateStoryElicitPrompt('Quero ajustar a story que cita a branch develop', '001');
+    expect(r).toContain('FASE 0 — Governança de branch');
+    expect(r).toContain('branch(es): `develop`');
+    expect(r).toContain('usar sempre a branch carregada na sessão do VS Code');
+  });
 });
 
 describe('generateFixElicitPrompt', () => {
@@ -215,6 +222,13 @@ describe('generateFixElicitPrompt', () => {
   it('references the correct fix ID in file path', () => {
     expect(result).toContain('FIX-001');
     expect(result).toContain('.speckit/FIX-001.md');
+  });
+
+  it('adds branch governance question when the bug description cites a branch', () => {
+    const r = generateFixElicitPrompt('O erro começou após mudar algo na branch develop', '001');
+    expect(r).toContain('FASE 0 — Governança de branch');
+    expect(r).toContain('branch(es): `develop`');
+    expect(r).toContain('usar sempre a branch carregada na sessão do VS Code');
   });
 
   it('contains Bug Description phase', () => {

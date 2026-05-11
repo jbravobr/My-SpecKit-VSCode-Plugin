@@ -17,7 +17,7 @@ describe('handleHelpCommand', () => {
     expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '📊 Ver Status das Specs',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /status'],
     });
   });
@@ -31,10 +31,11 @@ describe('handleHelpCommand', () => {
     expect(output).toContain('/review-auto');
     expect(output).toContain('--changes-requested');
     expect(output).toContain('--approved');
+    expect(output).toContain('--mutation');
     expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '▶ Iniciar Revisão Automática',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /review-auto'],
     });
   });
@@ -48,6 +49,17 @@ describe('handleHelpCommand', () => {
     expect(output).toContain('/status');
     expect(output).toContain('--all');
     expect(output).toContain('--closed');
+  });
+
+  it('shows branch governance options in batch help', async () => {
+    const stream = createMockStream();
+
+    await handleHelpCommand(createMockRequest('batch'), stream, createMockToken());
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('/batch');
+    expect(output).toContain('--branch-strategy <session|cited>');
+    expect(output).toContain('--confirm <intent-id>');
   });
 
   it('maps topic aliases to command help', async () => {
@@ -71,7 +83,7 @@ describe('handleHelpCommand', () => {
     expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '🚪 Mostrar Regras de Gate',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /gate'],
     });
   });
@@ -87,7 +99,7 @@ describe('handleHelpCommand', () => {
     expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '📘 Abrir Ajuda Geral',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /help'],
     });
   });

@@ -1,4 +1,8 @@
 import { Gap, Story } from '../../story/Story';
+import {
+  detectStoryBranchMentions,
+  generateRuntimeBranchGovernanceSection,
+} from '../utils/BranchGovernance';
 
 export function generateGapFillingPrompt(story: Story, gaps: Gap[]): string {
   const storyId = story.metadata.id || '001';
@@ -45,6 +49,12 @@ export function generateRunPrompt(story: Story): string {
   const storyId = story.metadata.id || '001';
   const criteria = story.functionalSpec.acceptanceCriteria.map((c) => `- [ ] ${c}`).join('\n');
   const dodList = story.dod.criteria.map((c) => `- [ ] ${c}`).join('\n');
+  const branchGovernanceSection = generateRuntimeBranchGovernanceSection({
+    mentions: detectStoryBranchMentions(story),
+    defaultSessionBranch: `feature/${storyId}-<slug>`,
+    sessionBranchLabel: 'a branch de trabalho confirmada para esta sessão',
+    noLoopExample: '`develop`, `main` ou outra branch citada',
+  });
 
   return `# Run Story — Modo Monolítico
 
@@ -88,11 +98,18 @@ ${dodList || '   - (não especificado)'}
 > Aceite: "confirmar", "pode ir", "sim", "s", "ok" ou equivalente.
 > Se o usuário pedir ajustes: incorpore, reapresente o plano e aguarde nova confirmação.
 
----
+${branchGovernanceSection ? `${branchGovernanceSection}---\n\n` : '---\n\n'}
 
 ## Gate 1 — Implementação
 
 ### Setup git
+\`\`\`bash
+git rev-parse --is-inside-work-tree
+\`\`\`
+
+> Se a governança de branch acima tiver concluído por "usar branch da sessão", o padrão abaixo vale como branch de trabalho default desta sessão.
+> Se o usuário tiver decidido respeitar uma branch citada, substitua o alvo abaixo pela branch confirmada e não crie branch alternativa sem nova confirmação.
+
 \`\`\`bash
 git checkout develop && git pull
 git checkout -b feature/${storyId}-<slug>
@@ -259,7 +276,7 @@ ${criteria || '- [ ] (critérios não especificados)'}
 - [ ] Segurança: ${story.nonFunctionalSpec.security || '(não especificado)'}
 
 **Git:**
-- [ ] Branch segue padrão \`feature/${storyId}-<slug>\`
+- [ ] Branch segue padrão \`feature/${storyId}-<slug>\` **ou** a branch explicitamente confirmada na governança inicial
 - [ ] Commits seguem Conventional Commits
 - [ ] Sem commits genéricos ("fix", "wip", "test")
 
@@ -363,6 +380,6 @@ git commit -m "fix(${storyId}): ajustes pós-revisão"
 Somente após todos os gates concluídos com sucesso, emita:
 
 > **Story ${storyId} CONCLUÍDA.** Testes: 100% passando. Cobertura: X%.
-> Commit local na branch \`feature/${storyId}-<slug>\`.
+> Commit local na branch da sessão confirmada para a story (por padrão, \`feature/${storyId}-<slug>\`).
 `;
 }

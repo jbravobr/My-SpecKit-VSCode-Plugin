@@ -1,4 +1,8 @@
 import { Story } from '../../story/Story';
+import {
+  detectStoryBranchMentions,
+  generateRuntimeBranchGovernanceSection,
+} from '../utils/BranchGovernance';
 
 export function generateReviewPrompt(story: Story): string {
   const storyId = story.metadata.id || '001';
@@ -11,6 +15,12 @@ export function generateReviewPrompt(story: Story): string {
   const scalabilityLine = story.nonFunctionalSpec.scalability?.trim()
     ? `\n- [ ] Escalabilidade (código): ${story.nonFunctionalSpec.scalability.trim()}`
     : '';
+  const branchGovernanceSection = generateRuntimeBranchGovernanceSection({
+    mentions: detectStoryBranchMentions(story),
+    defaultSessionBranch: `feature/${storyId}-<slug>`,
+    sessionBranchLabel: 'a branch de trabalho confirmada no Gate 0',
+    noLoopExample: '`develop`, `main` ou outra branch citada',
+  });
 
   return `# Review Story — Sessão B (Gates 3–4)
 
@@ -38,7 +48,7 @@ Só inicie o checklist após concluir os 4 passos acima.
 
 **Regra do revisor independente:** ao encontrar uma decisão questionável, pergunte a razão ao usuário antes de marcar como bloqueante — não assuma que foi intencional ou que foi erro.
 
----
+${branchGovernanceSection ? `${branchGovernanceSection}---\n\n` : '---\n\n'}
 
 ## Gate 3 — Revisão
 
@@ -82,7 +92,7 @@ ${criteria || '- [ ] (critérios não especificados)'}
 - [ ] Idempotência: operações de escrita não duplicam estado — Idempotency-Key ou deduplicação por chave de negócio presente
 
 ### Git
-- [ ] Branch segue padrão \`feature/${storyId}-<slug>\`
+- [ ] Branch segue padrão \`feature/${storyId}-<slug>\` **ou** a branch explicitamente confirmada na governança inicial
 - [ ] Commits seguem Conventional Commits
 - [ ] Sem commits com mensagem genérica ("fix", "wip", "test")
 - [ ] Nenhum commit direto em \`develop\` ou \`main\`
@@ -201,7 +211,7 @@ git commit -m "chore(${storyId}): encerra story no speckit"
 Somente após todos os gates concluídos com sucesso, emita:
 
 > **Story ${storyId} CONCLUÍDA.** Testes: 100% passando. Cobertura: X%.
-> Commit local na branch \`feature/${storyId}-<slug>\`.
+> Commit local na branch da sessão confirmada para a story (por padrão, \`feature/${storyId}-<slug>\`).
 `;
 }
 

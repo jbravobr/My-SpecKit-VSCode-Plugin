@@ -119,12 +119,12 @@ describe('handleValidateCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '📊 Ver Status das Specs',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /status'],
     });
     expect(stream.button).toHaveBeenCalledWith({
       title: '▶ Propor Gate 3 (após Gate 2)',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /review-auto'],
     });
   });
@@ -171,7 +171,7 @@ describe('handleValidateCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '📊 Ver Status das Specs',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /status'],
     });
   });

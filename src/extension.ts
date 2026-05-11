@@ -15,6 +15,17 @@ async function openCopilotChatWithQuery(query: string): Promise<void> {
   await vscode.commands.executeCommand('workbench.action.chat.open', { query });
 }
 
+async function runChatQuickAction(query: string): Promise<void> {
+  if (typeof query !== 'string' || query.trim().length === 0) {
+    vscode.window.showErrorMessage(
+      'SpecKit: Não foi possível executar a ação rápida (query inválida).',
+    );
+    return;
+  }
+
+  await openCopilotChatWithQuery(query.trim());
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   registerSpeckitParticipant(context);
   createSpecFileWatcher(context);
@@ -60,14 +71,10 @@ export function activate(context: vscode.ExtensionContext): void {
       await openCopilotChatWithQuery('@speckit /fix');
     }),
     vscode.commands.registerCommand('speckit.openChatWithQuery', async (query: string) => {
-      if (typeof query !== 'string' || query.trim().length === 0) {
-        vscode.window.showErrorMessage(
-          'SpecKit: Não foi possível executar a ação rápida (query inválida).',
-        );
-        return;
-      }
-
-      await openCopilotChatWithQuery(query.trim());
+      await runChatQuickAction(query);
+    }),
+    vscode.commands.registerCommand('speckit.runChatQuickAction', async (query: string) => {
+      await runChatQuickAction(query);
     }),
     vscode.commands.registerCommand(
       'speckit.addDevToolsSkill',

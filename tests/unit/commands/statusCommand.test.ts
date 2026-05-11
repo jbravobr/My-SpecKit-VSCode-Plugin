@@ -72,7 +72,7 @@ describe('handleStatusCommand', () => {
     expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '📊 Executar /status',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /status'],
     });
   });
@@ -95,7 +95,7 @@ describe('handleStatusCommand', () => {
     expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '🔁 Gerar Proposta de Retrofit',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /status --fix'],
     });
   });
@@ -152,12 +152,12 @@ describe('handleStatusCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '📊 Atualizar Status',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /status'],
     });
     expect(stream.button).toHaveBeenCalledWith({
       title: '📦 Ver Status Completo (--all)',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /status --all'],
     });
   });
@@ -438,7 +438,7 @@ describe('handleStatusCommand', () => {
     expect(intentId).toBeTruthy();
     expect(stream.button).toHaveBeenCalledWith({
       title: '✅ Confirmar Retrofit Proposto',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: [`@speckit /status --fix --confirm ${intentId}`],
     });
 
@@ -482,7 +482,7 @@ describe('handleStatusCommand', () => {
     expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '🔁 Gerar Nova Proposta de Retrofit',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /status --fix'],
     });
   });

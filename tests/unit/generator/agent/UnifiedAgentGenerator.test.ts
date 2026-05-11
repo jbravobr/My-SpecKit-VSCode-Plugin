@@ -55,6 +55,18 @@ describe('StoryUnifiedAgentGenerator', () => {
       expect(result).toContain('Não empilhar story branch sobre story branch');
     });
 
+    it('adds anti-loop guidance when the story cites a branch like develop', () => {
+      const story = storyWithDeps([]);
+      story.businessRequirement.problem = 'A implementação cita a branch develop como contexto.';
+
+      const result = generateUnifiedAgent(story);
+
+      expect(result).toContain('Protocolo de branch citada');
+      expect(result).toContain('`develop`');
+      expect(result).toContain('a branch única do lote');
+      expect(result).toContain('**não** volte a procurar/criar `develop`');
+    });
+
     it('contains dependency protocol', () => {
       const result = generateUnifiedAgent(completeStory);
       expect(result).toContain('PROTOCOLO DE DEPENDÊNCIA');

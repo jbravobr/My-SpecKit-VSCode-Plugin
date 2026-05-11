@@ -109,4 +109,15 @@ describe('generateBatchIndex', () => {
     expect(result).toContain('Não crie `feature/<story-id>-<slug>` neste modo');
     expect(result).toContain('Não empilhe branch de uma story sobre outra');
   });
+
+  it('adds anti-loop guidance when a story cites a branch', () => {
+    const story = makeStory({ id: '001' });
+    story.businessRequirement.problem = 'A story menciona explicitamente a branch develop.';
+
+    const result = generateBatchIndex([story]);
+
+    expect(result).toContain('Governança de branch citada (anti-loop)');
+    expect(result).toContain('`develop`');
+    expect(result).toContain('branch do lote deve continuar canônica');
+  });
 });

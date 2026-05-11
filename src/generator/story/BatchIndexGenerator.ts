@@ -1,13 +1,26 @@
 import type { Story } from '../../story/Story';
+import {
+  BatchBranchRuntimeContext,
+  generateBatchBranchGovernanceSummary,
+  generateBatchBranchModeGuidance,
+} from '../utils/BranchGovernance';
 
 /**
  * Generates a multi-story `copilot-instructions.md` for batch mode.
  * Lists all active context skills and unified agents.
  */
-export function generateBatchIndex(stories: Story[]): string {
+export function generateBatchIndex(
+  stories: Story[],
+  branchContext?: BatchBranchRuntimeContext,
+): string {
   const activeStories = stories.filter(
     (s) => s.metadata.status !== 'done' && s.metadata.status !== 'cancelled',
   );
+  const branchGovernanceSummary = generateBatchBranchGovernanceSummary(
+    activeStories,
+    branchContext,
+  );
+  const branchModeGuidance = generateBatchBranchModeGuidance(branchContext);
 
   const storyList = activeStories
     .map((s) => {
@@ -63,9 +76,7 @@ ${agentsList || '- nenhum'}
 
 ## Estratégia de branch (batch)
 
-- Use **uma única branch** para todo o lote (ex: \`feature/batch-<yyyymmdd>-<slug>\`)
-- Não crie \`feature/<story-id>-<slug>\` neste modo
-- Não empilhe branch de uma story sobre outra
-- Se a execução iniciar em \`develop\`/\`main\`, crie a branch do lote uma vez e reutilize até o fim
+${branchModeGuidance}
+${branchGovernanceSummary ? `- ${branchGovernanceSummary.trim()}` : ''}
 `;
 }

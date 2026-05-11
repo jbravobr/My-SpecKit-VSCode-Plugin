@@ -80,6 +80,7 @@ Só inicie o checklist após concluir os 4 passos acima.
 - [ ] Teste de regressão principal presente e passando (falha sem o fix, passa com o fix)
 - [ ] 0 (zero) falhas (evidência: relatório da Sessão A)
 - [ ] CRAP ≤ 30 para toda função modificada com CC > 5 (bloqueante de gate)
+- [ ] Se houver CRAP > 30, explicar mutation testing ao usuário, estimar tempo e oferecer dois caminhos (continuar sem mutation ou aplicar mutation no escopo afetado) — execução só com decisão explícita do usuário
 - [ ] Cobertura ≥ 80% nas linhas modificadas (relatório obrigatório)
 - [ ] Edge cases cobertos
 

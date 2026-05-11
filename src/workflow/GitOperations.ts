@@ -8,6 +8,8 @@ export interface IGitOps {
   isRepository(cwd: string): Promise<boolean>;
   init(cwd: string): Promise<string>;
   changedFiles?(cwd: string, range?: string): Promise<string[]>;
+  currentBranch?(cwd: string): Promise<string>;
+  createBranch?(cwd: string, branchName: string): Promise<string>;
 }
 
 const MAX_OUTPUT_BYTES = 50 * 1024; // 50KB
@@ -77,6 +79,24 @@ export const gitOps: IGitOps = {
 
   async init(cwd: string): Promise<string> {
     return execGit(['init'], cwd);
+  },
+
+  async currentBranch(cwd: string): Promise<string> {
+    const branchName = (await execGit(['branch', '--show-current'], cwd)).trim();
+    if (!branchName) {
+      throw new Error(
+        'Não foi possível resolver a branch atual do Git (HEAD indefinido, detached ou repositório sem branch ativa).',
+      );
+    }
+    return branchName;
+  },
+
+  async createBranch(cwd: string, branchName: string): Promise<string> {
+    const normalizedBranch = branchName.trim();
+    if (!normalizedBranch) {
+      throw new Error('O nome da branch a ser criada não pode ser vazio.');
+    }
+    return execGit(['checkout', '-b', normalizedBranch], cwd);
   },
 
   async changedFiles(cwd: string, range = 'develop...HEAD'): Promise<string[]> {

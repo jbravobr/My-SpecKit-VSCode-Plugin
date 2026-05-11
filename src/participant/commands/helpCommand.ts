@@ -42,11 +42,15 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       '@speckit /batch --generate',
       '@speckit /batch --generate --unified',
       '@speckit /batch --generate --unified --story <id>',
+      '@speckit /batch --generate --unified --branch-strategy <session|cited>',
+      '@speckit /batch --generate --unified --branch-strategy session --confirm <intent-id>',
     ],
     options: [
       '--generate (ou --gen)',
       '--unified (junto com --generate) — gera agente implementador/revisor por story',
       '--story <id> (filtra uma story específica, requer --generate --unified)',
+      '--branch-strategy <session|cited> (resolve a governança de branch quando a story cita branch)',
+      '--confirm <intent-id> (confirma a criação pendente da branch da sessão sugerida no modo unificado)',
     ],
     aliases: ['/batch-generate', '/batch-unified'],
   },
@@ -82,6 +86,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       '@speckit /review-auto --confirm <intent-id>',
       '@speckit /review-auto --changes-requested',
       '@speckit /review-auto --approved',
+      '@speckit /review-auto --mutation',
       '@speckit /review-auto --batch-consent',
       '@speckit /review-auto --batch-consent --confirm <intent-id>',
       '@speckit /review-auto --auto',
@@ -90,6 +95,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       '--confirm <intent-id> para confirmar transição proposta (obrigatório fora de --auto)',
       '--changes-requested (alias: --changes, --rework) para retornar Gate 3 → Gate 2',
       '--approved (alias: --approve) para encerrar Gate 3 → Gate 4/status done',
+      '--mutation (alias: --mut) para detalhar trilha opcional de mutation quando CRAP > 30',
       '--batch-consent para propor consentimento único da sessão batch unificada',
       '--auto para handoff automático somente quando consentimento batch estiver ativo',
     ],
@@ -128,12 +134,20 @@ function emitChatQuickActionButton(
   title: string,
   query: string,
 ): void {
-  if (typeof stream.button !== 'function') return;
-  stream.button({
+  const command: vscode.Command = {
     title,
-    command: 'speckit.openChatWithQuery',
+    command: 'speckit.runChatQuickAction',
     arguments: [query],
-  });
+  };
+
+  if (typeof stream.button === 'function') {
+    stream.button(command);
+    return;
+  }
+
+  if (typeof stream.push === 'function') {
+    stream.push(new vscode.ChatResponseCommandButtonPart(command));
+  }
 }
 
 function renderContextualHelp(actions: ContextualHelpAction[], note?: string): string {
@@ -192,6 +206,10 @@ const TOPIC_CONTEXTUAL_ACTIONS: Record<string, ContextualHelpAction[]> = {
       command: '@speckit /review-auto --confirm <intent-id>',
       description: 'confirmar transição proposta por intent',
     },
+    {
+      command: '@speckit /review-auto --mutation',
+      description: 'detalhar trilha opcional de mutation quando CRAP > 30',
+    },
   ],
   gate: [
     {
@@ -220,10 +238,10 @@ function renderGeneralHelp(): string {
     '- 🔧 **Refactoring, debug ou análise:** abra um agente diretamente no Copilot Chat — sem necessidade de spec\n\n' +
     '**Comandos com parâmetros mais usados:**\n' +
     '- `/status [--all|--closed] [--fix] [--confirm <intent-id>]`\n' +
-    '- `/batch [--generate|--gen] [--unified] [--story <id>]`\n' +
+    '- `/batch [--generate|--gen] [--unified] [--story <id>] [--branch-strategy <session|cited>] [--confirm <intent-id>]`\n' +
     '- `/gate [check gate <de> <para>|check status <de> <para>]`\n' +
     '- `/validate [--devtools]`\n' +
-    '- `/review-auto [--approved|--changes-requested] [--confirm <intent-id>]`\n' +
+    '- `/review-auto [--approved|--changes-requested|--mutation] [--confirm <intent-id>]`\n' +
     '- `/draft [--fix|--refactoring|--spike]`\n\n' +
     '**Atalhos (aliases):**\n' +
     '- `/status-all` → `/status --all`\n' +

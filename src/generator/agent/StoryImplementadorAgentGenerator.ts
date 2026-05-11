@@ -1,4 +1,8 @@
 import { Story } from '../../story/Story';
+import {
+  detectStoryBranchMentions,
+  generateRuntimeBranchGovernanceSection,
+} from '../utils/BranchGovernance';
 import { generateContainerRuntimePreflightSection } from '../utils/ContainerRuntimePreflight';
 import { generateGitRepositoryPreflightSection } from '../utils/GitRepositoryPreflight';
 import { AGENT_TOOLS_YAML } from './agentTools';
@@ -35,7 +39,12 @@ export function generateImplementadorContentForUnified(story: Story): string {
   return generateImplementadorContentInternal(story, { unifiedMode: true });
 }
 
-function generateBatchUnifiedGitSection(storyId: string): string {
+function generateBatchUnifiedGitSection(storyId: string, hasBranchMentions: boolean): string {
+  const antiLoopStep = hasBranchMentions
+    ? `4. Se a governança de branch já tiver fixado a branch do lote no início, permaneça nela mesmo que a story cite \`develop\`, \`main\` ou outra branch.
+`
+    : '';
+
   return `### Setup git (modo batch unificado — branch única do lote)
 
 Neste modo, todas as stories do batch evoluem na **mesma linha de código**.
@@ -51,6 +60,7 @@ Neste modo, todas as stories do batch evoluem na **mesma linha de código**.
    git checkout -b feature/batch-<yyyymmdd>-<slug>
    \`\`\`
 3. Se já existir uma branch de trabalho do lote, **permaneça nela**.
+${antiLoopStep}
 
 Regras inegociáveis neste modo:
 - Não crie \`feature/${storyId}-<slug>\`
@@ -69,6 +79,7 @@ function generateImplementadorContentInternal(
   const fw = story.technicalSpec.framework || '(não definido)';
   const arch = story.technicalSpec.architecture || '(não definida)';
   const projectStage = story.technicalSpec.projectStage || 'brownfield';
+  const branchMentions = detectStoryBranchMentions(story);
 
   const criteria =
     story.functionalSpec.acceptanceCriteria.length > 0
@@ -86,8 +97,16 @@ function generateImplementadorContentInternal(
       : '- (não especificado)';
 
   const gitSetupSection = options.unifiedMode
-    ? generateBatchUnifiedGitSection(storyId)
+    ? generateBatchUnifiedGitSection(storyId, branchMentions.length > 0)
     : generateGitRepositoryPreflightSection(`feature/${storyId}-<slug>`);
+  const branchGovernanceSection = options.unifiedMode
+    ? ''
+    : generateRuntimeBranchGovernanceSection({
+        mentions: branchMentions,
+        defaultSessionBranch: `feature/${storyId}-<slug>`,
+        sessionBranchLabel: 'a branch de trabalho definida para esta sessão',
+        noLoopExample: '`develop`, `main` ou outra branch citada',
+      });
 
   const stageSection =
     projectStage === 'greenfield'
@@ -191,7 +210,7 @@ NUNCA inicie implementação sem:
 Se surgir ambiguidade durante execução → interromper e perguntar.
 Se o escopo mudar → replanejar antes de continuar.
 
-## Formato obrigatório de resposta no chat (Markdown)
+${branchGovernanceSection ? `${branchGovernanceSection}\n---\n` : ''}## Formato obrigatório de resposta no chat (Markdown)
 
 - Responda **sempre** em Markdown estruturado (títulos, listas, checklist e próximos passos)
 - Nunca responda em texto corrido sem estrutura

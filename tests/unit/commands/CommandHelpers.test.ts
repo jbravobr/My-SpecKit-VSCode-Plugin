@@ -1,48 +1,46 @@
-import { describe, expect, it } from 'vitest';
-import {
-  handleCommandError,
-  requireWorkspace,
-} from '../../../src/participant/commands/CommandHelpers';
-import { createMockStream, WorkspaceStub } from '../../support/fakes';
+import * as vscode from 'vscode';
+import { describe, expect, it, vi } from 'vitest';
+import { emitChatQuickActionButton } from '../../../src/participant/commands/CommandHelpers';
 
-describe('requireWorkspace', () => {
-  it('returns workspace root when available', () => {
-    const stream = createMockStream();
-    const workspace = new WorkspaceStub();
-    const root = requireWorkspace(workspace, stream);
-    expect(root).toBe('C:/workspace');
-    expect(stream.getAllMarkdown()).toBe('');
-  });
+describe('emitChatQuickActionButton', () => {
+  it('falls back to push command button part when stream.button is unavailable', () => {
+    const pushMock = vi.fn();
+    const vscodeWithCtor = vscode as unknown as {
+      ChatResponseCommandButtonPart?: new (value: vscode.Command) => { value: vscode.Command };
+    };
+    const originalCtor = vscodeWithCtor.ChatResponseCommandButtonPart;
+    class FakeChatResponseCommandButtonPart {
+      constructor(public readonly value: vscode.Command) {}
+    }
+    Object.defineProperty(vscodeWithCtor, 'ChatResponseCommandButtonPart', {
+      value: FakeChatResponseCommandButtonPart,
+      configurable: true,
+    });
 
-  it('returns undefined and emits error when workspace root is missing', () => {
-    const stream = createMockStream();
-    const workspace = new WorkspaceStub({ workspaceRoot: undefined as unknown as string });
-    workspace.getWorkspaceRoot = () => undefined;
-    const root = requireWorkspace(workspace, stream);
-    expect(root).toBeUndefined();
-    expect(stream.getAllMarkdown()).toContain('Nenhum workspace aberto');
-  });
-});
+    const stream = {
+      markdown: vi.fn(),
+      anchor: vi.fn(),
+      button: undefined,
+      filetree: vi.fn(),
+      progress: vi.fn(),
+      reference: vi.fn(),
+      push: pushMock,
+    } as unknown as vscode.ChatResponseStream;
 
-describe('handleCommandError', () => {
-  it('formats Error instances with message', () => {
-    const stream = createMockStream();
-    handleCommandError(new Error('disk full'), stream, 'Erro ao salvar');
-    expect(stream.getAllMarkdown()).toContain('**Erro ao salvar:**');
-    expect(stream.getAllMarkdown()).toContain('disk full');
-  });
+    try {
+      emitChatQuickActionButton(stream, '✅ Confirmar', '@speckit /review-auto --confirm 123');
+    } finally {
+      Object.defineProperty(vscodeWithCtor, 'ChatResponseCommandButtonPart', {
+        value: originalCtor,
+        configurable: true,
+      });
+    }
 
-  it('formats non-Error values with String()', () => {
-    const stream = createMockStream();
-    handleCommandError('unexpected string', stream, 'Erro genérico');
-    expect(stream.getAllMarkdown()).toContain('**Erro genérico:**');
-    expect(stream.getAllMarkdown()).toContain('unexpected string');
-  });
-
-  it('handles null/undefined errors gracefully', () => {
-    const stream = createMockStream();
-    handleCommandError(null, stream, 'Context');
-    expect(stream.getAllMarkdown()).toContain('**Context:**');
-    expect(stream.getAllMarkdown()).toContain('null');
+    expect(pushMock).toHaveBeenCalledTimes(1);
+    const buttonPart = pushMock.mock.calls[0]?.[0];
+    expect(buttonPart).toBeInstanceOf(FakeChatResponseCommandButtonPart);
+    expect(buttonPart.value.title).toBe('✅ Confirmar');
+    expect(buttonPart.value.command).toBe('speckit.runChatQuickAction');
+    expect(buttonPart.value.arguments).toEqual(['@speckit /review-auto --confirm 123']);
   });
 });

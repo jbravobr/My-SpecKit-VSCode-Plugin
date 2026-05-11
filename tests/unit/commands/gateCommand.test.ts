@@ -19,7 +19,7 @@ describe('handleGateCommand', () => {
     expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '📊 Ver Status das Specs',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /status'],
     });
   });
@@ -71,12 +71,12 @@ describe('handleGateCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '▶ Validar 0 → 1',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /gate check gate 0 1'],
     });
     expect(stream.button).toHaveBeenCalledWith({
       title: '📊 Ver Status das Specs',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /status'],
     });
   });
@@ -88,7 +88,7 @@ describe('handleGateCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '▶ Validar Gate 0 → 1',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /gate check gate 0 1'],
     });
   });
@@ -129,7 +129,7 @@ describe('handleGateCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '▶ Validar Status open → in-progress',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /gate check status open in-progress'],
     });
   });
@@ -141,7 +141,7 @@ describe('handleGateCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '📊 Ver Status das Specs',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /status'],
     });
   });
@@ -154,7 +154,7 @@ describe('handleGateCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '🚪 Mostrar Regras de Gate',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /gate'],
     });
   });
@@ -166,7 +166,7 @@ describe('handleGateCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '🚪 Mostrar Regras de Gate',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /gate'],
     });
   });

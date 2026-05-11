@@ -2,6 +2,11 @@ import { Story } from '../../story/Story';
 import { AGENT_TOOLS_YAML } from './agentTools';
 import { generateImplementadorContentForUnified } from './StoryImplementadorAgentGenerator';
 import { generateRevisorContent } from './StoryRevisorAgentGenerator';
+import {
+  BatchBranchRuntimeContext,
+  detectStoryBranchMentions,
+  generateRuntimeBranchGovernanceSection,
+} from '../utils/BranchGovernance';
 
 /**
  * Generates a unified agent file that contains both implementador (Gates 0-2)
@@ -10,7 +15,10 @@ import { generateRevisorContent } from './StoryRevisorAgentGenerator';
  * Used by `/batch --generate` to produce one agent per story.
  * The user opens one chat per story; the agent transitions internally between modes.
  */
-export function generateUnifiedAgent(story: Story): string {
+export function generateUnifiedAgent(
+  story: Story,
+  branchContext?: BatchBranchRuntimeContext,
+): string {
   const storyId = story.metadata.id;
   const lang = story.technicalSpec.language || '(não definida)';
   const fw = story.technicalSpec.framework || '(não definido)';
@@ -46,7 +54,7 @@ Dependências: ${deps}
 
 ---
 
-${generateBatchBranchProtocol()}
+${generateBatchBranchProtocol(story, branchContext)}
 
 ---
 
@@ -76,7 +84,49 @@ ${generateReturnProtocol(storyId)}
 `;
 }
 
-function generateBatchBranchProtocol(): string {
+function generateBatchBranchProtocol(
+  story: Story,
+  branchContext?: BatchBranchRuntimeContext,
+): string {
+  const mentions = detectStoryBranchMentions(story);
+  if (branchContext?.strategy === 'session' && branchContext.sessionBranch) {
+    const citedMentions =
+      mentions.length > 0 ? mentions.map((mention) => `\`${mention}\``).join(', ') : '';
+    return `## PROTOCOLO DE BRANCH (modo batch unificado)
+
+Neste fluxo \`/batch --generate --unified\`, o usuário já fixou a branch canônica desta sessão/lote: \`${branchContext.sessionBranch}\`.
+
+Regras obrigatórias:
+1. Use \`${branchContext.sessionBranch}\` para toda implementação e revisão desta story
+2. Não criar branch por story
+3. Não empilhar story branch sobre story branch
+4. Nenhuma citação textual pode sobrescrever \`${branchContext.sessionBranch}\` sem nova confirmação explícita do usuário
+${citedMentions ? `5. Trate ${citedMentions} apenas como contexto; **não** volte a procurar/criar essas branch(es)` : ''}`;
+  }
+
+  if (branchContext?.strategy === 'cited') {
+    const citedMentions =
+      mentions.length > 0
+        ? mentions.map((mention) => `\`${mention}\``).join(', ')
+        : 'branch(es) citada(s)';
+    return `## PROTOCOLO DE BRANCH (modo batch unificado)
+
+Neste fluxo \`/batch --generate --unified\`, o usuário autorizou respeitar as branch(es) citada(s) na spec.
+
+Regras obrigatórias:
+1. Considere ${citedMentions} como fonte válida para esta story
+2. Antes de qualquer \`checkout\`, confirme qual branch citada deve prevalecer quando houver mais de uma opção
+3. Não faça fallback silencioso para uma branch da sessão/lote sem nova confirmação do usuário
+4. Se a branch citada confirmada não existir, interrompa e volte ao usuário com o erro`;
+  }
+
+  const branchGovernanceSection = generateRuntimeBranchGovernanceSection({
+    mentions,
+    defaultSessionBranch: 'feature/batch-<yyyymmdd>-<slug>',
+    sessionBranchLabel: 'a branch única do lote',
+    noLoopExample: '`develop`, `main` ou outra branch citada',
+  });
+
   return `## PROTOCOLO DE BRANCH (modo batch unificado)
 
 Neste fluxo \`/batch --generate --unified\`, a execução de todas as stories ocorre em **uma única branch de integração do lote**.
@@ -86,7 +136,7 @@ Regras obrigatórias:
 2. Não empilhar story branch sobre story branch
 3. Se a sessão iniciar em \`develop\`/\`main\`, criar **uma** branch de lote (ex: \`feature/batch-<yyyymmdd>-<slug>\`) e reutilizá-la para todas as stories
 4. Todos os commits de implementação/revisão permanecem nessa branch única até o encerramento do lote
-`;
+${branchGovernanceSection ? `\n${branchGovernanceSection}` : ''}`;
 }
 
 function generateDependencyProtocol(story: Story): string {

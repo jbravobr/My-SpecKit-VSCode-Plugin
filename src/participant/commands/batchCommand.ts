@@ -7,6 +7,12 @@ import { generateFixCopilotConfig } from '../../generator/FixCopilotConfigGenera
 import { generateUnifiedAgent } from '../../generator/agent/StoryUnifiedAgentGenerator';
 import { generateBatchIndex } from '../../generator/story/BatchIndexGenerator';
 import { backupCopilotInstructions } from '../../generator/utils/BackupManager';
+import {
+  BatchBranchRuntimeContext,
+  detectBatchBranchMentions,
+  generateBatchBranchGovernanceSummary,
+  generateBatchBranchModeMessage,
+} from '../../generator/utils/BranchGovernance';
 import { analyzeDependencies } from '../../generator/utils/DependencyGraph';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
@@ -20,6 +26,15 @@ import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { createCorrelationId } from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
+import {
+  BranchResolutionStrategy,
+  clearBranchSessionGovernance,
+  consumeTransitionIntent,
+  createTransitionIntent,
+  getBranchSessionGovernance,
+  setBranchSessionGovernance,
+} from '../../workflow/TransitionGovernance';
+import { gitOps, IGitOps } from '../../workflow/GitOperations';
 import { requireWorkspace } from './CommandHelpers';
 
 const GATE_LABELS: Record<Gate, string> = {
@@ -50,6 +65,9 @@ interface BatchCommandControl {
   generateConfigs: boolean;
   useUnified: boolean;
   storyId?: string;
+  branchStrategy?: BranchResolutionStrategy;
+  branchStrategyRaw?: string;
+  confirmIntentId?: string;
 }
 
 function emitChatQuickActionButton(
@@ -57,12 +75,20 @@ function emitChatQuickActionButton(
   title: string,
   query: string,
 ): void {
-  if (typeof stream.button !== 'function') return;
-  stream.button({
+  const command: vscode.Command = {
     title,
-    command: 'speckit.openChatWithQuery',
+    command: 'speckit.runChatQuickAction',
     arguments: [query],
-  });
+  };
+
+  if (typeof stream.button === 'function') {
+    stream.button(command);
+    return;
+  }
+
+  if (typeof stream.push === 'function') {
+    stream.push(new vscode.ChatResponseCommandButtonPart(command));
+  }
 }
 
 function readFlagValue(tokens: string[], flag: string): string | undefined {
@@ -84,6 +110,13 @@ function readFlagValue(tokens: string[], flag: string): string | undefined {
   return undefined;
 }
 
+function parseBranchStrategy(value: string | undefined): BranchResolutionStrategy | undefined {
+  if (!value) return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'session' || normalized === 'cited') return normalized;
+  return undefined;
+}
+
 function parseBatchControl(prompt: string | undefined): BatchCommandControl {
   const tokens = (prompt ?? '').trim().split(/\s+/).filter(Boolean);
   const normalizedTokens = tokens.map((token) => token.toLowerCase());
@@ -91,13 +124,22 @@ function parseBatchControl(prompt: string | undefined): BatchCommandControl {
     .filter((token) => token.startsWith('--'))
     .map((token) => token.split('=')[0]);
 
-  const allowedFlags = new Set(['--generate', '--gen', '--unified', '--story']);
+  const allowedFlags = new Set([
+    '--generate',
+    '--gen',
+    '--unified',
+    '--story',
+    '--branch-strategy',
+    '--confirm',
+  ]);
   const invalidFlags = flags.filter((flag) => !allowedFlags.has(flag));
 
   const generateConfigs =
     normalizedTokens.includes('--generate') || normalizedTokens.includes('--gen');
   const useUnified = normalizedTokens.includes('--unified');
   const storyId = readFlagValue(tokens, '--story');
+  const branchStrategyRaw = readFlagValue(tokens, '--branch-strategy');
+  const confirmIntentId = readFlagValue(tokens, '--confirm');
 
   return {
     flags,
@@ -105,7 +147,340 @@ function parseBatchControl(prompt: string | undefined): BatchCommandControl {
     generateConfigs,
     useUnified,
     storyId: storyId && storyId.length > 0 ? storyId : undefined,
+    branchStrategyRaw,
+    branchStrategy: parseBranchStrategy(branchStrategyRaw),
+    confirmIntentId: confirmIntentId && confirmIntentId.length > 0 ? confirmIntentId : undefined,
   };
+}
+
+function appendBatchBranchFlags(
+  commandLabel: string,
+  branchStrategy: BranchResolutionStrategy,
+  confirmIntentId?: string,
+): string {
+  return `@speckit ${commandLabel} --branch-strategy ${branchStrategy}${confirmIntentId ? ` --confirm ${confirmIntentId}` : ''}`;
+}
+
+function buildSuggestedBatchBranchName(workspaceRoot: string): string {
+  const now = new Date();
+  const yyyymmdd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  const workspaceSlug =
+    path
+      .basename(workspaceRoot)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 24) || 'workspace';
+  return `feature/batch-${yyyymmdd}-${workspaceSlug}`;
+}
+
+function isMissingCurrentBranchError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('head indefinido') ||
+    normalized.includes('detached') ||
+    normalized.includes('branch atual')
+  );
+}
+
+function sameMentionSet(left: string[], right: string[]): boolean {
+  const normalize = (values: string[]): string[] =>
+    [...values].map((value) => value.toLowerCase()).sort((a, b) => a.localeCompare(b));
+  const normalizedLeft = normalize(left);
+  const normalizedRight = normalize(right);
+  return (
+    normalizedLeft.length === normalizedRight.length &&
+    normalizedLeft.every((value, index) => value === normalizedRight[index])
+  );
+}
+
+async function resolveBatchBranchRuntimeContext(
+  stories: Story[],
+  workspaceRoot: string,
+  stream: vscode.ChatResponseStream,
+  fs: IFileSystem,
+  git: IGitOps,
+  commandLabel: string,
+  control: BatchCommandControl,
+  audit: AuditLogger,
+  tracer: TraceabilityManager,
+  commandExecutionId: string,
+  batchId: string,
+): Promise<BatchBranchRuntimeContext | undefined> {
+  const citedMentions = detectBatchBranchMentions(stories);
+  if (citedMentions.length === 0) return undefined;
+
+  const persistedGovernance =
+    control.branchStrategy || control.confirmIntentId
+      ? undefined
+      : await getBranchSessionGovernance(workspaceRoot, fs);
+
+  if (persistedGovernance) {
+    if (
+      persistedGovernance.strategy === 'cited' &&
+      !sameMentionSet(persistedGovernance.citedMentions, citedMentions)
+    ) {
+      await clearBranchSessionGovernance(workspaceRoot, fs);
+      stream.markdown(
+        '\n♻️ A governança de branch citada da sessão foi resetada porque o novo lote cita branches diferentes das confirmadas anteriormente.\n\n',
+      );
+    } else if (
+      persistedGovernance.strategy === 'session' &&
+      persistedGovernance.sessionBranch &&
+      git.currentBranch
+    ) {
+      try {
+        const currentBranch = await git.currentBranch(workspaceRoot);
+        if (currentBranch !== persistedGovernance.sessionBranch) {
+          await clearBranchSessionGovernance(workspaceRoot, fs);
+          stream.markdown(
+            `\n♻️ A governança de branch da sessão foi resetada porque a branch ativa atual (\`${currentBranch}\`) difere da branch canônica previamente confirmada (\`${persistedGovernance.sessionBranch}\`).\n\n`,
+          );
+        }
+      } catch (err: unknown) {
+        if (isMissingCurrentBranchError(err)) {
+          await clearBranchSessionGovernance(workspaceRoot, fs);
+          stream.markdown(
+            '\n♻️ A governança de branch da sessão foi resetada porque a branch ativa do Git não pôde mais ser resolvida.\n\n',
+          );
+        } else {
+          throw err;
+        }
+      }
+    }
+  }
+
+  const reusableGovernance =
+    control.branchStrategy || control.confirmIntentId
+      ? undefined
+      : await getBranchSessionGovernance(workspaceRoot, fs);
+
+  if (reusableGovernance) {
+    const context: BatchBranchRuntimeContext = {
+      strategy: reusableGovernance.strategy,
+      citedMentions,
+      sessionBranch: reusableGovernance.sessionBranch,
+      sessionBranchSource: reusableGovernance.sessionBranchSource,
+    };
+
+    stream.markdown(
+      `\n♻️ Reutilizando governança de branch da sessão: ${generateBatchBranchModeMessage(context)}\n\n`,
+    );
+    return context;
+  }
+
+  if (!control.branchStrategy) {
+    stream.markdown(
+      `\n### 🌿 Governança de branch citada (obrigatória antes da geração unificada)\n\n` +
+        `As stories deste lote citam ${citedMentions.map((mention) => `\`${mention}\``).join(', ')}.\n\n` +
+        `Antes de gerar os agentes, o usuário precisa decidir se o lote deve:\n` +
+        `1. respeitar as branch(es) citada(s), ou\n` +
+        `2. usar sempre a branch carregada na sessão do VS Code como fonte canônica.\n`,
+    );
+    emitChatQuickActionButton(
+      stream,
+      '🌿 Usar branch da sessão',
+      appendBatchBranchFlags(commandLabel, 'session'),
+    );
+    emitChatQuickActionButton(
+      stream,
+      '🧭 Respeitar branch(es) citadas',
+      appendBatchBranchFlags(commandLabel, 'cited'),
+    );
+    return undefined;
+  }
+
+  if (control.branchStrategy === 'cited') {
+    const governance = await setBranchSessionGovernance(workspaceRoot, fs, {
+      strategy: 'cited',
+      command: commandLabel,
+      citedMentions,
+    });
+    const context: BatchBranchRuntimeContext = {
+      strategy: governance.strategy,
+      citedMentions,
+    };
+    stream.markdown(`\n✅ ${generateBatchBranchModeMessage(context)}\n\n`);
+    await emitCommandTelemetry({
+      workspaceRoot,
+      fs,
+      audit,
+      tracer,
+      command: commandLabel,
+      outcome: `🌿 estratégia de branch resolvida: respeitar branches citadas (${citedMentions.join(', ')})`,
+      commandExecutionId,
+      batchId,
+      specId: 'GLOBAL-BATCH',
+      specTitle: 'Batch Command',
+      specType: 'story',
+      llmResponseReceived: true,
+      traceDescription: 'batch branch governance resolved',
+    });
+    return context;
+  }
+
+  if (!(await git.isRepository(workspaceRoot))) {
+    stream.markdown(
+      '\n❌ Não foi possível aplicar a estratégia `session`: o workspace atual não está em um repositório Git.\n',
+    );
+    return undefined;
+  }
+
+  if (control.confirmIntentId) {
+    const intent = await consumeTransitionIntent(
+      workspaceRoot,
+      fs,
+      control.confirmIntentId,
+      'branch-governance',
+    );
+    if (!intent || intent.payload.action !== 'create-session-branch') {
+      stream.markdown(
+        `\n❌ Intent-ID inválido ou expirado: \`${control.confirmIntentId}\`. Gere uma nova sugestão com \`${appendBatchBranchFlags(commandLabel, 'session')}\`.\n`,
+      );
+      emitChatQuickActionButton(
+        stream,
+        '🌿 Gerar nova sugestão de branch',
+        appendBatchBranchFlags(commandLabel, 'session'),
+      );
+      return undefined;
+    }
+
+    const branchName = intent.payload.branchName;
+    if (!branchName) {
+      stream.markdown(
+        '\n❌ O intent de branch não contém o nome da branch sugerida. Gere uma nova sugestão para continuar.\n',
+      );
+      emitChatQuickActionButton(
+        stream,
+        '🌿 Gerar nova sugestão de branch',
+        appendBatchBranchFlags(commandLabel, 'session'),
+      );
+      return undefined;
+    }
+
+    if (!git.createBranch) {
+      stream.markdown(
+        '\n❌ O runtime Git configurado não suporta criação de branch neste fluxo.\n',
+      );
+      return undefined;
+    }
+
+    try {
+      await git.createBranch(workspaceRoot, branchName);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      stream.markdown(
+        `\n❌ Não foi possível criar a branch sugerida \`${branchName}\`: ${message}\n`,
+      );
+      return undefined;
+    }
+
+    const governance = await setBranchSessionGovernance(workspaceRoot, fs, {
+      strategy: 'session',
+      command: commandLabel,
+      citedMentions,
+      sessionBranch: branchName,
+      sessionBranchSource: 'created',
+    });
+    const context: BatchBranchRuntimeContext = {
+      strategy: governance.strategy,
+      citedMentions,
+      sessionBranch: governance.sessionBranch,
+      sessionBranchSource: governance.sessionBranchSource,
+    };
+    stream.markdown(`\n✅ Branch da sessão criada e fixada para este lote: \`${branchName}\`.\n\n`);
+    await emitCommandTelemetry({
+      workspaceRoot,
+      fs,
+      audit,
+      tracer,
+      command: commandLabel,
+      outcome: `🌿 branch da sessão criada e fixada: ${branchName}`,
+      commandExecutionId,
+      batchId,
+      specId: 'GLOBAL-BATCH',
+      specTitle: 'Batch Command',
+      specType: 'story',
+      llmResponseReceived: true,
+      traceDescription: 'batch branch governance resolved',
+    });
+    return context;
+  }
+
+  if (!git.currentBranch) {
+    stream.markdown(
+      '\n❌ O runtime Git configurado não suporta leitura da branch atual neste fluxo.\n',
+    );
+    return undefined;
+  }
+
+  try {
+    const currentBranch = await git.currentBranch(workspaceRoot);
+    const governance = await setBranchSessionGovernance(workspaceRoot, fs, {
+      strategy: 'session',
+      command: commandLabel,
+      citedMentions,
+      sessionBranch: currentBranch,
+      sessionBranchSource: 'current',
+    });
+    const context: BatchBranchRuntimeContext = {
+      strategy: governance.strategy,
+      citedMentions,
+      sessionBranch: governance.sessionBranch,
+      sessionBranchSource: governance.sessionBranchSource,
+    };
+    stream.markdown(`\n✅ ${generateBatchBranchModeMessage(context)}\n\n`);
+    await emitCommandTelemetry({
+      workspaceRoot,
+      fs,
+      audit,
+      tracer,
+      command: commandLabel,
+      outcome: `🌿 estratégia de branch resolvida: branch da sessão ${currentBranch}`,
+      commandExecutionId,
+      batchId,
+      specId: 'GLOBAL-BATCH',
+      specTitle: 'Batch Command',
+      specType: 'story',
+      llmResponseReceived: true,
+      traceDescription: 'batch branch governance resolved',
+    });
+    return context;
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!isMissingCurrentBranchError(err)) {
+      stream.markdown(`\n❌ Não foi possível resolver a branch atual da sessão: ${message}\n`);
+      return undefined;
+    }
+
+    const suggestedBranch = buildSuggestedBatchBranchName(workspaceRoot);
+    const intent = await createTransitionIntent(workspaceRoot, fs, {
+      kind: 'branch-governance',
+      command: commandLabel,
+      payload: {
+        action: 'create-session-branch',
+        branchName: suggestedBranch,
+        strategy: 'session',
+      },
+      ttlMinutes: 240,
+    });
+
+    stream.markdown(
+      `\n### 🌿 Criação de branch da sessão (confirmação obrigatória)\n\n` +
+        `A estratégia \`session\` foi escolhida, mas nenhuma branch ativa pôde ser resolvida no Git (${message}).\n\n` +
+        `Sugestão de branch para este lote: \`${suggestedBranch}\`\n\n` +
+        `Intent-ID: \`${intent.id}\`\n` +
+        `Confirme explicitamente para criar e fixar essa branch na sessão:\n` +
+        `- \`${appendBatchBranchFlags(commandLabel, 'session', intent.id)}\`\n`,
+    );
+    emitChatQuickActionButton(
+      stream,
+      '✅ Confirmar criação da branch sugerida',
+      appendBatchBranchFlags(commandLabel, 'session', intent.id),
+    );
+    return undefined;
+  }
 }
 
 export async function handleBatchCommand(
@@ -114,6 +489,7 @@ export async function handleBatchCommand(
   _token: vscode.CancellationToken,
   fs: IFileSystem = vscodeFileSystem,
   workspace: IWorkspace = vscodeWorkspace,
+  git: IGitOps = gitOps,
 ): Promise<void> {
   const workspaceRoot = requireWorkspace(workspace, stream);
   if (!workspaceRoot) return;
@@ -124,8 +500,29 @@ export async function handleBatchCommand(
   if (control.invalidFlags.length > 0) {
     stream.markdown(
       `❌ Parâmetro(s) inválido(s) em /batch: ${control.invalidFlags.map((flag) => `\`${flag}\``).join(', ')}\n\n` +
-        '**Uso:** `@speckit /batch [--generate|--gen] [--unified] [--story <id>]`\n' +
+        '**Uso:** `@speckit /batch [--generate|--gen] [--unified] [--story <id>] [--branch-strategy <session|cited>] [--confirm <intent-id>]`\n' +
         'Dica: para modo unificado, use `@speckit /batch --generate --unified`.',
+    );
+    return;
+  }
+
+  if (control.flags.includes('--confirm') && !control.confirmIntentId) {
+    stream.markdown(
+      '❌ Use `--confirm <intent-id>` para confirmar uma criação pendente de branch da sessão.\n',
+    );
+    return;
+  }
+
+  if (control.flags.includes('--branch-strategy') && !control.branchStrategyRaw) {
+    stream.markdown(
+      '❌ Use `--branch-strategy <session|cited>` para escolher a estratégia de branch do lote.\n',
+    );
+    return;
+  }
+
+  if (control.branchStrategyRaw && !control.branchStrategy) {
+    stream.markdown(
+      `❌ Estratégia de branch inválida: \`${control.branchStrategyRaw}\`. Use apenas \`session\` ou \`cited\`.\n`,
     );
     return;
   }
@@ -134,6 +531,24 @@ export async function handleBatchCommand(
     stream.markdown(
       '❌ Use `--story <id>` para filtrar uma story específica no modo unificado.\n\n' +
         '**Exemplo de uso:** `@speckit /batch --generate --unified --story <id>`',
+    );
+    return;
+  }
+
+  if (
+    (control.branchStrategy || control.confirmIntentId) &&
+    !(control.generateConfigs && control.useUnified)
+  ) {
+    stream.markdown(
+      '❌ `--branch-strategy` e `--confirm` só podem ser usados com `--generate --unified`.\n\n' +
+        '**Exemplo de uso:** `@speckit /batch --generate --unified --branch-strategy session`',
+    );
+    return;
+  }
+
+  if (control.confirmIntentId && control.branchStrategy !== 'session') {
+    stream.markdown(
+      '❌ `--confirm <intent-id>` exige `--branch-strategy session`, pois essa confirmação só é usada para criar a branch da sessão.\n',
     );
     return;
   }
@@ -262,18 +677,22 @@ export async function handleBatchCommand(
   }
 
   if (useUnified) {
-    await handleUnifiedGenerate(
+    const unifiedGenerated = await handleUnifiedGenerate(
       valid,
       specDir,
       workspaceRoot,
       stream,
       fs,
+      workspace,
       audit,
       tracer,
+      git,
       commandExecutionId,
       batchId,
       phaseCommand,
+      control,
     );
+    if (!unifiedGenerated) return;
     await emitCommandTelemetry({
       workspaceRoot,
       fs,
@@ -510,18 +929,16 @@ async function handleUnifiedGenerate(
   workspaceRoot: string,
   stream: vscode.ChatResponseStream,
   fs: IFileSystem,
+  workspace: IWorkspace,
   audit: AuditLogger,
   tracer: TraceabilityManager,
+  git: IGitOps,
   commandExecutionId: string,
   batchId: string,
   commandLabel: string,
-): Promise<void> {
+  control: BatchCommandControl,
+): Promise<boolean> {
   stream.markdown('\n---\n\n⏳ Gerando agentes unificados + análise de dependências...\n\n');
-
-  const backupPath = await backupCopilotInstructions(workspaceRoot, fs);
-  if (backupPath) {
-    stream.markdown('💾 Backup do `copilot-instructions.md` anterior salvo.\n\n');
-  }
 
   // Parse all valid story specs into Story objects
   const stories: Story[] = [];
@@ -547,6 +964,28 @@ async function handleUnifiedGenerate(
         commandLabel,
       );
     }
+  }
+
+  const branchContext = await resolveBatchBranchRuntimeContext(
+    stories,
+    workspaceRoot,
+    stream,
+    fs,
+    git,
+    commandLabel,
+    control,
+    audit,
+    tracer,
+    commandExecutionId,
+    batchId,
+  );
+  if (detectBatchBranchMentions(stories).length > 0 && !branchContext) {
+    return false;
+  }
+
+  const backupPath = await backupCopilotInstructions(workspaceRoot, fs);
+  if (backupPath) {
+    stream.markdown('💾 Backup do `copilot-instructions.md` anterior salvo.\n\n');
   }
 
   // Dependency analysis
@@ -590,7 +1029,7 @@ async function handleUnifiedGenerate(
     };
 
     try {
-      const content = generateUnifiedAgent(story);
+      const content = generateUnifiedAgent(story, branchContext);
       const agentPath = path.join(agentsDir, `speckit-story-${story.metadata.id}.agent.md`);
       await fs.writeFile(agentPath, content);
       stream.markdown(`✅ Agente unificado: \`speckit-story-${story.metadata.id}.agent.md\`\n`);
@@ -626,7 +1065,7 @@ async function handleUnifiedGenerate(
   }
 
   // Generate batch index (copilot-instructions.md)
-  const batchIndex = generateBatchIndex(stories);
+  const batchIndex = generateBatchIndex(stories, branchContext);
   const instructionsPath = path.join(githubDir, 'copilot-instructions.md');
   await fs.writeFile(instructionsPath, batchIndex);
   stream.markdown(`\n✅ \`copilot-instructions.md\` atualizado (modo batch).\n`);
@@ -638,7 +1077,7 @@ async function handleUnifiedGenerate(
     try {
       const content = await fs.readFile(path.join(specDir, entry.fileName));
       const fix = parseFix(content);
-      await generateFixCopilotConfig(workspaceRoot, fix, fs);
+      await generateFixCopilotConfig(workspaceRoot, fix, fs, workspace);
       fixCount++;
       stream.markdown(`✅ Fix \`${entry.id}\` — config gerada\n`);
 
@@ -672,6 +1111,8 @@ async function handleUnifiedGenerate(
   }
 
   const fixSummaryLine = fixCount > 0 ? `- 🔧 ${fixCount} fix(es) processado(s)\n` : '';
+  const branchGovernanceSummary = generateBatchBranchGovernanceSummary(stories, branchContext);
+  const branchModeMessage = generateBatchBranchModeMessage(branchContext);
   stream.markdown(`
 ---
 
@@ -682,7 +1123,8 @@ ${fixSummaryLine}- 📄 \`copilot-instructions.md\` gerado em modo batch
 
 **Próximo passo:** Abra o Copilot Chat e selecione o agente da story desejada no dropdown.
 **Importante (modo unificado):** implementação e revisão acontecem no mesmo agente (speckit-story-<id>). Não espere um agente \`speckit-revisor\` separado neste fluxo.
-**Estratégia de branch (modo unificado):** use uma branch única do lote (ex: \`feature/batch-<yyyymmdd>-<slug>\`). Não crie branch por story e não empilhe branches de stories.
+${branchModeMessage}
+${branchGovernanceSummary}
 Antes do primeiro handoff automático, execute \`@speckit /review-auto --batch-consent\` e confirme o intent retornado.
 Ao concluir Gate 2 com sucesso, execute \`@speckit /review-auto --auto\` para persistir \`gate: 3\` e \`status: review\` com evidência visível no chat.
 Se o veredito do Gate 3 for ALTERAÇÕES SOLICITADAS, execute \`@speckit /review-auto --changes-requested --auto\`.
@@ -695,6 +1137,7 @@ Se o veredito do Gate 3 for APROVADO, execute \`@speckit /review-auto --approved
     '✅ Iniciar Consentimento Batch',
     '@speckit /review-auto --batch-consent',
   );
+  return true;
 }
 
 async function recordBatchPhaseEvents(

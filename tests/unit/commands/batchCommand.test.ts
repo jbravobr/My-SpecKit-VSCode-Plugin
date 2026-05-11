@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { handleBatchCommand } from '../../../src/participant/commands/batchCommand';
+import { IGitOps } from '../../../src/workflow/GitOperations';
 import {
   createMockRequest,
   createMockStream,
@@ -24,6 +25,26 @@ function seedFs(specs: Array<{ fileName: string; content: string }>): InMemoryFi
     fs.writeFile(`C:/workspace/.speckit/${fileName}`, content);
   }
   return fs;
+}
+
+function fakeGit(overrides: Partial<IGitOps> = {}): IGitOps {
+  return {
+    diff: async () => '',
+    commit: async () => '',
+    commitFile: async () => '',
+    hasChanges: async () => false,
+    isRepository: async () => true,
+    init: async () => '',
+    changedFiles: async () => [],
+    currentBranch: async () => 'feature/current-session',
+    createBranch: async () => '',
+    ...overrides,
+  };
+}
+
+function extractIntentId(output: string): string {
+  const match = output.match(/Intent-ID:\s*`([^`]+)`/);
+  return match?.[1] ?? '';
 }
 
 describe('handleBatchCommand', () => {
@@ -141,12 +162,12 @@ describe('handleBatchCommand', () => {
     expect(stream.getAllMarkdown()).toContain('--generate --unified');
     expect(stream.button).toHaveBeenCalledWith({
       title: '🤖 Gerar Lote Unificado',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /batch --generate --unified'],
     });
     expect(stream.button).toHaveBeenCalledWith({
       title: '📋 Validar Spec Ativa',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /validate'],
     });
   });
@@ -293,7 +314,7 @@ describe('handleBatchCommand', () => {
       expect(output).toContain('status: review');
       expect(stream.button).toHaveBeenCalledWith({
         title: '✅ Iniciar Consentimento Batch',
-        command: 'speckit.openChatWithQuery',
+        command: 'speckit.runChatQuickAction',
         arguments: ['@speckit /review-auto --batch-consent'],
       });
       expect(fs.hasFile('speckit-story-001.agent.md')).toBe(true);
@@ -302,6 +323,191 @@ describe('handleBatchCommand', () => {
       const sessionContent = fs.contentFor('session-');
       expect(sessionContent).toContain('LLMResponseReceived: true');
       expect(sessionContent).not.toContain('LLMResponseReceived: false');
+    });
+
+    it('shows anti-loop branch guidance when a batch story cites develop', async () => {
+      const storyWithDevelop = completeStoryMd.replace(
+        '### Problema\r\n\r\n',
+        '### Problema\r\n\r\nA story cita a branch develop como contexto.\r\n\r\n',
+      );
+      const fs = seedFs([{ fileName: 'STORY-001.md', content: storyWithDevelop }]);
+      const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+      const stream = createMockStream();
+
+      await handleBatchCommand(
+        createMockRequest('--generate --unified'),
+        stream,
+        createMockToken(),
+        fs,
+        workspace,
+        fakeGit(),
+      );
+
+      const output = stream.getAllMarkdown();
+      expect(output).toContain(
+        'Governança de branch citada (obrigatória antes da geração unificada)',
+      );
+      expect(output).toContain('`develop`');
+      expect(output).toContain('branch carregada na sessão do VS Code');
+      expect(fs.hasFile('speckit-story-001.agent.md')).toBe(false);
+      expect(stream.button).toHaveBeenCalledWith({
+        title: '🌿 Usar branch da sessão',
+        command: 'speckit.runChatQuickAction',
+        arguments: ['@speckit /batch --generate --unified --branch-strategy session'],
+      });
+    });
+
+    it('reuses the current git branch when the user chooses branch-strategy session', async () => {
+      const storyWithDevelop = completeStoryMd.replace(
+        '### Problema\r\n\r\n',
+        '### Problema\r\n\r\nA story cita a branch develop como contexto.\r\n\r\n',
+      );
+      const fs = seedFs([{ fileName: 'STORY-001.md', content: storyWithDevelop }]);
+      const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+      const stream = createMockStream();
+
+      await handleBatchCommand(
+        createMockRequest('--generate --unified --branch-strategy session'),
+        stream,
+        createMockToken(),
+        fs,
+        workspace,
+        fakeGit({ currentBranch: async () => 'feature/runtime-session' }),
+      );
+
+      const output = stream.getAllMarkdown();
+      expect(output).toContain('`feature/runtime-session`');
+      expect(output).toContain('branch canônica desta sessão/lote');
+      expect(output).toContain('Governança de branch citada (anti-loop)');
+      expect(fs.hasFile('speckit-story-001.agent.md')).toBe(true);
+      expect(fs.contentFor('transition-state.json')).toContain('"strategy": "session"');
+      expect(fs.contentFor('transition-state.json')).toContain(
+        '"sessionBranch": "feature/runtime-session"',
+      );
+    });
+
+    it('resets persisted session governance when the active git branch drifts', async () => {
+      const storyWithDevelop = completeStoryMd.replace(
+        '### Problema\r\n\r\n',
+        '### Problema\r\n\r\nA story cita a branch develop como contexto.\r\n\r\n',
+      );
+      const fs = seedFs([{ fileName: 'STORY-001.md', content: storyWithDevelop }]);
+      const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+
+      await handleBatchCommand(
+        createMockRequest('--generate --unified --branch-strategy session'),
+        createMockStream(),
+        createMockToken(),
+        fs,
+        workspace,
+        fakeGit({ currentBranch: async () => 'feature/runtime-session' }),
+      );
+
+      const driftStream = createMockStream();
+      await handleBatchCommand(
+        createMockRequest('--generate --unified'),
+        driftStream,
+        createMockToken(),
+        fs,
+        workspace,
+        fakeGit({ currentBranch: async () => 'feature/other-branch' }),
+      );
+
+      const output = driftStream.getAllMarkdown();
+      expect(output).toContain('foi resetada porque a branch ativa atual');
+      expect(output).toContain(
+        'Governança de branch citada (obrigatória antes da geração unificada)',
+      );
+      expect(output).toContain('`feature/runtime-session`');
+      expect(output).toContain('`feature/other-branch`');
+    });
+
+    it('requires explicit confirmation before creating a missing session branch', async () => {
+      const storyWithDevelop = completeStoryMd.replace(
+        '### Problema\r\n\r\n',
+        '### Problema\r\n\r\nA story cita a branch develop como contexto.\r\n\r\n',
+      );
+      const fs = seedFs([{ fileName: 'STORY-001.md', content: storyWithDevelop }]);
+      const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+      const stream = createMockStream();
+
+      await handleBatchCommand(
+        createMockRequest('--generate --unified --branch-strategy session'),
+        stream,
+        createMockToken(),
+        fs,
+        workspace,
+        fakeGit({
+          currentBranch: async () => {
+            throw new Error(
+              'Não foi possível resolver a branch atual do Git (HEAD indefinido, detached ou repositório sem branch ativa).',
+            );
+          },
+        }),
+      );
+
+      const output = stream.getAllMarkdown();
+      const intentId = extractIntentId(output);
+      expect(output).toContain('Criação de branch da sessão (confirmação obrigatória)');
+      expect(output).toContain('Sugestão de branch para este lote');
+      expect(intentId).toBeTruthy();
+      expect(fs.hasFile('speckit-story-001.agent.md')).toBe(false);
+      expect(stream.button).toHaveBeenCalledWith({
+        title: '✅ Confirmar criação da branch sugerida',
+        command: 'speckit.runChatQuickAction',
+        arguments: [
+          `@speckit /batch --generate --unified --branch-strategy session --confirm ${intentId}`,
+        ],
+      });
+    });
+
+    it('creates the suggested branch after explicit confirmation', async () => {
+      const storyWithDevelop = completeStoryMd.replace(
+        '### Problema\r\n\r\n',
+        '### Problema\r\n\r\nA story cita a branch develop como contexto.\r\n\r\n',
+      );
+      const fs = seedFs([{ fileName: 'STORY-001.md', content: storyWithDevelop }]);
+      const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+      const proposalStream = createMockStream();
+      const createdBranches: string[] = [];
+      const git = fakeGit({
+        currentBranch: async () => {
+          throw new Error(
+            'Não foi possível resolver a branch atual do Git (HEAD indefinido, detached ou repositório sem branch ativa).',
+          );
+        },
+        createBranch: async (_cwd, branchName) => {
+          createdBranches.push(branchName);
+          return '';
+        },
+      });
+
+      await handleBatchCommand(
+        createMockRequest('--generate --unified --branch-strategy session'),
+        proposalStream,
+        createMockToken(),
+        fs,
+        workspace,
+        git,
+      );
+
+      const intentId = extractIntentId(proposalStream.getAllMarkdown());
+      const confirmStream = createMockStream();
+      await handleBatchCommand(
+        createMockRequest(`--generate --unified --branch-strategy session --confirm ${intentId}`),
+        confirmStream,
+        createMockToken(),
+        fs,
+        workspace,
+        git,
+      );
+
+      const output = confirmStream.getAllMarkdown();
+      expect(output).toContain('Branch da sessão criada e fixada para este lote');
+      expect(output).toContain('branch canônica desta sessão/lote');
+      expect(createdBranches).toHaveLength(1);
+      expect(createdBranches[0]).toContain('feature/batch-');
+      expect(fs.hasFile('speckit-story-001.agent.md')).toBe(true);
     });
 
     it('generates unified agent for only the selected story id', async () => {

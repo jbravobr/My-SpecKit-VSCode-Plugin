@@ -1,5 +1,9 @@
 import { Story } from '../../story/Story';
 import { AGENT_TOOLS_YAML } from './agentTools';
+import {
+  detectStoryBranchMentions,
+  generateRuntimeBranchGovernanceSection,
+} from '../utils/BranchGovernance';
 
 export type RevisorContentMode = 'standard' | 'batch-unified';
 
@@ -35,17 +39,29 @@ export function generateRevisorContent(story: Story, options: RevisorContentOpti
   const scalabilityLine = story.nonFunctionalSpec.scalability?.trim()
     ? `\n- [ ] Escalabilidade (código): ${story.nonFunctionalSpec.scalability.trim()}`
     : '';
+  const branchMentions = detectStoryBranchMentions(story);
+  const branchGovernanceSection = generateRuntimeBranchGovernanceSection({
+    mentions: branchMentions,
+    defaultSessionBranch: isBatchUnified
+      ? 'feature/batch-<yyyymmdd>-<slug>'
+      : `feature/${storyId}-<slug>`,
+    sessionBranchLabel: isBatchUnified
+      ? 'a branch única do lote já definida no início do batch'
+      : 'a branch de trabalho confirmada no Gate 0',
+    noLoopExample: '`develop`, `main` ou outra branch citada',
+  });
 
   const gitChecklist = isBatchUnified
     ? `### Git
 - [ ] Branch atual é a branch única do lote (ex: \`feature/batch-<yyyymmdd>-<slug>\`)
 - [ ] Nenhuma branch por story foi criada neste fluxo batch
 - [ ] Não houve empilhamento de branch entre stories
+- [ ] Nenhuma citação textual posterior a branch desviou a branch do lote definida no início
 - [ ] Commits seguem Conventional Commits
 - [ ] Sem commits com mensagem genérica ("fix", "wip", "test")
 - [ ] Nenhum commit direto em \`develop\` ou \`main\``
     : `### Git
-- [ ] Branch segue padrão \`feature/${storyId}-<slug>\`
+- [ ] Branch segue padrão \`feature/${storyId}-<slug>\` **ou** a branch explicitamente confirmada na governança inicial
 - [ ] Commits seguem Conventional Commits
 - [ ] Sem commits com mensagem genérica ("fix", "wip", "test")
 - [ ] Nenhum commit direto em \`develop\` ou \`main\``;
@@ -84,7 +100,7 @@ Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${st
 - Todos os itens do checklist devem ser verificados — não pule nenhum
 - **NUNCA implemente correções sem aprovação explícita do usuário** — apresente o plano de correções e aguarde confirmação ("sim", "ok", "confirmar", "pode ir") antes de tocar em qualquer arquivo
 
-## Formato obrigatório de resposta no chat (Markdown)
+${branchGovernanceSection ? `${branchGovernanceSection}\n---\n` : ''}## Formato obrigatório de resposta no chat (Markdown)
 
 - Responda **sempre** em Markdown estruturado (títulos, checklist, blocos de evidência e decisão)
 - Nunca responda em texto corrido sem estrutura
@@ -153,6 +169,7 @@ ${criteria || '- [ ] (critérios não especificados)'}
 - [ ] 0 (zero) falhas (evidência: relatório da Sessão A)
 - [ ] Testes comportamentais presentes para cada critério de aceite — validam o **comportamento real**, não apenas a execução interna
 - [ ] CRAP ≤ 30 para todas as funções com complexidade ciclomática > 5 (bloqueante de gate)
+- [ ] Se houver CRAP > 30, explicar mutation testing ao usuário, estimar tempo e oferecer dois caminhos (continuar sem mutation ou aplicar mutation no escopo afetado) — execução só com decisão explícita do usuário
 - [ ] Cobertura ≥ 80% (evidência de abrangência — relatório obrigatório)
 - [ ] Happy path coberto para cada critério de aceite
 - [ ] Edge cases cobertos (null, vazio, limites)

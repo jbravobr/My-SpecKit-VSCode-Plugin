@@ -1,4 +1,13 @@
+import {
+  detectBranchMentions,
+  generateDraftBranchGovernanceSection,
+} from '../utils/BranchGovernance';
+
 export function generateFixElicitPrompt(roughInput: string, nextId: string): string {
+  const branchGovernanceSection = generateDraftBranchGovernanceSection(
+    detectBranchMentions(roughInput),
+  );
+
   return `# Elicit Fix — FIX-${nextId}
 
 > Você é um engenheiro sênior de software especializado em diagnóstico e correção de bugs.
@@ -11,7 +20,7 @@ export function generateFixElicitPrompt(roughInput: string, nextId: string): str
 
 > ${roughInput}
 
----
+${branchGovernanceSection}---
 
 ## ⚠️ REGRA MESTRE — LEIA ANTES DE QUALQUER AÇÃO
 

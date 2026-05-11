@@ -1,5 +1,9 @@
 import { WorkspaceDefaults } from '../../config/WorkspaceDefaults';
 import { SpecType } from '../../story/Story';
+import {
+  detectBranchMentions,
+  generateDraftBranchGovernanceSection,
+} from '../utils/BranchGovernance';
 
 const TYPE_LABELS: Record<SpecType, string> = {
   story: 'História',
@@ -59,6 +63,9 @@ export function generateStoryElicitPrompt(
   const typeLabel = TYPE_LABELS[specType];
   const defaultsCtx = buildDefaultsContext(defaults);
   const typeCtx = buildTypeContext(specType);
+  const branchGovernanceSection = generateDraftBranchGovernanceSection(
+    detectBranchMentions(roughInput),
+  );
 
   return `# Elicit ${typeLabel} — STORY-${nextId}
 
@@ -72,7 +79,7 @@ export function generateStoryElicitPrompt(
 
 > ${roughInput}
 
-${typeCtx}${defaultsCtx}---
+${typeCtx}${defaultsCtx}${branchGovernanceSection}---
 
 ## ⚠️ REGRA MESTRE — LEIA ANTES DE QUALQUER AÇÃO
 

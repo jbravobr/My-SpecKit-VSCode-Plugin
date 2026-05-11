@@ -39,12 +39,20 @@ function emitChatQuickActionButton(
   title: string,
   query: string,
 ): void {
-  if (typeof stream.button !== 'function') return;
-  stream.button({
+  const command: vscode.Command = {
     title,
-    command: 'speckit.openChatWithQuery',
+    command: 'speckit.runChatQuickAction',
     arguments: [query],
-  });
+  };
+
+  if (typeof stream.button === 'function') {
+    stream.button(command);
+    return;
+  }
+
+  if (typeof stream.push === 'function') {
+    stream.push(new vscode.ChatResponseCommandButtonPart(command));
+  }
 }
 
 function readFlagValue(tokens: string[], flag: string): string | undefined {

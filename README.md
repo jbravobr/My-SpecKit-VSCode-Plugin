@@ -840,6 +840,8 @@ Processa **todas** as specs em `.speckit/` em lote — validação paralela + ge
 @speckit /batch --generate             → Valida + gera config Copilot para cada spec válida
 @speckit /batch --generate --unified   → Gera agentes unificados (implementador + revisor por story)
 @speckit /batch --generate --unified --story <id> → Gera agente unificado apenas da story informada
+@speckit /batch --generate --unified --branch-strategy <session|cited> → Resolve a governança de branch quando a story cita branch
+@speckit /batch --generate --unified --branch-strategy session --confirm <intent-id> → Confirma a criação da branch sugerida para a sessão
 @speckit /batch-generate               → Atalho para /batch --generate
 @speckit /batch-unified                → Atalho para /batch --generate --unified
 ```
@@ -879,6 +881,10 @@ Gera um **agente unificado por story** — cada agente contém o protocolo compl
 6. **Handoff explícito** — a transição Gate 2 → Gate 3 deve emitir no chat o bloco de handoff (`IMPLEMENTADOR → REVISOR`) com gate/status atualizados
 7. **Outcomes explícitos no chat** — após o veredito, o agente deve executar `@speckit /review-auto --changes-requested --auto` (Gate 3 → 2) ou `@speckit /review-auto --approved --auto` (Gate 3 → 4)
 8. **Filtro por story** — use `--story <id>` em conjunto com `--generate --unified` para gerar somente o agente da story reaberta/selecionada
+9. **Governança explícita de branch citada** — se alguma story citar `develop`, `main` ou outra branch, o comando pausa a geração e pede ao usuário escolher entre:
+   - `--branch-strategy session` → usar sempre a branch carregada na sessão do VS Code como fonte canônica
+   - `--branch-strategy cited` → respeitar as branch(es) citada(s) na spec
+10. **Criação controlada da branch da sessão** — quando o usuário escolhe `session` e o Git não tem branch ativa resolvível, o SpecKit sugere uma branch `feature/batch-<yyyymmdd>-<slug>` e exige confirmação explícita via `--confirm <intent-id>` antes de criar e fixar essa branch para o restante da sessão atual
 
 > Referências narrativas a outras stories ou fixes dentro do corpo da história não entram na análise de dependências. Para bloquear uma story, declare explicitamente o ID no campo `depends-on` do metadata.
 

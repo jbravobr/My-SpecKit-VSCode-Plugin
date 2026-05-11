@@ -42,6 +42,13 @@ function storyWithMeta(gate: number, status: string): string {
       });
 }
 
+function storyWithLanguage(gate: number, status: string, language: string): string {
+  const base = storyWithMeta(gate, status);
+  return /^\s*language:\s*.+$/m.test(base)
+    ? base.replace(/^\s*language:\s*.+$/m, `language: ${language}`)
+    : base;
+}
+
 function extractIntentId(output: string): string {
   const match = output.match(/Intent-ID:\s*`([^`]+)`/);
   return match?.[1] ?? '';
@@ -77,7 +84,7 @@ describe('handleReviewAutoCommand', () => {
     expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '📊 Ver Status das Specs',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /status'],
     });
   });
@@ -115,7 +122,7 @@ describe('handleReviewAutoCommand', () => {
     expect(intentId).toBeTruthy();
     expect(stream.button).toHaveBeenCalledWith({
       title: '✅ Confirmar Transição Proposta',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: [`@speckit /review-auto --confirm ${intentId}`],
     });
 
@@ -149,17 +156,17 @@ describe('handleReviewAutoCommand', () => {
     );
     expect(stream.button).toHaveBeenCalledWith({
       title: '▶ Iniciar Gate 3 (revisão formal)',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /review-auto'],
     });
     expect(stream.button).toHaveBeenCalledWith({
       title: '🔄 Registrar ALTERAÇÕES SOLICITADAS',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /review-auto --changes-requested --auto'],
     });
     expect(stream.button).toHaveBeenCalledWith({
       title: '✅ Registrar APROVADO',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /review-auto --approved --auto'],
     });
     expect(storyContent).toContain('gate: 3');
@@ -222,7 +229,7 @@ describe('handleReviewAutoCommand', () => {
     expect(intentId).toBeTruthy();
     expect(stream.button).toHaveBeenCalledWith({
       title: '✅ Confirmar Transição Proposta',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: [`@speckit /review-auto --confirm ${intentId}`],
     });
 
@@ -253,7 +260,7 @@ describe('handleReviewAutoCommand', () => {
     expect(auditContent).toContain('/review-auto --approved: ✅ Veredito APROVADO');
     expect(stream.button).toHaveBeenCalledWith({
       title: '📦 Commitar Código Gerado',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: ['@speckit /commit'],
     });
 
@@ -287,7 +294,7 @@ describe('handleReviewAutoCommand', () => {
     expect(intentId).toBeTruthy();
     expect(stream.button).toHaveBeenCalledWith({
       title: '✅ Confirmar Transição Proposta',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: [`@speckit /review-auto --confirm ${intentId}`],
     });
 
@@ -520,7 +527,7 @@ describe('handleReviewAutoCommand', () => {
     expect(stream.button).toHaveBeenCalledWith(
       expect.objectContaining({
         title: '📦 Commitar Código Gerado',
-        command: 'speckit.openChatWithQuery',
+        command: 'speckit.runChatQuickAction',
         arguments: ['@speckit /commit'],
       }),
     );
@@ -549,8 +556,117 @@ describe('handleReviewAutoCommand', () => {
     expect(intentId).toBeTruthy();
     expect(stream.button).toHaveBeenCalledWith({
       title: '✅ Confirmar Consentimento Batch',
-      command: 'speckit.openChatWithQuery',
+      command: 'speckit.runChatQuickAction',
       arguments: [`@speckit /review-auto --batch-consent --confirm ${intentId}`],
     });
+  });
+
+  it('enforces CRAP gate and offers mutation path when CRAP > 30 is detected', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub();
+    const git = fakeGit({ changedFiles: async () => ['src/domain/rules.ts'] });
+
+    await fs.writeFile(
+      'C:/workspace/.speckit/STORY-001.md',
+      storyWithLanguage(3, 'review', 'typescript'),
+    );
+    await fs.writeFile(
+      'C:/workspace/src/domain/rules.ts',
+      [
+        'export function risky(a: number, b: number, c: number, d: number): number {',
+        '  if (a > 0 && b > 0) return 1;',
+        '  if (a > 0 && c > 0) return 2;',
+        '  if (a > 0 && d > 0) return 3;',
+        '  if (b > 0 && c > 0) return 4;',
+        '  if (b > 0 && d > 0) return 5;',
+        '  if (c > 0 && d > 0) return 6;',
+        '  return 0;',
+        '}',
+      ].join('\n'),
+    );
+    await fs.writeFile(
+      'C:/workspace/coverage/lcov.info',
+      [
+        'TN:',
+        'SF:C:/workspace/src/domain/rules.ts',
+        'DA:1,1',
+        'DA:2,1',
+        'DA:3,0',
+        'DA:4,0',
+        'DA:5,0',
+        'DA:6,0',
+        'DA:7,0',
+        'DA:8,0',
+        'DA:9,0',
+        'end_of_record',
+      ].join('\n'),
+    );
+
+    await handleReviewAutoCommand(createMockRequest(''), stream, token, ws, fs, git);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('CRAP gate bloqueante');
+    expect(output).toContain('CRAP=');
+    expect(output).toContain('Mutation testing (opcional por decisão do usuário)');
+    expect(output).toContain('Caminhos possíveis');
+    expect(output).toContain('ALTERAÇÕES SOLICITADAS (bloqueios automáticos)');
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '🧬 Avaliar via Mutation',
+      command: 'speckit.runChatQuickAction',
+      arguments: ['@speckit /review-auto --mutation'],
+    });
+  });
+
+  it('shows mutation assessment details when --mutation is requested', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub();
+    const git = fakeGit({ changedFiles: async () => ['src/domain/rules.ts'] });
+
+    await fs.writeFile(
+      'C:/workspace/.speckit/STORY-001.md',
+      storyWithLanguage(3, 'review', 'typescript'),
+    );
+    await fs.writeFile(
+      'C:/workspace/src/domain/rules.ts',
+      [
+        'export function risky(a: number, b: number, c: number, d: number): number {',
+        '  if (a > 0 && b > 0) return 1;',
+        '  if (a > 0 && c > 0) return 2;',
+        '  if (a > 0 && d > 0) return 3;',
+        '  if (b > 0 && c > 0) return 4;',
+        '  if (b > 0 && d > 0) return 5;',
+        '  if (c > 0 && d > 0) return 6;',
+        '  return 0;',
+        '}',
+      ].join('\n'),
+    );
+    await fs.writeFile(
+      'C:/workspace/coverage/lcov.info',
+      [
+        'TN:',
+        'SF:C:/workspace/src/domain/rules.ts',
+        'DA:1,1',
+        'DA:2,1',
+        'DA:3,0',
+        'DA:4,0',
+        'DA:5,0',
+        'DA:6,0',
+        'DA:7,0',
+        'DA:8,0',
+        'DA:9,0',
+        'end_of_record',
+      ].join('\n'),
+    );
+
+    await handleReviewAutoCommand(createMockRequest('--mutation'), stream, token, ws, fs, git);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Avaliação de Mutation');
+    expect(output).toContain('Mutation testing cria pequenas alterações artificiais no código');
+    expect(output).toContain('Comando sugerido: `npx stryker run --mutate "src/domain/rules.ts"`');
+    expect(output).toContain('Continuar sem mutation agora');
+    expect(output).toContain('Aplicar mutation agora');
   });
 });
