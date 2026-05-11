@@ -720,7 +720,7 @@ Orquestra a revisão automática da Story ativa e as transições de gate com pr
 
 1. Propõe transições de gate/status e exige confirmação explícita antes da persistência (`--confirm <intent-id>`)
 2. Coleta evidências automáticas (arquivos alterados e cobertura `lcov` quando disponível)
-3. Aplica bloqueios automáticos mínimos (ex.: cobertura ausente/abaixo de 80%)
+3. Aplica bloqueios automáticos mínimos (ex.: cobertura ausente/abaixo de 80%, CRAP por função acima do limite)
 4. Emite veredito orquestrado e força continuidade do checklist completo de revisão no mesmo fluxo
 5. Expõe toda transição de gate/status com bloco Markdown `Antes` → `Depois`
 
@@ -734,12 +734,14 @@ Orquestra a revisão automática da Story ativa e as transições de gate com pr
 @speckit /review-auto --batch-consent
 @speckit /review-auto --batch-consent --confirm <intent-id>
 @speckit /review-auto --auto
+@speckit /review-auto --mutation
 ```
 
 > Fora do modo `--auto`, toda transição proposta por `/review-auto` exige confirmação explícita com `--confirm <intent-id>`.
 > No modo unificado, confirme um consentimento único de sessão com `/review-auto --batch-consent` antes de usar `/review-auto --auto`.
 > Se o veredito for **ALTERAÇÕES SOLICITADAS** no unificado, execute `/review-auto --changes-requested --auto`.
-> Se o veredito for **APROVADO** no unificado, execute `/review-auto --approved --auto`.
+> Se o veredito for **APROVADO** no unificado, execute `/review-auto --approved --auto` (Gate 4 fica em `status: ready-to-commit` até o commit final com `/commit`).
+> Comandos `@speckit /...` devem ser acionados pelo participant no chat (ex.: `speckit.runChatQuickAction` via `vscode/runCommand`), não via terminal/PowerShell.
 
 ---
 
@@ -879,7 +881,7 @@ Gera um **agente unificado por story** — cada agente contém o protocolo compl
 4. **Transição automática de revisão com consentimento** — ao concluir Gate 2, o protocolo unificado exige consentimento único (`@speckit /review-auto --batch-consent`) e então aciona `@speckit /review-auto --auto` para persistir `gate: 3` e `status: review`
 5. **Execução imediata da revisão** — após o handoff, o próprio agente deve acionar `@speckit /review-auto --auto` e executar o checklist completo do Gate 3 no mesmo fluxo (sem aguardar novo comando do usuário), emitindo veredito
 6. **Handoff explícito** — a transição Gate 2 → Gate 3 deve emitir no chat o bloco de handoff (`IMPLEMENTADOR → REVISOR`) com gate/status atualizados
-7. **Outcomes explícitos no chat** — após o veredito, o agente deve executar `@speckit /review-auto --changes-requested --auto` (Gate 3 → 2) ou `@speckit /review-auto --approved --auto` (Gate 3 → 4)
+7. **Outcomes explícitos no chat** — após o veredito, o agente deve executar `@speckit /review-auto --changes-requested --auto` (Gate 3 → 2) ou `@speckit /review-auto --approved --auto` (Gate 3 → 4 com `status: ready-to-commit` até `/commit`)
 8. **Filtro por story** — use `--story <id>` em conjunto com `--generate --unified` para gerar somente o agente da story reaberta/selecionada
 9. **Governança explícita de branch citada** — se alguma story citar `develop`, `main` ou outra branch, o comando pausa a geração e pede ao usuário escolher entre:
    - `--branch-strategy session` → usar sempre a branch carregada na sessão do VS Code como fonte canônica
@@ -918,7 +920,7 @@ Resumo (modo unificado):
 Próximo passo: Abra o Copilot Chat e selecione o agente da story desejada no dropdown.
 Importante: no modo unificado, confirme um consentimento único com `@speckit /review-auto --batch-consent` antes de handoffs automáticos.
 Importante: a transição Gate 2 → Gate 3 usa `@speckit /review-auto --auto` e atualiza o metadata da story para `gate: 3` e `status: review`.
-Importante: após o veredito, use `@speckit /review-auto --changes-requested --auto` (rework) ou `@speckit /review-auto --approved --auto` (encerramento).
+Importante: após o veredito, use `@speckit /review-auto --changes-requested --auto` (rework) ou `@speckit /review-auto --approved --auto` (Gate 4 com `status: ready-to-commit` até o commit final).
 Importante: no modo unificado, a transição também tenta fechar automaticamente commit pendente do Gate 2 antes da revisão.
 ```
 
@@ -930,7 +932,7 @@ Cada agente unificado contém 4 protocolos embutidos:
 | ----------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Dependência | Gate 0 (pré-condição)                  | Verifica apenas o metadata canônico `depends-on`; bloqueia se pendentes                                                                                                     |
 | Transição   | Gate 2 → Gate 3                        | Tenta commit automático do Gate 2, exige consentimento batch único, aciona `/review-auto --auto`, persiste metadata (`gate: 3`, `status: review`) e emite handoff explícito |
-| Desfecho    | Gate 3 → Gate 2 ou Gate 4              | Comandos explícitos no unificado: `/review-auto --changes-requested --auto` (retrabalho) ou `/review-auto --approved --auto` (encerramento) com transição visível no chat   |
+| Desfecho    | Gate 3 → Gate 2 ou Gate 4              | Comandos explícitos no unificado: `/review-auto --changes-requested --auto` (retrabalho) ou `/review-auto --approved --auto` (Gate 4 com `status: ready-to-commit`) com transição visível no chat |
 | Retorno     | Revisor emite "ALTERAÇÕES SOLICITADAS" | Documenta fixes, retorna ao implementador, aplica correções, re-executa revisão                                                                                             |
 | Inviolável  | Sempre ativo no modo revisor           | Revisor **nunca** implementa — apenas documenta bloqueios e devolve ao implementador                                                                                        |
 

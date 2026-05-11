@@ -45,7 +45,7 @@ export function activate(context: vscode.ExtensionContext): void {
           git: gitOps,
           notify: async (specId) => {
             const action = await vscode.window.showInformationMessage(
-              `SpecKit: STORY-${specId} encerrada em Gate 4 — há mudanças pendentes após Keep.`,
+              `SpecKit: STORY-${specId} em Gate 4 (ready-to-commit) — há mudanças pendentes após Keep.`,
               'Commitar agora',
               'Mais tarde',
             );
@@ -66,6 +66,9 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('speckit.newStory', async () => {
       await openCopilotChatWithQuery('@speckit /new');
+    }),
+    vscode.commands.registerCommand('speckit.newFix', async () => {
+      await openCopilotChatWithQuery('@speckit /fix');
     }),
     vscode.commands.registerCommand('speckit.fixStory', async () => {
       await openCopilotChatWithQuery('@speckit /fix');

@@ -99,6 +99,7 @@ Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${st
 - Não assuma que foi intencional ou que foi erro
 - Todos os itens do checklist devem ser verificados — não pule nenhum
 - **NUNCA implemente correções sem aprovação explícita do usuário** — apresente o plano de correções e aguarde confirmação ("sim", "ok", "confirmar", "pode ir") antes de tocar em qualquer arquivo
+- Para comandos do participant (\`@speckit /...\`), use sempre \`vscode/runCommand\` com \`speckit.runChatQuickAction\` (nunca terminal/PowerShell)
 
 ${branchGovernanceSection ? `${branchGovernanceSection}\n---\n` : ''}## Formato obrigatório de resposta no chat (Markdown)
 
@@ -205,11 +206,11 @@ ${dodList || '- [ ] (não especificado)'}
 3. **Melhorias**: recomendados mas não bloqueantes
 4. **Sugestões fora de escopo**: registre, não implemente
 
-**Se veredito for APROVADO:** escreva no chat: ${approvedCommand} para persistir Gate 3 → Gate 4/status done antes de concluir o Gate 4.
+**Se veredito for APROVADO:** acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com ${approvedCommand} para persistir Gate 3 → Gate 4/status ready-to-commit antes do commit final.
 
 **Se veredito for ALTERAÇÕES SOLICITADAS:**
 
-1. Escreva no chat: ${changesRequestedCommand} para persistir Gate 3 → Gate 2/status in-progress.
+1. Acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com ${changesRequestedCommand} para persistir Gate 3 → Gate 2/status in-progress.
 2. Registre a transição no chat usando o bloco Markdown obrigatório.
 3. Converta os bloqueantes em tarefas atômicas:
 
@@ -285,10 +286,10 @@ git commit -m "fix(${storyId}): ajustes pós-revisão"
 \`\`\`
 
 ### Passo 5 — Encerramento da story no SpecKit
-No chat, execute:
+Execute via \`vscode/runCommand\` chamando \`speckit.runChatQuickAction\`:
 ${approvedCommand}
 
-O comando persiste o metadata com \`gate: 4\` e \`status: done\` e emite a transição no chat.
+O comando persiste o metadata com \`gate: 4\` e \`status: ready-to-commit\` e emite a transição no chat. Após o commit final (\`@speckit /commit\`), o status deve evoluir para \`done\`.
 
 ---
 

@@ -1,4 +1,11 @@
-export type SpecStatus = 'open' | 'in-progress' | 'review' | 'blocked' | 'done' | 'cancelled';
+export type SpecStatus =
+  | 'open'
+  | 'in-progress'
+  | 'review'
+  | 'blocked'
+  | 'ready-to-commit'
+  | 'done'
+  | 'cancelled';
 export type Gate = 0 | 1 | 2 | 3 | 4;
 export type ProjectStage = 'greenfield' | 'brownfield';
 export type SpecType = 'story' | 'refactoring' | 'spike';

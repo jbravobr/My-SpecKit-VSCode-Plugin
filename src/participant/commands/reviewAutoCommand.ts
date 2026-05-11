@@ -771,8 +771,8 @@ function buildTransitionProposal(action: ReviewAutoAction): TransitionProposal |
   if (action === 'approved') {
     return {
       toGate: 4,
-      toStatus: 'done',
-      reason: 'Veredito APROVADO confirmado no Gate 3.',
+      toStatus: 'ready-to-commit',
+      reason: 'Veredito APROVADO confirmado no Gate 3. Gate 4 aguardando commit final.',
       commandLabel: '/review-auto --approved',
     };
   }
@@ -965,7 +965,7 @@ export async function handleReviewAutoCommand(
         '**Uso suportado:**\n' +
         '- `@speckit /review-auto` (orquestra Gate 2 → Gate 3 e revisão automática)\n' +
         '- `@speckit /review-auto --changes-requested` (Gate 3 → Gate 2 para retrabalho)\n' +
-        '- `@speckit /review-auto --approved` (Gate 3 → Gate 4 com status done)\n' +
+        '- `@speckit /review-auto --approved` (Gate 3 → Gate 4 com status ready-to-commit)\n' +
         '- `@speckit /review-auto --mutation` (trilha opcional de mutation testing quando CRAP > 30)\n' +
         '- `@speckit /review-auto --batch-consent` (propõe consentimento único da sessão batch)\n' +
         '- `@speckit /review-auto --confirm <intent-id>` (confirma transição pendente)\n',
@@ -1436,9 +1436,9 @@ export async function handleReviewAutoCommand(
 
       const summary = transitioned.summary;
 
-      if (summary.toGate !== 4 || summary.toStatus !== 'done') {
+      if (summary.toGate !== 4 || summary.toStatus !== 'ready-to-commit') {
         stream.markdown(
-          '❌ A confirmação recebida não representa encerramento para Gate 4/status done.\n',
+          '❌ A confirmação recebida não representa avanço para Gate 4/status ready-to-commit.\n',
         );
         emitContextualCommands(stream, [
           {
@@ -1452,7 +1452,7 @@ export async function handleReviewAutoCommand(
 
       await recordReviewAutoEvent({
         command: '/review-auto --approved',
-        outcome: '✅ Veredito APROVADO — story encerrada no Gate 4',
+        outcome: '✅ Veredito APROVADO — Gate 4 aguardando commit final para done',
         detail: `Gate: ${summary.fromGate} -> ${summary.toGate}\nStatus: ${summary.fromStatus} -> ${summary.toStatus}`,
         gate: 4,
         commandExecutionId,
@@ -1465,19 +1465,22 @@ export async function handleReviewAutoCommand(
       });
 
       stream.markdown(
-        `## ✅ Encerramento Orquestrado — STORY-${story.metadata.id}\n\n` +
+        `## ✅ Gate 4 Orquestrado — STORY-${story.metadata.id}\n\n` +
           `${formatTransitionMarkdown(summary)}\n\n` +
           '### O que aconteceu\n' +
-          '- ✅ Metadata da story atualizado para **Gate 4 / done**\n' +
+          '- ✅ Metadata da story atualizado para **Gate 4 / ready-to-commit**\n' +
           '- ✅ Metadata commitado automaticamente no git\n\n' +
-          '### Próximo passo — Commitar o código gerado\n\n' +
+          '### Próximo passo obrigatório — Commit final para concluir a story\n\n' +
           '> O código criado durante esta story ainda aguarda sua aceitação.\n' +
           '> **1.** Clique em **Keep** na barra acima para aceitar os arquivos gerados\n' +
-          '> **2.** Clique no botão abaixo para commitar tudo e fechar o ciclo\n',
+          '> **2.** Clique no botão abaixo para commitar tudo e concluir o status em **done**\n',
       );
       emitContextualCommands(stream, [
         { command: '@speckit /commit', description: 'commitar código gerado após clicar Keep' },
-        { command: '@speckit /status --all', description: 'confirmar story em Gate 4 / done' },
+        {
+          command: '@speckit /status --all',
+          description: 'confirmar story em Gate 4 / ready-to-commit antes do commit final',
+        },
       ]);
       emitChatQuickActionButton(stream, '📦 Commitar Código Gerado', '@speckit /commit');
       emitChatQuickActionButton(stream, '📊 Ver Status Completo', '@speckit /status --all');
@@ -1500,11 +1503,16 @@ export async function handleReviewAutoCommand(
   }
 
   if (control.action === 'changes-requested') {
-    if (story.metadata.gate !== 3) {
+    const allowFromGate3 = story.metadata.gate === 3;
+    const allowFromGate4Pending =
+      story.metadata.gate === 4 && story.metadata.status === 'ready-to-commit';
+    if (!allowFromGate3 && !allowFromGate4Pending) {
       await recordReviewAutoEvent({
         command: '/review-auto --changes-requested',
         outcome: '⛔ bloqueado: gate inválido para retorno ao retrabalho',
-        detail: `Gate atual: ${story.metadata.gate}. Gate esperado: 3.`,
+        detail:
+          `Gate atual: ${story.metadata.gate} / status ${story.metadata.status}. ` +
+          'Gate esperado: 3 (review) ou 4 (ready-to-commit).',
         gate: story.metadata.gate,
         commandExecutionId,
         specId: story.metadata.id,
@@ -1516,7 +1524,7 @@ export async function handleReviewAutoCommand(
       });
 
       stream.markdown(
-        `❌ Story \`${story.metadata.id}\` está no Gate ${story.metadata.gate}. O retorno para retrabalho exige Gate 3.\n`,
+        `❌ Story \`${story.metadata.id}\` está em Gate/Status incompatível. O retorno para retrabalho exige Gate 3 (review) ou Gate 4 (ready-to-commit).\n`,
       );
       emitContextualCommands(stream, [
         { command: '@speckit /status', description: 'consultar gate/status atual da story' },

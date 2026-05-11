@@ -251,13 +251,15 @@ describe('handleReviewAutoCommand', () => {
     const auditContent = fs.contentFor('audit.log');
     const traceRaw = fs.contentFor('traceability/001.json');
 
-    expect(output).toContain('Encerramento Orquestrado');
+    expect(output).toContain('Gate 4 Orquestrado');
     expect(output).toContain('| Gate | `3` | `4` |');
-    expect(output).toContain('| Status | `review` | `done` |');
+    expect(output).toContain('| Status | `review` | `ready-to-commit` |');
     expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(storyContent).toContain('gate: 4');
-    expect(storyContent).toContain('status: done');
-    expect(auditContent).toContain('/review-auto --approved: ✅ Veredito APROVADO');
+    expect(storyContent).toContain('status: ready-to-commit');
+    expect(auditContent).toContain(
+      '/review-auto --approved: ✅ Veredito APROVADO — Gate 4 aguardando commit final',
+    );
     expect(stream.button).toHaveBeenCalledWith({
       title: '📦 Commitar Código Gerado',
       command: 'speckit.runChatQuickAction',
@@ -391,9 +393,9 @@ describe('handleReviewAutoCommand', () => {
     const storyContent = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
     const output = stream.getAllMarkdown();
 
-    expect(output).toContain('Encerramento Orquestrado');
+    expect(output).toContain('Gate 4 Orquestrado');
     expect(storyContent).toContain('gate: 4');
-    expect(storyContent).toContain('status: done');
+    expect(storyContent).toContain('status: ready-to-commit');
   });
 
   it('auto-commits spec metadata after --approved --auto gate 3->4 transition', async () => {
@@ -434,7 +436,7 @@ describe('handleReviewAutoCommand', () => {
     const [_cwd, filePath, message] = commitFileSpy.mock.calls[0];
     expect(filePath).toContain('STORY-001.md');
     expect(message).toContain('gate 3→4');
-    expect(message).toContain('done');
+    expect(message).toContain('ready-to-commit');
   });
 
   it('does not call commitFile when patch has no changes', async () => {
@@ -517,7 +519,7 @@ describe('handleReviewAutoCommand', () => {
     // New guided message
     expect(output).toContain('Metadata commitado automaticamente');
     expect(output).toContain('Clique em **Keep**');
-    expect(output).toContain('Commitar o código gerado');
+    expect(output).toContain('Commit final para concluir a story');
 
     // Old manual git instruction should be gone
     expect(output).not.toContain('git add .speckit');

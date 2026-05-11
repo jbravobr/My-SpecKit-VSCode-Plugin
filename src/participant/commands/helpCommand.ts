@@ -94,7 +94,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     options: [
       '--confirm <intent-id> para confirmar transição proposta (obrigatório fora de --auto)',
       '--changes-requested (alias: --changes, --rework) para retornar Gate 3 → Gate 2',
-      '--approved (alias: --approve) para encerrar Gate 3 → Gate 4/status done',
+      '--approved (alias: --approve) para avançar Gate 3 → Gate 4/status ready-to-commit',
       '--mutation (alias: --mut) para detalhar trilha opcional de mutation quando CRAP > 30',
       '--batch-consent para propor consentimento único da sessão batch unificada',
       '--auto para handoff automático somente quando consentimento batch estiver ativo',
