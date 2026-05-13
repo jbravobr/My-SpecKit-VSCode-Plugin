@@ -1,0 +1,73 @@
+SpecKit — Novidades para usuários — 0.4.0
+=========================================
+Data: 13/05/2026
+
+Resumo
+------
+Esta versão entrega uma camada de validação determinística que roda automaticamente
+em três momentos do seu fluxo SDD: quando você salva a spec, quando você salva um
+arquivo de código TS/JS, e quando o /review-auto promove um gate. As evidências
+ficam em `.speckit/evidence/` e o agente Revisor passa a coordenar com o Implementador
+um loop de correção sem te interromper com pop-ups ou diálogos. Você também ganha um
+novo comando `/verify` para rodar a validação sob demanda.
+
+Novas features
+--------------
+- Novo comando `/verify [--gate N]`: executa a validação determinística para o próximo
+  gate (ou um gate específico) e grava evidência consumida pelo Revisor. Útil para
+  saber, em qualquer momento, se a story está pronta para avançar.
+- Validação automática no save da spec: ao salvar uma spec, o plugin verifica
+  disciplinas de teste presentes/ausentes (idempotência, máquina de estado, recovery,
+  análise de valores de borda) e grava sugestões em
+  `.speckit/evidence/latest-heuristic.md`.
+- Validação automática no save de código: ao salvar um arquivo TS/JS com a story em
+  gate ≥ 2, o CRAP daquele arquivo é recalculado e atualizado em
+  `.speckit/evidence/latest-crap.md`. Cálculo é escopado ao arquivo, então é rápido.
+- Validação automática na transição de gate: o /review-auto, ao avançar de gate,
+  agora roda o conjunto completo de validadores do gate alvo e emite um resumo no
+  chat. A evidência é persistida em `.speckit/evidence/<spec>-<run>.md` e em
+  `.speckit/evidence/latest.md`.
+
+Melhorias de experiência
+------------------------
+- Nenhuma das validações automáticas depende de você clicar em botão, confirmar
+  diálogo ou rodar comando: o pipeline é silencioso, informacional e best-effort.
+  Se um validador falha por qualquer motivo, o erro é engolido e nada é abortado.
+- Validações pesadas (test-execution, coverage, CRAP) são escopadas ao diff da story
+  e cacheadas por hash+mtime, então o impacto em hardware e tempo é mínimo mesmo em
+  monorepos.
+- Suporte stack-agnóstico: TypeScript e JavaScript têm validação nativa. Java, Kotlin,
+  Python, C# e Go recebem findings com o comando exato a executar (mvn, pytest,
+  dotnet test, go test) — o Revisor delega para você quando necessário.
+- O loop de correção tem limite de 5 iterações por (spec, gate) — se ultrapassar, o
+  Revisor sinaliza bloqueio em vez de ficar tentando indefinidamente.
+
+Correções e segurança de release
+---------------------------------
+- Tamanho do VSIX reduzido de ~17 MB para ~1,2 MB: o pacote 0.3.26 vinha
+  incluindo indevidamente os workspaces irmãos `packages/intellij/`
+  (plugin JetBrains com 179 MB de fontes e build) e `packages/core-server/`,
+  que não fazem parte da extensão VS Code. Agora apenas os 5 arquivos
+  essenciais são publicados.
+- Nenhuma quebra de comportamento existente. A lógica legada de CRAP e cobertura do
+  /review-auto foi preservada intacta; a nova camada de evidência é adicional e
+  informacional.
+- Hook de transição nunca aborta a transição mesmo se a validação falhar: as decisões
+  de gate continuam sendo do agente Revisor + suas confirmações.
+
+Como usar rapidamente
+---------------------
+1. Continue usando o fluxo normal — /new, /draft, edição da spec, implementação,
+   /review-auto. Tudo segue igual.
+2. Após salvar uma spec, abra `.speckit/evidence/latest-heuristic.md` para ver se há
+   disciplinas de teste ausentes sugeridas como critério de aceite.
+3. Após salvar um arquivo de código TS/JS em uma story em gate ≥ 2, abra
+   `.speckit/evidence/latest-crap.md` para ver o CRAP atualizado da função tocada.
+4. Quando quiser saber se a story está pronta para o próximo gate, rode
+   `@speckit /verify` no chat. Para um gate específico: `@speckit /verify --gate 2`.
+5. Após `/review-auto` avançar um gate, o resumo da validação aparece no chat e a
+   evidência completa fica em `.speckit/evidence/<spec>-<run>.md`.
+
+Artefato
+--------
+- publish/0.4.0/vscode-plugin-speckit-0.4.0.vsix

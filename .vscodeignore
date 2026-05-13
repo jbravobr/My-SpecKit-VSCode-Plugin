@@ -44,6 +44,11 @@ markdown-to-pdf/**
 # Publish archives
 publish/**
 
+# Sibling workspace packages (not shipped in the VS Code extension VSIX)
+# - packages/intellij/ ~179 MB of JetBrains plugin sources/build artifacts
+# - packages/core-server/ standalone HTTP server (not consumed by extension.js at runtime)
+packages/**
+
 # Local run logs (vitest, tsc, lint, build, etc.)
 *.log
 **/*.log

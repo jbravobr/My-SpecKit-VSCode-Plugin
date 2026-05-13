@@ -1,0 +1,99 @@
+SpecKit — Changelog 0.4.0
+=========================
+Data: 13/05/2026
+Branch base: main
+
+MINOR — Camada de validação determinística automática + loop Revisor↔Implementador
+------------------------------------------------------------------------------------
+Esta release introduz uma camada de enforcement determinístico que produz evidência
+automaticamente em três pontos de disparo (save de spec, save de código, transição de
+gate via /review-auto) e expõe o comando /verify para execução manual sob demanda. A
+evidência persistida em `.speckit/evidence/latest.md` é consumida pelo Revisor (agente)
+para orquestrar um loop de correção com o Implementador, sem dependência de ação do
+usuário e sem bloquear o editor.
+
+Resumo da release
+-----------------
+Foram adicionados 6 validadores determinísticos (heuristic, ac-presence, coverage, CRAP,
+typecheck, test-execution), um GateEvidenceCollector que mapeia Gate→validadores, um
+RevisorFeedbackBridge que formata findings em prompt para o agente Revisor, um
+EvidenceReportWriter que persiste relatório em .speckit/evidence/, um IterationCounter
+com limite default de 5 iterações por (spec,gate), e três hooks automáticos: spec save
+dispara heurística de disciplinas (idempotência, máquina de estado, recovery, BVA),
+code save dispara CRAP incremental para o arquivo, e a transição de gate via
+/review-auto roda o conjunto completo de validadores do gate alvo. A camada é
+stack-agnóstica: nativa para TS/JS e delegada ao Revisor com comando exato para
+Java/Kotlin/Python/C#/Go.
+
+Mudanças técnicas
+-----------------
+- `src/validator/auto/` (novo): ValidationRegistry, ValidationCache (hash+mtime),
+  StoryHeuristicValidator, CoverageThresholdValidator, AcceptanceCriteriaTestPresenceValidator,
+  CrapValidator (fórmula cc²·(1−cov/100)³+cc via TS Compiler API), TypecheckValidator e
+  TestExecutionValidator com CommandRunner injetável.
+- `src/workflow/GateEvidenceCollector.ts`: mapa Gate→validadores
+  (0=heuristic; 1=heuristic+typecheck; 2=typecheck+ac-presence;
+   3=ac-presence+test-execution+coverage+crap; 4=∅).
+- `src/workflow/RevisorFeedbackBridge.ts`: formata EvidenceReport em prompt determinístico
+  com seções Bloqueadores/Avisos/Delegado/Info, formato `path:line: emoji severity: msg. Fix: ...`.
+- `src/workflow/EvidenceReportWriter.ts`: persiste `.speckit/evidence/<specId>-<runId>.{md,json}`
+  e atualiza `.speckit/evidence/latest.md` para consumo do Revisor.
+- `src/workflow/IterationCounter.ts`: contador por (spec,gate) persistido em
+  `.speckit/state/iteration-counters/<specId>.json`, default limite 5.
+- `src/workflow/GateVerificationHook.ts`: helper informacional para wiring na transição;
+  best-effort, nunca lança, nunca aborta transição.
+- `src/workflow/SpecAutoValidationRunner.ts`: heurística de disciplinas no save de spec,
+  escreve `.speckit/evidence/latest-heuristic.md`.
+- `src/workflow/PostSaveIncrementalRunner.ts`: CRAP incremental no save de arquivo TS/JS,
+  guard rails para custo (skip não TS/JS, sem workspace, sem story, story em gate < 2),
+  escreve `.speckit/evidence/latest-crap.md`.
+- `src/participant/commands/verifyCommand.ts` (novo): comando `/verify [--gate N]` executa
+  o GateEvidenceCollector para o Gate alvo e emite o prompt do Revisor no chat.
+- `src/participant/speckitParticipant.ts`: registro do command verify.
+- `src/participant/commands/reviewAutoCommand.ts`: chamada de runGateVerificationHook
+  imediatamente após a persistência da transição de gate, em try/catch, com stream
+  de uma linha de resumo. Lógica legada CRAP/coverage inalterada.
+- `src/workflow/SpecFileWatcher.ts`: invoca runSpecHeuristicOnSave debounced em 500ms.
+- `src/extension.ts`: invoca runIncrementalCrapForSavedFile no onDidSaveTextDocument.
+- `src/participant/commands/helpCommand.ts`: /verify adicionado ao renderGeneralHelp.
+- `package.json`: bump de versão 0.3.25 → 0.4.0.
+- `.vscodeignore`: adicionado `packages/**` para excluir os workspaces irmãos
+  (`packages/intellij/` com ~179 MB de fontes/build do plugin JetBrains e
+  `packages/core-server/` servidor HTTP standalone não consumido pelo
+  `dist/extension.js` em runtime). O VSIX 0.3.26 (16 MB) e a primeira tentativa
+  do 0.4.0 (17 MB) incluíam esses workspaces indevidamente — agora o pacote
+  contém apenas os 5 arquivos essenciais (README.md, README.html, package.json,
+  assets/speckit_icon.png, dist/extension.js).
+
+Documentação
+------------
+- README.md: nova seção `### @speckit /verify` com descrição dos 3 pontos de disparo
+  automático (spec save, code save, gate transition) e o consumo de
+  `.speckit/evidence/latest.md` pelo Revisor.
+- Changelogs técnico e de usuário 0.4.0 adicionados em `publish/0.4.0/`.
+
+Testes adicionados
+------------------
+- tests/unit/validator/auto/ — 8 arquivos de teste cobrindo todos os validadores:
+  ValidationRegistry, ValidationCache, StoryHeuristicValidator, CoverageThresholdValidator,
+  AcceptanceCriteriaTestPresenceValidator, CrapValidator, TypecheckValidator, TestExecutionValidator.
+- tests/unit/workflow/ — novos: GateEvidenceCollector, RevisorFeedbackBridge,
+  EvidenceReportWriter, IterationCounter, GateVerificationHook,
+  SpecAutoValidationRunner, PostSaveIncrementalRunner.
+- Total agregado da suíte: 83 arquivos passando (de 84), aproximadamente 1244 testes.
+- A única falha (tests/unit/workflow/PostSaveCommitNotifier.test.ts em cenário gate
+  4/ready-to-commit) é pré-existente em main desde antes desta release e não foi
+  introduzida nem é coberta por esta entrega.
+
+Validação executada antes do release
+-------------------------------------
+- npx tsc --noEmit -> 0 erros
+- npx eslint . -> 0 erros
+- npx vitest run -> 83 arquivos passando, 1 pré-existente falhando (PostSaveCommitNotifier)
+- node esbuild.js --production -> bundle gerado
+- node ./scripts/check-changelog.mjs -> verificará este arquivo
+- node ./scripts/verify-vsix.mjs -> verificará o vsix gerado
+
+Artefato gerado
+---------------
+- publish/0.4.0/vscode-plugin-speckit-0.4.0.vsix
