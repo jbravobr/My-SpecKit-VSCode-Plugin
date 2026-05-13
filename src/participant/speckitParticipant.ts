@@ -20,6 +20,7 @@ import { handleReviewAutoCommand } from './commands/reviewAutoCommand';
 import { handleStatusCommand } from './commands/statusCommand';
 import { handleTraceCommand } from './commands/traceCommand';
 import { handleValidateCommand } from './commands/validateCommand';
+import { handleVerifyCommand } from './commands/verifyCommand';
 import { emitQuickActions } from './commands/CommandHelpers';
 
 const LLM_HISTORY_COMMANDS = new Set<string>([
@@ -149,6 +150,9 @@ export async function handleSpeckitRequest(
         break;
       case 'review-auto':
         await handleReviewAutoCommand(request, stream, token);
+        break;
+      case 'verify':
+        await handleVerifyCommand(request, stream, token);
         break;
       default:
         stream.markdown(
