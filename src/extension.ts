@@ -8,6 +8,7 @@ import { Framework, Language } from './story/Story';
 import { createSpecFileWatcher } from './workflow/SpecFileWatcher';
 import { gitOps } from './workflow/GitOperations';
 import { checkPostSavePendingCommit } from './workflow/PostSaveCommitNotifier';
+import { runIncrementalCrapForSavedFile } from './workflow/PostSaveIncrementalRunner';
 
 const POST_SAVE_DEBOUNCE_MS = 2000;
 
@@ -36,7 +37,20 @@ export function activate(context: vscode.ExtensionContext): void {
   let postSaveTimer: ReturnType<typeof setTimeout> | undefined;
 
   context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument(() => {
+    vscode.workspace.onDidSaveTextDocument((doc) => {
+      // Incremental CRAP recalc for code saves (best-effort, never blocks).
+      void (async () => {
+        try {
+          await runIncrementalCrapForSavedFile({
+            fs: vscodeFileSystem,
+            workspace: vscodeWorkspace,
+            savedFilePath: doc.uri.fsPath,
+          });
+        } catch {
+          // swallow — informational only
+        }
+      })();
+
       if (postSaveTimer) clearTimeout(postSaveTimer);
       postSaveTimer = setTimeout(() => {
         void checkPostSavePendingCommit({
