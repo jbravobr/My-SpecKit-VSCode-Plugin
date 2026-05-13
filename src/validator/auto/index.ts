@@ -31,3 +31,15 @@ export {
   type CrapResult,
   type CrapValidatorOptions,
 } from './CrapValidator';
+export {
+  TypecheckValidator,
+  parseTscOutput,
+  type TypecheckValidatorOptions,
+  type CommandRunner as TypecheckCommandRunner,
+  type ProcessResult as TypecheckProcessResult,
+} from './TypecheckValidator';
+export {
+  TestExecutionValidator,
+  parseVitestFailures,
+  type TestExecutionValidatorOptions,
+} from './TestExecutionValidator';
