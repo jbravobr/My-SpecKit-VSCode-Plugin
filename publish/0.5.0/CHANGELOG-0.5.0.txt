@@ -1,0 +1,114 @@
+SpecKit — Changelog 0.5.0
+=========================
+Data: 13/05/2026
+Branch base: main
+
+MINOR — Quality-of-life: secret leak, métricas locais, score de spec, loop com memória e UI nativa
+--------------------------------------------------------------------------------------------------
+Esta release entrega seis melhorias incrementais sobre a camada de validação determinística
+introduzida em 0.4.0, mantendo o princípio "evidência local, sem rede, sem bloqueio do usuário".
+Foram adicionados: detecção de segredos hardcoded, métricas locais persistidas, score de
+completude de spec, consciência de iteração no loop Revisor↔Implementador, timeout por
+validador na ValidationRegistry, e duas superfícies nativas do VS Code (Status Bar e
+Diagnostics/Problems).
+
+Resumo da release
+-----------------
+Foi adicionado o validador `SecretLeakValidator` com 8 regras (AWS, GitHub, JWT, PEM, Slack,
+Google, generic api_key, secret-with-value) integrado aos Gates 2 e 3, com detecção de
+placeholders para evitar falso positivo. Um `MetricsRecorder` agora persiste eventos em
+`.speckit/metrics/events.jsonl` (cap rotativo de 2 MiB) com summarize() para pass rate, p95,
+top validators, eventos por gate/spec — exposto via novo comando `/metrics`. Um
+`SpecCompletenessScorer` calcula score 0-100 da spec ativa em 7 dimensões (metadata, requisito
+de negócio, spec funcional, spec não-funcional, DoD, disciplinas, rastreabilidade) com
+breakdown e recomendações — exposto via novo comando `/score`. O `GateVerificationHook`
+passou a ler evidência anterior do mesmo (spec,gate), calcular delta (regredidos vs
+resolvidos) e injetar `IterationContext` no prompt do Revisor (tentativa N/limite, lista
+de validadores regredidos, aviso de LIMITE ATINGIDO). A `ValidationRegistry` ganhou
+suporte a `timeoutMs` por validador, com AbortController por worker e emissão de finding
+sintético em timeout. A extensão agora instancia `SpeckitDiagnostics` (popula o painel
+Problems com a evidência mais recente) e `SpeckitStatusBar` (item esquerdo mostrando
+spec/gate/status, clique abre /metrics), ambos atualizados no onSave.
+
+Mudanças técnicas
+-----------------
+- `src/validator/auto/SecretLeakValidator.ts` (novo): 8 regex rules + detecção de placeholders
+  (`${`, `{{`, `<your`, `placeholder`, `changeme`, `dummy_secret`, `fake_secret`, `xxxxxx`,
+  `0000000`). Skip de node_modules/dist/test files. Respeita ctx.signal.
+- `src/validator/auto/index.ts`: export do novo validador.
+- `src/validator/auto/types.ts`: `RunOptions.timeoutMs?: number`.
+- `src/validator/auto/ValidationRegistry.ts`: `runWorker` agora cria localAbort por validator,
+  forward de parent signal, `Promise.race([validator.run(), timeoutPromise])`. Em timeout:
+  aborta sinal local, emite Finding error `Validator '<id>' excedeu timeout de Xms`, marca
+  perValidator com `error: 'timeout'`.
+- `src/workflow/GateEvidenceCollector.ts`: `DEFAULT_GATE_VALIDATORS` adiciona `secret-leak`
+  nos gates 2 e 3; `collect()` aceita parâmetro `timeoutMs`.
+- `src/workflow/GateVerificationHook.ts`: registra SecretLeakValidator no
+  buildDefaultGateCollector; lê evidência anterior `.speckit/evidence/<specId>-*.json`
+  (mais recente por sort); calcula validadores regredidos (blocking agora e ausente antes);
+  integra IterationCounter; emite `IterationContext` no `buildRevisorPrompt`; grava métricas;
+  Output type agora inclui `iteration?: IterationContext`.
+- `src/workflow/RevisorFeedbackBridge.ts`: nova interface `IterationContext`;
+  `buildRevisorPrompt(report, iteration?)` exibe attempt/limit, delta vs anterior, lista
+  de regressos, aviso LIMITE ATINGIDO. Parâmetro opcional, retrocompatível.
+- `src/workflow/MetricsRecorder.ts` (novo): JSONL writer em `.speckit/metrics/events.jsonl`,
+  cap rotativo de 2 MiB (drop das linhas mais antigas), `recordEvidence()` helper,
+  `summarize()` com byType/byGate/bySpec/avgDuration/p95/passRate/topValidators.
+- `src/workflow/SpecCompletenessScorer.ts` (novo): função pura `scoreStory(story)` →
+  `{score, level, breakdown[], recommendations[]}`. Score máx 100 em 7 dimensões
+  (metadata 10, business 15, functional 25, non-functional 15, DoD 15, disciplines 10,
+  traceability 10). Níveis: baixa/média/alta/excelente.
+- `src/workflow/SpecAutoValidationRunner.ts`: grava evento `spec-heuristic`.
+- `src/workflow/PostSaveIncrementalRunner.ts`: grava evento `incremental-crap`.
+- `src/participant/commands/metricsCommand.ts` (novo): handler de `/metrics` que invoca
+  `summarize()` e formata markdown com os agregados.
+- `src/participant/commands/scoreCommand.ts` (novo): handler de `/score` que carrega a story
+  ativa e renderiza score + breakdown + recomendações.
+- `src/participant/commands/verifyCommand.ts`: registra SecretLeakValidator; grava eventos
+  `verify-command` e `gate-verification`.
+- `src/participant/speckitParticipant.ts`: cases para `metrics` e `score`.
+- `src/participant/commands/helpCommand.ts`: entradas `/metrics` e `/score` em
+  renderGeneralHelp.
+- `package.json`: chatParticipants.commands agora declara `verify`, `metrics`, `score`.
+- `src/ui/SpeckitDiagnostics.ts` (novo): lê a evidência mais nova em `.speckit/evidence/*.json`
+  e popula `vscode.DiagnosticCollection('speckit')` mapeando finding→Diagnostic (severity
+  conforme finding.severity; range usa Math.max(0, (f.line ?? 1) − 1) para converter 1-based
+  → 0-based).
+- `src/ui/SpeckitStatusBar.ts` (novo): item esquerdo com `StatusBarAlignment.Left`,
+  priority 50, mostra spec/gate/contagem de bloqueadores; exporta
+  `COMMAND_OPEN_METRICS = 'speckit.openMetrics'`.
+- `src/extension.ts`: instancia SpeckitDiagnostics + SpeckitStatusBar; registra comando
+  `speckit.openMetrics`; refresh em onDidSaveTextDocument.
+- `tests/unit/extension.test.ts`: mock de vscode expandido (StatusBarAlignment,
+  createStatusBarItem, DiagnosticSeverity, Range, Uri, Diagnostic, MarkdownString,
+  languages.createDiagnosticCollection) + `vi.mock` para os dois módulos de UI.
+- `package.json`: bump 0.4.0 → 0.5.0.
+
+Documentação
+------------
+- README.md: novas seções `### @speckit /metrics`, `### @speckit /score` e bloco descrevendo
+  Status Bar e Problems. Mantida a seção `/verify` da release anterior.
+
+Testes adicionados
+------------------
+- tests/unit/validator/auto/SecretLeakValidator.test.ts — 10 testes.
+- tests/unit/workflow/MetricsRecorder.test.ts — 5 testes (incluindo cap rotativo).
+- tests/unit/workflow/SpecCompletenessScorer.test.ts — 4 testes.
+- tests/unit/workflow/RevisorFeedbackBridge.iteration.test.ts — 7 testes (delta, attempt,
+  limite atingido, lista de regressos).
+- Total agregado da suíte: 1273 testes passando, 1 pré-existente falhando
+  (tests/unit/workflow/PostSaveCommitNotifier.test.ts; falha não introduzida por esta
+  release nem coberta por ela).
+
+Validação executada antes do release
+-------------------------------------
+- npx tsc --noEmit -> 0 erros
+- npx eslint src --format json -> 0 erros
+- npx vitest run -> 1273 passed, 1 failed (PostSaveCommitNotifier pré-existente)
+- node esbuild.js --production -> bundle gerado
+- node ./scripts/check-changelog.mjs -> verificará este arquivo
+- node ./scripts/verify-vsix.mjs -> verificará o vsix gerado
+
+Artefato gerado
+---------------
+- publish/0.5.0/vscode-plugin-speckit-0.5.0.vsix

@@ -3,6 +3,7 @@ import { extractSpecType } from '../parser/BaseParser';
 import { parseStory } from '../story/StoryParser';
 import { StoryHeuristicValidator } from '../validator/auto/StoryHeuristicValidator';
 import type { Finding } from '../validator/auto/types';
+import { MetricsRecorder } from './MetricsRecorder';
 
 export interface SpecAutoValidationDeps {
   fs: IFileSystem;
@@ -108,6 +109,20 @@ export async function runSpecHeuristicOnSave(
       findings,
       reason: `write-error: ${(err as Error).message}`,
     };
+  }
+
+  try {
+    const recorder = new MetricsRecorder(fs, workspaceRoot);
+    await recorder.record({
+      type: 'spec-heuristic',
+      ts: now().toISOString(),
+      specId: story.metadata.id,
+      findingsTotal: findings.length,
+      findingsBlocking: findings.filter((f) => f.severity === 'error' || f.severity === 'blocker')
+        .length,
+    });
+  } catch {
+    // swallow
   }
 
   return { ran: true, findings, reportPath };

@@ -27,8 +27,8 @@ export interface EvidenceReport {
 export const DEFAULT_GATE_VALIDATORS: Record<Gate, string[]> = {
   0: ['story-heuristic'],
   1: ['story-heuristic', 'typecheck'],
-  2: ['typecheck', 'acceptance-test-presence'],
-  3: ['acceptance-test-presence', 'test-execution', 'coverage-threshold', 'crap'],
+  2: ['typecheck', 'acceptance-test-presence', 'secret-leak'],
+  3: ['acceptance-test-presence', 'test-execution', 'coverage-threshold', 'crap', 'secret-leak'],
   4: [],
 };
 
@@ -64,6 +64,7 @@ export class GateEvidenceCollector {
     storyFiles?: string[];
     gateTarget: Gate;
     signal?: AbortSignal;
+    timeoutMs?: number;
   }): Promise<EvidenceReport> {
     const ids = this.validatorsForGate(input.gateTarget);
     const ctx: ValidatorContext = {
@@ -84,7 +85,10 @@ export class GateEvidenceCollector {
         validatorsRun: [],
       };
     }
-    const report: ValidationReport = await this.registry.run(ctx, { only: ids });
+    const report: ValidationReport = await this.registry.run(ctx, {
+      only: ids,
+      timeoutMs: input.timeoutMs,
+    });
     const passed = !report.findings.some(isBlocking);
     return {
       gate: input.gateTarget,

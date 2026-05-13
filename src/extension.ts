@@ -5,6 +5,8 @@ import { vscodeFileSystem } from './generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from './generator/utils/VscodeWorkspace';
 import { registerSpeckitParticipant } from './participant/speckitParticipant';
 import { Framework, Language } from './story/Story';
+import { COMMAND_OPEN_METRICS, SpeckitStatusBar } from './ui/SpeckitStatusBar';
+import { SpeckitDiagnostics } from './ui/SpeckitDiagnostics';
 import { createSpecFileWatcher } from './workflow/SpecFileWatcher';
 import { gitOps } from './workflow/GitOperations';
 import { checkPostSavePendingCommit } from './workflow/PostSaveCommitNotifier';
@@ -32,6 +34,26 @@ export function activate(context: vscode.ExtensionContext): void {
   createSpecFileWatcher(context);
 
   // ---------------------------------------------------------------------------
+  // SpecKit Diagnostics + Status Bar (best-effort UI surfaces)
+  // ---------------------------------------------------------------------------
+  const workspaceRoot = vscodeWorkspace.getWorkspaceRoot();
+  let diagnostics: SpeckitDiagnostics | undefined;
+  if (workspaceRoot) {
+    diagnostics = new SpeckitDiagnostics(vscodeFileSystem, workspaceRoot);
+    context.subscriptions.push({ dispose: () => diagnostics?.dispose() });
+    void diagnostics.refresh();
+  }
+  const statusBar = new SpeckitStatusBar(vscodeFileSystem, vscodeWorkspace);
+  context.subscriptions.push({ dispose: () => statusBar.dispose() });
+  void statusBar.refresh();
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(COMMAND_OPEN_METRICS, async () => {
+      await openCopilotChatWithQuery('@speckit /metrics');
+    }),
+  );
+
+  // ---------------------------------------------------------------------------
   // Post-save commit nudge — fires after the user clicks Keep on Copilot Edits
   // ---------------------------------------------------------------------------
   let postSaveTimer: ReturnType<typeof setTimeout> | undefined;
@@ -49,6 +71,8 @@ export function activate(context: vscode.ExtensionContext): void {
         } catch {
           // swallow — informational only
         }
+        void diagnostics?.refresh();
+        void statusBar.refresh();
       })();
 
       if (postSaveTimer) clearTimeout(postSaveTimer);

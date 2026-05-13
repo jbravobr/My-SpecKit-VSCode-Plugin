@@ -29,6 +29,60 @@ vi.mock('vscode', () => ({
   window: {
     showErrorMessage: vscodeMock.showErrorMessage,
     showInformationMessage: vscodeMock.showInformationMessage,
+    createStatusBarItem: vi.fn(() => ({
+      text: '',
+      tooltip: '',
+      command: '',
+      show: vi.fn(),
+      dispose: vi.fn(),
+    })),
+  },
+  languages: {
+    createDiagnosticCollection: vi.fn(() => ({
+      clear: vi.fn(),
+      dispose: vi.fn(),
+      set: vi.fn(),
+    })),
+  },
+  StatusBarAlignment: { Left: 1, Right: 2 },
+  DiagnosticSeverity: { Error: 0, Warning: 1, Information: 2, Hint: 3 },
+  Range: class {
+    constructor(
+      public a: number,
+      public b: number,
+      public c: number,
+      public d: number,
+    ) {}
+  },
+  Uri: {
+    file: (p: string) => ({ fsPath: p, toString: () => 'file://' + p }),
+    parse: (s: string) => ({ toString: () => s }),
+  },
+  Diagnostic: class {
+    constructor(
+      public range: unknown,
+      public message: string,
+      public severity: number,
+    ) {}
+    source = '';
+  },
+  MarkdownString: class {
+    constructor(public value: string) {}
+  },
+}));
+
+vi.mock('../../src/ui/SpeckitStatusBar', () => ({
+  SpeckitStatusBar: class {
+    refresh = vi.fn();
+    dispose = vi.fn();
+  },
+  COMMAND_OPEN_METRICS: 'speckit.openMetrics',
+}));
+
+vi.mock('../../src/ui/SpeckitDiagnostics', () => ({
+  SpeckitDiagnostics: class {
+    refresh = vi.fn();
+    dispose = vi.fn();
   },
 }));
 

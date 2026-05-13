@@ -780,6 +780,32 @@ Executa a **validação determinística automática** da Story ativa para o pró
 
 ---
 
+### `@speckit /metrics`
+
+Resume métricas locais persistidas em `.speckit/metrics/events.jsonl`: total de execuções, pass rate, p95 de duração, validadores mais executados, eventos por gate/spec. Não envia dados a nenhum serviço externo; é puramente local.
+
+**Uso:**
+
+```
+@speckit /metrics
+```
+
+### `@speckit /score`
+
+Avalia a completude estrutural da spec ativa em uma escala 0..100, com breakdown por dimensão (metadata, requisito de negócio, spec funcional/não-funcional, DoD, disciplinas de teste, rastreabilidade) e recomendações práticas para subir o score. Roda em <5ms sem usar LLM.
+
+**Uso:**
+
+```
+@speckit /score
+```
+
+### Status Bar e Problems
+
+A extensão agora mantém um item de **Status Bar** com a spec ativa, gate corrente e status da última validação (✓ / ✗). Clicar abre `/metrics`. Findings da última evidência também aparecem no painel **Problems** do VS Code com origem `speckit/<validator>`, navegáveis por arquivo:linha.
+
+---
+
 ### `@speckit /context`
 
 Gerencia arquivos de contexto adicionais que o agente deve considerar durante a implementação.

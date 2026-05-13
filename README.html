@@ -1,0 +1,1768 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>SpecKit · Spec-Driven Development for VS Code · Documento Executivo</title>
+        <meta
+            name="description"
+            content="SpecKit é a extensão de VS Code que transforma intenção em código auditável: cinco gates, quinze comandos, três atores e uma arquitetura de prompts em camadas que governa, instrui e revisa cada entrega."
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+            rel="stylesheet"
+        />
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+        <style>
+            :root {
+                --bg-0: #0b1020;
+                --bg-1: #11172b;
+                --bg-2: #161e36;
+                --surface: #1c2541;
+                --surface-2: #243057;
+                --line: #2a3760;
+                --text: #e8ecf6;
+                --text-dim: #b0b9d4;
+                --text-muted: #7c87a9;
+                --accent: #7aa2ff;
+                --accent-2: #9d7aff;
+                --user: #58e1c2;
+                --participant: #ffb454;
+                --llm: #c98bff;
+                --success: #38d39f;
+                --warn: #ffb454;
+                --danger: #ff6b8a;
+                --gate: #4cc9f0;
+                --gradient-hero: linear-gradient(135deg, #0b1020 0%, #1a1d4d 50%, #2a1d5d 100%);
+                --gradient-accent: linear-gradient(135deg, #7aa2ff 0%, #9d7aff 100%);
+                --gradient-success: linear-gradient(135deg, #38d39f 0%, #4cc9f0 100%);
+                --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.45);
+                --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+                --shadow-glow: 0 0 40px rgba(122, 162, 255, 0.25);
+                /* A3 landscape (1587px @ 96dpi) com margens internas equilibradas */
+                --doc-max: 1480px;
+                --doc-pad-x: 80px;
+            }
+
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            html { scroll-behavior: smooth; }
+            body {
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                background: var(--bg-0);
+                color: var(--text);
+                line-height: 1.65;
+                -webkit-font-smoothing: antialiased;
+                overflow-x: hidden;
+            }
+            code, pre, .mono { font-family: "JetBrains Mono", "Consolas", monospace; }
+
+            /* ======= PROGRESS BAR ======= */
+            .progress-bar {
+                position: fixed;
+                top: 0; left: 0;
+                height: 3px;
+                width: 0%;
+                background: var(--gradient-accent);
+                z-index: 1000;
+                transition: width 0.1s linear;
+                box-shadow: 0 0 12px rgba(122,162,255,0.6);
+            }
+
+            /* ======= NAV ======= */
+            .topnav {
+                position: fixed;
+                top: 14px; right: 18px;
+                z-index: 999;
+                background: rgba(17,23,43,0.78);
+                backdrop-filter: blur(12px);
+                border: 1px solid var(--line);
+                border-radius: 100px;
+                padding: 8px 14px;
+                display: flex; gap: 4px;
+                font-size: 12px; font-weight: 600;
+            }
+            .topnav a {
+                color: var(--text-dim);
+                text-decoration: none;
+                padding: 6px 12px;
+                border-radius: 100px;
+                transition: all 0.2s;
+            }
+            .topnav a:hover { color: var(--text); background: rgba(122,162,255,0.12); }
+            @media (max-width: 900px) { .topnav { display: none; } }
+
+            /* ======= HERO ======= */
+            .hero {
+                background: var(--gradient-hero);
+                padding: 140px var(--doc-pad-x) 110px;
+                position: relative;
+                overflow: hidden;
+                border-bottom: 1px solid var(--line);
+            }
+            .hero::before {
+                content: ""; position: absolute;
+                top: -50%; left: -10%;
+                width: 60%; height: 200%;
+                background: radial-gradient(circle, rgba(157,122,255,0.18) 0%, transparent 70%);
+                pointer-events: none;
+            }
+            .hero::after {
+                content: ""; position: absolute;
+                bottom: -50%; right: -10%;
+                width: 60%; height: 200%;
+                background: radial-gradient(circle, rgba(122,162,255,0.15) 0%, transparent 70%);
+                pointer-events: none;
+            }
+            .hero-inner { max-width: var(--doc-max); margin: 0 auto; position: relative; z-index: 1; }
+            .eyebrow {
+                display: inline-flex; align-items: center; gap: 10px;
+                padding: 8px 18px;
+                background: rgba(122,162,255,0.12);
+                border: 1px solid rgba(122,162,255,0.35);
+                border-radius: 100px;
+                font-size: 13px; font-weight: 600;
+                color: var(--accent);
+                letter-spacing: 0.08em; text-transform: uppercase;
+                margin-bottom: 28px;
+            }
+            .eyebrow .dot {
+                width: 8px; height: 8px;
+                background: var(--success);
+                border-radius: 50%;
+                box-shadow: 0 0 12px var(--success);
+                animation: pulse 2s ease-in-out infinite;
+            }
+            @keyframes pulse {
+                0%,100% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.6; transform: scale(1.3); }
+            }
+            .hero h1 {
+                font-size: clamp(38px, 5.8vw, 68px);
+                font-weight: 800; line-height: 1.06;
+                letter-spacing: -0.02em;
+                background: linear-gradient(135deg, #ffffff 0%, #b0b9d4 100%);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 24px;
+            }
+            .hero h1 .highlight {
+                background: var(--gradient-accent);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .hero-lead {
+                font-size: clamp(17px, 1.6vw, 21px);
+                color: var(--text-dim);
+                margin-bottom: 48px; font-weight: 400;
+                text-align: justify; hyphens: auto;
+            }
+            .hero-meta {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 16px;
+            }
+            .meta-card {
+                background: rgba(28,37,65,0.6);
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: 18px 20px;
+                backdrop-filter: blur(8px);
+                transition: transform 0.3s ease, border-color 0.3s ease;
+            }
+            .meta-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+            .meta-card .label {
+                font-size: 11px; letter-spacing: 0.12em;
+                text-transform: uppercase; color: var(--text-muted);
+                font-weight: 600; margin-bottom: 8px;
+            }
+            .meta-card .value { font-size: 22px; font-weight: 700; color: var(--text); }
+            .meta-card .value small { font-size: 13px; color: var(--text-dim); font-weight: 500; margin-left: 4px; }
+
+            /* ======= SECTION ======= */
+            section { padding: 110px var(--doc-pad-x); position: relative; }
+            .section-inner { max-width: var(--doc-max); margin: 0 auto; }
+            section h1, section h2, section h3, section h4, section h5, section p,
+            section li, section .section-lead, section .tl-desc,
+            .hero-lead {
+                text-align: justify;
+                text-justify: inter-word;
+                hyphens: auto;
+                -webkit-hyphens: auto;
+            }
+            section.alt { background: var(--bg-1); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+            .section-tag {
+                display: inline-block; font-size: 12px; font-weight: 700;
+                letter-spacing: 0.18em; text-transform: uppercase;
+                color: var(--accent); margin-bottom: 16px;
+                text-align: left;
+            }
+            h2 {
+                font-size: clamp(28px, 3.5vw, 44px); font-weight: 800;
+                line-height: 1.15; letter-spacing: -0.015em;
+                margin-bottom: 18px; color: var(--text);
+            }
+            h3 { font-size: 22px; font-weight: 700; margin-bottom: 14px; color: var(--text); }
+            .section-lead { font-size: 18px; color: var(--text-dim); margin-bottom: 56px; }
+
+            /* ======= METRICS ======= */
+            .metrics {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 20px;
+            }
+            .metric {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 28px 26px;
+                position: relative; overflow: hidden;
+                transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            }
+            .metric:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--accent); }
+            .metric::before {
+                content: ""; position: absolute;
+                top: 0; left: 0; width: 4px; height: 100%;
+                background: var(--gradient-accent);
+            }
+            .metric .icon { font-size: 28px; margin-bottom: 14px; display: block; }
+            .metric .number {
+                font-size: 38px; font-weight: 800; line-height: 1;
+                background: var(--gradient-accent);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 8px;
+            }
+            .metric .label { font-size: 14px; color: var(--text-dim); font-weight: 500; }
+
+            /* ======= ROLE LEGEND ======= */
+            .legend {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 20px;
+                margin-bottom: 40px;
+            }
+            .role-card {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 28px;
+                border-left: 5px solid;
+                transition: transform 0.3s ease;
+            }
+            .role-card:hover { transform: translateY(-3px); }
+            .role-card.user { border-left-color: var(--user); }
+            .role-card.participant { border-left-color: var(--participant); }
+            .role-card.llm { border-left-color: var(--llm); }
+            .role-card .role-icon { font-size: 32px; display: inline-block; margin-bottom: 12px; }
+            .role-card h4 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+            .role-card.user h4 { color: var(--user); }
+            .role-card.participant h4 { color: var(--participant); }
+            .role-card.llm h4 { color: var(--llm); }
+            .role-card p { font-size: 14px; color: var(--text-dim); margin-bottom: 10px; }
+            .role-card ul { list-style: none; padding: 0; margin-top: 8px; }
+            .role-card ul li {
+                font-size: 13px; color: var(--text-muted);
+                padding: 4px 0 4px 18px; position: relative;
+            }
+            .role-card ul li::before {
+                content: "▸"; position: absolute; left: 0;
+                color: var(--accent); font-weight: 700;
+            }
+
+            /* ======= TIMELINE ======= */
+            .timeline { position: relative; padding-left: 40px; }
+            .timeline::before {
+                content: ""; position: absolute;
+                left: 12px; top: 8px; bottom: 8px;
+                width: 2px;
+                background: linear-gradient(180deg, var(--gate) 0%, var(--accent-2) 50%, var(--success) 100%);
+                border-radius: 2px;
+            }
+            .tl-item {
+                position: relative; margin-bottom: 44px;
+                opacity: 0; transform: translateY(40px);
+                transition: opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1);
+                will-change: opacity, transform;
+            }
+            .tl-item.is-visible { opacity: 1; transform: translateY(0); }
+            .tl-item.is-leaving { opacity: 0.15; transform: translateY(-20px); }
+            @media (prefers-reduced-motion: reduce) {
+                .tl-item { opacity: 1; transform: none; transition: none; }
+                .tl-item.is-leaving { opacity: 1; transform: none; }
+            }
+            .tl-item::before {
+                content: ""; position: absolute;
+                left: -36px; top: 8px;
+                width: 18px; height: 18px;
+                background: var(--bg-0);
+                border: 3px solid var(--gate);
+                border-radius: 50%; z-index: 1;
+            }
+            .tl-item.fix::before { border-color: var(--danger); }
+            .tl-item.success::before {
+                border-color: var(--success);
+                box-shadow: 0 0 12px var(--success);
+            }
+            .tl-time {
+                display: inline-block; font-size: 12px; font-weight: 600;
+                color: var(--text-muted);
+                background: var(--bg-2);
+                padding: 4px 10px; border-radius: 6px;
+                margin-bottom: 10px;
+                font-family: "JetBrains Mono", monospace;
+            }
+            .tl-title { font-size: 20px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+            .tl-desc { color: var(--text-dim); font-size: 15px; margin-bottom: 14px; }
+            .tl-block {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: 22px 24px;
+                margin-top: 14px;
+            }
+            .tl-block h5 {
+                font-size: 12px; letter-spacing: 0.14em;
+                text-transform: uppercase; color: var(--accent);
+                margin-bottom: 10px; font-weight: 700;
+            }
+            .tl-block ul { list-style: none; padding: 0; }
+            .tl-block ul li {
+                font-size: 14px; color: var(--text-dim);
+                padding: 5px 0 5px 22px; position: relative;
+            }
+            .tl-block ul li::before {
+                content: "◆"; position: absolute; left: 4px;
+                color: var(--gate); font-size: 10px; top: 9px;
+            }
+            .tl-block ul li strong { color: var(--text); font-weight: 600; }
+            .tag {
+                display: inline-block; font-size: 11px; font-weight: 700;
+                padding: 3px 9px; border-radius: 5px;
+                margin-right: 6px; letter-spacing: 0.05em; text-transform: uppercase;
+            }
+            .tag.gate { background: rgba(76,201,240,0.15); color: var(--gate); border: 1px solid rgba(76,201,240,0.3); }
+            .tag.fix { background: rgba(255,107,138,0.15); color: var(--danger); border: 1px solid rgba(255,107,138,0.3); }
+            .tag.ok { background: rgba(56,211,159,0.15); color: var(--success); border: 1px solid rgba(56,211,159,0.3); }
+            .tag.user { background: rgba(88,225,194,0.15); color: var(--user); border: 1px solid rgba(88,225,194,0.3); }
+            .tag.llm { background: rgba(201,139,255,0.15); color: var(--llm); border: 1px solid rgba(201,139,255,0.3); }
+
+            /* ======= COMMAND GROUPS (agrupados por categoria, mesma disposição dos scenarios) ======= */
+            .cmd-group-block { margin-bottom: 44px; }
+            .cmd-group-block:last-child { margin-bottom: 0; }
+            .cmd-group-header {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                margin-bottom: 20px;
+                padding-bottom: 14px;
+                border-bottom: 1px solid var(--line);
+            }
+            .cmd-group-header .pill {
+                display: inline-block;
+                font-size: 11px; letter-spacing: 0.16em;
+                text-transform: uppercase; font-weight: 700;
+                padding: 6px 14px; border-radius: 100px;
+                background: rgba(122,162,255,0.12);
+                color: var(--accent);
+                border: 1px solid rgba(122,162,255,0.3);
+            }
+            .cmd-group-header .group-meta {
+                font-size: 13px;
+                color: var(--text-muted);
+                font-style: italic;
+            }
+            .cmd-cards {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 20px;
+            }
+            .cmd-card {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 26px 26px 24px;
+                position: relative;
+                transition: transform 0.3s ease, border-color 0.3s ease;
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+            }
+            .cmd-card:hover { transform: translateY(-4px); border-color: var(--accent-2); }
+            .cmd-card h4 {
+                font-size: 15px;
+                margin-bottom: 14px;
+                font-family: "JetBrains Mono", "Consolas", monospace;
+                color: var(--text);
+                word-break: break-all;
+                overflow-wrap: anywhere;
+                line-height: 1.35;
+                padding: 8px 12px;
+                background: var(--bg-2);
+                border-radius: 8px;
+                border: 1px solid var(--line);
+                display: inline-block;
+                width: fit-content;
+                max-width: 100%;
+            }
+            .cmd-card h4 .slash { color: var(--accent); font-weight: 700; }
+            .cmd-card p {
+                font-size: 14px;
+                color: var(--text-dim);
+                margin-bottom: 0;
+                line-height: 1.55;
+            }
+
+            /* ======= LOOP STORY ======= */
+            .loop-story {
+                background: linear-gradient(135deg, rgba(255,107,138,0.06) 0%, rgba(157,122,255,0.06) 100%);
+                border: 1px solid rgba(255,107,138,0.2);
+                border-radius: 22px;
+                padding: 40px;
+                margin-top: 32px;
+            }
+            .loop-rounds {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 20px;
+                margin-top: 24px;
+            }
+            .round {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: 26px 24px 24px;
+                position: relative;
+            }
+            .round-num {
+                position: absolute; top: -14px; left: 20px;
+                background: var(--gradient-accent);
+                color: white; font-size: 12px; font-weight: 700;
+                padding: 6px 14px; border-radius: 100px;
+                letter-spacing: 0.1em; text-transform: uppercase;
+            }
+            .round h4 { font-size: 16px; margin: 8px 0 12px; color: var(--text); }
+            .round .verdict {
+                font-size: 13px; font-weight: 700;
+                padding: 4px 10px; border-radius: 6px;
+                display: inline-block; margin-bottom: 12px;
+            }
+            .verdict.bad { background: rgba(255,107,138,0.15); color: var(--danger); }
+            .verdict.good { background: rgba(56,211,159,0.15); color: var(--success); }
+            .round ul { list-style: none; padding: 0; }
+            .round ul li {
+                font-size: 14px; color: var(--text-dim);
+                padding: 6px 0 6px 20px; position: relative;
+            }
+            .round ul li::before { content: "→"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+
+            /* ======= QUOTE ======= */
+            .quote-block {
+                background: var(--surface);
+                border-left: 5px solid var(--accent);
+                padding: 30px 36px;
+                border-radius: 0 14px 14px 0;
+                margin: 40px 0;
+                font-size: 19px; font-style: italic;
+                color: var(--text);
+                position: relative;
+            }
+            .quote-block::before {
+                content: '"'; position: absolute;
+                top: -10px; left: 18px;
+                font-size: 80px; color: var(--accent); opacity: 0.2;
+                font-family: Georgia, serif; line-height: 1;
+            }
+            .quote-block .attr {
+                display: block; margin-top: 14px;
+                font-size: 14px; color: var(--text-muted);
+                font-style: normal; font-weight: 600;
+            }
+
+            /* ======= DIAGRAM ======= */
+            .diagram-card {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 36px;
+                margin-bottom: 32px;
+                overflow-x: auto;
+            }
+            .diagram-card h3 { margin-bottom: 8px; color: var(--accent); }
+            .diagram-card .desc { color: var(--text-dim); margin-bottom: 24px; font-size: 15px; }
+            .mermaid {
+                background: var(--bg-1);
+                border-radius: 12px;
+                padding: 28px;
+                text-align: center;
+            }
+            /* Hover uniforme em TODOS os diagramas mermaid — replica o comportamento
+               observado no sequence diagram (atores) para flowcharts e demais elementos.
+               IMPORTANTE: não usar transform aqui, pois desloca o elemento e provoca
+               loop de hover quando o cursor perde contato com a área deslocada. */
+            .mermaid svg { overflow: visible; }
+            .mermaid g.node,
+            .mermaid g.actor,
+            .mermaid g.cluster,
+            .mermaid g.label,
+            .mermaid g.edgeLabel,
+            .mermaid g.edgePath,
+            .mermaid .flowchart-link,
+            .mermaid .messageText,
+            .mermaid .messageLine0,
+            .mermaid .messageLine1,
+            .mermaid rect.actor,
+            .mermaid text.actor,
+            .mermaid line.actor-line,
+            .mermaid .actor-man,
+            .mermaid .actor-top,
+            .mermaid .actor-bottom,
+            .mermaid [class*="actor-"] {
+                transition: filter 0.25s ease,
+                            stroke 0.25s ease, stroke-width 0.25s ease,
+                            fill 0.25s ease, opacity 0.25s ease;
+                cursor: pointer;
+            }
+
+            /* Nós de flowchart e atores de sequence — apenas glow, sem deslocar */
+            .mermaid g.node:hover,
+            .mermaid g.actor:hover,
+            .mermaid [class*="actor-man"]:hover,
+            .mermaid [class*="actor-top"]:hover,
+            .mermaid [class*="actor-bottom"]:hover {
+                filter: drop-shadow(0 0 16px rgba(122,162,255,0.95))
+                        drop-shadow(0 0 6px rgba(157,122,255,0.75));
+            }
+            .mermaid g.node:hover rect,
+            .mermaid g.node:hover polygon,
+            .mermaid g.node:hover circle,
+            .mermaid g.node:hover ellipse,
+            .mermaid g.node:hover path,
+            .mermaid g.actor:hover rect,
+            .mermaid g.actor:hover line,
+            .mermaid g.actor:hover circle,
+            .mermaid g.actor:hover path,
+            .mermaid rect.actor:hover,
+            .mermaid rect[class*="actor"]:hover,
+            .mermaid circle[class*="actor"]:hover,
+            .mermaid line[class*="actor"]:hover,
+            .mermaid path[class*="actor"]:hover,
+            .mermaid .actor-man:hover,
+            .mermaid .actor-man:hover *,
+            .mermaid .actor-top:hover,
+            .mermaid .actor-bottom:hover {
+                stroke: var(--accent-2) !important;
+                stroke-width: 2.5px !important;
+            }
+            .mermaid g.node:hover rect,
+            .mermaid g.node:hover polygon,
+            .mermaid rect.actor:hover,
+            .mermaid rect[class*="actor"]:hover {
+                fill: #2a1d5d !important;
+            }
+            /* Textos dentro de nós/atores em qualquer renderização */
+            .mermaid g.node:hover text,
+            .mermaid g.node:hover tspan,
+            .mermaid g.node:hover .nodeLabel,
+            .mermaid g.node:hover .label,
+            .mermaid g.node:hover foreignObject span,
+            .mermaid g.node:hover foreignObject p,
+            .mermaid g.node:hover foreignObject div,
+            .mermaid g.actor:hover text,
+            .mermaid g.actor:hover tspan,
+            .mermaid text.actor:hover,
+            .mermaid text[class*="actor"]:hover,
+            .mermaid text.actor:hover tspan {
+                fill: #ffffff !important;
+                color: #ffffff !important;
+                font-weight: 700 !important;
+            }
+            /* Linha vertical do ator (cycle line) */
+            .mermaid line.actor-line:hover,
+            .mermaid .actor-line:hover {
+                stroke: var(--accent-2) !important;
+                stroke-width: 2px !important;
+                filter: drop-shadow(0 0 6px rgba(122,162,255,0.7));
+            }
+
+            /* Edges / setas */
+            .mermaid g.edgePath:hover path,
+            .mermaid .flowchart-link:hover {
+                stroke: var(--accent-2) !important;
+                stroke-width: 2.5px !important;
+                filter: drop-shadow(0 0 8px rgba(157,122,255,0.7));
+            }
+
+            /* Labels de aresta (texto sobre as setas) */
+            .mermaid g.edgeLabel:hover,
+            .mermaid g.label:hover {
+                filter: drop-shadow(0 0 10px rgba(122,162,255,0.75));
+            }
+            .mermaid g.edgeLabel:hover *,
+            .mermaid g.label:hover * {
+                fill: var(--accent) !important;
+                color: var(--accent) !important;
+                font-weight: 700 !important;
+            }
+
+            /* Mensagens da sequence */
+            .mermaid .messageText:hover {
+                fill: var(--accent) !important;
+                font-weight: 700 !important;
+            }
+            .mermaid .messageLine0:hover,
+            .mermaid .messageLine1:hover {
+                stroke: var(--accent-2) !important;
+                stroke-width: 2.5px !important;
+                filter: drop-shadow(0 0 6px rgba(157,122,255,0.6));
+            }
+
+            /* ======= VALUE GRID ======= */
+            .value-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 22px;
+            }
+            .value-card {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 32px 30px;
+                transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            }
+            .value-card:hover { transform: translateY(-5px); border-color: var(--accent); box-shadow: var(--shadow-md); }
+            .value-card .v-icon {
+                width: 52px; height: 52px;
+                background: var(--gradient-accent);
+                border-radius: 12px;
+                display: flex; align-items: center; justify-content: center;
+                font-size: 26px; margin-bottom: 20px;
+                box-shadow: 0 8px 22px rgba(122,162,255,0.25);
+            }
+            .value-card h3 { font-size: 18px; margin-bottom: 10px; }
+            .value-card p { color: var(--text-dim); font-size: 14px; }
+            .value-card .v-meta {
+                margin-top: 14px; font-size: 12px;
+                color: var(--text-muted); font-family: "JetBrains Mono", monospace;
+                padding-top: 12px; border-top: 1px solid var(--line);
+            }
+
+            /* ======= EVIDENCE ======= */
+            .evidence {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 16px;
+            }
+            .evi-card {
+                background: var(--bg-2);
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                padding: 22px;
+                font-family: "JetBrains Mono", monospace;
+                transition: border-color 0.3s ease;
+            }
+            .evi-card:hover { border-color: var(--success); }
+            .evi-card .label {
+                font-size: 11px; color: var(--text-muted);
+                letter-spacing: 0.1em; text-transform: uppercase;
+                margin-bottom: 10px;
+                font-family: "Inter", sans-serif; font-weight: 600;
+            }
+            .evi-card .value {
+                font-size: 14px; color: var(--success);
+                font-weight: 600; word-break: break-all;
+                line-height: 1.6;
+            }
+
+            /* ======= LAYER STACK ======= */
+            .layer-stack { display: flex; flex-direction: column; gap: 18px; }
+            .layer {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 26px 30px;
+                display: grid;
+                grid-template-columns: 100px 1fr auto;
+                gap: 24px; align-items: center;
+                position: relative; overflow: hidden;
+                transition: transform 0.3s ease, border-color 0.3s ease;
+            }
+            .layer:hover { transform: translateX(6px); border-color: var(--accent); }
+            .layer::before {
+                content: ""; position: absolute;
+                top: 0; left: 0; width: 5px; height: 100%;
+            }
+            .layer.t1::before { background: var(--gate); }
+            .layer.t2::before { background: var(--accent-2); }
+            .layer.t3::before { background: var(--success); }
+            .layer-tier {
+                font-size: 11px; letter-spacing: 0.16em;
+                text-transform: uppercase; color: var(--accent);
+                font-weight: 700;
+                text-align: center;
+                background: var(--bg-2);
+                padding: 10px 8px; border-radius: 8px;
+            }
+            .layer-body h4 { font-size: 17px; margin-bottom: 6px; }
+            .layer-body p { font-size: 14px; color: var(--text-dim); margin: 0; }
+            .layer-tokens {
+                font-family: "JetBrains Mono", monospace;
+                font-size: 13px; color: var(--success);
+                font-weight: 600;
+                background: rgba(56,211,159,0.08);
+                padding: 8px 14px; border-radius: 8px;
+                border: 1px solid rgba(56,211,159,0.2);
+                white-space: nowrap;
+            }
+            @media (max-width: 720px) {
+                .layer { grid-template-columns: 1fr; gap: 12px; }
+                .layer-tier { width: fit-content; }
+            }
+
+            /* ======= MATURITY ======= */
+            .maturity {
+                display: grid;
+                grid-template-columns: repeat(5, 1fr);
+                gap: 12px;
+            }
+            .level {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: 22px 18px;
+                text-align: center;
+                position: relative;
+                transition: transform 0.3s ease;
+            }
+            .level:hover { transform: translateY(-4px); }
+            .level .n {
+                font-size: 28px; font-weight: 800;
+                background: var(--gradient-accent);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 6px;
+            }
+            .level .t {
+                font-size: 13px; font-weight: 700;
+                color: var(--text); margin-bottom: 10px;
+                letter-spacing: 0.04em;
+            }
+            .level .d { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+            @media (max-width: 900px) { .maturity { grid-template-columns: repeat(2, 1fr); } }
+
+            /* ======= APPLICATION SCENARIOS ======= */
+            .scenarios {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 20px;
+            }
+            .scenario {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 28px;
+                position: relative;
+                transition: transform 0.3s ease, border-color 0.3s ease;
+            }
+            .scenario:hover { transform: translateY(-4px); border-color: var(--accent-2); }
+            .scenario .badge {
+                display: inline-block;
+                font-size: 10px; letter-spacing: 0.14em;
+                text-transform: uppercase; font-weight: 700;
+                padding: 4px 10px; border-radius: 100px;
+                background: rgba(122,162,255,0.12);
+                color: var(--accent);
+                border: 1px solid rgba(122,162,255,0.3);
+                margin-bottom: 14px;
+            }
+            .scenario h4 {
+                font-size: 17px; margin-bottom: 12px;
+            }
+            .scenario p { font-size: 14px; color: var(--text-dim); margin-bottom: 12px; }
+            .scenario .impact {
+                font-size: 12px; color: var(--success);
+                font-family: "JetBrains Mono", monospace;
+                padding-top: 12px; margin-top: 12px;
+                border-top: 1px solid var(--line);
+            }
+
+            /* ======= FOOTER ======= */
+            footer {
+                background: var(--bg-1);
+                border-top: 1px solid var(--line);
+                padding: 72px var(--doc-pad-x) 48px;
+                text-align: center;
+                position: relative;
+                overflow: hidden;
+            }
+            footer::before {
+                content: ""; position: absolute;
+                top: 0; left: 50%; transform: translateX(-50%);
+                width: 60%; height: 1px;
+                background: var(--gradient-accent);
+                opacity: 0.6;
+            }
+            footer .footer-inner { max-width: var(--doc-max); margin: 0 auto; position: relative; z-index: 1; }
+            footer .brand {
+                font-size: 26px; font-weight: 800;
+                background: var(--gradient-accent);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 14px;
+            }
+            footer p { color: var(--text-muted); font-size: 14px; max-width: 720px; margin: 0 auto 10px; }
+            footer .legal {
+                margin-top: 28px; font-size: 12px;
+                color: var(--text-muted); opacity: 0.7;
+            }
+
+            /* ======= UTILITIES ======= */
+            .spacer-lg { margin-top: 56px; }
+            .text-center { text-align: center; }
+            .divider-soft {
+                height: 1px; background: var(--line);
+                margin: 56px 0; opacity: 0.5;
+            }
+
+            @media (max-width: 1280px) {
+                :root { --doc-pad-x: 48px; }
+            }
+            @media (max-width: 768px) {
+                :root { --doc-pad-x: 20px; }
+                .hero { padding: 90px var(--doc-pad-x) 70px; }
+                section { padding: 70px var(--doc-pad-x); }
+                .timeline { padding-left: 28px; }
+                .timeline::before { left: 6px; }
+                .tl-item::before { left: -28px; width: 14px; height: 14px; }
+                .cmd-list li { grid-template-columns: 1fr; gap: 6px; }
+                .cmd-cards { grid-template-columns: 1fr; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="progress-bar" id="progressBar"></div>
+
+        <nav class="topnav" aria-label="Navegação primária">
+            <a href="#essencia">Essência</a>
+            <a href="#atores">Atores</a>
+            <a href="#gates">Gates</a>
+            <a href="#comandos">Comandos</a>
+            <a href="#camadas">Camadas</a>
+            <a href="#cenarios">Aplicações</a>
+            <a href="#maturidade">Maturidade</a>
+        </nav>
+
+        <header class="hero">
+            <div class="hero-inner">
+                <span class="eyebrow"><span class="dot"></span> SpecKit · Spec-Driven Development for VS Code</span>
+                <h1>
+                    Da <span class="highlight">intenção</span> ao <span class="highlight">artefato auditável</span>:
+                    um método para conduzir o ciclo de desenvolvimento sob disciplina verificável.
+                </h1>
+                <p class="hero-lead">
+                    O SpecKit é uma extensão para Visual Studio Code que organiza o ciclo entre intenção e
+                    código por meio de cinco portões de qualidade — alinhamento, implementação, testes,
+                    revisão multidimensional e entrega — exigindo, em cada um, evidência verificável. A
+                    proposta metodológica parte de uma distinção operacional entre três papéis: o ser humano
+                    formula a intenção e decide, um orquestrador determinístico aplica regras e portões, e o
+                    modelo de linguagem raciocina dentro de fronteiras explícitas. O objetivo é tornar o
+                    trabalho com assistentes generativos compatível com práticas estabelecidas de engenharia
+                    de software: rastreabilidade, cobertura mínima, revisão estruturada e separação clara de
+                    responsabilidades.
+                </p>
+                <div class="hero-meta">
+                    <div class="meta-card"><div class="label">Versão</div><div class="value">0.3.25</div></div>
+                    <div class="meta-card"><div class="label">Portões de qualidade</div><div class="value">5 <small>gates</small></div></div>
+                    <div class="meta-card"><div class="label">Comandos de chat</div><div class="value">15+ <small>@speckit/*</small></div></div>
+                    <div class="meta-card"><div class="label">Modos de agente</div><div class="value">5 <small>personas</small></div></div>
+                    <div class="meta-card"><div class="label">Stacks suportadas</div><div class="value">5 <small>TS · JS · Java · C# · Python</small></div></div>
+                    <div class="meta-card"><div class="label">Cobertura mínima</div><div class="value">≥80% <small>obrigatório</small></div></div>
+                </div>
+            </div>
+        </header>
+
+        <section id="essencia">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo I · A essência da disciplina</span>
+                <h2>Por que Spec-Driven Development</h2>
+                <p class="section-lead">
+                    O ganho de velocidade introduzido por assistentes generativos só se converte em valor
+                    sustentável quando preservadas as práticas que conferem previsibilidade ao software:
+                    rastreabilidade de decisão, cobertura de testes, revisão por critérios objetivos e
+                    separação de responsabilidades. O SpecKit organiza esses elementos em uma sequência
+                    operacional, tornando cada decisão um artefato versionado, cada implementação uma trilha
+                    consultável e cada revisão um procedimento estruturado por onze dimensões técnicas.
+                </p>
+
+                <div class="metrics">
+                    <div class="metric">
+                        <span class="icon">🎯</span>
+                        <div class="number">5</div>
+                        <div class="label">Gates progressivos que governam alinhamento, código, testes, revisão e entrega</div>
+                    </div>
+                    <div class="metric">
+                        <span class="icon">📐</span>
+                        <div class="number">11</div>
+                        <div class="label">Dimensões obrigatórias na revisão técnica — do contrato à observabilidade</div>
+                    </div>
+                    <div class="metric">
+                        <span class="icon">🧱</span>
+                        <div class="number">3</div>
+                        <div class="label">Camadas de prompt — baseline, skills e agentes — orquestradas por contexto</div>
+                    </div>
+                    <div class="metric">
+                        <span class="icon">📦</span>
+                        <div class="number">9</div>
+                        <div class="label">Artefatos gerados por feature em <code>.github/</code>, todos versionados</div>
+                    </div>
+                    <div class="metric">
+                        <span class="icon">⚡</span>
+                        <div class="number">80%</div>
+                        <div class="label">Piso de cobertura aplicado em testes unitários e de integração</div>
+                    </div>
+                    <div class="metric">
+                        <span class="icon">🔁</span>
+                        <div class="number">100%</div>
+                        <div class="label">Reproducibilidade entre máquinas — toda configuração mora no workspace</div>
+                    </div>
+                </div>
+
+                <div class="quote-block">
+                    A premissa metodológica é instrumental: dispor de ferramenta que torne barata a aplicação
+                    do rito. Quando a disciplina depende exclusivamente de esforço humano contínuo, ela tende
+                    à erosão; quando suportada por automação determinística, mantém-se consistente entre
+                    autores, sprints e equipes.
+                    <span class="attr">— Nota de design do produto</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="alt" id="atores">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo II · Os três atores</span>
+                <h2>Uma divisão clara de papéis cognitivos</h2>
+                <p class="section-lead">
+                    A força do modelo nasce da separação inequívoca de responsabilidades entre três protagonistas.
+                    Cada um tem competência exclusiva sobre uma camada do problema, e nenhum pode invadir o
+                    território do outro. Essa fronteira não é estética: é o que torna o sistema auditável,
+                    explicável e — sobretudo — confiável diante de stakeholders técnicos e de governança.
+                </p>
+
+                <div class="legend">
+                    <div class="role-card user">
+                        <span class="role-icon">👤</span>
+                        <h4>Usuário · Intenção e juízo</h4>
+                        <p>
+                            É o detentor do problema de negócio. Formula a intenção em linguagem natural,
+                            valida hipóteses, aprova trade-offs e firma o aceite. Decisões que envolvem
+                            risco residual, escopo ou prioridade pertencem exclusivamente a ele.
+                        </p>
+                        <ul>
+                            <li>Define o "porquê" e o critério de pronto</li>
+                            <li>Aprova ou recusa o plano antes da execução</li>
+                            <li>Conduz o aceite no Gate 4</li>
+                        </ul>
+                    </div>
+                    <div class="role-card participant">
+                        <span class="role-icon">⚙️</span>
+                        <h4>Participant · Orquestração determinística</h4>
+                        <p>
+                            É o núcleo do SpecKit. Determinístico, sem inteligência generativa própria,
+                            ele aplica regras, controla portões, monta o contexto, materializa artefatos
+                            e rejeita estados inválidos. É o juiz neutro que garante a invariância do rito.
+                        </p>
+                        <ul>
+                            <li>Compõe prompts por camadas (Tier 1/2/3)</li>
+                            <li>Aciona gates e bloqueia avanços sem evidência</li>
+                            <li>Persiste arquivos rastreáveis em <code>.github/</code></li>
+                        </ul>
+                    </div>
+                    <div class="role-card llm">
+                        <span class="role-icon">🧠</span>
+                        <h4>LLM · Raciocínio dentro da moldura</h4>
+                        <p>
+                            É a faculdade generativa. Raciocina, propõe, escreve, refatora — mas sempre
+                            dentro dos limites instituídos pelo Participant. Não decide sozinho, não toca
+                            artefatos sem permissão e não fecha gates: apenas produz o que será verificado.
+                        </p>
+                        <ul>
+                            <li>Recebe instruções por camadas, em contexto curto</li>
+                            <li>Produz código, testes e revisões verificáveis</li>
+                            <li>Opera sob personas (default · implementador · revisor · debugger · refactor)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="diagram-card">
+                    <h3>O contrato cognitivo entre os atores</h3>
+                    <p class="desc">
+                        A sequência abaixo descreve, em forma canônica, como uma intenção atravessa o sistema
+                        até virar entrega aceita. Note o tráfego unidirecional de autoridade: o Usuário decide,
+                        o Participant governa, o LLM raciocina — e nada cruza a fronteira sem evidência.
+                    </p>
+                    <div class="mermaid">
+sequenceDiagram
+    autonumber
+    actor U as Usuário
+    participant P as Participant (Orquestrador)
+    participant L as LLM (Raciocínio)
+    U->>P: Intenção em linguagem natural (@speckit/new)
+    P->>P: Carrega Tier 1 (baseline always-on)
+    P->>L: Compõe contexto e solicita plano
+    L-->>P: Plano com hipóteses e riscos
+    P->>U: Apresenta plano · pede aprovação (Gate 0)
+    U->>P: Aprova plano
+    P->>L: Solicita implementação (Tier 2: skills · Tier 3: agente)
+    L-->>P: Diff + artefatos
+    P->>P: Validação (Gate 1: build · Gate 2: testes ≥80%)
+    P->>L: Solicita revisão multidimensional (Gate 3)
+    L-->>P: Relatório de 11 dimensões
+    P->>U: Apresenta evidências · pede aceite (Gate 4)
+    U->>P: Aceita e libera commit
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="gates">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo III · A linha do tempo dos cinco portões</span>
+                <h2>Do enunciado da intenção até o commit verificado</h2>
+                <p class="section-lead">
+                    A sequência a seguir descreve os cinco portões que estruturam o ciclo. Cada portão
+                    interrompe a execução, define um critério objetivo de prosseguimento e produz um artefato
+                    correspondente. A apresentação em formato de linha do tempo, com revelação progressiva
+                    durante o scroll, busca preservar a noção de etapa discreta — característica essencial do
+                    método, em oposição a fluxos contínuos sem pontos formais de verificação.
+                </p>
+
+                <div class="timeline">
+                    <div class="tl-item">
+                        <span class="tl-time">T+00 · Antes do código</span>
+                        <span class="tag user">Usuário</span><span class="tag gate">Gate 0 · Alinhamento</span>
+                        <h3 class="tl-title">A intenção é declarada e o plano é negociado</h3>
+                        <p class="tl-desc">
+                            O ciclo se abre com uma frase humana — uma user story, um bug a corrigir, uma melhoria
+                            arquitetural — submetida via <code>@speckit/new</code> ou <code>@speckit/fix</code>.
+                            O SpecKit não permite que o LLM comece a escrever código nesse momento. O Participant
+                            extrai requisitos implícitos, identifica ambiguidades, levanta riscos e devolve ao
+                            Usuário um plano formal. Sem aprovação explícita, nada avança.
+                        </p>
+                        <div class="tl-block">
+                            <h5>O que é produzido neste portão</h5>
+                            <ul>
+                                <li><strong>spec.md</strong> — narrativa do problema, hipóteses, critérios de aceite</li>
+                                <li><strong>plan.md</strong> — decomposição técnica, estratégia de testes, riscos</li>
+                                <li><strong>tasks.md</strong> — sequência executável, dependências, marcos</li>
+                                <li><strong>Aprovação registrada</strong> — pareceres do usuário viram parte do histórico</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="tl-item">
+                        <span class="tl-time">T+01 · A construção começa</span>
+                        <span class="tag llm">LLM</span><span class="tag gate">Gate 1 · Implementação</span>
+                        <h3 class="tl-title">O código nasce já com fronteiras explícitas</h3>
+                        <p class="tl-desc">
+                            Aprovado o plano, o Participant compõe o contexto de execução. Aplica a camada
+                            baseline, ativa skills da stack detectada (TypeScript, Java, Python, C# ou JavaScript)
+                            e, quando necessário, eleva o LLM ao modo agente — implementador, refactor ou debugger.
+                            O LLM produz diffs cirúrgicos; o Participant valida que cada arquivo tocado pertence
+                            ao plano aceito. Mudanças fora do escopo são rejeitadas automaticamente.
+                        </p>
+                        <div class="tl-block">
+                            <h5>Validações automáticas que ocorrem antes do próximo gate</h5>
+                            <ul>
+                                <li>Compilação completa do projeto sem erros novos</li>
+                                <li><strong>Type-check</strong> obrigatório onde a stack suporta (TS, C#, Python)</li>
+                                <li>Linter da stack executado e zero violações novas</li>
+                                <li>Convenções de naming, estrutura de pastas e import boundaries respeitadas</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="tl-item">
+                        <span class="tl-time">T+02 · A prova de comportamento</span>
+                        <span class="tag llm">LLM</span><span class="tag gate">Gate 2 · Testes ≥80%</span>
+                        <h3 class="tl-title">Nenhuma feature existe sem teste correspondente</h3>
+                        <p class="tl-desc">
+                            Este é o portão que separa a entrega ilusória da entrega real. O LLM gera testes
+                            unitários, de integração e, quando aplicável, comportamentais — orientados por risco,
+                            não por cobertura cosmética. O Participant executa a suíte completa e valida o piso de
+                            80% de cobertura. Se um único teste falhar ou se a cobertura cair, o pipeline para.
+                            Não há mensagem de sucesso negociada: ou os números cobrem, ou o gate fecha.
+                        </p>
+                        <div class="tl-block">
+                            <h5>O que diferencia o Gate 2 da prática convencional</h5>
+                            <ul>
+                                <li>Testes são <strong>orientados por hipótese</strong> — cada caso responde a um risco identificado</li>
+                                <li>Mutation testing condicional quando a complexidade ciclomática excede o limite</li>
+                                <li>Cenários de segurança obrigatórios em endpoints autenticados (OWASP)</li>
+                                <li>Evidência da execução fica anexada ao commit — não basta dizer "passou"</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="tl-item">
+                        <span class="tl-time">T+03 · A revisão como rito</span>
+                        <span class="tag llm">LLM</span><span class="tag gate">Gate 3 · Revisão 11 dimensões</span>
+                        <h3 class="tl-title">Onze perguntas que nenhuma entrega escapa</h3>
+                        <p class="tl-desc">
+                            O SpecKit institucionaliza o code review como artefato. O LLM atua como revisor sênior
+                            sob a persona <em>revisor</em>, percorrendo um checklist obrigatório de onze dimensões:
+                            contrato e API, segurança, observabilidade, performance, resiliência, testabilidade,
+                            legibilidade, acoplamento, regressões silenciosas, dependências e compliance. Cada
+                            achado é severo, categorizado e endereçado antes do aceite. Reviews superficiais — o
+                            "lgtm" performático — deixam de existir.
+                        </p>
+                        <div class="tl-block">
+                            <h5>As onze dimensões de inspeção</h5>
+                            <ul>
+                                <li><strong>Contrato</strong> — assinaturas, idempotência, versionamento</li>
+                                <li><strong>Segurança</strong> — authN/authZ, input validation, segredos</li>
+                                <li><strong>Observabilidade</strong> — logs estruturados, traces, métricas</li>
+                                <li><strong>Performance</strong> — Big-O, N+1, latência crítica</li>
+                                <li><strong>Resiliência</strong> — timeouts, retries, circuit breakers</li>
+                                <li><strong>Testabilidade</strong> — injeção, mocks tipados, determinismo</li>
+                                <li><strong>Legibilidade</strong> — coesão, intenção, complexidade ciclomática</li>
+                                <li><strong>Acoplamento</strong> — dependências, camadas, boundaries</li>
+                                <li><strong>Regressão</strong> — superfícies adjacentes potencialmente afetadas</li>
+                                <li><strong>Dependências</strong> — supply chain, licenças, versões</li>
+                                <li><strong>Compliance</strong> — LGPD, auditabilidade, retenção</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="tl-item success">
+                        <span class="tl-time">T+04 · O aceite explícito</span>
+                        <span class="tag user">Usuário</span><span class="tag gate">Gate 4 · Entrega</span><span class="tag ok">Pronto para commit</span>
+                        <h3 class="tl-title">Não existe commit sem decisão consciente</h3>
+                        <p class="tl-desc">
+                            O último portão devolve ao humano a palavra final. O Participant consolida o pacote —
+                            diff, testes, cobertura, revisão, riscos residuais — e submete ao Usuário. O commit
+                            é montado com mensagem semântica derivada do plano, trailer de coautoria e link
+                            rastreável aos artefatos em <code>.github/</code>. Push remoto, quando ocorre, é
+                            sempre ato deliberado, nunca consequência automática de "tudo passou".
+                        </p>
+                        <div class="tl-block">
+                            <h5>Composição do pacote de entrega</h5>
+                            <ul>
+                                <li>Diff revisado com aprovação registrada</li>
+                                <li>Relatório consolidado dos cinco gates</li>
+                                <li>Mensagem de commit em <em>Conventional Commits</em></li>
+                                <li>Trilha de rastreabilidade: <code>@speckit/trace</code> e <code>@speckit/history</code></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="quote-block">
+                    Cada portão constitui um ponto de verificação em que o sistema requer evidência objetiva
+                    antes de prosseguir. Esse mecanismo aproxima o ciclo de desenvolvimento assistido por IA
+                    das práticas estabelecidas em engenharia de qualidade: o que avança é o que se demonstrou
+                    correto, não o que se presumiu suficiente.
+                    <span class="attr">— Observação metodológica</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="alt" id="comandos">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo IV · A superfície de comandos</span>
+                <h2>Quinze atalhos para um vocabulário comum de engenharia</h2>
+                <p class="section-lead">
+                    O SpecKit conversa com o desenvolvedor pela barra de chat do VS Code. Cada comando é uma
+                    ação determinística com pré e pós-condições explícitas: nada acontece "por interpretação",
+                    tudo acontece por contrato. A seguir, a superfície completa, agrupada por intenção.
+                </p>
+
+                <div class="cmd-group-block">
+                    <div class="cmd-group-header">
+                        <span class="pill">Criação</span>
+                        <span class="group-meta">Abertura de ciclo · spec, plan e tasks gerados sob rito completo</span>
+                    </div>
+                    <div class="cmd-cards">
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>new</h4>
+                            <p>Inicia uma user story sob o rito completo dos cinco gates, com geração de spec, plan e tasks.</p>
+                        </div>
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>fix</h4>
+                            <p>Abre um bugfix com hipótese, plano de reprodução e teste de regressão obrigatório.</p>
+                        </div>
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>draft</h4>
+                            <p>Esboça spec, plan e tasks antes do compromisso formal com o ciclo de cinco gates.</p>
+                        </div>
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>init</h4>
+                            <p>Provisiona o workspace, skills da stack detectada e a estrutura padrão em <code>.github/</code>.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cmd-group-block">
+                    <div class="cmd-group-header">
+                        <span class="pill">Validação</span>
+                        <span class="group-meta">Verificação de gates, estado do ciclo e prontidão do workspace</span>
+                    </div>
+                    <div class="cmd-cards">
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>validate</h4>
+                            <p>Executa os portões de forma incremental e retorna o relatório de evidência consolidado.</p>
+                        </div>
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>gate</h4>
+                            <p>Inspeciona um gate específico (0 a 4), seus critérios e o estado atual de cada verificação.</p>
+                        </div>
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>status</h4>
+                            <p>Mostra a posição atual no ciclo, gates concluídos e itens ainda pendentes de evidência.</p>
+                        </div>
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>doctor</h4>
+                            <p>Executa diagnóstico de configuração, dependências, stack detectada e prontidão do workspace.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cmd-group-block">
+                    <div class="cmd-group-header">
+                        <span class="pill">Governança</span>
+                        <span class="group-meta">Auditoria, revisão automatizada e rastreabilidade de decisões</span>
+                    </div>
+                    <div class="cmd-cards">
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>audit</h4>
+                            <p>Gera relatório completo de aderência aos cinco gates ao longo do ciclo da feature.</p>
+                        </div>
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>review-auto</h4>
+                            <p>Aciona o agente revisor sob as onze dimensões técnicas obrigatórias do Gate 3.</p>
+                        </div>
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>trace</h4>
+                            <p>Rastreia cada decisão técnica até o requisito original que a motivou no plano aprovado.</p>
+                        </div>
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>history</h4>
+                            <p>Reconstrói o histórico narrativo da feature, com decisões, revisões e aceites registrados.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cmd-group-block">
+                    <div class="cmd-group-header">
+                        <span class="pill">Contexto</span>
+                        <span class="group-meta">Composição de prompts, personas e execução em lote</span>
+                    </div>
+                    <div class="cmd-cards">
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>agent</h4>
+                            <p>Alterna o LLM entre default, implementador, revisor, debugger e refactor conforme a tarefa.</p>
+                        </div>
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>context</h4>
+                            <p>Inspeciona ou ajusta o contexto montado pelas camadas baseline, skills e agentes ativos.</p>
+                        </div>
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>batch</h4>
+                            <p>Executa um conjunto sequencial de comandos sob rastreamento unificado de evidência.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cmd-group-block">
+                    <div class="cmd-group-header">
+                        <span class="pill">Entrega</span>
+                        <span class="group-meta">Materialização do commit, revisão do diff e documentação contextual</span>
+                    </div>
+                    <div class="cmd-cards">
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>diff</h4>
+                            <p>Exibe e justifica o diff proposto pelo LLM antes que qualquer arquivo seja gravado.</p>
+                        </div>
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>commit</h4>
+                            <p>Materializa o commit semântico ao final do Gate 4, com mensagem derivada do plano.</p>
+                        </div>
+                        <div class="cmd-card">
+                            <h4><span class="slash">@speckit/</span>help</h4>
+                            <p>Apresenta documentação contextual de qualquer comando, gate, agente ou conceito do método.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="camadas">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo V · Arquitetura de prompts em camadas</span>
+                <h2>Por que o SpecKit consome menos contexto e produz mais sinal</h2>
+                <p class="section-lead">
+                    A maior parte das suítes que usam LLM colapsa por excesso de contexto: tudo é injetado a
+                    todo momento, o modelo dilui sua atenção e a qualidade desaba quando importa. O SpecKit
+                    inverte esse paradigma. Três camadas se ativam por necessidade — uma baseline sempre
+                    presente, skills específicas da tarefa e personas elevadas apenas quando o trabalho exige.
+                    O resultado é eficiência cognitiva mensurável em tokens economizados e em precisão obtida.
+                </p>
+
+                <div class="layer-stack">
+                    <div class="layer t1">
+                        <div class="layer-tier">Tier 1<br/>Always-on</div>
+                        <div class="layer-body">
+                            <h4>Baseline · O contrato de qualidade universal</h4>
+                            <p>
+                                Carrega em toda interação as regras invioláveis: anti-alucinação, evidência
+                                obrigatória, separação de papéis, gates ativos. Garante que o LLM jamais opere
+                                fora da moldura, mesmo em conversas curtas. Cobre dez seções de NFR transversais.
+                            </p>
+                        </div>
+                        <div class="layer-tokens">~400 tokens</div>
+                    </div>
+                    <div class="layer t2">
+                        <div class="layer-tier">Tier 2<br/>Skills on-demand</div>
+                        <div class="layer-body">
+                            <h4>Skills de stack, contexto e devtools</h4>
+                            <p>
+                                Ativadas dinamicamente conforme a linguagem detectada (TypeScript, Java, Python,
+                                C#, JavaScript) e o framework alvo (React, Angular, Spring Boot, .NET, FastAPI).
+                                Trazem padrões idiomáticos, gotchas, comandos de validação e estilo de teste.
+                            </p>
+                        </div>
+                        <div class="layer-tokens">~1.500–2.500 tokens</div>
+                    </div>
+                    <div class="layer t3">
+                        <div class="layer-tier">Tier 3<br/>Agent personas</div>
+                        <div class="layer-body">
+                            <h4>Cinco modos especializados que substituem o assistente genérico</h4>
+                            <p>
+                                Quando a tarefa pede mais do que sugestões: <strong>implementador</strong>
+                                materializa código, <strong>revisor</strong> conduz Gate 3, <strong>debugger</strong>
+                                opera com hipóteses, <strong>refactor</strong> preserva contrato externo, e o
+                                <strong>default</strong> media as transições. Cada persona elimina ruído e foca o sinal.
+                            </p>
+                        </div>
+                        <div class="layer-tokens">~2.000–2.500 tokens</div>
+                    </div>
+                </div>
+
+                <div class="divider-soft"></div>
+
+                <div class="diagram-card">
+                    <h3>Fluxo macro do raciocínio em camadas</h3>
+                    <p class="desc">
+                        A composição é incremental, nunca cumulativa. Cada camada se justifica pela tarefa
+                        imediata; ao final, o contexto se desfaz, evitando contaminação entre conversas.
+                    </p>
+                    <div class="mermaid">
+flowchart TD
+    A([Intenção do usuário]) --> B{{Participant analisa contexto}}
+    B --> C[Tier 1 · Baseline always-on]
+    B --> D[Tier 2 · Skills de stack]
+    B --> E[Tier 3 · Agente especializado]
+    C --> F[Prompt final composto]
+    D --> F
+    E --> F
+    F --> G[LLM produz artefato verificável]
+    G --> H{{Gates 0 a 4}}
+    H --> I[Bloqueio com diagnóstico]
+    H --> J([Entrega aceita])
+                    </div>
+                </div>
+
+                <h2 class="spacer-lg">Os cinco modos de agente</h2>
+                <p class="section-lead">
+                    Cada modo é um contrato cognitivo distinto. Trocar de modo não é estética: redefine o que
+                    o LLM pode tocar, como justifica e qual a forma da resposta esperada.
+                </p>
+                <div class="value-grid">
+                    <div class="value-card">
+                        <div class="v-icon">🎯</div>
+                        <h3>Default</h3>
+                        <p>Ponto de partida neutro. Conduz triagem, esclarece intenção e direciona para o modo correto antes da execução.</p>
+                        <div class="v-meta">@speckit/agent default</div>
+                    </div>
+                    <div class="value-card">
+                        <div class="v-icon">🛠️</div>
+                        <h3>Implementador</h3>
+                        <p>Materializa código sob plano aprovado. Não inventa escopo, não toca arquivos não previstos, justifica cada diff.</p>
+                        <div class="v-meta">@speckit/agent implementador</div>
+                    </div>
+                    <div class="value-card">
+                        <div class="v-icon">🔍</div>
+                        <h3>Revisor</h3>
+                        <p>Aplica o checklist de onze dimensões do Gate 3. Cada achado é tipado, severo, com proposta corretiva acionável.</p>
+                        <div class="v-meta">@speckit/agent revisor</div>
+                    </div>
+                    <div class="value-card">
+                        <div class="v-icon">🐞</div>
+                        <h3>Debugger</h3>
+                        <p>Opera por hipótese. Reproduz, isola variáveis, formula a causa raiz com evidência antes de propor qualquer correção.</p>
+                        <div class="v-meta">@speckit/agent debugger</div>
+                    </div>
+                    <div class="value-card">
+                        <div class="v-icon">♻️</div>
+                        <h3>Refactor</h3>
+                        <p>Reorganiza sem alterar comportamento externo. Testes existentes são a rede de segurança; contrato público é intocável.</p>
+                        <div class="v-meta">@speckit/agent refactor</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="alt">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo VI · Loop de revisão · estudo de caso</span>
+                <h2>Como uma revisão evolui de "parece ok" para "está provado"</h2>
+                <p class="section-lead">
+                    O Gate 3 não é uma checagem única — é um loop sob disciplina. Ele se repete até que o
+                    código satisfaça as onze dimensões. Abaixo, três rodadas típicas de uma revisão real,
+                    extraídas do comportamento padrão do agente revisor sob persona ativa.
+                </p>
+
+                <div class="loop-story">
+                    <p>
+                        O LLM revisor entra em ciclo curto: percorre o diff, classifica achados por severidade,
+                        propõe correção mínima e re-avalia. Cada rodada produz um veredicto explícito; nenhuma
+                        rodada é silenciosamente "boa o suficiente".
+                    </p>
+                    <div class="loop-rounds">
+                        <div class="round">
+                            <span class="round-num">Rodada 1</span>
+                            <h4>Triagem multidimensional</h4>
+                            <span class="verdict bad">Bloqueado</span>
+                            <ul>
+                                <li>Falta validação de input em rota autenticada</li>
+                                <li>Logs sem correlation-id no fluxo principal</li>
+                                <li>Cobertura cai abaixo de 80% no módulo tocado</li>
+                            </ul>
+                        </div>
+                        <div class="round">
+                            <span class="round-num">Rodada 2</span>
+                            <h4>Correção endereçada</h4>
+                            <span class="verdict bad">Quase</span>
+                            <ul>
+                                <li>Inputs validados com schema tipado</li>
+                                <li>Correlation-id propagado por middleware</li>
+                                <li>Persistência sem timeout explícito · alerta</li>
+                            </ul>
+                        </div>
+                        <div class="round">
+                            <span class="round-num">Rodada 3</span>
+                            <h4>Aprovação com evidência</h4>
+                            <span class="verdict good">Aprovado</span>
+                            <ul>
+                                <li>Timeout e retry com backoff aplicados</li>
+                                <li>Cobertura recuperada para 87% no módulo</li>
+                                <li>Onze dimensões registradas no relatório</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="cenarios">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo VII · Contextos de aplicação</span>
+                <h2>Situações em que o método é particularmente aderente</h2>
+                <p class="section-lead">
+                    A aplicabilidade do SpecKit não é universal nem indiscriminada. Os contextos a seguir
+                    descrevem situações em que o custo da estrutura adicional tende a ser compensado pelos
+                    requisitos do domínio — seja por exigência regulatória, escala operacional, criticidade
+                    do sistema ou características do time. Em cenários menos exigentes, o método pode ser
+                    aplicado parcialmente, com seleção dos gates pertinentes.
+                </p>
+
+                <div class="scenarios">
+                    <div class="scenario">
+                        <span class="badge">Regulado</span>
+                        <h4>Organizações sob auditoria contínua</h4>
+                        <p>
+                            Em instituições financeiras, seguradoras e setores submetidos a controles
+                            regulatórios, a documentação retrospectiva de decisões técnicas costuma ser custosa
+                            e incompleta. A geração automática de artefatos versionados — especificação, plano,
+                            revisão e evidência — reduz a distância entre prática de desenvolvimento e
+                            requisitos de conformidade.
+                        </p>
+                        <div class="impact">Característica relevante · trilha de decisão produzida durante o ciclo, não após</div>
+                    </div>
+                    <div class="scenario">
+                        <span class="badge">Alta frequência</span>
+                        <h4>Times com cadência elevada de pull requests</h4>
+                        <p>
+                            Em equipes que sustentam múltiplos deploys diários, a revisão por pares manual
+                            tende a se tornar gargalo ou superficial. O Gate 3, operado por persona dedicada,
+                            estabelece um piso comum de inspeção sobre dimensões técnicas previamente definidas,
+                            sem substituir o discernimento humano nos casos que o exigem.
+                        </p>
+                        <div class="impact">Característica relevante · checklist explícito e reprodutível entre revisões</div>
+                    </div>
+                    <div class="scenario">
+                        <span class="badge">Modernização</span>
+                        <h4>Refatoração de sistemas legados</h4>
+                        <p>
+                            O modo refactor define como invariante a preservação do comportamento externo
+                            observável. Combinado com mutation testing condicional para módulos de
+                            complexidade ciclomática elevada, oferece uma rede de proteção que diferencia
+                            mudança estrutural segura de reescrita de risco.
+                        </p>
+                        <div class="impact">Característica relevante · contrato externo tratado como invariante explícita</div>
+                    </div>
+                    <div class="scenario">
+                        <span class="badge">Onboarding</span>
+                        <h4>Equipes com rotatividade ou ingresso frequente</h4>
+                        <p>
+                            As camadas baseline e stack codificam padrões internos que normalmente residem em
+                            conhecimento tácito. Para profissionais em ingresso, esses arquivos funcionam como
+                            material de referência consultável e como guardrails durante a execução,
+                            independentemente do tempo de casa.
+                        </p>
+                        <div class="impact">Característica relevante · conhecimento tácito convertido em prompt versionado</div>
+                    </div>
+                    <div class="scenario">
+                        <span class="badge">Governança</span>
+                        <h4>Adoção institucional de IA generativa</h4>
+                        <p>
+                            Para áreas técnicas que precisam justificar o uso de modelos de linguagem perante
+                            comitês de risco, compliance ou conselhos, o registro estruturado de cada
+                            interação — entrada, decisão, evidência, aceite — oferece base documental para
+                            análise. A IA opera dentro de fronteiras explícitas, não como caixa-preta.
+                        </p>
+                        <div class="impact">Característica relevante · cada decisão assistida por IA é registrada e revisável</div>
+                    </div>
+                    <div class="scenario">
+                        <span class="badge">Heterogêneo</span>
+                        <h4>Polirepositórios com múltiplas stacks</h4>
+                        <p>
+                            O modelo em camadas permite que um mesmo contrato baseline atravesse repositórios
+                            em linguagens distintas, com as particularidades técnicas isoladas em skills de
+                            stack. A padronização ocorre no método; a especialização técnica preserva o
+                            idiomatismo de cada plataforma.
+                        </p>
+                        <div class="impact">Característica relevante · separação entre método transversal e prática local</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-inner">
+                <span class="section-tag">Capítulo VIII · Artefatos versionados</span>
+                <h2>Tudo que o SpecKit produz mora no repositório</h2>
+                <p class="section-lead">
+                    Diferente de soluções que vivem em painéis externos, o SpecKit grava a memória da entrega
+                    no próprio repositório. Isso significa rastreabilidade git-nativa, revisão por PR e
+                    portabilidade entre máquinas e ambientes — sem dependência de SaaS opaco.
+                </p>
+
+                <div class="evidence">
+                    <div class="evi-card">
+                        <div class="label">Story · 9 arquivos</div>
+                        <div class="value">.github/features/{feature}/spec.md · plan.md · tasks.md · review.md · trace.md · evidence/* · commit-msg.txt</div>
+                    </div>
+                    <div class="evi-card">
+                        <div class="label">Fix · 7 arquivos</div>
+                        <div class="value">.github/fixes/{bug}/incident.md · hypothesis.md · plan.md · regression-test.md · review.md · trace.md · commit-msg.txt</div>
+                    </div>
+                    <div class="evi-card">
+                        <div class="label">Skills</div>
+                        <div class="value">.github/skills/baseline.md · stack-{lang}.md · context-{framework}.md · devtools.md</div>
+                    </div>
+                    <div class="evi-card">
+                        <div class="label">Agents</div>
+                        <div class="value">.github/agents/default.md · implementador.md · revisor.md · debugger.md · refactor.md</div>
+                    </div>
+                    <div class="evi-card">
+                        <div class="label">Configuração</div>
+                        <div class="value">.github/speckit/config.yaml · gates.yaml · coverage.yaml</div>
+                    </div>
+                    <div class="evi-card">
+                        <div class="label">Auditoria</div>
+                        <div class="value">.github/speckit/audit/{date}/report.md · evidence/* · trace.json</div>
+                    </div>
+                </div>
+
+                <div class="quote-block">
+                    Manter os artefatos no próprio repositório preserva uma propriedade frequentemente diluída
+                    em fluxos assistidos por IA: a continuidade da memória técnica. Decisões permanecem
+                    associadas ao código que as motivou, com autor, contexto e justificativa acessíveis pelas
+                    mesmas ferramentas usadas para revisar o restante da base.
+                    <span class="attr">— Princípio de rastreabilidade</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="alt" id="maturidade">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo IX · Matriz de maturidade</span>
+                <h2>Cinco estágios de adoção, do experimento ao status quo</h2>
+                <p class="section-lead">
+                    Nenhuma organização adota o SpecKit integralmente no primeiro dia — e o produto reconhece
+                    isso. A matriz a seguir descreve a trajetória típica de equipes que migram de "uso ad hoc
+                    de IA" para "engenharia governada por contrato". Posicionar o time no estágio correto é o
+                    primeiro passo prático após a instalação.
+                </p>
+
+                <div class="maturity">
+                    <div class="level">
+                        <div class="n">L0</div>
+                        <div class="t">Exploração</div>
+                        <div class="d">Pilotos isolados. IA usada como autocomplete sem rito. Sem rastreabilidade.</div>
+                    </div>
+                    <div class="level">
+                        <div class="n">L1</div>
+                        <div class="t">Adoção</div>
+                        <div class="d">Skills baseline ativas. Stories simples passando pelos cinco gates. Time aprende o vocabulário.</div>
+                    </div>
+                    <div class="level">
+                        <div class="n">L2</div>
+                        <div class="t">Disciplina</div>
+                        <div class="d">Stack skills consolidadas. Gate 3 sob persona revisor adotado em PRs. Cobertura ≥80% sustentada.</div>
+                    </div>
+                    <div class="level">
+                        <div class="n">L3</div>
+                        <div class="t">Governança</div>
+                        <div class="d">Auditoria contínua via <code>@speckit/audit</code>. Métricas DORA estáveis. Onboarding usa skills como currículo.</div>
+                    </div>
+                    <div class="level">
+                        <div class="n">L4</div>
+                        <div class="t">Status quo</div>
+                        <div class="d">Engenharia indistinguível do método. SpecKit invisível porque é a forma de trabalhar.</div>
+                    </div>
+                </div>
+
+                <div class="divider-soft"></div>
+
+                <div class="diagram-card">
+                    <h3>Roteiro recomendado de adoção</h3>
+                    <p class="desc">
+                        A jornada não é linear no calendário, mas é sequencial em capacidades. Pular etapas
+                        produz fadiga; consolidar cada estágio antes do próximo produz adesão duradoura.
+                    </p>
+                    <div class="mermaid">
+flowchart TD
+    L0[L0 · Exploração - IA como autocomplete] --> L1
+    L1[L1 · Adoção - Cinco gates em stories simples] --> L2
+    L2[L2 · Disciplina - Gate 3 sob persona revisor] --> L3
+    L3[L3 · Governança - Compliance defensável] --> L4
+    L4[L4 · Status quo - SpecKit invisível]
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-inner">
+                <span class="section-tag">Considerações finais</span>
+                <h2>Disciplina de engenharia em ciclos assistidos por IA</h2>
+                <p class="section-lead">
+                    O SpecKit não propõe a autonomia plena de modelos de linguagem nem a substituição do
+                    julgamento humano. Propõe um arranjo operacional no qual o assistente generativo opera
+                    sob fronteiras explícitas, o orquestrador determinístico aplica as regras e o profissional
+                    de engenharia detém a decisão. As práticas instituídas pelos cinco portões — alinhamento
+                    formal, validação automatizada, cobertura mínima, revisão estruturada e aceite consciente
+                    — são, em larga medida, reapresentações de princípios consolidados em engenharia de
+                    software, ajustadas ao contexto contemporâneo de desenvolvimento assistido por IA.
+                </p>
+                <div class="quote-block">
+                    A contribuição central é menos sobre introduzir conceitos novos e mais sobre reduzir o
+                    custo de aplicar os já estabelecidos em fluxos de trabalho que incluem modelos generativos
+                    como participantes ativos do ciclo.
+                    <span class="attr">— Síntese</span>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <div class="footer-inner">
+                <div class="brand">SpecKit · Spec-Driven Development</div>
+                <p>
+                    Extensão Visual Studio Code · Versão 0.3.25 · Método operacional para conduzir ciclos de
+                    desenvolvimento assistidos por IA sob critérios estruturados de engenharia.
+                </p>
+                <p>
+                    Cinco gates · Quinze comandos · Três atores · Cinco modos de agente · Stacks TypeScript,
+                    JavaScript, Java, C# e Python.
+                </p>
+                <div class="legal">
+                    Documento executivo gerado para apresentação técnica. Para a referência canônica de uso, comandos e configuração, consulte o <code>README.md</code> do repositório.
+                </div>
+            </div>
+        </footer>
+
+        <script>
+            // Progress bar
+            (function () {
+                var bar = document.getElementById("progressBar");
+                if (!bar) return;
+                function update() {
+                    var h = document.documentElement;
+                    var scrolled = h.scrollTop;
+                    var height = h.scrollHeight - h.clientHeight;
+                    var pct = height > 0 ? (scrolled / height) * 100 : 0;
+                    bar.style.width = pct + "%";
+                }
+                window.addEventListener("scroll", update, { passive: true });
+                window.addEventListener("resize", update);
+                update();
+            })();
+
+            // Mermaid init
+            mermaid.initialize({
+                startOnLoad: true,
+                theme: "dark",
+                themeVariables: {
+                    primaryColor: "#243057",
+                    primaryTextColor: "#e8ecf6",
+                    primaryBorderColor: "#7aa2ff",
+                    lineColor: "#7aa2ff",
+                    secondaryColor: "#1c2541",
+                    tertiaryColor: "#11172b",
+                    background: "#11172b",
+                    fontFamily: "Inter, sans-serif",
+                },
+                flowchart: { curve: "basis", padding: 20 },
+                sequence: { actorMargin: 60, boxMargin: 12, messageMargin: 36 },
+            });
+
+            // Timeline scroll reveal
+            (function () {
+                var items = document.querySelectorAll(".timeline .tl-item");
+                if (!items.length) return;
+
+                if (!("IntersectionObserver" in window)) {
+                    items.forEach(function (el) { el.classList.add("is-visible"); });
+                    return;
+                }
+
+                var enterObserver = new IntersectionObserver(
+                    function (entries) {
+                        entries.forEach(function (entry) {
+                            var el = entry.target;
+                            if (entry.isIntersecting) {
+                                el.classList.add("is-visible");
+                                el.classList.remove("is-leaving");
+                            } else {
+                                var rect = entry.boundingClientRect;
+                                if (rect.bottom < 0) {
+                                    el.classList.add("is-leaving");
+                                } else if (rect.top > window.innerHeight) {
+                                    el.classList.remove("is-visible");
+                                    el.classList.remove("is-leaving");
+                                }
+                            }
+                        });
+                    },
+                    { threshold: 0.15, rootMargin: "0px 0px -10% 0px" }
+                );
+
+                items.forEach(function (el) { enterObserver.observe(el); });
+            })();
+
+            // Smooth-scroll for top nav (already has html { scroll-behavior: smooth })
+        </script>
+    </body>
+</html>

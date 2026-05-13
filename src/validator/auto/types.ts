@@ -55,6 +55,8 @@ export interface ValidationReport {
 export interface RunOptions {
   only?: string[];
   concurrency?: number;
+  /** Optional per-validator timeout in milliseconds. Defaults to no timeout. */
+  timeoutMs?: number;
 }
 
 export const BLOCKING_SEVERITIES: ReadonlySet<Severity> = new Set<Severity>(['error', 'blocker']);

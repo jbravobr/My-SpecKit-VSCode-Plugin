@@ -1,0 +1,87 @@
+SpecKit — Novidades para usuários — 0.5.0
+=========================================
+Data: 13/05/2026
+
+Resumo
+------
+Esta versão adiciona seis melhorias práticas sobre o pipeline de validação introduzido em
+0.4.0, sem mudar a forma de trabalhar nem adicionar passos manuais. Você ganha detecção
+automática de segredos hardcoded em código, dois novos comandos no chat (`/metrics` e
+`/score`), um Status Bar nativo do VS Code mostrando a story ativa e duas integrações
+silenciosas: findings da última validação aparecem no painel Problems e o Revisor agora
+"lembra" da iteração anterior do mesmo gate para evitar pedir as mesmas correções de novo.
+
+Novas features
+--------------
+- Detecção de segredos hardcoded: arquivos tocados pela story passam por um validador que
+  reconhece chaves AWS, GitHub PAT, JWT, blocos PEM, tokens Slack/Google e padrões genéricos
+  do tipo `apiKey = "..."`. Placeholders óbvios (`${...}`, `<your-key>`, `changeme`,
+  `dummy_secret`, etc.) são ignorados para não gerar ruído. Roda automaticamente nos
+  Gates 2 e 3 e em `/verify`.
+- Novo comando `/metrics`: mostra um resumo das últimas validações locais executadas — total
+  de execuções, taxa de aprovação, p95 de duração, validadores mais usados, eventos por
+  gate e por spec. Os dados ficam em `.speckit/metrics/events.jsonl` (local, com cap
+  rotativo de 2 MiB). Nada sai da sua máquina.
+- Novo comando `/score`: calcula um score 0..100 da completude estrutural da spec ativa,
+  com nota por dimensão (metadata, requisito de negócio, spec funcional, spec
+  não-funcional, DoD, disciplinas de teste, rastreabilidade) e recomendações concretas
+  para subir o score. Não usa LLM: roda em milissegundos.
+- Status Bar nativo: um item à esquerda mostra a story ativa, o gate corrente e o status
+  da última validação (✓ verde, ✗ vermelho com contagem de bloqueadores). Clicar abre o
+  `/metrics`.
+- Painel Problems integrado: findings da evidência mais recente em `.speckit/evidence/`
+  agora aparecem no painel Problems com origem `speckit/<validator>`, navegáveis por
+  arquivo:linha. Atualiza automaticamente após cada save.
+
+Melhorias de experiência
+------------------------
+- Revisor com memória de iteração: a cada nova rodada do loop dentro do mesmo (spec, gate),
+  o prompt do Revisor passa a incluir a tentativa atual vs limite, validadores que
+  REGRediram (voltaram a falhar depois de terem passado) e validadores que foram resolvidos
+  na última iteração. Isso evita o agente pedir correções já feitas e dá visão clara de
+  progresso.
+- Timeout por validador: a infraestrutura interna agora suporta limite de tempo por
+  validador. Se algum validador travar (rede lenta, processo pendurado, arquivo gigante),
+  ele é abortado e emite um finding `error` em vez de bloquear o pipeline inteiro.
+- Nenhum comando novo bloqueia o editor. Tudo continua best-effort: se um validador falha,
+  o erro é engolido e o fluxo segue.
+- Pacote VSIX continua enxuto (~1,2 MB): nada foi adicionado ao bundle além do código.
+
+Como usar rapidamente
+---------------------
+1. Não há setup. Atualize a extensão e siga seu fluxo normal.
+2. Olhe o Status Bar (canto inferior esquerdo) para ver a story ativa, o gate e se a
+   última validação passou.
+3. Após qualquer save, dê uma olhada no painel Problems: findings com origem `speckit/...`
+   te levam direto à linha do código (ou da spec) que precisa de atenção.
+4. No chat, experimente:
+   - `@speckit /score` para ver onde sua spec pode crescer.
+   - `@speckit /metrics` depois de algumas validações para ver pass rate e p95 locais.
+   - `@speckit /verify` continua existindo para rodar a validação sob demanda.
+5. Se você usa segredos em código por engano, o validador `secret-leak` vai sinalizar na
+   próxima transição de gate ou no próximo `/verify`. Para placeholders intencionais use
+   marcadores como `${...}`, `<your-key>`, `changeme` — eles são ignorados automaticamente.
+
+Compatibilidade
+---------------
+- 100% retrocompatível com 0.4.0. Nenhuma mudança de comando existente. Nenhum arquivo
+  de configuração obrigatório.
+- Stack-agnosticismo preservado: TS/JS rodam nativamente; outras stacks recebem findings
+  delegados ao Revisor com comando exato.
+
+Correções e segurança de release
+---------------------------------
+- Lint pré-existente em `SecretLeakValidator.ts` (escape desnecessário em classe regex)
+  corrigido para manter `npx eslint src` em 0 erros.
+- Tamanho do VSIX preservado em ~1,2 MB; nenhuma dependência nova foi adicionada ao
+  bundle de runtime. O fix de `.vscodeignore` introduzido em 0.4.0 (que evita inflar o
+  pacote com `packages/intellij/` e `packages/core-server/`) foi mantido intacto.
+- Nenhum comando novo envia dados pela rede. Métricas e evidências permanecem 100% locais
+  em `.speckit/`.
+- Hook de iteração no Revisor é puramente informacional: o limite de 5 iterações por
+  (spec, gate) introduzido em 0.4.0 segue valendo, agora com mensagem mais clara
+  quando atingido.
+
+Artefato
+--------
+- publish/0.5.0/vscode-plugin-speckit-0.5.0.vsix

@@ -4,7 +4,7 @@
   "workspaces": ["packages/*"],
   "displayName": "SpecKit — Spec Driven Development",
   "description": "Defina sua história e configure o Copilot para desenvolvimento orientado a spec",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "icon": "assets/speckit_icon.png",
   "publisher": "local",
   "engines": {
@@ -115,6 +115,18 @@
           {
             "name": "init",
             "description": "Inicializar workspace e consolidar specs dispersas em .speckit/"
+          },
+          {
+            "name": "verify",
+            "description": "Executar validação determinística do gate alvo da spec ativa"
+          },
+          {
+            "name": "metrics",
+            "description": "Resumir métricas locais de validação (.speckit/metrics/events.jsonl)"
+          },
+          {
+            "name": "score",
+            "description": "Avaliar completude da spec ativa e gerar um score 0-100"
           }
         ]
       }

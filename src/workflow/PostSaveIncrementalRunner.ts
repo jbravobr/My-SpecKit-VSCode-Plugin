@@ -4,6 +4,7 @@ import { extractSpecType } from '../parser/BaseParser';
 import { parseStory } from '../story/StoryParser';
 import { CrapValidator } from '../validator/auto/CrapValidator';
 import type { Finding, Validator } from '../validator/auto/types';
+import { MetricsRecorder } from './MetricsRecorder';
 
 const TS_JS_EXT = /\.(ts|tsx|js|jsx|mts|cts)$/i;
 
@@ -130,6 +131,21 @@ export async function runIncrementalCrapForSavedFile(
     await fs.writeFile(reportPath, header + body);
   } catch (err) {
     return { ran: true, findings, reason: `write-error: ${(err as Error).message}` };
+  }
+
+  try {
+    const recorder = new MetricsRecorder(fs, workspaceRoot);
+    await recorder.record({
+      type: 'incremental-crap',
+      ts: now().toISOString(),
+      specId: story.metadata.id,
+      findingsTotal: findings.length,
+      findingsBlocking: findings.filter((f) => f.severity === 'error' || f.severity === 'blocker')
+        .length,
+      extra: { savedFilePath },
+    });
+  } catch {
+    // swallow
   }
 
   return { ran: true, findings, reportPath };

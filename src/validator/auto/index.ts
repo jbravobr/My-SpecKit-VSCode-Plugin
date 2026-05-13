@@ -43,3 +43,9 @@ export {
   parseVitestFailures,
   type TestExecutionValidatorOptions,
 } from './TestExecutionValidator';
+export {
+  SecretLeakValidator,
+  DEFAULT_SECRET_RULES,
+  type SecretRule,
+  type SecretLeakValidatorOptions,
+} from './SecretLeakValidator';

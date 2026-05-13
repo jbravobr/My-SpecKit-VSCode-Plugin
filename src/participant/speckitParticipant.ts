@@ -15,8 +15,10 @@ import { handleGateCommand } from './commands/gateCommand';
 import { handleHelpCommand } from './commands/helpCommand';
 import { handleHistoryCommand } from './commands/historyCommand';
 import { handleInitCommand } from './commands/initCommand';
+import { handleMetricsCommand } from './commands/metricsCommand';
 import { handleNewCommand } from './commands/newCommand';
 import { handleReviewAutoCommand } from './commands/reviewAutoCommand';
+import { handleScoreCommand } from './commands/scoreCommand';
 import { handleStatusCommand } from './commands/statusCommand';
 import { handleTraceCommand } from './commands/traceCommand';
 import { handleValidateCommand } from './commands/validateCommand';
@@ -153,6 +155,12 @@ export async function handleSpeckitRequest(
         break;
       case 'verify':
         await handleVerifyCommand(request, stream, token);
+        break;
+      case 'metrics':
+        await handleMetricsCommand(request, stream, token);
+        break;
+      case 'score':
+        await handleScoreCommand(request, stream, token);
         break;
       default:
         stream.markdown(

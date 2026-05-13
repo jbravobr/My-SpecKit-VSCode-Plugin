@@ -9,6 +9,7 @@ import {
   CoverageThresholdValidator,
   CrapValidator,
   AcceptanceCriteriaTestPresenceValidator,
+  SecretLeakValidator,
   StoryHeuristicValidator,
   TestExecutionValidator,
   TypecheckValidator,
@@ -16,6 +17,7 @@ import {
 import { EvidenceReportWriter } from '../../workflow/EvidenceReportWriter';
 import { GateEvidenceCollector } from '../../workflow/GateEvidenceCollector';
 import { gitOps } from '../../workflow/GitOperations';
+import { MetricsRecorder } from '../../workflow/MetricsRecorder';
 import { buildRevisorPrompt } from '../../workflow/RevisorFeedbackBridge';
 import { handleCommandError, requireWorkspace } from './CommandHelpers';
 
@@ -40,6 +42,7 @@ export function buildDefaultCollector(): GateEvidenceCollector {
   c.registerValidator(new TestExecutionValidator());
   c.registerValidator(new CoverageThresholdValidator());
   c.registerValidator(new CrapValidator());
+  c.registerValidator(new SecretLeakValidator());
   return c;
 }
 
@@ -110,6 +113,21 @@ export async function handleVerifyCommand(
   const writerFactory = deps.writer ?? ((root, f) => new EvidenceReportWriter(f, root));
   const writer = writerFactory(workspaceRoot, fs);
   const written = await writer.write(report, story.metadata.id);
+
+  try {
+    const recorder = new MetricsRecorder(fs, workspaceRoot);
+    await recorder.recordEvidence(story.metadata.id, report);
+    await recorder.record({
+      type: 'verify-command',
+      ts: new Date().toISOString(),
+      specId: story.metadata.id,
+      gate: target,
+      durationMs: report.durationMs,
+      passed: report.passed,
+    });
+  } catch {
+    // swallow
+  }
 
   const prompt = buildRevisorPrompt(report);
   stream.markdown(

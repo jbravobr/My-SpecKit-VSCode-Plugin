@@ -8,6 +8,17 @@ export interface RevisorPrompt {
   delegatedCommands: string[];
 }
 
+export interface IterationContext {
+  /** 1-based current attempt counter. */
+  attempt: number;
+  /** Hard limit configured for this spec/gate. */
+  limit: number;
+  /** Optional: number of blocking findings in the immediately previous attempt. */
+  previousBlockingCount?: number;
+  /** Optional: validators that newly regressed compared to previous attempt. */
+  regressedValidators?: string[];
+}
+
 const SEVERITY_EMOJI: Record<Severity, string> = {
   blocker: '🛑',
   error: '❌',
@@ -29,7 +40,10 @@ export function formatFindingLine(f: Finding): string {
   return f.suggestedFix ? `${base} Fix: ${f.suggestedFix}` : `${base}`;
 }
 
-export function buildRevisorPrompt(report: EvidenceReport): RevisorPrompt {
+export function buildRevisorPrompt(
+  report: EvidenceReport,
+  iteration?: IterationContext,
+): RevisorPrompt {
   const sorted = [...report.findings].sort(
     (a, b) =>
       SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] ||
@@ -43,6 +57,30 @@ export function buildRevisorPrompt(report: EvidenceReport): RevisorPrompt {
   const delegated = sorted.filter((f) => f.delegatedToRevisor);
 
   const lines: string[] = [];
+
+  if (iteration) {
+    const exhausted = iteration.attempt > iteration.limit;
+    lines.push(
+      `Iteração: ${iteration.attempt}/${iteration.limit}${exhausted ? ' (LIMITE ATINGIDO — bloquear loop e exigir intervenção humana)' : ''}.`,
+    );
+    if (
+      typeof iteration.previousBlockingCount === 'number' &&
+      iteration.previousBlockingCount > 0
+    ) {
+      const delta = blocking.length - iteration.previousBlockingCount;
+      const direction = delta < 0 ? 'redução' : delta > 0 ? 'AUMENTO' : 'sem variação';
+      lines.push(
+        `Delta bloqueadores vs. iteração anterior: ${delta > 0 ? '+' : ''}${delta} (${direction}).`,
+      );
+    }
+    if (iteration.regressedValidators && iteration.regressedValidators.length > 0) {
+      lines.push(
+        `⚠️ Regressão detectada nos validadores: ${iteration.regressedValidators.map((v) => '`' + v + '`').join(', ')}.`,
+      );
+    }
+    lines.push('');
+  }
+
   lines.push(
     `Gate alvo: ${report.gate}. Status: ${report.passed ? 'PASSED' : 'BLOCKED'}. ` +
       `Validadores: ${report.validatorsRun.join(', ') || '(nenhum)'} ` +
@@ -80,8 +118,8 @@ export function buildRevisorPrompt(report: EvidenceReport): RevisorPrompt {
 
   return {
     summary: report.passed
-      ? `Gate ${report.gate} aprovado pelo plugin (${report.findings.length} findings, nenhum bloqueador).`
-      : `Gate ${report.gate} BLOQUEADO pelo plugin: ${blocking.length} bloqueador(es). Revisor deve coordenar fixes com Implementador antes de reavaliar.`,
+      ? `Gate ${report.gate} aprovado pelo plugin (${report.findings.length} findings, nenhum bloqueador)${iteration ? ` em ${iteration.attempt}ª iteração` : ''}.`
+      : `Gate ${report.gate} BLOQUEADO pelo plugin: ${blocking.length} bloqueador(es)${iteration ? ` (iteração ${iteration.attempt}/${iteration.limit})` : ''}. Revisor deve coordenar fixes com Implementador antes de reavaliar.`,
     body: lines.join('\n'),
     hasBlockingFindings: blocking.length > 0,
     delegatedCommands: delegated.map((f) => f.delegatedToRevisor!.command),

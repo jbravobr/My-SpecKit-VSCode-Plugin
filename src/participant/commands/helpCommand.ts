@@ -243,6 +243,8 @@ function renderGeneralHelp(): string {
     '- `/validate [--devtools]`\n' +
     '- `/review-auto [--approved|--changes-requested|--mutation] [--confirm <intent-id>]`\n' +
     '- `/verify [--gate <0..4>]` → validação determinística (alimenta o Revisor)\n' +
+    '- `/metrics` → resumo das métricas locais (`.speckit/metrics/events.jsonl`)\n' +
+    '- `/score` → score de completude da spec ativa (0..100)\n' +
     '- `/draft [--fix|--refactoring|--spike]`\n\n' +
     '**Atalhos (aliases):**\n' +
     '- `/status-all` → `/status --all`\n' +
