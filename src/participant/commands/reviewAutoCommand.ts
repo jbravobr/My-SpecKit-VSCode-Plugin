@@ -11,6 +11,7 @@ import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { validateGateTransition, validateStatusTransition } from '../../workflow/GateEnforcer';
 import { gitOps, IGitOps } from '../../workflow/GitOperations';
+import { runGateVerificationHook } from '../../workflow/GateVerificationHook';
 import { upsertMetadataFields } from '../../workflow/MetadataPatcher';
 import { createCorrelationId } from '../../workflow/ObservabilityContext';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
@@ -1382,6 +1383,29 @@ export async function handleReviewAutoCommand(
       await git.commitFile(workspaceRootPath, activeStoryPath, metaCommitMsg).catch(() => {
         // Silent: git may be unavailable or the file may already be committed.
       });
+
+      // Best-effort deterministic gate verification — writes evidence to
+      // `.speckit/evidence/` so the Revisor agent can consume it without depending
+      // on the user. Never throws; never blocks the transition.
+      try {
+        const verification = await runGateVerificationHook({
+          workspaceRoot: workspaceRootPath,
+          fs,
+          git,
+          story: { ...story, metadata: { ...story.metadata, gate: summary.toGate } },
+          toGate: summary.toGate,
+        });
+        const evRel = verification.latestPath
+          .replace(workspaceRootPath.replace(/\\/g, '/'), '.')
+          .replace(/^\.\//, '');
+        stream.markdown(
+          `\n${verification.report.passed ? '✅' : '🛑'} **Validação determinística Gate ${summary.toGate}:** ` +
+            `${verification.report.findings.length} finding(s), ${verification.report.passed ? 'sem bloqueadores' : 'com bloqueadores'}. ` +
+            `Evidência: \`${evRel}\`.\n`,
+        );
+      } catch {
+        // Hook is informational; failures must not affect the transition.
+      }
     }
 
     return { applied: true, summary };

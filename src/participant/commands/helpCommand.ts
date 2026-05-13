@@ -242,6 +242,7 @@ function renderGeneralHelp(): string {
     '- `/gate [check gate <de> <para>|check status <de> <para>]`\n' +
     '- `/validate [--devtools]`\n' +
     '- `/review-auto [--approved|--changes-requested|--mutation] [--confirm <intent-id>]`\n' +
+    '- `/verify [--gate <0..4>]` → validação determinística (alimenta o Revisor)\n' +
     '- `/draft [--fix|--refactoring|--spike]`\n\n' +
     '**Atalhos (aliases):**\n' +
     '- `/status-all` → `/status --all`\n' +

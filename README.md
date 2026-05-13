@@ -745,6 +745,41 @@ Orquestra a revisão automática da Story ativa e as transições de gate com pr
 
 ---
 
+### `@speckit /verify`
+
+Executa a **validação determinística automática** da Story ativa para o próximo Gate (ou um Gate específico via `--gate N`) e grava evidência consumível pelo **Revisor**.
+
+**O que faz:**
+
+1. Lê a spec ativa em `.speckit/` e identifica o Gate alvo (`currentGate + 1` por padrão).
+2. Roda o conjunto de validadores apropriado ao Gate alvo:
+   - StoryHeuristicValidator (disciplinas ausentes: idempotência, máquina de estado, recovery, BVA)
+   - TypecheckValidator (`tsc --noEmit` para TS/JS; demais stacks → delegado ao Revisor)
+   - AcceptanceCriteriaTestPresenceValidator (cada AC tem ≥1 teste rastreável)
+   - TestExecutionValidator (`vitest related` para arquivos da story)
+   - CoverageThresholdValidator (≥80% por arquivo, lendo `coverage/coverage-summary.json`)
+   - CrapValidator (CRAP > 30 em função tocada pela story)
+3. Persiste evidência em `.speckit/evidence/<specId>-<runId>.{md,json}` e atualiza `.speckit/evidence/latest.md` (consumido pelo Revisor no próximo turno).
+4. Emite no chat o resumo determinístico (`✅ APROVADO` / `🛑 BLOQUEADO`) e o prompt formatado para o Implementador corrigir achados.
+
+**Uso:**
+
+```
+@speckit /verify
+@speckit /verify --gate 2
+@speckit /verify --gate 3
+```
+
+**Quando dispara automaticamente (sem precisar do comando):**
+
+- Ao **salvar a spec** (`.speckit/**/*.md`): heurística de disciplinas é recalculada → `.speckit/evidence/latest-heuristic.md`.
+- Ao **salvar arquivo de código** TS/JS, se a story estiver em Gate ≥ 2: CRAP do arquivo é recalculado → `.speckit/evidence/latest-crap.md`.
+- Ao **transitar de Gate** via `/review-auto`: o conjunto completo do Gate alvo roda e o resumo aparece no chat. Falhas no hook nunca abortam a transição (informacional).
+
+> A camada é **stack-agnóstica**: nativa apenas para TS/JS. Para Java/Kotlin/Python/C#/Go, o achado vem com `delegatedToRevisor` contendo o comando exato a executar (`mvn test -pl ...`, `pytest --cov=...`, `dotnet test --filter`, `go test ./... -cover`).
+
+---
+
 ### `@speckit /context`
 
 Gerencia arquivos de contexto adicionais que o agente deve considerar durante a implementação.
