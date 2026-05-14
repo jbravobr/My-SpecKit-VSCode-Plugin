@@ -7,21 +7,24 @@
     <meta name="description" content="Documentação completa da extensão SpecKit em formato HTML rico, com diagramas animados e layout A3." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
     <style>
       :root {
-        --bg-0: #0b1020;
-        --bg-1: #11172b;
-        --bg-2: #161e36;
-        --surface: #1c2541;
-        --surface-2: #243057;
-        --line: #2a3760;
-        --text: #e8ecf6;
-        --text-dim: #b0b9d4;
+        /* Paleta enriquecida */
+        --bg-0: #07091a;
+        --bg-1: #0d1228;
+        --bg-2: #131836;
+        --surface: #1a2147;
+        --surface-2: #232c5a;
+        --line: #2e3a6e;
+        --line-soft: rgba(122,162,255,0.18);
+        --text: #f1f4ff;
+        --text-dim: #b8c2e0;
         --text-muted: #7c87a9;
         --accent: #7aa2ff;
-        --accent-2: #9d7aff;
+        --accent-2: #c98bff;
+        --accent-3: #58e1c2;
         --user: #58e1c2;
         --participant: #ffb454;
         --llm: #c98bff;
@@ -29,60 +32,51 @@
         --warn: #ffb454;
         --danger: #ff6b8a;
         --gate: #4cc9f0;
-        --gradient-hero: linear-gradient(135deg, #0b1020 0%, #1a1d4d 50%, #2a1d5d 100%);
-        --gradient-accent: linear-gradient(135deg, #7aa2ff 0%, #9d7aff 100%);
+        --pink: #ff6b8a;
+        --gradient-hero: linear-gradient(135deg, #07091a 0%, #1d2056 35%, #3a1f63 70%, #4f1f4f 100%);
+        --gradient-accent: linear-gradient(135deg, #7aa2ff 0%, #c98bff 100%);
         --gradient-success: linear-gradient(135deg, #38d39f 0%, #4cc9f0 100%);
-        --gradient-aurora: linear-gradient(120deg, #7aa2ff, #9d7aff, #58e1c2, #ffb454, #c98bff);
-        /* A3 landscape: 1587px @ 96dpi. Margins generosas. */
+        --gradient-warm: linear-gradient(135deg, #ffb454 0%, #ff6b8a 100%);
+        --gradient-aurora: linear-gradient(120deg, #7aa2ff, #c98bff, #58e1c2, #ffb454, #ff6b8a);
+        --shadow-md: 0 8px 28px rgba(0,0,0,0.35);
+        --shadow-lg: 0 24px 60px rgba(0,0,0,0.45);
+        /* Tipografia */
+        --font-body: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        --font-display: "Bricolage Grotesque", "Plus Jakarta Sans", system-ui, sans-serif;
+        --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+        /* Layout A3 landscape (1587px @96dpi); prosa limitada para legibilidade */
         --doc-max: 1480px;
-        --doc-pad-x: 80px;
-        --doc-pad-y: 90px;
+        --prose-max: 78ch;     /* limite ótimo de leitura */
+        --doc-pad-x: 96px;
+        --doc-pad-y: 96px;
       }
 
       * { box-sizing: border-box; margin: 0; padding: 0; }
       html { scroll-behavior: smooth; }
       body {
-        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family: var(--font-body);
+        font-feature-settings: "ss01", "ss02", "cv01", "cv11";
         background: var(--bg-0);
         color: var(--text);
-        line-height: 1.72;
+        line-height: 1.7;
+        font-size: 16.5px;
         -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
         overflow-x: hidden;
       }
-      code, pre, .mono { font-family: "JetBrains Mono", "Consolas", monospace; }
+      code, pre, .mono { font-family: var(--font-mono); }
 
-      /* ==================== ANIMAÇÕES BASE ==================== */
+      /* ==================== ANIMAÇÕES ==================== */
       @keyframes fadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       @keyframes pulseDot {
         0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 12px var(--success); }
         50% { opacity: 0.55; transform: scale(1.35); box-shadow: 0 0 22px var(--success); }
       }
-      @keyframes auroraShift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-      }
-      @keyframes float {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-8px); }
-      }
-      @keyframes shimmer {
-        0% { background-position: -1000px 0; }
-        100% { background-position: 1000px 0; }
-      }
-      @keyframes drawLine {
-        from { stroke-dashoffset: 1200; }
-        to { stroke-dashoffset: 0; }
-      }
-      @keyframes fadeNode {
-        from { opacity: 0; transform: scale(0.85); }
-        to { opacity: 1; transform: scale(1); }
-      }
-      @keyframes orbit {
-        from { transform: rotate(0deg) translateX(160px) rotate(0deg); }
-        to { transform: rotate(360deg) translateX(160px) rotate(-360deg); }
-      }
+      @keyframes auroraShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+      @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+      @keyframes shimmer { 0% { background-position: -1200px 0; } 100% { background-position: 1200px 0; } }
+      @keyframes drawLine { from { stroke-dashoffset: 1500; } to { stroke-dashoffset: 0; } }
       @keyframes blink { 50% { opacity: 0; } }
 
       /* ==================== PROGRESS BAR ==================== */
@@ -99,62 +93,55 @@
 
       /* ==================== TOP NAV ==================== */
       .topnav {
-        position: fixed; top: 14px; right: 18px;
-        z-index: 999;
-        background: rgba(17,23,43,0.78);
-        backdrop-filter: blur(14px);
+        position: fixed; top: 14px; right: 18px; z-index: 999;
+        background: rgba(13,18,40,0.85);
+        backdrop-filter: blur(14px) saturate(1.4);
         border: 1px solid var(--line);
         border-radius: 100px;
         padding: 8px 14px;
         display: flex; gap: 4px;
         font-size: 12px; font-weight: 600;
+        font-family: var(--font-body);
         animation: fadeIn 0.8s ease 0.3s backwards;
       }
       .topnav a {
-        color: var(--text-dim);
-        text-decoration: none;
-        padding: 6px 12px;
-        border-radius: 100px;
+        color: var(--text-dim); text-decoration: none;
+        padding: 6px 13px; border-radius: 100px;
         transition: all 0.25s;
       }
-      .topnav a:hover { color: var(--text); background: rgba(122,162,255,0.15); transform: translateY(-1px); }
+      .topnav a:hover { color: var(--text); background: rgba(122,162,255,0.18); transform: translateY(-1px); }
       @media (max-width: 1100px) { .topnav { display: none; } }
 
       /* ==================== HERO ==================== */
       .hero {
         background: var(--gradient-hero);
-        padding: 150px var(--doc-pad-x) 120px;
-        position: relative;
-        overflow: hidden;
+        padding: 160px var(--doc-pad-x) 130px;
+        position: relative; overflow: hidden;
         border-bottom: 1px solid var(--line);
       }
       .hero::before {
         content: ""; position: absolute;
-        top: -50%; left: -10%;
-        width: 60%; height: 200%;
-        background: radial-gradient(circle, rgba(157,122,255,0.20) 0%, transparent 70%);
-        pointer-events: none;
-        animation: float 8s ease-in-out infinite;
+        top: -40%; left: -15%; width: 70%; height: 200%;
+        background: radial-gradient(circle, rgba(201,139,255,0.22) 0%, transparent 60%);
+        pointer-events: none; animation: float 9s ease-in-out infinite;
       }
       .hero::after {
         content: ""; position: absolute;
-        bottom: -50%; right: -10%;
-        width: 60%; height: 200%;
-        background: radial-gradient(circle, rgba(122,162,255,0.18) 0%, transparent 70%);
-        pointer-events: none;
-        animation: float 9s ease-in-out infinite reverse;
+        bottom: -40%; right: -15%; width: 70%; height: 200%;
+        background: radial-gradient(circle, rgba(88,225,194,0.18) 0%, transparent 60%);
+        pointer-events: none; animation: float 11s ease-in-out infinite reverse;
       }
       .hero-inner { max-width: var(--doc-max); margin: 0 auto; position: relative; z-index: 1; }
       .eyebrow {
         display: inline-flex; align-items: center; gap: 10px;
-        padding: 8px 18px;
-        background: rgba(122,162,255,0.12);
-        border: 1px solid rgba(122,162,255,0.35);
+        padding: 9px 20px;
+        background: rgba(201,139,255,0.14);
+        border: 1px solid rgba(201,139,255,0.4);
         border-radius: 100px;
-        font-size: 13px; font-weight: 600;
-        color: var(--accent);
-        letter-spacing: 0.08em; text-transform: uppercase;
-        margin-bottom: 28px;
+        font-size: 12px; font-weight: 700;
+        color: #d9b8ff;
+        letter-spacing: 0.14em; text-transform: uppercase;
+        margin-bottom: 32px;
         animation: fadeUp 0.7s ease;
       }
       .eyebrow .dot {
@@ -164,13 +151,14 @@
         animation: pulseDot 2s ease-in-out infinite;
       }
       .hero h1 {
-        font-size: clamp(40px, 6vw, 78px);
-        font-weight: 800; line-height: 1.05;
-        letter-spacing: -0.025em;
-        background: linear-gradient(135deg, #ffffff 0%, #b0b9d4 100%);
+        font-family: var(--font-display);
+        font-size: clamp(44px, 6.8vw, 88px);
+        font-weight: 800; line-height: 1.02;
+        letter-spacing: -0.035em;
+        background: linear-gradient(135deg, #ffffff 0%, #d2dafc 60%, #b8c2e0 100%);
         -webkit-background-clip: text; background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 26px;
+        margin-bottom: 28px;
         animation: fadeUp 0.9s ease 0.1s backwards;
       }
       .hero h1 .grad {
@@ -181,56 +169,71 @@
         animation: auroraShift 8s ease infinite;
       }
       .hero-lead {
-        font-size: clamp(17px, 1.6vw, 22px);
+        font-size: clamp(17px, 1.45vw, 22px);
         color: var(--text-dim);
         margin-bottom: 56px; font-weight: 400;
-        text-align: justify; hyphens: auto;
-        max-width: 1200px;
+        max-width: 1100px;
+        line-height: 1.65;
         animation: fadeUp 1s ease 0.25s backwards;
       }
       .hero-meta {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
         gap: 16px;
         animation: fadeUp 1s ease 0.4s backwards;
       }
       .meta-card {
-        background: rgba(28,37,65,0.6);
+        background: rgba(26,33,71,0.65);
         border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 18px 20px;
-        backdrop-filter: blur(8px);
-        transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 16px;
+        padding: 20px 22px;
+        backdrop-filter: blur(10px);
+        transition: transform 0.4s cubic-bezier(0.2,0.8,0.2,1), border-color 0.3s, box-shadow 0.3s;
+        position: relative; overflow: hidden;
       }
-      .meta-card:hover {
-        transform: translateY(-4px);
-        border-color: var(--accent);
-        box-shadow: 0 12px 28px rgba(122,162,255,0.18);
+      .meta-card::before {
+        content: ""; position: absolute; inset: 0;
+        background: var(--gradient-accent); opacity: 0; transition: opacity 0.3s;
       }
-      .meta-card .label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; }
-      .meta-card .value { font-size: 22px; font-weight: 700; color: var(--text); }
-      .meta-card .value small { font-size: 13px; color: var(--text-dim); font-weight: 500; margin-left: 4px; }
+      .meta-card:hover { transform: translateY(-5px); border-color: var(--accent-2); box-shadow: 0 14px 32px rgba(201,139,255,0.22); }
+      .meta-card .label { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; }
+      .meta-card .value { font-size: 23px; font-weight: 700; color: var(--text); font-family: var(--font-display); }
+      .meta-card .value small { font-size: 13px; color: var(--text-dim); font-weight: 500; margin-left: 5px; font-family: var(--font-body); }
 
       /* ==================== TOC ==================== */
-      .toc-section { padding: var(--doc-pad-y) var(--doc-pad-x); background: var(--bg-1); border-bottom: 1px solid var(--line); }
+      .toc-section {
+        padding: var(--doc-pad-y) var(--doc-pad-x);
+        background: linear-gradient(180deg, var(--bg-1) 0%, var(--bg-0) 100%);
+        border-bottom: 1px solid var(--line);
+      }
       .toc-inner { max-width: var(--doc-max); margin: 0 auto; }
-      .toc-title { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 24px; }
-      .toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+      .toc-title {
+        font-size: 12px; font-weight: 800; letter-spacing: 0.22em;
+        text-transform: uppercase; color: var(--accent-2);
+        margin-bottom: 28px;
+      }
+      .toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
       .toc-item {
-        display: flex; align-items: center; gap: 12px;
-        padding: 14px 18px;
+        display: flex; align-items: center; gap: 14px;
+        padding: 16px 20px;
         background: var(--surface);
         border: 1px solid var(--line);
-        border-radius: 12px;
-        color: var(--text-dim);
-        text-decoration: none;
-        font-size: 14px; font-weight: 500;
-        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        border-radius: 14px;
+        color: var(--text-dim); text-decoration: none;
+        font-size: 14.5px; font-weight: 500;
+        transition: all 0.35s cubic-bezier(0.2,0.8,0.2,1);
         animation: fadeUp 0.5s ease backwards;
         animation-delay: calc(var(--i, 0) * 40ms);
+        position: relative; overflow: hidden;
       }
-      .toc-item:hover { transform: translateX(4px); border-color: var(--accent); color: var(--text); }
-      .toc-num { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--accent); font-weight: 700; }
+      .toc-item::after {
+        content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+        background: var(--gradient-accent); transform: scaleY(0); transform-origin: bottom;
+        transition: transform 0.3s ease;
+      }
+      .toc-item:hover { transform: translateX(6px); border-color: var(--accent-2); color: var(--text); background: var(--surface-2); }
+      .toc-item:hover::after { transform: scaleY(1); transform-origin: top; }
+      .toc-num { font-family: var(--font-mono); font-size: 12px; color: var(--accent-2); font-weight: 700; }
       .toc-text { flex: 1; }
 
       /* ==================== DOC CONTENT ==================== */
@@ -240,163 +243,178 @@
         padding: var(--doc-pad-y) var(--doc-pad-x);
         position: relative;
       }
-      .doc h1, .doc h2, .doc h3, .doc h4, .doc p, .doc li, .doc blockquote {
+      /* Justificação inteligente: justify + hifenização + interword + word-spacing
+         conservador. Última linha à esquerda para evitar "spaced out". */
+      .doc p, .doc li {
         text-align: justify;
+        text-align-last: left;
         text-justify: inter-word;
         hyphens: auto;
         -webkit-hyphens: auto;
-        word-break: keep-all;
+        word-spacing: -0.02em;
         overflow-wrap: break-word;
+        max-width: var(--prose-max);
       }
+      .doc blockquote { max-width: var(--prose-max); }
+      .doc blockquote p { max-width: 100%; }
+      .doc h1, .doc h2, .doc h3, .doc h4 { text-align: left; }
       .doc h1 {
-        font-size: clamp(30px, 4vw, 52px);
-        font-weight: 800; line-height: 1.12; letter-spacing: -0.02em;
-        margin: 70px 0 26px;
-        background: linear-gradient(135deg, #ffffff 0%, #b0b9d4 100%);
+        font-family: var(--font-display);
+        font-size: clamp(34px, 4.4vw, 60px);
+        font-weight: 800; line-height: 1.08; letter-spacing: -0.03em;
+        margin: 80px 0 28px;
+        background: linear-gradient(135deg, #ffffff 0%, #c98bff 100%);
         -webkit-background-clip: text; background-clip: text;
         -webkit-text-fill-color: transparent;
-        text-align: left;
       }
       .doc h1:first-child { margin-top: 0; }
       .doc h2 {
-        font-size: clamp(24px, 2.6vw, 36px);
-        font-weight: 800; line-height: 1.2; letter-spacing: -0.015em;
-        margin: 70px 0 22px;
+        font-family: var(--font-display);
+        font-size: clamp(26px, 2.8vw, 40px);
+        font-weight: 800; line-height: 1.18; letter-spacing: -0.022em;
+        margin: 76px 0 24px;
         color: var(--text);
-        padding-left: 18px;
-        border-left: 4px solid transparent;
+        padding-left: 22px;
+        border-left: 5px solid;
         border-image: var(--gradient-accent) 1;
-        text-align: left;
       }
       .doc h3 {
-        font-size: 22px; font-weight: 700; margin: 40px 0 14px; color: var(--accent);
-        text-align: left;
+        font-family: var(--font-display);
+        font-size: 24px; font-weight: 700;
+        margin: 44px 0 16px; color: var(--accent);
+        letter-spacing: -0.01em;
       }
       .doc h4 {
-        font-size: 17px; font-weight: 700; margin: 26px 0 10px; color: var(--accent-2);
-        text-align: left;
+        font-family: var(--font-display);
+        font-size: 18px; font-weight: 700;
+        margin: 28px 0 12px; color: var(--accent-2);
+        letter-spacing: -0.005em;
       }
-      .doc p { margin: 14px 0; color: var(--text-dim); font-size: 16px; }
-      .doc strong { color: var(--text); font-weight: 600; }
+      .doc p { margin: 16px 0; color: var(--text-dim); font-size: 16.5px; line-height: 1.75; }
+      .doc strong { color: var(--text); font-weight: 700; }
       .doc em { color: var(--text); font-style: italic; }
-      .doc a { color: var(--accent); text-decoration: none; border-bottom: 1px dashed rgba(122,162,255,0.4); transition: all 0.2s; }
-      .doc a:hover { color: var(--accent-2); border-bottom-color: var(--accent-2); }
-      .doc ul, .doc ol { margin: 14px 0 18px 28px; color: var(--text-dim); }
-      .doc li { margin-bottom: 8px; font-size: 16px; }
-      .doc li::marker { color: var(--accent); }
+      .doc a {
+        color: var(--accent); text-decoration: none;
+        background: linear-gradient(180deg, transparent 92%, rgba(122,162,255,0.5) 92%);
+        background-size: 100% 100%; transition: all 0.25s;
+      }
+      .doc a:hover { color: var(--accent-2); background: linear-gradient(180deg, transparent 92%, rgba(201,139,255,0.6) 92%); }
+      .doc ul, .doc ol { margin: 16px 0 22px 30px; color: var(--text-dim); }
+      .doc li { margin-bottom: 10px; font-size: 16.5px; line-height: 1.72; }
+      .doc li::marker { color: var(--accent-2); font-weight: 700; }
       .doc hr {
-        border: none;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, var(--line) 20%, var(--line) 80%, transparent);
-        margin: 50px 0;
+        border: none; height: 1px;
+        background: linear-gradient(90deg, transparent, var(--line) 20%, var(--accent-2) 50%, var(--line) 80%, transparent);
+        margin: 60px 0;
+        opacity: 0.5;
       }
       .doc code:not(pre code) {
-        background: rgba(122,162,255,0.12);
+        background: linear-gradient(135deg, rgba(122,162,255,0.16), rgba(201,139,255,0.12));
         color: var(--accent);
-        padding: 2px 7px;
-        border-radius: 5px;
-        font-size: 0.9em;
-        border: 1px solid rgba(122,162,255,0.18);
+        padding: 3px 9px;
+        border-radius: 6px;
+        font-size: 0.88em;
+        font-weight: 500;
+        border: 1px solid rgba(122,162,255,0.22);
+        word-break: break-word;
       }
       .doc pre {
-        background: #0a0f1f;
+        background: linear-gradient(180deg, #060a18 0%, #0a0f24 100%);
         border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 20px 22px;
-        margin: 18px 0 26px;
+        border-radius: 14px;
+        padding: 22px 24px;
+        margin: 20px 0 28px;
         overflow-x: auto;
-        font-size: 13px;
-        line-height: 1.65;
+        font-size: 13.5px;
+        line-height: 1.7;
         color: #d4dbef;
         position: relative;
       }
       .doc pre::before {
-        content: "";
-        position: absolute;
-        top: 0; left: 0; right: 0; height: 2px;
-        background: var(--gradient-accent);
-        opacity: 0.6;
+        content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        background: var(--gradient-accent); opacity: 0.7;
+        border-top-left-radius: 14px; border-top-right-radius: 14px;
       }
-      .doc pre code { color: #d4dbef; font-size: 13px; }
+      .doc pre code { color: #d4dbef; font-size: 13.5px; }
       .doc blockquote.callout {
-        background: rgba(122,162,255,0.06);
-        border-left: 4px solid var(--accent);
-        border-radius: 8px;
-        padding: 16px 22px;
-        margin: 20px 0 26px;
+        background: linear-gradient(135deg, rgba(122,162,255,0.08), rgba(201,139,255,0.05));
+        border-left: 4px solid var(--accent-2);
+        border-radius: 10px;
+        padding: 18px 24px;
+        margin: 22px 0 28px;
         color: var(--text-dim);
-        font-size: 15px;
+        font-size: 15.5px;
       }
-      .doc blockquote.callout p { margin: 6px 0; }
+      .doc blockquote.callout p { margin: 6px 0; max-width: 100%; }
 
       /* ==================== TABLE ==================== */
       .table-wrap {
         overflow-x: auto;
-        margin: 18px 0 28px;
+        margin: 20px 0 32px;
         border-radius: 14px;
         border: 1px solid var(--line);
         background: var(--surface);
-        box-shadow: var(--shadow-md, 0 8px 24px rgba(0,0,0,0.25));
+        box-shadow: var(--shadow-md);
       }
-      .doc table { width: 100%; border-collapse: collapse; font-size: 14px; }
-      .doc thead { background: var(--surface-2); }
+      .doc table { width: 100%; border-collapse: collapse; font-size: 14.5px; font-family: var(--font-body); }
+      .doc thead { background: linear-gradient(135deg, var(--surface-2), var(--surface)); }
       .doc th, .doc td {
         text-align: left;
-        padding: 14px 18px;
+        padding: 14px 20px;
         border-bottom: 1px solid var(--line);
         color: var(--text-dim);
       }
-      .doc th { color: var(--text); font-weight: 700; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; }
+      .doc th { color: var(--text); font-weight: 700; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; font-family: var(--font-display); }
       .doc tbody tr { transition: background 0.2s; }
-      .doc tbody tr:hover { background: rgba(122,162,255,0.05); }
+      .doc tbody tr:hover { background: rgba(122,162,255,0.06); }
       .doc tbody tr:last-child td { border-bottom: none; }
 
       /* ==================== MERMAID ==================== */
-      .diagram-figure { margin: 32px 0 40px; }
+      .diagram-figure { margin: 36px 0 44px; }
       .diagram-caption {
-        font-size: 12px; font-weight: 700; letter-spacing: 0.16em;
-        text-transform: uppercase; color: var(--accent);
-        margin-bottom: 14px; text-align: left;
+        font-size: 12px; font-weight: 800; letter-spacing: 0.18em;
+        text-transform: uppercase; color: var(--accent-2);
+        margin-bottom: 16px; text-align: left;
+        font-family: var(--font-display);
       }
       .mermaid-wrap {
         background:
-          radial-gradient(ellipse at top left, rgba(122,162,255,0.10), transparent 60%),
-          radial-gradient(ellipse at bottom right, rgba(157,122,255,0.10), transparent 60%),
+          radial-gradient(ellipse at top left, rgba(122,162,255,0.12), transparent 55%),
+          radial-gradient(ellipse at bottom right, rgba(201,139,255,0.12), transparent 55%),
+          radial-gradient(ellipse at center, rgba(88,225,194,0.05), transparent 70%),
           var(--bg-2);
         border: 1px solid var(--line);
-        border-radius: 16px;
-        padding: 40px 32px;
-        margin: 18px 0 32px;
+        border-radius: 18px;
+        padding: 44px 36px;
+        margin: 20px 0 36px;
         text-align: center;
         overflow-x: auto;
         position: relative;
+        box-shadow: inset 0 0 60px rgba(122,162,255,0.04), var(--shadow-md);
       }
       .mermaid-wrap::before {
         content: ""; position: absolute; inset: 0;
-        background: linear-gradient(90deg, transparent, rgba(122,162,255,0.07), transparent);
-        background-size: 1200px 100%;
-        animation: shimmer 7s linear infinite;
-        pointer-events: none; border-radius: 16px;
+        background: linear-gradient(90deg, transparent, rgba(201,139,255,0.07), transparent);
+        background-size: 1400px 100%;
+        animation: shimmer 8s linear infinite;
+        pointer-events: none; border-radius: 18px;
       }
-      .mermaid { font-family: "Inter", sans-serif !important; position: relative; z-index: 1; }
+      .mermaid { font-family: var(--font-body) !important; position: relative; z-index: 1; }
       .mermaid svg { max-width: 100%; height: auto !important; }
 
-      /* Animação NÃO destrutiva: apenas opacity nos grupos. Não usar transform
-         em g.node — quebra o posicionamento absoluto interno do Mermaid. */
+      /* Animação só com opacity (não quebra geometria) */
       .mermaid-wrap .mermaid g.node,
       .mermaid-wrap .mermaid g.cluster,
       .mermaid-wrap .mermaid g.actor,
       .mermaid-wrap .mermaid g.label,
       .mermaid-wrap .mermaid g.statediagram-state,
       .mermaid-wrap .mermaid .edgeLabel { opacity: 0; }
-      .mermaid-wrap.is-visible .mermaid g.node { animation: fadeIn 0.6s ease forwards; }
-      .mermaid-wrap.is-visible .mermaid g.cluster { animation: fadeIn 0.6s ease forwards; }
-      .mermaid-wrap.is-visible .mermaid g.actor { animation: fadeIn 0.6s ease forwards; }
-      .mermaid-wrap.is-visible .mermaid g.label { animation: fadeIn 0.6s ease forwards; }
+      .mermaid-wrap.is-visible .mermaid g.node,
+      .mermaid-wrap.is-visible .mermaid g.cluster,
+      .mermaid-wrap.is-visible .mermaid g.actor,
+      .mermaid-wrap.is-visible .mermaid g.label,
       .mermaid-wrap.is-visible .mermaid g.statediagram-state { animation: fadeIn 0.6s ease forwards; }
-      .mermaid-wrap.is-visible .mermaid .edgeLabel { animation: fadeIn 0.5s ease 0.8s forwards; }
-
-      /* Staggered delays */
+      .mermaid-wrap.is-visible .mermaid .edgeLabel { animation: fadeIn 0.5s ease 0.7s forwards; }
       .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(1)  { animation-delay: 0.05s; }
       .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(2)  { animation-delay: 0.12s; }
       .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(3)  { animation-delay: 0.19s; }
@@ -407,8 +425,6 @@
       .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(8)  { animation-delay: 0.54s; }
       .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(n+9){ animation-delay: 0.60s; }
 
-      /* Linhas: stroke-dash drawing animation. Safe because dasharray/offset
-         are on the path itself, not on transform. */
       .mermaid-wrap .mermaid .edgePath path,
       .mermaid-wrap .mermaid .flowchart-link,
       .mermaid-wrap .mermaid path.transition,
@@ -422,18 +438,15 @@
       .mermaid-wrap.is-visible .mermaid path.transition,
       .mermaid-wrap.is-visible .mermaid line.messageLine0,
       .mermaid-wrap.is-visible .mermaid line.messageLine1 {
-        animation: drawLine 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s forwards;
+        animation: drawLine 1.6s cubic-bezier(0.2,0.8,0.2,1) 0.5s forwards;
       }
 
-      /* Cores vibrantes via paleta: tinge shapes via filter:hue-rotate
-         leve e drop-shadow colorida nas formas, sem mexer em fill/stroke
-         (evita quebrar gradientes/labels do Mermaid). */
       .mermaid-wrap .mermaid g.node rect,
       .mermaid-wrap .mermaid g.node polygon,
       .mermaid-wrap .mermaid g.node circle,
       .mermaid-wrap .mermaid g.node ellipse,
       .mermaid-wrap .mermaid g.node path {
-        filter: drop-shadow(0 0 6px rgba(122,162,255,0.35));
+        filter: drop-shadow(0 0 8px rgba(122,162,255,0.4));
         transition: filter 0.4s ease;
       }
       .mermaid-wrap .mermaid g.node:hover rect,
@@ -441,14 +454,12 @@
       .mermaid-wrap .mermaid g.node:hover circle,
       .mermaid-wrap .mermaid g.node:hover ellipse,
       .mermaid-wrap .mermaid g.node:hover path {
-        filter: drop-shadow(0 0 14px rgba(157,122,255,0.85)) brightness(1.15);
+        filter: drop-shadow(0 0 18px rgba(201,139,255,0.9)) brightness(1.18);
         cursor: pointer;
       }
-
-      /* Pulse glow contínuo, sutil, em nós (sem transform) */
       @keyframes nodeGlow {
-        0%, 100% { filter: drop-shadow(0 0 6px rgba(122,162,255,0.35)); }
-        50%      { filter: drop-shadow(0 0 12px rgba(157,122,255,0.55)); }
+        0%, 100% { filter: drop-shadow(0 0 8px rgba(122,162,255,0.4)); }
+        50%      { filter: drop-shadow(0 0 14px rgba(201,139,255,0.6)); }
       }
       .mermaid-wrap.is-visible .mermaid g.node rect,
       .mermaid-wrap.is-visible .mermaid g.node polygon,
@@ -456,8 +467,6 @@
       .mermaid-wrap.is-visible .mermaid g.node ellipse {
         animation: nodeGlow 6s ease-in-out infinite;
       }
-
-      /* Setas/marker tips: pulso de cor */
       @keyframes markerPulse {
         0%, 100% { fill: var(--accent); }
         50%      { fill: var(--accent-2); }
@@ -466,50 +475,48 @@
       .mermaid-wrap.is-visible .mermaid defs marker path {
         animation: markerPulse 4s ease-in-out infinite;
       }
-
-      /* Texto: garantir visibilidade mesmo durante fade dos nós-pai */
       .mermaid-wrap .mermaid g.node text,
       .mermaid-wrap .mermaid g.label text,
-      .mermaid-wrap .mermaid g.actor text { fill: var(--text) !important; }
+      .mermaid-wrap .mermaid g.actor text { fill: var(--text) !important; font-family: var(--font-body) !important; font-weight: 500; }
       .mermaid-wrap .mermaid .edgeLabel,
       .mermaid-wrap .mermaid .edgeLabel rect { background-color: transparent !important; fill: var(--bg-2) !important; }
       .mermaid-wrap .mermaid .edgeLabel span,
-      .mermaid-wrap .mermaid .edgeLabel p { color: var(--text-dim) !important; background: transparent !important; }
+      .mermaid-wrap .mermaid .edgeLabel p { color: var(--text-dim) !important; background: transparent !important; font-family: var(--font-body) !important; }
 
-      /* ==================== REVEAL ON SCROLL ==================== */
+      /* ==================== REVEAL ==================== */
       .reveal {
-        opacity: 0;
-        transform: translateY(24px);
-        transition: opacity 0.65s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.65s cubic-bezier(0.2, 0.8, 0.2, 1);
+        opacity: 0; transform: translateY(24px);
+        transition: opacity 0.7s cubic-bezier(0.2,0.8,0.2,1), transform 0.7s cubic-bezier(0.2,0.8,0.2,1);
         will-change: opacity, transform;
       }
       .reveal.is-visible { opacity: 1; transform: translateY(0); }
 
       /* ==================== FOOTER ==================== */
       footer {
-        background: var(--bg-1);
+        background: linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 100%);
         border-top: 1px solid var(--line);
-        padding: 70px var(--doc-pad-x) 50px;
+        padding: 80px var(--doc-pad-x) 60px;
         text-align: center;
         color: var(--text-muted);
-        font-size: 13px;
+        font-size: 13.5px;
       }
-      footer h3 { color: var(--text); margin-bottom: 14px; font-size: 18px; }
-      footer code { background: rgba(122,162,255,0.1); color: var(--accent); padding: 2px 7px; border-radius: 5px; font-size: 12px; }
+      footer h3 { font-family: var(--font-display); color: var(--text); margin-bottom: 14px; font-size: 22px; }
+      footer code { background: rgba(122,162,255,0.12); color: var(--accent); padding: 3px 8px; border-radius: 5px; font-size: 12px; font-family: var(--font-mono); }
 
-      /* ==================== PRINT (A3 landscape) ==================== */
+      /* ==================== PRINT A3 ==================== */
       @page { size: A3 landscape; margin: 18mm; }
       @media print {
         .progress-bar, .topnav { display: none; }
         .reveal { opacity: 1; transform: none; }
         .mermaid-wrap::before { animation: none; }
+        body { background: white; color: black; }
+        .doc { color: black; }
+        .doc p, .doc li { color: #222; }
       }
 
       @media (max-width: 900px) {
-        :root { --doc-pad-x: 24px; --doc-pad-y: 50px; }
+        :root { --doc-pad-x: 24px; --doc-pad-y: 50px; --prose-max: 100%; }
         .hero { padding: 90px var(--doc-pad-x) 70px; }
-        .doc h1 { font-size: 32px; }
-        .doc h2 { font-size: 24px; }
       }
     </style>
   </head>
@@ -656,11 +663,20 @@
 </tr>
 </tbody>
 </table></div><p class="reveal"><strong>Resumo do fluxo em 4 passos:</strong></p>
-<pre class="reveal"><code>  +------------+    +----------+    +-------------+    +----------+    +======+
-  | Criar spec +---&gt;| Validar  +---&gt;| Implementar +---&gt;| Revisar  +---&gt;| Done |
-  +------------+    +----------+    +-------------+    +----------+    +======+
-   /draft /new /fix   /validate    agent implementador  agent revisor
-</code></pre>
+
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Pipeline de comandos SpecKit</figcaption>
+  <div class="mermaid-wrap"><pre class="mermaid">flowchart LR
+    A[Criar spec<br/><i>/draft /new /fix</i>]:::a --> B[Validar<br/><i>/validate</i>]:::b
+    B --> C[Implementar<br/><i>agent implementador</i>]:::c
+    C --> D[Revisar<br/><i>agent revisor</i>]:::d
+    D --> E([Done]):::e
+    classDef a fill:#243057,stroke:#7aa2ff,stroke-width:2px,color:#e8ecf6
+    classDef b fill:#2a2557,stroke:#9d7aff,stroke-width:2px,color:#e8ecf6
+    classDef c fill:#1b3a4d,stroke:#4cc9f0,stroke-width:2px,color:#e8ecf6
+    classDef d fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    classDef e fill:#1a3a2e,stroke:#38d39f,stroke-width:3px,color:#e8ecf6</pre></div>
+</figure>
 <blockquote class="reveal callout"><p class="reveal"><strong>Criar</strong> e <strong>validar</strong> acontecem no chat <code>@speckit</code>. <strong>Implementar</strong> e <strong>revisar</strong> acontecem em sessões separadas do Copilot Chat, selecionando os agents no dropdown.</p>
 </blockquote>
 <hr>
@@ -738,61 +754,81 @@
 </tbody>
 </table></div><p class="reveal">Ambos os caminhos convergem para o mesmo <code>.speckit/STORY-XXX.md</code> ou <code>FIX-XXX.md</code> e seguem o mesmo fluxo de validação e implementação.</p>
 <h3 id="fluxo-nova-feature-historia" class="reveal">Fluxo — Nova Feature (História)</h3>
-<pre class="reveal"><code>  +=================== Criar a spec ===================+
-  |                                                    |
-  |  /draft (texto livre)          /new (template)     |
-  |       |                             |              |
-  |       v                             v              |
-  |  elicit-story.prompt.md     STORY-XXX.md (editor)  |
-  |       |                             |              |
-  |       v                             |              |
-  |  Entrevista 6 fases                 |              |
-  |       |                             |              |
-  |       v                             |              |
-  |  STORY-XXX.md ----------------------+              |
-  +========================+===========================+
-                           v
-  +=================== Validar ========================+
-  |  /validate --&gt; Lacunas? --Sim--&gt; gap-fill --+     |
-  |                   |                         |     |
-  |                  Nao                  (volta)     |
-  |                   v                               |
-  |          DoR atingido + 9 arquivos                |
-  +========================+==========================+
-                           v
-  +============ Implementar + Revisar ================+
-  |  agent implementador --&gt; agent revisor            |
-  |     (Gates 0-2)            (Gates 3-4)            |
-  +===================================================+
-</code></pre>
+
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Fluxo Story · da criação à implementação</figcaption>
+  <div class="mermaid-wrap"><pre class="mermaid">flowchart TB
+    subgraph CRIAR["Criar a spec"]
+        direction TB
+        D1["/draft (texto livre)"]:::a --> P1[elicit-story.prompt.md]:::p
+        N1["/new (template)"]:::a --> P2[STORY-XXX.md no editor]:::p
+        P1 --> Q1[Entrevista 6 fases]:::q
+        Q1 --> S1[STORY-XXX.md]:::s
+        P2 --> S1
+    end
+    subgraph VAL["Validar"]
+        direction TB
+        V1[/validate/]:::v --> CK{Lacunas?}:::ck
+        CK -- Sim --> GF[gap-fill loop]:::g --> V1
+        CK -- Não --> DOR[DoR atingido<br/>9 arquivos]:::done
+    end
+    subgraph IMP["Implementar + Revisar"]
+        direction LR
+        AI[agent implementador<br/>Gates 0-2]:::ai --> AR[agent revisor<br/>Gates 3-4]:::ar
+    end
+    CRIAR --> VAL --> IMP
+    classDef a fill:#243057,stroke:#7aa2ff,stroke-width:2px,color:#e8ecf6
+    classDef p fill:#2a2557,stroke:#9d7aff,stroke-width:2px,color:#e8ecf6
+    classDef q fill:#1b3a4d,stroke:#4cc9f0,stroke-width:2px,color:#e8ecf6
+    classDef s fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    classDef v fill:#243057,stroke:#7aa2ff,stroke-width:2px,color:#e8ecf6
+    classDef ck fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    classDef g fill:#3a1f4d,stroke:#c98bff,stroke-width:2px,color:#e8ecf6
+    classDef done fill:#1a3a2e,stroke:#38d39f,stroke-width:3px,color:#e8ecf6
+    classDef ai fill:#1b3a4d,stroke:#4cc9f0,stroke-width:2px,color:#e8ecf6
+    classDef ar fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    style CRIAR fill:#0f1428,stroke:#7aa2ff,color:#7aa2ff
+    style VAL fill:#0f1428,stroke:#9d7aff,color:#9d7aff
+    style IMP fill:#0f1428,stroke:#4cc9f0,color:#4cc9f0</pre></div>
+</figure>
 <h3 id="fluxo-correcao-de-bug-fix" class="reveal">Fluxo — Correção de Bug (Fix)</h3>
-<pre class="reveal"><code>  +================== Criar a spec (Fix) ==============+
-  |                                                     |
-  |  /draft --fix (texto livre)     /fix (template)     |
-  |       |                              |              |
-  |       v                              v              |
-  |  elicit-fix.prompt.md       FIX-XXX.md + stack auto |
-  |       |                              |              |
-  |       v                              |              |
-  |  Entrevista 7 fases                  |              |
-  |       |                              |              |
-  |       v                              |              |
-  |  FIX-XXX.md -------------------------+              |
-  +=========================+===========================+
-                            v
-  +=================== Validar ========================+
-  |  /validate --&gt; Lacunas? --Sim--&gt; gap-fill --+     |
-  |                   |                         |     |
-  |                  Nao                  (volta)     |
-  |                   v                               |
-  |          Fix valido + 7 arquivos                  |
-  +========================+==========================+
-                           v
-  +============= Corrigir + Revisar ==================+
-  |  agent fix-implementador --&gt; agent fix-revisor    |
-  |       (Gates 0-2)              (Gates 3-4)        |
-  +===================================================+
-</code></pre>
+
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Fluxo Fix · da criação à correção</figcaption>
+  <div class="mermaid-wrap"><pre class="mermaid">flowchart TB
+    subgraph CRIAR["Criar a spec (Fix)"]
+        direction TB
+        D1["/draft --fix (texto livre)"]:::a --> P1[elicit-fix.prompt.md]:::p
+        N1["/fix (template)"]:::a --> P2[FIX-XXX.md + stack auto]:::p
+        P1 --> Q1[Entrevista 7 fases]:::q
+        Q1 --> S1[FIX-XXX.md]:::s
+        P2 --> S1
+    end
+    subgraph VAL["Validar"]
+        direction TB
+        V1[/validate/]:::v --> CK{Lacunas?}:::ck
+        CK -- Sim --> GF[gap-fill loop]:::g --> V1
+        CK -- Não --> DOR[Fix válido<br/>7 arquivos]:::done
+    end
+    subgraph IMP["Corrigir + Revisar"]
+        direction LR
+        AI[agent fix-implementador<br/>Gates 0-2]:::ai --> AR[agent fix-revisor<br/>Gates 3-4]:::ar
+    end
+    CRIAR --> VAL --> IMP
+    classDef a fill:#243057,stroke:#7aa2ff,stroke-width:2px,color:#e8ecf6
+    classDef p fill:#2a2557,stroke:#9d7aff,stroke-width:2px,color:#e8ecf6
+    classDef q fill:#1b3a4d,stroke:#4cc9f0,stroke-width:2px,color:#e8ecf6
+    classDef s fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    classDef v fill:#243057,stroke:#7aa2ff,stroke-width:2px,color:#e8ecf6
+    classDef ck fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    classDef g fill:#3a1f4d,stroke:#c98bff,stroke-width:2px,color:#e8ecf6
+    classDef done fill:#1a3a2e,stroke:#38d39f,stroke-width:3px,color:#e8ecf6
+    classDef ai fill:#1b3a4d,stroke:#4cc9f0,stroke-width:2px,color:#e8ecf6
+    classDef ar fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    style CRIAR fill:#0f1428,stroke:#ff6b8a,color:#ff6b8a
+    style VAL fill:#0f1428,stroke:#9d7aff,color:#9d7aff
+    style IMP fill:#0f1428,stroke:#4cc9f0,color:#4cc9f0</pre></div>
+</figure>
 <hr>
 <h2 id="comandos" class="reveal section-title">Comandos</h2>
 <h3 id="padrao-de-resposta-unificado-no-chat" class="reveal">Padrão de resposta unificado no chat</h3>
@@ -2143,13 +2179,28 @@ Quando uma sessão com agente implementador executa Git diretamente, o agente de
 </figure>
 
 <p class="reveal">O SpecKit estrutura a implementação em <strong>5 gates</strong> distribuídos em duas sessões:</p>
-<pre class="reveal"><code>  +== Sessao A: agent implementador ===================+     +== Sessao B: agent revisor ==+
-  |                                                     |     |                              |
-  |  Gate 0 --&gt; Gate 1 --&gt; Gate 2 --- Novo Chat ----------&gt;  Gate 3 --&gt; Gate 4            |
-  |  Alinhamento  Implementacao  Testes                 |     |  Revisao       Entrega       |
-  |                                                     |     |                              |
-  +=====================================================+     +==============================+
-</code></pre>
+
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Handoff entre sessões · Implementador → Revisor</figcaption>
+  <div class="mermaid-wrap"><pre class="mermaid">flowchart LR
+    subgraph SA["Sessão A · agent implementador"]
+        direction LR
+        G0[Gate 0<br/>Alinhamento]:::g0 --> G1[Gate 1<br/>Implementação]:::g1
+        G1 --> G2[Gate 2<br/>Testes]:::g2
+    end
+    subgraph SB["Sessão B · agent revisor"]
+        direction LR
+        G3[Gate 3<br/>Revisão]:::g3 --> G4[Gate 4<br/>Entrega]:::g4
+    end
+    SA -- "Novo Chat" --> SB
+    classDef g0 fill:#243057,stroke:#7aa2ff,stroke-width:2px,color:#e8ecf6
+    classDef g1 fill:#2a2557,stroke:#9d7aff,stroke-width:2px,color:#e8ecf6
+    classDef g2 fill:#1b3a4d,stroke:#4cc9f0,stroke-width:2px,color:#e8ecf6
+    classDef g3 fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    classDef g4 fill:#1a3a2e,stroke:#38d39f,stroke-width:3px,color:#e8ecf6
+    style SA fill:#0f1428,stroke:#4cc9f0,color:#4cc9f0
+    style SB fill:#0f1428,stroke:#ffb454,color:#ffb454</pre></div>
+</figure>
 <div class="table-wrap reveal"><table><thead>
 <tr>
 <th>Gate</th>
@@ -2503,13 +2554,21 @@ Quando uma sessão com agente implementador executa Git diretamente, o agente de
 </figure>
 
 <p class="reveal">O SpecKit oferece <strong>5 modos de operação</strong> que alteram o comportamento, os guardrails e os protocolos do agente. Use <code>/agent &lt;modo&gt;</code> para alternar.</p>
-<pre class="reveal"><code>  +---------+   +---------------+   +---------+   +----------+   +----------+
-  | default |--&gt;| implementador |--&gt;| revisor |--&gt;| debugger |--&gt;| refactor |
-  +---------+   +---------------+   +---------+   +----------+   +----------+
-       ^                                                               |
-       +---------------------------------------------------------------+
-                            @speckit /agent &lt;modo&gt;
-</code></pre>
+
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Modos do agente · grafo de transição</figcaption>
+  <div class="mermaid-wrap"><pre class="mermaid">flowchart LR
+    DEF[default]:::d -->|/agent implementador| IMP[implementador]:::a
+    IMP -->|/agent revisor| REV[revisor]:::b
+    REV -->|/agent debugger| DBG[debugger]:::c
+    DBG -->|/agent refactor| RFT[refactor]:::e
+    RFT -->|/agent default| DEF
+    classDef d fill:#243057,stroke:#7aa2ff,stroke-width:2px,color:#e8ecf6
+    classDef a fill:#1b3a4d,stroke:#4cc9f0,stroke-width:2px,color:#e8ecf6
+    classDef b fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    classDef c fill:#3a1f4d,stroke:#c98bff,stroke-width:2px,color:#e8ecf6
+    classDef e fill:#1a3a2e,stroke:#58e1c2,stroke-width:2px,color:#e8ecf6</pre></div>
+</figure>
 <h3 id="mode-default" class="reveal">Mode: Default</h3>
 <p class="reveal">Modo conversacional sem protocolo de gate. Útil para perguntas gerais, testes de conceito e exploração livre.</p>
 <p class="reveal"><strong>Quando usar:</strong></p>
@@ -2809,14 +2868,30 @@ Agente:  📋 Etapa 1 — Snapshot
 <h2 id="guia-pratico-do-zero-a-entrega" class="reveal section-title">Guia prático — do zero à entrega</h2>
 <p class="reveal">Passo a passo completo: da instalação até o commit de entrega. Aplicável a qualquer Story.</p>
 <h3 id="visao-geral-do-fluxo" class="reveal">Visão geral do fluxo</h3>
-<pre class="reveal"><code>  +== Sessao 1: SpecKit Chat ===+   +== Sessao 2: Implementador ====+   +== Sessao 3: Revisor ==+
-  |                              |   |                               |   |                        |
-  |  1. Instalar plugin          |   |  4. Gate 0 -- Alinhar         |   |  7. Gate 3 -- Revisar  |
-  |  2. Criar spec               |--&gt;|  5. Gate 1 -- Implementar     |--&gt;|  8. Gate 4 -- Entregar |
-  |  3. Validar spec             |   |  6. Gate 2 -- Testar          |   |                        |
-  |                              |   |                               |   |                        |
-  +==============================+   +===============================+   +========================+
-</code></pre>
+
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Três sessões · ciclo completo</figcaption>
+  <div class="mermaid-wrap"><pre class="mermaid">flowchart LR
+    subgraph S1["Sessão 1 · SpecKit Chat"]
+        direction TB
+        N1[Instalar plugin]:::a --> N2[Criar spec]:::a --> N3[Validar spec]:::a
+    end
+    subgraph S2["Sessão 2 · Implementador"]
+        direction TB
+        N4[Gate 0 — Alinhar]:::b --> N5[Gate 1 — Implementar]:::b --> N6[Gate 2 — Testar]:::b
+    end
+    subgraph S3["Sessão 3 · Revisor"]
+        direction TB
+        N7[Gate 3 — Revisar]:::c --> N8[Gate 4 — Entregar]:::c
+    end
+    S1 --> S2 --> S3
+    classDef a fill:#243057,stroke:#7aa2ff,stroke-width:2px,color:#e8ecf6
+    classDef b fill:#1b3a4d,stroke:#4cc9f0,stroke-width:2px,color:#e8ecf6
+    classDef c fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    style S1 fill:#0f1428,stroke:#7aa2ff,color:#7aa2ff
+    style S2 fill:#0f1428,stroke:#4cc9f0,color:#4cc9f0
+    style S3 fill:#0f1428,stroke:#ffb454,color:#ffb454</pre></div>
+</figure>
 <h3 id="passo-1-instalar-o-plugin" class="reveal">Passo 1 — Instalar o plugin</h3>
 <pre class="reveal"><code>Ctrl+Shift+P → Extensions: Install from VSIX → selecionar arquivo .vsix
 </code></pre>
@@ -2994,33 +3069,27 @@ Agente:  📋 Checklist de Revisão (11 dimensões)
 <details>
 <summary><strong>Story via /draft (elicitação por texto livre)</strong></summary>
 <h3 id="sequencia-draft-elicitacao-validate" class="reveal">Sequência: /draft → elicitação → /validate</h3>
-<pre class="reveal"><code>  Voce                        @speckit                    Copilot Agente
-   |                             |                             |
-   |  /draft &quot;Calcular           |                             |
-   |   comissao via Kafka&quot;       |                             |
-   |----------------------------&gt;|                             |
-   |    elicit-story-001.prompt  |                             |
-   |&lt;----------------------------|                             |
-   |                             |  Abra em Novo Chat Agente  |
-   |---------------------------------------------------------&gt;|
-   |                             |                             |
-   |              +---- loop 6 Fases (1 pergunta por vez) ----+
-   |              |  Pergunta Negocio/Funcional/NFR/Tech/DoR  ||
-   |&lt;---------------------------------------------------------|
-   |  Responde    |                                           ||
-   |---------------------------------------------------------&gt;|
-   |              |  Registrado. Proxima...                   ||
-   |&lt;---------------------------------------------------------|
-   |              +-------------------------------------------+
-   |                             |    STORY-001.md criado      |
-   |&lt;---------------------------------------------------------|
-   |                             |                             |
-   |  /validate                  |                             |
-   |----------------------------&gt;|                             |
-   |    DoR atingido — 9 arqs    |                             |
-   |&lt;----------------------------|                             |
-   |                             |  Novo Chat → implementador  |
-</code></pre>
+
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Sequence · criação de Story</figcaption>
+  <div class="mermaid-wrap"><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor U as Você
+    participant S as @speckit
+    participant A as Copilot Agente
+    U->>S: /draft "Calcular comissão via Kafka"
+    S-->>U: elicit-story-001.prompt
+    U->>A: Abrir em Novo Chat Agente
+    loop 6 fases (1 pergunta por vez)
+        A->>U: Pergunta Negócio / Funcional / NFR / Tech / DoR
+        U->>A: Responde
+        A-->>U: Registrado. Próxima…
+    end
+    A-->>U: STORY-001.md criado
+    U->>S: /validate
+    S-->>U: DoR atingido — 9 arquivos
+    S-->>U: Novo Chat → implementador</pre></div>
+</figure>
 <p class="reveal"><strong>Input:</strong></p>
 <pre class="reveal"><code>@speckit /draft Quero calcular comissão de vendedores baseado em eventos Kafka quando uma venda é concluída
 </code></pre>
@@ -3061,32 +3130,27 @@ Agente:  📋 Checklist de Revisão (11 dimensões)
 <details>
 <summary><strong>Fix via /draft (detecção automática de intent)</strong></summary>
 <h3 id="sequencia-draft-elicitacao-fix-validate" class="reveal">Sequência: /draft → elicitação fix → /validate</h3>
-<pre class="reveal"><code>  Voce                        @speckit                    Copilot Agente
-   |                             |                             |
-   |  /draft &quot;Login OAuth2       |                             |
-   |   retorna 500 apos token&quot;   |                             |
-   |----------------------------&gt;|                             |
-   |                     Detecta keyword &quot;500&quot; → intent fix    |
-   |    elicit-fix-001.prompt    |                             |
-   |&lt;----------------------------|                             |
-   |                             |  Abra em Novo Chat Agente  |
-   |---------------------------------------------------------&gt;|
-   |                             |                             |
-   |              +---- loop 7 Fases -------------------------+
-   |              |  Bug/Hipotese/Impacto/Regressao/Ctx/DoF   ||
-   |&lt;---------------------------------------------------------|
-   |  Responde    |                                           ||
-   |---------------------------------------------------------&gt;|
-   |              +-------------------------------------------+
-   |                             |    FIX-001.md criado        |
-   |&lt;---------------------------------------------------------|
-   |                             |                             |
-   |  /validate                  |                             |
-   |----------------------------&gt;|                             |
-   |    Fix valido — 7 arqs      |                             |
-   |&lt;----------------------------|                             |
-   |                             |  Novo Chat → fix-implem.    |
-</code></pre>
+
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Sequence · criação de Story</figcaption>
+  <div class="mermaid-wrap"><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor U as Você
+    participant S as @speckit
+    participant A as Copilot Agente
+    U->>S: /draft "Calcular comissão via Kafka"
+    S-->>U: elicit-story-001.prompt
+    U->>A: Abrir em Novo Chat Agente
+    loop 6 fases (1 pergunta por vez)
+        A->>U: Pergunta Negócio / Funcional / NFR / Tech / DoR
+        U->>A: Responde
+        A-->>U: Registrado. Próxima…
+    end
+    A-->>U: STORY-001.md criado
+    U->>S: /validate
+    S-->>U: DoR atingido — 9 arquivos
+    S-->>U: Novo Chat → implementador</pre></div>
+</figure>
 <p class="reveal"><strong>Input:</strong></p>
 <pre class="reveal"><code>@speckit /draft O login OAuth2 retorna 500 após expiração do token de refresh
 </code></pre>
@@ -3307,49 +3371,23 @@ Apache Kafka (AWS MSK), Docker, Kubernetes (EKS), GitHub Actions
 </code></pre>
 <hr>
 <h3 id="story-incompleta-fluxo-de-alinhamento" class="reveal">Story incompleta — fluxo de alinhamento</h3>
-<pre class="reveal"><code>  Voce                                           @speckit
-   |                                                |
-   |  /validate (story com lacunas)                 |
-   |-----------------------------------------------&gt;|
-   |                          6 lacunas encontradas |
-   |&lt;-----------------------------------------------|
-   |                                                |
-   |  Lacuna 1 — Valor de negocio?                  |
-   |&lt;-----------------------------------------------|
-   |  &quot;Eliminar lag D+1, dashboards ao vivo&quot;        |
-   |-----------------------------------------------&gt;|
-   |                                                |
-   |  Lacuna 2 — Tipos de regra de comissao?        |
-   |&lt;-----------------------------------------------|
-   |  &quot;Taxa fixa, escalonada, teto, bonus&quot;          |
-   |-----------------------------------------------&gt;|
-   |                                                |
-   |  Lacuna 3 — Fora de escopo?                    |
-   |&lt;-----------------------------------------------|
-   |  &quot;Pagamento, API REST, recalculo&quot;              |
-   |-----------------------------------------------&gt;|
-   |                                                |
-   |  Lacuna 4 — SLA de performance?                |
-   |&lt;-----------------------------------------------|
-   |  &quot;P99 &lt; 300ms, 1k eventos/min&quot;                 |
-   |-----------------------------------------------&gt;|
-   |                                                |
-   |  Lacuna 5 — Arquitetura?                       |
-   |&lt;-----------------------------------------------|
-   |  &quot;Hexagonal&quot;                                   |
-   |-----------------------------------------------&gt;|
-   |                                                |
-   |  Lacuna 6 — DoD?                               |
-   |&lt;-----------------------------------------------|
-   |  &quot;Idempotencia, DLQ, sem PII, branch&quot;          |
-   |-----------------------------------------------&gt;|
-   |                  Todas as lacunas preenchidas   |
-   |                                                |
-   |  /validate (novamente)                         |
-   |-----------------------------------------------&gt;|
-   |               DoR atingido — 9 arquivos gerados|
-   |&lt;-----------------------------------------------|
-</code></pre>
+
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Sequence · loop gap-fill de Story</figcaption>
+  <div class="mermaid-wrap"><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor U as Você
+    participant S as @speckit
+    U->>S: /validate (story com lacunas)
+    S-->>U: 6 lacunas encontradas
+    loop 6 lacunas
+        S->>U: Lacuna N — pergunta direcionada
+        U-->>S: Resposta concisa
+    end
+    S-->>U: Todas as lacunas preenchidas
+    U->>S: /validate (novamente)
+    S-->>U: DoR atingido — 9 arquivos gerados</pre></div>
+</figure>
 </details>
 <details>
 <summary><strong>Fix via /fix (template direto) — completo e incompleto</strong></summary>
@@ -3475,39 +3513,23 @@ Middleware impacta: refresh token, API key auth, rotas públicas opcionais.
 </blockquote>
 <hr>
 <h3 id="fix-incompleto-fluxo-de-alinhamento" class="reveal">Fix incompleto — fluxo de alinhamento</h3>
-<pre class="reveal"><code>  Voce                                           @speckit
-   |                                                |
-   |  /validate (fix com lacunas)                   |
-   |-----------------------------------------------&gt;|
-   |                          4 lacunas encontradas |
-   |&lt;-----------------------------------------------|
-   |                                                |
-   |  Lacuna 1 — Passos para reproduzir?            |
-   |&lt;-----------------------------------------------|
-   |  &quot;Relatorio &gt; Exportar PDF. TypeError&quot;         |
-   |-----------------------------------------------&gt;|
-   |                                                |
-   |  Lacuna 2 — Hipotese da causa raiz?            |
-   |&lt;-----------------------------------------------|
-   |  &quot;Firefox bloqueia window.print() em async&quot;    |
-   |-----------------------------------------------&gt;|
-   |                                                |
-   |  Lacuna 3 — Severidade?                        |
-   |&lt;-----------------------------------------------|
-   |  &quot;High — usado diariamente pelo financeiro&quot;    |
-   |-----------------------------------------------&gt;|
-   |                                                |
-   |  Lacuna 4 — Testes de regressao?               |
-   |&lt;-----------------------------------------------|
-   |  &quot;Unitario: print sincrono. Integracao: cliq&quot; |
-   |-----------------------------------------------&gt;|
-   |                       Todas as lacunas preench. |
-   |                                                |
-   |  /validate (novamente)                         |
-   |-----------------------------------------------&gt;|
-   |                Fix valido — 7 arquivos gerados |
-   |&lt;-----------------------------------------------|
-</code></pre>
+
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Sequence · loop gap-fill de Fix</figcaption>
+  <div class="mermaid-wrap"><pre class="mermaid">sequenceDiagram
+    autonumber
+    actor U as Você
+    participant S as @speckit
+    U->>S: /validate (fix com lacunas)
+    S-->>U: Lacunas encontradas
+    loop até preencher
+        S->>U: Lacuna N — pergunta direcionada
+        U-->>S: Resposta concisa
+    end
+    S-->>U: Todas as lacunas preenchidas
+    U->>S: /validate
+    S-->>U: Fix válido — 7 arquivos gerados</pre></div>
+</figure>
 </details>
 <hr>
 <h2 id="rastreabilidade-e-auditoria" class="reveal section-title">Rastreabilidade e auditoria</h2>
