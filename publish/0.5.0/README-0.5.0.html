@@ -243,20 +243,20 @@
         padding: var(--doc-pad-y) var(--doc-pad-x);
         position: relative;
       }
-      /* Justificação inteligente: justify + hifenização + interword + word-spacing
-         conservador. Última linha à esquerda para evitar "spaced out". */
+      /* Justificação ergonômica: A3 landscape tem largura generosa,
+         então mantemos a prosa cobrindo toda a coluna do .doc para que
+         a justificação fique VISÍVEL (múltiplas linhas por parágrafo).
+         text-align-last NÃO é forçado a left, pois isso anula a justificação
+         em parágrafos curtos. Mantemos hifenização para evitar rios. */
       .doc p, .doc li {
         text-align: justify;
-        text-align-last: left;
         text-justify: inter-word;
         hyphens: auto;
         -webkit-hyphens: auto;
-        word-spacing: -0.02em;
+        word-spacing: -0.015em;
         overflow-wrap: break-word;
-        max-width: var(--prose-max);
       }
-      .doc blockquote { max-width: var(--prose-max); }
-      .doc blockquote p { max-width: 100%; }
+      .doc blockquote p { text-align: justify; }
       .doc h1, .doc h2, .doc h3, .doc h4 { text-align: left; }
       .doc h1 {
         font-family: var(--font-display);
@@ -542,10 +542,10 @@
         </p>
         <div class="hero-meta">
           <div class="meta-card"><div class="label">Versão</div><div class="value">0.5.0 <small>MINOR</small></div></div>
-          <div class="meta-card"><div class="label">Layout</div><div class="value">A3 <small>landscape</small></div></div>
-          <div class="meta-card"><div class="label">Texto</div><div class="value">Justificado</div></div>
-          <div class="meta-card"><div class="label">Diagramas</div><div class="value">Mermaid <small>animado</small></div></div>
-          <div class="meta-card"><div class="label">Capítulos</div><div class="value">20</div></div>
+          <div class="meta-card"><div class="label">Comandos</div><div class="value">15 <small>slash · participant</small></div></div>
+          <div class="meta-card"><div class="label">Spec-First</div><div class="value">Validation <small>hook automático</small></div></div>
+          <div class="meta-card"><div class="label">Review</div><div class="value">review-auto <small>multi-LLM</small></div></div>
+          <div class="meta-card"><div class="label">IDE</div><div class="value">VS Code <small>1.85+</small></div></div>
         </div>
       </div>
     </header>
