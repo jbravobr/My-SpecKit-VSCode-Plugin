@@ -1,0 +1,4388 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SpecKit — Spec Driven Development · README · v0.5.0</title>
+    <meta name="description" content="Documentação completa da extensão SpecKit em formato HTML rico, com diagramas animados e layout A3." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+    <style>
+      :root {
+        --bg-0: #0b1020;
+        --bg-1: #11172b;
+        --bg-2: #161e36;
+        --surface: #1c2541;
+        --surface-2: #243057;
+        --line: #2a3760;
+        --text: #e8ecf6;
+        --text-dim: #b0b9d4;
+        --text-muted: #7c87a9;
+        --accent: #7aa2ff;
+        --accent-2: #9d7aff;
+        --user: #58e1c2;
+        --participant: #ffb454;
+        --llm: #c98bff;
+        --success: #38d39f;
+        --warn: #ffb454;
+        --danger: #ff6b8a;
+        --gate: #4cc9f0;
+        --gradient-hero: linear-gradient(135deg, #0b1020 0%, #1a1d4d 50%, #2a1d5d 100%);
+        --gradient-accent: linear-gradient(135deg, #7aa2ff 0%, #9d7aff 100%);
+        --gradient-success: linear-gradient(135deg, #38d39f 0%, #4cc9f0 100%);
+        --gradient-aurora: linear-gradient(120deg, #7aa2ff, #9d7aff, #58e1c2, #ffb454, #c98bff);
+        /* A3 landscape: 1587px @ 96dpi. Margins generosas. */
+        --doc-max: 1480px;
+        --doc-pad-x: 80px;
+        --doc-pad-y: 90px;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html { scroll-behavior: smooth; }
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg-0);
+        color: var(--text);
+        line-height: 1.72;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+      code, pre, .mono { font-family: "JetBrains Mono", "Consolas", monospace; }
+
+      /* ==================== ANIMAÇÕES BASE ==================== */
+      @keyframes fadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes pulseDot {
+        0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 12px var(--success); }
+        50% { opacity: 0.55; transform: scale(1.35); box-shadow: 0 0 22px var(--success); }
+      }
+      @keyframes auroraShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+      }
+      @keyframes shimmer {
+        0% { background-position: -1000px 0; }
+        100% { background-position: 1000px 0; }
+      }
+      @keyframes drawLine {
+        from { stroke-dashoffset: 1200; }
+        to { stroke-dashoffset: 0; }
+      }
+      @keyframes fadeNode {
+        from { opacity: 0; transform: scale(0.85); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      @keyframes orbit {
+        from { transform: rotate(0deg) translateX(160px) rotate(0deg); }
+        to { transform: rotate(360deg) translateX(160px) rotate(-360deg); }
+      }
+      @keyframes blink { 50% { opacity: 0; } }
+
+      /* ==================== PROGRESS BAR ==================== */
+      .progress-bar {
+        position: fixed; top: 0; left: 0;
+        height: 3px; width: 0%;
+        background: var(--gradient-aurora);
+        background-size: 300% 100%;
+        animation: auroraShift 6s ease infinite;
+        z-index: 1000;
+        box-shadow: 0 0 14px rgba(122,162,255,0.7);
+        transition: width 0.1s linear;
+      }
+
+      /* ==================== TOP NAV ==================== */
+      .topnav {
+        position: fixed; top: 14px; right: 18px;
+        z-index: 999;
+        background: rgba(17,23,43,0.78);
+        backdrop-filter: blur(14px);
+        border: 1px solid var(--line);
+        border-radius: 100px;
+        padding: 8px 14px;
+        display: flex; gap: 4px;
+        font-size: 12px; font-weight: 600;
+        animation: fadeIn 0.8s ease 0.3s backwards;
+      }
+      .topnav a {
+        color: var(--text-dim);
+        text-decoration: none;
+        padding: 6px 12px;
+        border-radius: 100px;
+        transition: all 0.25s;
+      }
+      .topnav a:hover { color: var(--text); background: rgba(122,162,255,0.15); transform: translateY(-1px); }
+      @media (max-width: 1100px) { .topnav { display: none; } }
+
+      /* ==================== HERO ==================== */
+      .hero {
+        background: var(--gradient-hero);
+        padding: 150px var(--doc-pad-x) 120px;
+        position: relative;
+        overflow: hidden;
+        border-bottom: 1px solid var(--line);
+      }
+      .hero::before {
+        content: ""; position: absolute;
+        top: -50%; left: -10%;
+        width: 60%; height: 200%;
+        background: radial-gradient(circle, rgba(157,122,255,0.20) 0%, transparent 70%);
+        pointer-events: none;
+        animation: float 8s ease-in-out infinite;
+      }
+      .hero::after {
+        content: ""; position: absolute;
+        bottom: -50%; right: -10%;
+        width: 60%; height: 200%;
+        background: radial-gradient(circle, rgba(122,162,255,0.18) 0%, transparent 70%);
+        pointer-events: none;
+        animation: float 9s ease-in-out infinite reverse;
+      }
+      .hero-inner { max-width: var(--doc-max); margin: 0 auto; position: relative; z-index: 1; }
+      .eyebrow {
+        display: inline-flex; align-items: center; gap: 10px;
+        padding: 8px 18px;
+        background: rgba(122,162,255,0.12);
+        border: 1px solid rgba(122,162,255,0.35);
+        border-radius: 100px;
+        font-size: 13px; font-weight: 600;
+        color: var(--accent);
+        letter-spacing: 0.08em; text-transform: uppercase;
+        margin-bottom: 28px;
+        animation: fadeUp 0.7s ease;
+      }
+      .eyebrow .dot {
+        width: 8px; height: 8px;
+        background: var(--success);
+        border-radius: 50%;
+        animation: pulseDot 2s ease-in-out infinite;
+      }
+      .hero h1 {
+        font-size: clamp(40px, 6vw, 78px);
+        font-weight: 800; line-height: 1.05;
+        letter-spacing: -0.025em;
+        background: linear-gradient(135deg, #ffffff 0%, #b0b9d4 100%);
+        -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 26px;
+        animation: fadeUp 0.9s ease 0.1s backwards;
+      }
+      .hero h1 .grad {
+        background: var(--gradient-aurora);
+        background-size: 300% 100%;
+        -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: auroraShift 8s ease infinite;
+      }
+      .hero-lead {
+        font-size: clamp(17px, 1.6vw, 22px);
+        color: var(--text-dim);
+        margin-bottom: 56px; font-weight: 400;
+        text-align: justify; hyphens: auto;
+        max-width: 1200px;
+        animation: fadeUp 1s ease 0.25s backwards;
+      }
+      .hero-meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        animation: fadeUp 1s ease 0.4s backwards;
+      }
+      .meta-card {
+        background: rgba(28,37,65,0.6);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 18px 20px;
+        backdrop-filter: blur(8px);
+        transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+      }
+      .meta-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--accent);
+        box-shadow: 0 12px 28px rgba(122,162,255,0.18);
+      }
+      .meta-card .label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; }
+      .meta-card .value { font-size: 22px; font-weight: 700; color: var(--text); }
+      .meta-card .value small { font-size: 13px; color: var(--text-dim); font-weight: 500; margin-left: 4px; }
+
+      /* ==================== TOC ==================== */
+      .toc-section { padding: var(--doc-pad-y) var(--doc-pad-x); background: var(--bg-1); border-bottom: 1px solid var(--line); }
+      .toc-inner { max-width: var(--doc-max); margin: 0 auto; }
+      .toc-title { font-size: 12px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin-bottom: 24px; }
+      .toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+      .toc-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 14px 18px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        color: var(--text-dim);
+        text-decoration: none;
+        font-size: 14px; font-weight: 500;
+        transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        animation: fadeUp 0.5s ease backwards;
+        animation-delay: calc(var(--i, 0) * 40ms);
+      }
+      .toc-item:hover { transform: translateX(4px); border-color: var(--accent); color: var(--text); }
+      .toc-num { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--accent); font-weight: 700; }
+      .toc-text { flex: 1; }
+
+      /* ==================== DOC CONTENT ==================== */
+      .doc {
+        max-width: var(--doc-max);
+        margin: 0 auto;
+        padding: var(--doc-pad-y) var(--doc-pad-x);
+        position: relative;
+      }
+      .doc h1, .doc h2, .doc h3, .doc h4, .doc p, .doc li, .doc blockquote {
+        text-align: justify;
+        text-justify: inter-word;
+        hyphens: auto;
+        -webkit-hyphens: auto;
+        word-break: keep-all;
+        overflow-wrap: break-word;
+      }
+      .doc h1 {
+        font-size: clamp(30px, 4vw, 52px);
+        font-weight: 800; line-height: 1.12; letter-spacing: -0.02em;
+        margin: 70px 0 26px;
+        background: linear-gradient(135deg, #ffffff 0%, #b0b9d4 100%);
+        -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: left;
+      }
+      .doc h1:first-child { margin-top: 0; }
+      .doc h2 {
+        font-size: clamp(24px, 2.6vw, 36px);
+        font-weight: 800; line-height: 1.2; letter-spacing: -0.015em;
+        margin: 70px 0 22px;
+        color: var(--text);
+        padding-left: 18px;
+        border-left: 4px solid transparent;
+        border-image: var(--gradient-accent) 1;
+        text-align: left;
+      }
+      .doc h3 {
+        font-size: 22px; font-weight: 700; margin: 40px 0 14px; color: var(--accent);
+        text-align: left;
+      }
+      .doc h4 {
+        font-size: 17px; font-weight: 700; margin: 26px 0 10px; color: var(--accent-2);
+        text-align: left;
+      }
+      .doc p { margin: 14px 0; color: var(--text-dim); font-size: 16px; }
+      .doc strong { color: var(--text); font-weight: 600; }
+      .doc em { color: var(--text); font-style: italic; }
+      .doc a { color: var(--accent); text-decoration: none; border-bottom: 1px dashed rgba(122,162,255,0.4); transition: all 0.2s; }
+      .doc a:hover { color: var(--accent-2); border-bottom-color: var(--accent-2); }
+      .doc ul, .doc ol { margin: 14px 0 18px 28px; color: var(--text-dim); }
+      .doc li { margin-bottom: 8px; font-size: 16px; }
+      .doc li::marker { color: var(--accent); }
+      .doc hr {
+        border: none;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--line) 20%, var(--line) 80%, transparent);
+        margin: 50px 0;
+      }
+      .doc code:not(pre code) {
+        background: rgba(122,162,255,0.12);
+        color: var(--accent);
+        padding: 2px 7px;
+        border-radius: 5px;
+        font-size: 0.9em;
+        border: 1px solid rgba(122,162,255,0.18);
+      }
+      .doc pre {
+        background: #0a0f1f;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px 22px;
+        margin: 18px 0 26px;
+        overflow-x: auto;
+        font-size: 13px;
+        line-height: 1.65;
+        color: #d4dbef;
+        position: relative;
+      }
+      .doc pre::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 2px;
+        background: var(--gradient-accent);
+        opacity: 0.6;
+      }
+      .doc pre code { color: #d4dbef; font-size: 13px; }
+      .doc blockquote.callout {
+        background: rgba(122,162,255,0.06);
+        border-left: 4px solid var(--accent);
+        border-radius: 8px;
+        padding: 16px 22px;
+        margin: 20px 0 26px;
+        color: var(--text-dim);
+        font-size: 15px;
+      }
+      .doc blockquote.callout p { margin: 6px 0; }
+
+      /* ==================== TABLE ==================== */
+      .table-wrap {
+        overflow-x: auto;
+        margin: 18px 0 28px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: var(--shadow-md, 0 8px 24px rgba(0,0,0,0.25));
+      }
+      .doc table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      .doc thead { background: var(--surface-2); }
+      .doc th, .doc td {
+        text-align: left;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--line);
+        color: var(--text-dim);
+      }
+      .doc th { color: var(--text); font-weight: 700; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; }
+      .doc tbody tr { transition: background 0.2s; }
+      .doc tbody tr:hover { background: rgba(122,162,255,0.05); }
+      .doc tbody tr:last-child td { border-bottom: none; }
+
+      /* ==================== MERMAID ==================== */
+      .diagram-figure { margin: 32px 0 40px; }
+      .diagram-caption {
+        font-size: 12px; font-weight: 700; letter-spacing: 0.16em;
+        text-transform: uppercase; color: var(--accent);
+        margin-bottom: 14px; text-align: left;
+      }
+      .mermaid-wrap {
+        background: var(--bg-2);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 36px 30px;
+        margin: 18px 0 32px;
+        text-align: center;
+        overflow-x: auto;
+        position: relative;
+      }
+      .mermaid-wrap::before {
+        content: ""; position: absolute; inset: 0;
+        background: linear-gradient(90deg, transparent, rgba(122,162,255,0.06), transparent);
+        background-size: 1000px 100%;
+        animation: shimmer 6s linear infinite;
+        pointer-events: none; border-radius: 16px;
+      }
+      .mermaid { font-family: "Inter", sans-serif !important; position: relative; z-index: 1; }
+      .mermaid svg { max-width: 100%; height: auto !important; }
+      /* Animação: draw das linhas + fade dos nós quando aparecem no viewport */
+      .mermaid-wrap.is-visible .mermaid g.node,
+      .mermaid-wrap.is-visible .mermaid g.actor {
+        animation: fadeNode 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+      }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-child(1) { animation-delay: 0.05s; }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-child(2) { animation-delay: 0.15s; }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-child(3) { animation-delay: 0.25s; }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-child(4) { animation-delay: 0.35s; }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-child(5) { animation-delay: 0.45s; }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-child(n+6) { animation-delay: 0.55s; }
+      .mermaid-wrap.is-visible .mermaid .flowchart-link,
+      .mermaid-wrap.is-visible .mermaid path.transition,
+      .mermaid-wrap.is-visible .mermaid .messageLine0,
+      .mermaid-wrap.is-visible .mermaid .messageLine1 {
+        stroke-dasharray: 1200;
+        stroke-dashoffset: 1200;
+        animation: drawLine 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s forwards;
+      }
+      .mermaid g.node:hover { filter: brightness(1.25) drop-shadow(0 0 12px rgba(122,162,255,0.6)); cursor: pointer; transition: filter 0.25s ease; }
+
+      /* ==================== REVEAL ON SCROLL ==================== */
+      .reveal {
+        opacity: 0;
+        transform: translateY(24px);
+        transition: opacity 0.65s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.65s cubic-bezier(0.2, 0.8, 0.2, 1);
+        will-change: opacity, transform;
+      }
+      .reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+      /* ==================== FOOTER ==================== */
+      footer {
+        background: var(--bg-1);
+        border-top: 1px solid var(--line);
+        padding: 70px var(--doc-pad-x) 50px;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 13px;
+      }
+      footer h3 { color: var(--text); margin-bottom: 14px; font-size: 18px; }
+      footer code { background: rgba(122,162,255,0.1); color: var(--accent); padding: 2px 7px; border-radius: 5px; font-size: 12px; }
+
+      /* ==================== PRINT (A3 landscape) ==================== */
+      @page { size: A3 landscape; margin: 18mm; }
+      @media print {
+        .progress-bar, .topnav { display: none; }
+        .reveal { opacity: 1; transform: none; }
+        .mermaid-wrap::before { animation: none; }
+      }
+
+      @media (max-width: 900px) {
+        :root { --doc-pad-x: 24px; --doc-pad-y: 50px; }
+        .hero { padding: 90px var(--doc-pad-x) 70px; }
+        .doc h1 { font-size: 32px; }
+        .doc h2 { font-size: 24px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="progress-bar" id="progressBar"></div>
+
+    <nav class="topnav" aria-label="Navegação principal">
+      <a href="#guia-de-leitura">Guia</a>
+      <a href="#instalacao">Install</a>
+      <a href="#como-usar">Uso</a>
+      <a href="#comandos">Comandos</a>
+      <a href="#gates-de-implementacao">Gates</a>
+      <a href="#estrategia-de-prompt-layering-e-tokens">Prompts</a>
+      <a href="#modos-de-agente">Modos</a>
+      <a href="#matriz-de-maturidade">Maturidade</a>
+    </nav>
+
+    <header class="hero">
+      <div class="hero-inner">
+        <div class="eyebrow"><span class="dot"></span>SpecKit · README HTML · v0.5.0</div>
+        <h1>Spec <span class="grad">Driven</span> Development<br />para VS Code.</h1>
+        <p class="hero-lead">
+          Documentação completa em formato HTML rico — todo o conteúdo do README.md transposto com tipografia justificada,
+          margens A3, diagramas Mermaid animados e revelação progressiva por scroll. Tudo continua local, auditável e
+          alinhado ao fluxo SDD: cinco gates, atores bem definidos, prompts em camadas, validação determinística e UI
+          nativa do VS Code.
+        </p>
+        <div class="hero-meta">
+          <div class="meta-card"><div class="label">Versão</div><div class="value">0.5.0 <small>MINOR</small></div></div>
+          <div class="meta-card"><div class="label">Layout</div><div class="value">A3 <small>landscape</small></div></div>
+          <div class="meta-card"><div class="label">Texto</div><div class="value">Justificado</div></div>
+          <div class="meta-card"><div class="label">Diagramas</div><div class="value">Mermaid <small>animado</small></div></div>
+          <div class="meta-card"><div class="label">Capítulos</div><div class="value">20</div></div>
+        </div>
+      </div>
+    </header>
+
+    <section class="toc-section" id="sumario">
+      <div class="toc-inner">
+        <div class="toc-title">Sumário · 20 seções</div>
+        <div class="toc-grid">
+          <a href="#guia-de-leitura" class="toc-item" style="--i:0"><span class="toc-num">01</span><span class="toc-text">Guia de leitura</span></a>
+<a href="#pre-requisitos" class="toc-item" style="--i:1"><span class="toc-num">02</span><span class="toc-text">Pré-requisitos</span></a>
+<a href="#instalacao" class="toc-item" style="--i:2"><span class="toc-num">03</span><span class="toc-text">Instalação</span></a>
+<a href="#como-usar" class="toc-item" style="--i:3"><span class="toc-num">04</span><span class="toc-text">Como usar</span></a>
+<a href="#comandos" class="toc-item" style="--i:4"><span class="toc-num">05</span><span class="toc-text">Comandos</span></a>
+<a href="#acesso-pela-paleta-de-comandos" class="toc-item" style="--i:5"><span class="toc-num">06</span><span class="toc-text">Acesso pela paleta de comandos</span></a>
+<a href="#configuracao-do-workspace" class="toc-item" style="--i:6"><span class="toc-num">07</span><span class="toc-text">Configuração do workspace</span></a>
+<a href="#backup-e-logging" class="toc-item" style="--i:7"><span class="toc-num">08</span><span class="toc-text">Backup e logging</span></a>
+<a href="#arquivos-gerados" class="toc-item" style="--i:8"><span class="toc-num">09</span><span class="toc-text">Arquivos gerados</span></a>
+<a href="#gates-de-implementacao" class="toc-item" style="--i:9"><span class="toc-num">10</span><span class="toc-text">Gates de implementação</span></a>
+<a href="#estrategia-de-prompt-layering-e-tokens" class="toc-item" style="--i:10"><span class="toc-num">11</span><span class="toc-text">Estratégia de prompt layering e tokens</span></a>
+<a href="#modos-de-agente" class="toc-item" style="--i:11"><span class="toc-num">12</span><span class="toc-text">Modos de agente</span></a>
+<a href="#garantias-de-qualidade-por-gate" class="toc-item" style="--i:12"><span class="toc-num">13</span><span class="toc-text">Garantias de qualidade por gate</span></a>
+<a href="#guia-pratico-do-zero-a-entrega" class="toc-item" style="--i:13"><span class="toc-num">14</span><span class="toc-text">Guia prático — do zero à entrega</span></a>
+<a href="#exemplos-praticos" class="toc-item" style="--i:14"><span class="toc-num">15</span><span class="toc-text">Exemplos práticos</span></a>
+<a href="#rastreabilidade-e-auditoria" class="toc-item" style="--i:15"><span class="toc-num">16</span><span class="toc-text">Rastreabilidade e auditoria</span></a>
+<a href="#referencia-rapida-o-que-dizer-ao-agente" class="toc-item" style="--i:16"><span class="toc-num">17</span><span class="toc-text">Referência rápida — o que dizer ao agente</span></a>
+<a href="#faq" class="toc-item" style="--i:17"><span class="toc-num">18</span><span class="toc-text">FAQ</span></a>
+<a href="#limitacoes-conhecidas" class="toc-item" style="--i:18"><span class="toc-num">19</span><span class="toc-text">Limitações conhecidas</span></a>
+<a href="#matriz-de-maturidade" class="toc-item" style="--i:19"><span class="toc-num">20</span><span class="toc-text">Matriz de maturidade</span></a>
+        </div>
+      </div>
+    </section>
+
+    <main class="doc">
+      <h1 id="speckit-spec-driven-development" class="reveal section-title">SpecKit — Spec Driven Development</h1>
+<p class="reveal">Plugin para VS Code que implementa o fluxo de <strong>Spec Driven Development (SDD)</strong>: você define uma História estruturada (nova feature) ou um Fix estruturado (correção de bug) antes de escrever código, e o plugin gera automaticamente os arquivos de configuração do GitHub Copilot que “primam” a sessão com todo o contexto do projeto.</p>
+<p class="reveal">O Copilot passa a conhecer o requisito de negócio, critérios de aceite, restrições não-funcionais, stack técnica, padrão arquitetural, regras de teste, convenções de versionamento, padrões de segurança, observabilidade e resiliência — antes de qualquer conversa começar.</p>
+<hr>
+<h2 id="guia-de-leitura" class="reveal section-title">Guia de leitura</h2>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Ordem</th>
+<th>Seção</th>
+<th>Quando ler</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Como usar</strong></td>
+<td>Fluxo essencial de ponta a ponta</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Comandos</strong></td>
+<td>Referência objetiva de cada comando (15 comandos)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Paleta de comandos</strong></td>
+<td>Atalhos via <code>Ctrl+Shift+P</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Configuração do workspace</strong></td>
+<td>Defaults, detecção de stack, backup, logging</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Arquivos gerados</strong></td>
+<td>O que o plugin cria e para que serve</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Gates de implementação</strong></td>
+<td>Como os agents conduzem a implementação</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Modos de agente</strong></td>
+<td>5 modos com exemplos (debugger, refactor, etc.)</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Guia prático — do zero à entrega</strong></td>
+<td>Passo a passo numerado do fluxo completo</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Exemplos práticos</strong></td>
+<td>Cenários completos (Story e Fix)</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Rastreabilidade e auditoria</strong></td>
+<td>Como auditar e rastrear o histórico de specs</td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Referência rápida</strong></td>
+<td>Tabelas “o que dizer ao agente” por cenário</td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>FAQ</strong></td>
+<td>Perguntas frequentes e troubleshooting</td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Limitações conhecidas</strong></td>
+<td>Restrições atuais e roadmap</td>
+</tr>
+</tbody>
+</table></div><p class="reveal"><strong>Resumo do fluxo em 4 passos:</strong></p>
+<pre class="reveal"><code>  +------------+    +----------+    +-------------+    +----------+    +======+
+  | Criar spec +---&gt;| Validar  +---&gt;| Implementar +---&gt;| Revisar  +---&gt;| Done |
+  +------------+    +----------+    +-------------+    +----------+    +======+
+   /draft /new /fix   /validate    agent implementador  agent revisor
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal"><strong>Criar</strong> e <strong>validar</strong> acontecem no chat <code>@speckit</code>. <strong>Implementar</strong> e <strong>revisar</strong> acontecem em sessões separadas do Copilot Chat, selecionando os agents no dropdown.</p>
+</blockquote>
+<hr>
+<h2 id="pre-requisitos" class="reveal section-title">Pré-requisitos</h2>
+<ul class="reveal"><li><p class="reveal">VS Code <code>^1.93.0</code></li>
+<li><p class="reveal">Extensão <strong>GitHub Copilot Chat</strong> instalada e ativa</li>
+</ul>
+<hr>
+<h2 id="instalacao" class="reveal section-title">Instalação</h2>
+<ol class="reveal"><li><p class="reveal">Faça o download do arquivo <code>.vsix</code> mais recente</li>
+<li><p class="reveal">No VS Code, abra a paleta de comandos (<code>Ctrl+Shift+P</code>)</li>
+<li><p class="reveal">Execute <strong>“Extensions: Install from VSIX…”</strong></li>
+<li><p class="reveal">Selecione o arquivo <code>.vsix</code></li>
+</ol>
+<p class="reveal">Para gerar um artefato local de release com o fluxo oficial do repositório:</p>
+<pre class="reveal"><code class="language-bash">npm run package
+</code></pre>
+<p class="reveal">O comando gera o <code>.vsix</code> em <code>publish/&lt;version&gt;/</code> e falha se o artefato incluir conteúdo proibido como <code>coverage/</code>, <code>assets/diagrams/</code> ou <code>tests/</code>.</p>
+<p class="reveal">Além disso, o <code>npm run package</code> valida automaticamente o padrão obrigatório de changelog da versão:</p>
+<ul class="reveal"><li><p class="reveal">Técnico: <code>publish/&lt;version&gt;/CHANGELOG-&lt;version&gt;.txt</code><ul class="reveal"><li><p class="reveal">Título <code>SpecKit — Changelog &lt;version&gt;</code></li>
+<li><p class="reveal"><code>Data</code>, <code>Branch base</code>, tipo de release (<code>RELEASE|PATCH|HOTFIX|MINOR|MAJOR</code>)</li>
+<li><p class="reveal">Seções: <code>Resumo da release</code>, <code>Mudanças técnicas</code>, <code>Documentação</code>, <code>Testes adicionados</code>, <code>Validação executada antes do release</code>, <code>Artefato gerado</code></li>
+</ul>
+</li>
+<li><p class="reveal">Usuário: <code>publish/&lt;version&gt;/CHANGELOG-USER-&lt;version&gt;.txt</code><ul class="reveal"><li><p class="reveal">Título <code>SpecKit — Novidades para usuários — &lt;version&gt;</code></li>
+<li><p class="reveal"><code>Data</code></li>
+<li><p class="reveal">Seções: <code>Resumo</code>, <code>Novas features</code>, <code>Melhorias de experiência</code>, <code>Correções e segurança de release</code>, <code>Como usar rapidamente</code>, <code>Artefato</code></li>
+</ul>
+</li>
+</ul>
+<p class="reveal">Se qualquer seção obrigatória estiver ausente ou mal formatada, o empacotamento é bloqueado.</p>
+<hr>
+<h2 id="como-usar" class="reveal section-title">Como usar</h2>
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Fluxo típico de uma sessão SDD</figcaption>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">sequenceDiagram
+    autonumber
+    participant U as User
+    participant P as Participant
+    participant L as LLM
+    U->>P: @speckit /new "minha story"
+    P->>L: Layered prompt + scaffold
+    L-->>P: Story esqueleto
+    P-->>U: spec criada em .speckit/specs/
+    U->>P: /draft → /implement → /review-auto
+    P->>L: Camadas de prompt por gate
+    L-->>P: Implementação + revisão
+    P-->>U: Evidência + transição de gate</pre>
+  </div>
+</figure>
+
+<p class="reveal">O SpecKit expõe um <strong>Chat Participant</strong> chamado <code>@speckit</code>. Todo o fluxo acontece no Copilot Chat.</p>
+<blockquote class="reveal callout"><p class="reveal">O participant é marcado como <strong>sticky</strong> — uma vez invocado, ele permanece selecionado até você trocar de participant. Não é necessário digitar <code>@speckit</code> em cada mensagem.</p>
+</blockquote>
+<h3 id="ponto-de-entrada-estruturado-ou-por-texto-livre" class="reveal">Ponto de entrada: estruturado ou por texto livre</h3>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Modo</th>
+<th>Comando</th>
+<th>Quando usar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Texto livre</strong></td>
+<td><code>@speckit /draft &lt;descrição&gt;</code></td>
+<td>Ideia ainda informal, não sabe os campos obrigatórios, quer ser guiado</td>
+</tr>
+<tr>
+<td><strong>Template direto</strong></td>
+<td><code>@speckit /new</code> ou <code>/fix</code></td>
+<td>Já conhece a estrutura e quer preencher diretamente</td>
+</tr>
+</tbody>
+</table></div><p class="reveal">Ambos os caminhos convergem para o mesmo <code>.speckit/STORY-XXX.md</code> ou <code>FIX-XXX.md</code> e seguem o mesmo fluxo de validação e implementação.</p>
+<h3 id="fluxo-nova-feature-historia" class="reveal">Fluxo — Nova Feature (História)</h3>
+<pre class="reveal"><code>  +=================== Criar a spec ===================+
+  |                                                    |
+  |  /draft (texto livre)          /new (template)     |
+  |       |                             |              |
+  |       v                             v              |
+  |  elicit-story.prompt.md     STORY-XXX.md (editor)  |
+  |       |                             |              |
+  |       v                             |              |
+  |  Entrevista 6 fases                 |              |
+  |       |                             |              |
+  |       v                             |              |
+  |  STORY-XXX.md ----------------------+              |
+  +========================+===========================+
+                           v
+  +=================== Validar ========================+
+  |  /validate --&gt; Lacunas? --Sim--&gt; gap-fill --+     |
+  |                   |                         |     |
+  |                  Nao                  (volta)     |
+  |                   v                               |
+  |          DoR atingido + 9 arquivos                |
+  +========================+==========================+
+                           v
+  +============ Implementar + Revisar ================+
+  |  agent implementador --&gt; agent revisor            |
+  |     (Gates 0-2)            (Gates 3-4)            |
+  +===================================================+
+</code></pre>
+<h3 id="fluxo-correcao-de-bug-fix" class="reveal">Fluxo — Correção de Bug (Fix)</h3>
+<pre class="reveal"><code>  +================== Criar a spec (Fix) ==============+
+  |                                                     |
+  |  /draft --fix (texto livre)     /fix (template)     |
+  |       |                              |              |
+  |       v                              v              |
+  |  elicit-fix.prompt.md       FIX-XXX.md + stack auto |
+  |       |                              |              |
+  |       v                              |              |
+  |  Entrevista 7 fases                  |              |
+  |       |                              |              |
+  |       v                              |              |
+  |  FIX-XXX.md -------------------------+              |
+  +=========================+===========================+
+                            v
+  +=================== Validar ========================+
+  |  /validate --&gt; Lacunas? --Sim--&gt; gap-fill --+     |
+  |                   |                         |     |
+  |                  Nao                  (volta)     |
+  |                   v                               |
+  |          Fix valido + 7 arquivos                  |
+  +========================+==========================+
+                           v
+  +============= Corrigir + Revisar ==================+
+  |  agent fix-implementador --&gt; agent fix-revisor    |
+  |       (Gates 0-2)              (Gates 3-4)        |
+  +===================================================+
+</code></pre>
+<hr>
+<h2 id="comandos" class="reveal section-title">Comandos</h2>
+<h3 id="padrao-de-resposta-unificado-no-chat" class="reveal">Padrão de resposta unificado no chat</h3>
+<p class="reveal">Os comandos do participant seguem um padrão unificado de resposta:</p>
+<ul class="reveal"><li><p class="reveal">bloco principal em Markdown (resultado, contexto e orientação),</li>
+<li><p class="reveal">seção <strong>Comandos disponíveis agora (contextuais)</strong> quando aplicável,</li>
+<li><p class="reveal">quick actions via botão (<code>stream.button</code>) com <code>speckit.openChatWithQuery</code>.</li>
+</ul>
+<p class="reveal">Isso vale também para fallback/default do participant, reduzindo respostas “sem próximo passo” e melhorando a navegação entre fluxos no chat.</p>
+<h3 id="speckit-draft" class="reveal"><code>@speckit /draft</code></h3>
+<p class="reveal">Converte texto livre em um prompt de elicitação que guia o Copilot a entrevistar você e montar a spec completa — Story ou Fix — sem que você precise conhecer os campos obrigatórios de antemão.</p>
+<pre class="reveal"><code>@speckit /draft &lt;descrição livre&gt;
+</code></pre>
+<p class="reveal"><strong>Detecção automática de intent:</strong></p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Input</th>
+<th>Intent detectado</th>
+<th>Arquivo gerado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@speckit /draft Quero calcular comissão de vendedores via Kafka</code></td>
+<td>story</td>
+<td><code>.speckit/elicit-story-{nextId}.prompt.md</code></td>
+</tr>
+<tr>
+<td><code>@speckit /draft Login retorna 500 após expiração do token --fix</code></td>
+<td>fix (flag <code>--fix</code>)</td>
+<td><code>.speckit/elicit-fix-{nextId}.prompt.md</code></td>
+</tr>
+<tr>
+<td><code>@speckit /draft O botão de exportar não funciona no Firefox</code></td>
+<td>fix (keyword <code>não funciona</code>)</td>
+<td><code>.speckit/elicit-fix-{nextId}.prompt.md</code></td>
+</tr>
+<tr>
+<td><code>@speckit /draft Crash ao abrir o modal de pagamento</code></td>
+<td>fix (keyword <code>crash</code>)</td>
+<td><code>.speckit/elicit-fix-{nextId}.prompt.md</code></td>
+</tr>
+<tr>
+<td><code>@speckit /draft Migrar módulo de pagamento para hexagonal --refactoring</code></td>
+<td>refactoring (flag <code>--refactoring</code>)</td>
+<td><code>.speckit/elicit-story-{nextId}.prompt.md</code></td>
+</tr>
+<tr>
+<td><code>@speckit /draft Avaliar viabilidade de SSR com Next.js --spike</code></td>
+<td>spike (flag <code>--spike</code>)</td>
+<td><code>.speckit/elicit-story-{nextId}.prompt.md</code></td>
+</tr>
+</tbody>
+</table></div><p class="reveal"><strong>Flags explícitas:</strong></p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Flag</th>
+<th>Intent</th>
+<th>Aliases</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--fix</code></td>
+<td>fix</td>
+<td><code>--bug</code></td>
+</tr>
+<tr>
+<td><code>--refactoring</code></td>
+<td>refactoring</td>
+<td><code>--refactor</code></td>
+</tr>
+<tr>
+<td><code>--spike</code></td>
+<td>spike</td>
+<td><code>--poc</code></td>
+</tr>
+</tbody>
+</table></div><blockquote class="reveal callout"><p class="reveal">Flags <code>--refactoring</code> e <code>--spike</code> geram um <code>elicit-story-{id}.prompt.md</code> com <code>type: refactoring</code> ou <code>type: spike</code> no metadata da spec. A entrevista é a mesma de story, mas o agente adapta o foco (refactoring → escopo cirúrgico; spike → viabilidade e aprendizado).</p>
+</blockquote>
+<p class="reveal"><strong>Keywords que ativam intent fix (detecção automática, sem flag):</strong> <code>bug</code>, <code>erro</code>, <code>error</code>, <code>falha</code>, <code>falhou</code>, <code>quebrado</code>, <code>broke</code>, <code>broken</code>, <code>crash</code>, <code>regressão</code>, <code>regression</code>, <code>corrigir</code>, <code>correção</code>, <code>não funciona</code>.</p>
+<p class="reveal"><strong>Após a geração:</strong> o SpecKit cria o arquivo de elicitação, abre no editor e instrui a iniciar um <strong>Novo Chat em modo Agente</strong> para conduzir a entrevista estruturada.</p>
+<details>
+<summary><strong>Fases da entrevista — Story (6 fases)</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Fase</th>
+<th>Tema</th>
+<th>Campos elicitados</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Requisito de negócio</td>
+<td>Problema + urgência, valor de negócio + KPI candidato, stakeholders</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Especificação funcional</td>
+<td>User stories, critérios de aceite (quadrante: happy path · limites · rejeição · idempotência), fora de escopo derivado do contexto</td>
+</tr>
+<tr>
+<td>3</td>
+<td>NFRs</td>
+<td>Performance (P99 com isenção para async), segurança, escalabilidade como código + recomendações de infra, disponibilidade</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Especificação técnica</td>
+<td>Linguagem, framework, arquitetura (sempre pergunta, sugere mas não presume), target, banco, infra</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Dependências, DoR e DoD</td>
+<td>DoR com critérios AI-verificáveis separados dos de ação humana, DoD contextual (Kafka → DLQ rate, frontend → WCAG 2.1)</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Montagem final</td>
+<td>Salva <code>.speckit/STORY-XXX.md</code>, confirma criação</td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>Fases da entrevista — Fix (7 fases)</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Fase</th>
+<th>Tema</th>
+<th>Campos elicitados</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Bug description</td>
+<td>Sintomas, primeira ocorrência, passos para reproduzir, ambiente, workaround, frequência, urgência — título proposto no final</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Hipótese</td>
+<td>Pergunta aberta — extrai <code>hypothesis</code>, <code>suspectedFiles</code>, <code>suspectedComponents</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Impacto</td>
+<td>Severidade cruzada com workaround, volume de usuários afetados, risco de regressão com nível e razão</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Prevenção de regressão</td>
+<td>Testes a adicionar</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Contexto técnico</td>
+<td>Sinaliza ativamente: Redis/TTL/cache miss, load balancer, config env, version flags</td>
+</tr>
+<tr>
+<td>6</td>
+<td>DoF</td>
+<td>Critérios de Definition of Fixed + adições contextuais</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Montagem final</td>
+<td>Salva <code>.speckit/FIX-XXX.md</code>, confirma criação</td>
+</tr>
+</tbody>
+</table></div></details>
+<blockquote class="reveal callout"><p class="reveal"><strong>Regras do agente:</strong> UMA pergunta por vez. Nunca inventa ou assume resposta. Resumo e confirmação ao final de cada fase. “Não sei” ≠ “N/A”.</p>
+</blockquote>
+<hr>
+<h3 id="speckit-new" class="reveal"><code>@speckit /new</code></h3>
+<p class="reveal">Cria o arquivo <code>.speckit/STORY-XXX.md</code> (numeração automática) e abre no editor.</p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Seção</th>
+<th>O que preencher</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Requisito de Negócio</td>
+<td>Problema, valor de negócio, stakeholders</td>
+</tr>
+<tr>
+<td>Especificação Funcional</td>
+<td>User stories, critérios de aceite, fora de escopo</td>
+</tr>
+<tr>
+<td>Especificação Não-Funcional</td>
+<td>Performance, segurança, escalabilidade, usabilidade, disponibilidade</td>
+</tr>
+<tr>
+<td>Especificação Técnica</td>
+<td>Linguagem, framework, arquitetura, target, banco, infra</td>
+</tr>
+<tr>
+<td>DoR</td>
+<td>Marcar com <code>[x]</code> os critérios já atendidos</td>
+</tr>
+<tr>
+<td>DoD</td>
+<td>Critérios de conclusão</td>
+</tr>
+</tbody>
+</table></div><details>
+<summary><strong>Valores suportados</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Campo</th>
+<th>Valores</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linguagem</td>
+<td><code>typescript</code> · <code>javascript</code> · <code>java</code> · <code>csharp</code> · <code>python</code></td>
+</tr>
+<tr>
+<td>Framework</td>
+<td><code>dotnet</code> · <code>springboot</code> · <code>angular</code> · <code>react</code> · <code>fastapi</code> · <code>other</code></td>
+</tr>
+<tr>
+<td>Arquitetura</td>
+<td><code>hexagonal</code> · <code>layered</code> · <code>microservices</code> · <code>monolith</code> · <code>serverless</code></td>
+</tr>
+<tr>
+<td>Target</td>
+<td><code>backend</code> · <code>frontend</code> · <code>bff</code> · <code>script</code> · <code>library</code></td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>Metadata da spec (campos automáticos)</strong></summary>
+<p class="reveal">Cada spec contém um bloco <code>&lt;!-- metadata --&gt;</code> no markdown com campos gerenciados automaticamente:</p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Campo</th>
+<th>Valores</th>
+<th>Descrição</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code></td>
+<td><code>story</code> · <code>refactoring</code> · <code>spike</code></td>
+<td>Tipo da spec (story default, ou via <code>--refactoring</code>/<code>--spike</code> no <code>/draft</code>)</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>open</code> · <code>in-progress</code> · <code>review</code> · <code>blocked</code> · <code>done</code> · <code>cancelled</code></td>
+<td>Ciclo de vida da spec</td>
+</tr>
+<tr>
+<td><code>gate</code></td>
+<td><code>0</code> · <code>1</code> · <code>2</code> · <code>3</code> · <code>4</code></td>
+<td>Gate atual de implementação</td>
+</tr>
+<tr>
+<td><code>projectStage</code></td>
+<td><code>greenfield</code> · <code>brownfield</code></td>
+<td>Maturidade do projeto (afeta profundidade das instruções)</td>
+</tr>
+<tr>
+<td><code>depends-on</code></td>
+<td>IDs separados por vírgula (ex: <code>US-002, BF-001</code>)</td>
+<td>Fonte canônica e exclusiva de dependências — story não inicia até que todas estejam <code>done</code></td>
+</tr>
+</tbody>
+</table></div><blockquote class="reveal callout"><p class="reveal"><code>type</code>, <code>status</code> e <code>gate</code> são usados pelo <code>/status</code> para exibir o progresso. O <code>projectStage</code> influencia o nível de detalhe dos skills gerados (greenfield → mais guardrails).
+Dependências entre stories são consideradas <strong>somente</strong> quando declaradas no metadata <code>depends-on</code>. Menções no corpo da história, critérios de aceite, fora de escopo, infraestrutura ou contexto são ignoradas para bloqueio de dependência.</p>
+</blockquote>
+</details>
+<blockquote class="reveal callout"><p class="reveal"><strong>NFRs de performance</strong> são opcionais — quando não preenchidos, o plugin aplica baseline (<code>P99 &lt; 500ms</code> / <code>99,9%</code>) em todos os arquivos dependentes.</p>
+</blockquote>
+<hr>
+<h3 id="speckit-fix" class="reveal"><code>@speckit /fix</code></h3>
+<p class="reveal">Cria o arquivo <code>.speckit/FIX-XXX.md</code> (numeração automática) e abre no editor.</p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Seção</th>
+<th>O que preencher</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bug Description</td>
+<td>Título, sintomas, passos para reproduzir, ambiente, frequência</td>
+</tr>
+<tr>
+<td>Root Cause Hypothesis</td>
+<td>Hipótese da causa raiz, arquivos/componentes suspeitos</td>
+</tr>
+<tr>
+<td>Impact Assessment</td>
+<td>Severidade (<code>critical</code> · <code>high</code> · <code>medium</code> · <code>low</code>), usuários afetados, risco de regressão</td>
+</tr>
+<tr>
+<td>Regression Prevention</td>
+<td>Testes a adicionar para prevenir regressão</td>
+</tr>
+<tr>
+<td>DoF</td>
+<td>Critérios de Definition of Fixed</td>
+</tr>
+</tbody>
+</table></div><blockquote class="reveal callout"><p class="reveal"><strong>Stack técnica detectada automaticamente</strong> a partir do workspace (<code>package.json</code>, <code>pom.xml</code>, <code>*.csproj</code>, <code>requirements.txt</code>, <code>pyproject.toml</code>). Campos extras quando detectados: <code>messaging</code> (ex: Kafka), <code>database</code> (ex: PostgreSQL).</p>
+</blockquote>
+<hr>
+<h3 id="speckit-validate" class="reveal"><code>@speckit /validate</code></h3>
+<p class="reveal">Detecta automaticamente o tipo da spec ativa em <code>.speckit/</code> (Story ou Fix) e valida campos obrigatórios.</p>
+<p class="reveal"><strong>Spec com lacunas:</strong></p>
+<ol class="reveal"><li><p class="reveal">Gera <code>.speckit/gap-fill.prompt.md</code> — um prompt estruturado que lista todas as lacunas</li>
+<li><p class="reveal">Abre o arquivo no editor automaticamente</li>
+<li><p class="reveal">Instrui a executar o prompt no Copilot Agent (via ▶ Run in Copilot Chat ou <code>#gap-fill.prompt.md</code>)</li>
+<li><p class="reveal">O agente preenche as lacunas uma a uma e atualiza o arquivo da spec</li>
+<li><p class="reveal">Após completar, volta ao <code>@speckit /validate</code> para revalidar</li>
+<li><p class="reveal"><strong>Stories:</strong> exibe status do DoR com checkboxes (<code>[x]</code> / <code>[ ]</code>) para cada critério</li>
+</ol>
+<p class="reveal"><strong>Spec válida:</strong></p>
+<ol class="reveal"><li><p class="reveal">Faz <strong>backup</strong> do <code>copilot-instructions.md</code> existente em <code>.speckit/backups/</code></li>
+<li><p class="reveal"><strong>Story válida:</strong> gera 9 arquivos em <code>.github/</code> (skills + agents + prompt + workflows CI)</li>
+<li><p class="reveal"><strong>Fix válido:</strong> detecta stack automaticamente, gera 7 arquivos em <code>.github/</code> (sem workflows CI)</li>
+<li><p class="reveal"><strong>Avalia DevTools do projeto</strong> — verifica se ESLint, Prettier, husky e lint-staged estão configurados (ver abaixo)</li>
+<li><p class="reveal">Instrui a abrir modo <strong>Agente</strong> com o agent <strong>implementador</strong> (dropdown) para Gates 0–2</li>
+<li><p class="reveal">Registra log em <code>.speckit/logs/session-&lt;data&gt;.md</code></li>
+</ol>
+<p class="reveal"><strong>Oferta de DevTools (automática):</strong></p>
+<p class="reveal">Após gerar os arquivos em <code>.github/</code>, o <code>/validate</code> analisa o workspace do usuário e reporta quais ferramentas de qualidade estão presentes ou ausentes:</p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Ferramenta</th>
+<th>O que faz</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>ESLint</strong></td>
+<td>Análise estática — detecta bugs antes da execução</td>
+</tr>
+<tr>
+<td><strong>Prettier</strong></td>
+<td>Formatação automática — estilo consistente sem discussão</td>
+</tr>
+<tr>
+<td><strong>husky</strong></td>
+<td>Git hooks — impede commit de código com problemas</td>
+</tr>
+<tr>
+<td><strong>lint-staged</strong></td>
+<td>Lint apenas nos arquivos alterados — rápido no commit</td>
+</tr>
+</tbody>
+</table></div><ul class="reveal"><li><p class="reveal">✅ Ferramentas já presentes são listadas com aviso de <strong>não sobrescrever</strong></li>
+<li><p class="reveal">⚠️ <strong>Conflitos brownfield</strong> são alertados (ex: <code>.eslintrc*</code> + <code>eslint.config.*</code> coexistentes)</li>
+<li><p class="reveal">🔧 Ferramentas ausentes são descritas com impacto no projeto existente</li>
+<li><p class="reveal">O usuário opta via <strong>botão interativo</strong> ou flag <code>--devtools</code></li>
+</ul>
+<p class="reveal">Se aceito, gera <code>speckit-devtools/SKILL.md</code> em <code>.github/skills/</code> com instruções de instalação <strong>adaptadas à stack</strong> (TS/JS → ESLint + typescript-eslint + Prettier; Java → Checkstyle + Spotless; Python → Ruff; C# → dotnet format + Roslyn).</p>
+<blockquote class="reveal callout"><p class="reveal">Se todas as ferramentas já estiverem configuradas, exibe apenas <code>✅ Tooling de qualidade já configurado</code>.</p>
+<p class="reveal">Para incluir o skill diretamente sem botão: <code>@speckit /validate --devtools</code></p>
+</blockquote>
+<hr>
+<h3 id="speckit-status" class="reveal"><code>@speckit /status</code></h3>
+<p class="reveal">Exibe resumo de todas as specs abertas no workspace:</p>
+<ul class="reveal"><li><p class="reveal"><strong>Stories:</strong> título, linguagem/framework/arquitetura, status de validação (✅ DoR atingido / ⚠️ N lacunas), gate atual (<code>🚪 Gate N — Label</code>)</li>
+<li><p class="reveal"><strong>Fixes:</strong> título, severidade (🐛 critical / high / medium / low), gate atual (<code>🚪 Gate N — Label</code>)</li>
+<li><p class="reveal">Specs com <code>status: done</code> ou <code>cancelled</code> são ocultadas automaticamente</li>
+</ul>
+<p class="reveal"><strong>Opções:</strong></p>
+<ul class="reveal"><li><p class="reveal"><code>@speckit /status</code> → mostra somente specs abertas</li>
+<li><p class="reveal"><code>@speckit /status --all</code> (ou <code>--closed</code>) → inclui specs <code>done</code> e <code>cancelled</code></li>
+<li><p class="reveal"><code>@speckit /status-all</code> → atalho para <code>@speckit /status --all</code></li>
+</ul>
+<p class="reveal">Se você passar um parâmetro inválido, o comando retorna o uso correto e sugere as flags suportadas.</p>
+<p class="reveal"><strong>Exemplo de output:</strong></p>
+<pre class="reveal"><code>Stories abertas (2):
+- ✅ STORY-001.md — Cálculo de comissão [in-progress]  java / springboot / hexagonal  | 🚪 Gate 1 — Implementação
+- ⚠️ (3 lacunas) STORY-002.md — Dashboard vendas [open]  typescript / react / layered  | 🚪 Gate 0 — Alinhamento
+
+Fixes abertos (1):
+- 🐛 FIX-001.md — Login OAuth2 500 [high]  | 🚪 Gate 2 — Testes
+</code></pre>
+<h3 id="speckit-help" class="reveal"><code>@speckit /help</code></h3>
+<p class="reveal">Ajuda rápida para descobrir parâmetros e atalhos sem sair do chat.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /help
+@speckit /help status
+@speckit /help batch
+@speckit /help validate
+@speckit /help draft
+@speckit /help-status
+</code></pre>
+<p class="reveal"><strong>Atalhos úteis para descobrir parâmetros:</strong></p>
+<ul class="reveal"><li><p class="reveal"><code>@speckit /status-all</code> → <code>@speckit /status --all</code></li>
+<li><p class="reveal"><code>@speckit /batch-generate</code> → <code>@speckit /batch --generate</code></li>
+<li><p class="reveal"><code>@speckit /batch-unified</code> → <code>@speckit /batch --generate --unified</code></li>
+<li><p class="reveal"><code>@speckit /help-status</code> → <code>@speckit /help status</code></li>
+</ul>
+<hr>
+<h3 id="speckit-agent" class="reveal"><code>@speckit /agent</code></h3>
+<p class="reveal">Alterna o modo operacional do agente. Cada modo injeta guardrails e protocolos diferentes na sessão.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /agent                → Exibe modo ativo e modos disponíveis
+@speckit /agent debugger       → Ativa modo debugger
+@speckit /agent refactor       → Ativa modo refactor
+@speckit /agent implementador  → Ativa modo implementador (Gates 0-2)
+@speckit /agent revisor        → Ativa modo revisor (Gates 3-4)
+@speckit /agent default        → Volta ao modo conversacional
+</code></pre>
+<p class="reveal"><strong>Modos disponíveis:</strong></p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Modo</th>
+<th>Descrição</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>default</code></td>
+<td>Conversacional — ajuda geral sem protocolo de gate</td>
+</tr>
+<tr>
+<td><code>implementador</code></td>
+<td>Gates 0-2: spec → plan → implement → test</td>
+</tr>
+<tr>
+<td><code>revisor</code></td>
+<td>Gates 3-4: checklist de qualidade → segurança → entrega</td>
+</tr>
+<tr>
+<td><code>debugger</code></td>
+<td>Hipótese → evidência → fix mínimo → verificação → documentação</td>
+</tr>
+<tr>
+<td><code>refactor</code></td>
+<td>Snapshot → refatorar → validar continuamente → rollback se falhar</td>
+</tr>
+</tbody>
+</table></div><p class="reveal"><strong>Exemplo de output (sem argumento):</strong></p>
+<pre class="reveal"><code>Modo ativo: Default (conversacional)
+
+Modos disponíveis:
+- default — Default (conversacional)
+- implementador — Implementador (Gates 0-2: spec → plan → implement → test)
+- revisor — Revisor (Gates 3-4: checklist de qualidade → segurança → entrega)
+- debugger — Debugger (hipótese → evidência → fix → verificação)
+- refactor — Refactor (snapshot → refatorar → validar → rollback se falhar)
+
+Uso: @speckit /agent debugger
+</code></pre>
+<p class="reveal"><strong>Exemplo de output (modo ativado):</strong></p>
+<pre class="reveal"><code>✅ Modo alterado para Debugger (hipótese → evidência → fix → verificação)
+
+---
+
+AGENT MODE: Debugger
+Stack detectada: typescript / react
+
+1. Captura — Capture mensagem de erro, stack trace e passos para reprodução
+2. Hipótese — Formule uma hipótese sobre a causa raiz
+3. Evidência — Leia código, verifique logs, isole a falha
+4. Fix Mínimo — Correção cirúrgica atacando a causa raiz
+5. Verificação — Teste que reproduz a falha original
+6. Documentação — Causa raiz e recomendações de prevenção
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal">O modo persiste durante toda a sessão da extensão. Ao fechar e reabrir o VS Code, volta para <code>default</code>.</p>
+</blockquote>
+<blockquote class="reveal callout"><p class="reveal">Para protocolos completos de Gates, selecione os agents no dropdown do Copilot Chat (ver <strong>Modos de agente</strong>).</p>
+</blockquote>
+<hr>
+<h3 id="speckit-gate" class="reveal"><code>@speckit /gate</code></h3>
+<p class="reveal">Exibe regras de transição de gate e status, ou valida se uma transição específica é permitida.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /gate                              → Mostra todas as regras
+@speckit /gate rules                        → Mostra todas as regras
+@speckit /gate check gate 0 1               → Valida transição Gate 0 → Gate 1
+@speckit /gate check gate 2 0               → Valida regressão Gate 2 → Gate 0
+@speckit /gate check status open in-progress → Valida transição de status
+</code></pre>
+<p class="reveal"><strong>Regras de transição de gate:</strong></p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>De</th>
+<th>Para</th>
+<th>Regra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gate 0 — Alinhamento</td>
+<td>Gate 1 — Implementação</td>
+<td>✅ Avanço +1</td>
+</tr>
+<tr>
+<td>Gate 1 — Implementação</td>
+<td>Gate 0 ou Gate 2</td>
+<td>✅ +1 ou -1 (retrabalho)</td>
+</tr>
+<tr>
+<td>Gate 2 — Testes</td>
+<td>Gate 1 ou Gate 3</td>
+<td>✅ +1 ou -1</td>
+</tr>
+<tr>
+<td>Gate 3 — Revisão</td>
+<td>Gate 2 ou Gate 4</td>
+<td>✅ +1 ou -1</td>
+</tr>
+<tr>
+<td>Gate 4 — Entrega</td>
+<td>Gate 3</td>
+<td>✅ Apenas regressão -1</td>
+</tr>
+</tbody>
+</table></div><blockquote class="reveal callout"><p class="reveal">Avanço máximo: +1. Regressão máxima: -1 (retrabalho). Saltos como Gate 0 → Gate 3 são <strong>bloqueados</strong>.</p>
+</blockquote>
+<p class="reveal"><strong>Regras de transição de status:</strong></p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>De</th>
+<th>Próximos válidos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>open</code></td>
+<td><code>in-progress</code>, <code>cancelled</code></td>
+</tr>
+<tr>
+<td><code>in-progress</code></td>
+<td><code>review</code>, <code>blocked</code>, <code>cancelled</code></td>
+</tr>
+<tr>
+<td><code>review</code></td>
+<td><code>in-progress</code>, <code>done</code>, <code>cancelled</code></td>
+</tr>
+<tr>
+<td><code>blocked</code></td>
+<td><code>in-progress</code>, <code>cancelled</code></td>
+</tr>
+<tr>
+<td><code>done</code></td>
+<td>🔒 terminal</td>
+</tr>
+<tr>
+<td><code>cancelled</code></td>
+<td>🔒 terminal</td>
+</tr>
+</tbody>
+</table></div><p class="reveal"><strong>Exemplo de validação:</strong></p>
+<pre class="reveal"><code>@speckit /gate check gate 1 2
+</code></pre>
+<pre class="reveal"><code>✅ Gate 1 → Gate 2 — Transição permitida
+Próximos gates válidos a partir de Gate 1: Gate 0, Gate 2
+</code></pre>
+<pre class="reveal"><code>@speckit /gate check gate 0 3
+</code></pre>
+<pre class="reveal"><code>❌ Gate 0 → Gate 3 — Transição bloqueada
+Motivo: Salto de +3 não permitido (máximo: +1)
+Próximos gates válidos a partir de Gate 0: Gate 1
+</code></pre>
+<hr>
+<h3 id="speckit-audit" class="reveal"><code>@speckit /audit</code></h3>
+<p class="reveal">Exibe o log de auditoria do workspace — todas as ações executadas pelo plugin com timestamp.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /audit       → Últimas 20 entradas (padrão)
+@speckit /audit 50    → Últimas 50 entradas
+@speckit /audit 5     → Últimas 5 entradas
+</code></pre>
+<p class="reveal">O limite aceita valores de 1 a 100.</p>
+<p class="reveal"><strong>Exemplo de output:</strong></p>
+<pre class="reveal"><code>📋 Audit Log — últimas 5 de 23 entradas
+
+2026-03-19T10:15:00Z [command] /new
+2026-03-19T10:15:01Z [command] /new — ok
+2026-03-19T10:22:30Z [command] /validate
+2026-03-19T10:22:31Z [command] /validate — ok
+2026-03-19T10:30:00Z [command] /agent
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal">O log é gravado automaticamente em <code>.speckit/audit.log</code>. Cada comando registra entrada e resultado.</p>
+</blockquote>
+<hr>
+<h3 id="speckit-trace" class="reveal"><code>@speckit /trace</code></h3>
+<p class="reveal">Visualiza registros de rastreabilidade — histórico completo de cada spec com todas as transições de gate, status e validações.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /trace                → Lista todas as specs rastreadas
+@speckit /trace list           → Lista todas as specs rastreadas
+@speckit /trace STORY-001      → Detalhes de uma spec específica
+@speckit /trace FIX-001        → Detalhes de um fix específico
+</code></pre>
+<p class="reveal"><strong>Exemplo de output (lista):</strong></p>
+<pre class="reveal"><code>🔗 Rastreabilidade — 3 spec(s)
+
+| Spec ID    | Tipo  | Entradas | Última atualização       |
+|------------|-------|----------|--------------------------|
+| STORY-001  | story | 8        | 2026-03-19T14:30:00Z     |
+| STORY-002  | story | 3        | 2026-03-19T11:00:00Z     |
+| FIX-001    | fix   | 5        | 2026-03-19T16:00:00Z     |
+
+&gt; Use @speckit /trace &lt;spec-id&gt; para ver detalhes.
+</code></pre>
+<p class="reveal"><strong>Exemplo de output (detalhe):</strong></p>
+<pre class="reveal"><code>🔗 Trace — STORY-001
+
+| Campo      | Valor                    |
+|------------|--------------------------|
+| Tipo       | story                    |
+| Criado     | 2026-03-19T10:00:00Z     |
+| Atualizado | 2026-03-19T14:30:00Z     |
+| Entradas   | 8                        |
+
+Histórico:
+- 2026-03-19T10:00:00Z — created: Spec criada via /new
+- 2026-03-19T10:05:00Z — validated: DoR atingido, 9 arquivos gerados
+- 2026-03-19T10:30:00Z — gate-transition: Gate 0 → Gate 1
+- 2026-03-19T12:00:00Z — gate-transition: Gate 1 → Gate 2
+- 2026-03-19T14:00:00Z — gate-transition: Gate 2 → Gate 3
+- 2026-03-19T14:30:00Z — status-change: in-progress → review
+</code></pre>
+<hr>
+<h3 id="speckit-history" class="reveal"><code>@speckit /history</code></h3>
+<p class="reveal">Exibe histórico agregado em uma única visão, combinando eventos de auditoria, trace e session log.</p>
+<p class="reveal">Além da lista cronológica, o comando também apresenta um resumo de sessões canônicas (top por volume) para facilitar navegação de histórico.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /history           → Agregado (audit + trace + log), últimas 20 entradas
+@speckit /history audit     → Somente audit
+@speckit /history trace 50  → Somente trace, últimas 50 entradas
+@speckit /history log 100   → Somente session log, últimas 100 entradas
+@speckit /history sessions 8                     → Somente resumo de sessões canônicas (top 8)
+@speckit /history session implementador          → Drill-down por termo de alias
+@speckit /history session &quot;Comissao + revisor&quot;  → Drill-down por alias completo/trecho (com aspas)
+</code></pre>
+<p class="reveal"><strong>Filtros válidos:</strong> <code>all</code>, <code>audit</code>, <code>trace</code>, <code>log</code></p>
+<p class="reveal"><strong>Modos adicionais:</strong> <code>sessions</code>, <code>session &lt;alias|termo&gt;</code></p>
+<p class="reveal"><strong>Exemplo de contexto exibido por entrada:</strong></p>
+<pre class="reveal"><code>spec:US-WORKSPACE-20260501-1030, agent:implementador, gate:2, alias:Comissao Kafka + implementador + Gate-2
+</code></pre>
+<hr>
+<h3 id="speckit-diff" class="reveal"><code>@speckit /diff</code></h3>
+<p class="reveal">Mostra o git diff no chat — útil para revisar alterações sem sair da conversa.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /diff          → Diff resumido (stat)
+@speckit /diff --full   → Diff completo (todas as alterações)
+@speckit /diff -f       → Alias para --full
+</code></pre>
+<p class="reveal"><strong>Exemplo de output (resumo):</strong></p>
+<pre class="reveal"><code>Git Diff (resumo):
+
+ src/middleware/auth.ts | 15 +++++++++------
+ src/routes/auth.ts     |  3 ++-
+ 2 files changed, 11 insertions(+), 7 deletions(-)
+</code></pre>
+<p class="reveal"><strong>Exemplo de output (completo):</strong></p>
+<pre class="reveal"><code>Git Diff (completo):
+
+```diff
+diff --git a/src/middleware/auth.ts b/src/middleware/auth.ts
+--- a/src/middleware/auth.ts
++++ b/src/middleware/auth.ts
+@@ -12,6 +12,10 @@ export function authMiddleware(req, res, next) {
+     jwt.verify(token, secret, (err, decoded) =&gt; {
+-      if (err) throw err;
++      if (err instanceof jwt.TokenExpiredError) {
++        return res.status(401).json({ error: 'token_expired' });
++      }
++      if (err) return res.status(401).json({ error: 'invalid_token' });
+       req.user = decoded;
+```
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal">Se não houver alterações pendentes: <code>✅ Nenhuma alteração pendente.</code></p>
+</blockquote>
+<hr>
+<h3 id="speckit-commit" class="reveal"><code>@speckit /commit</code></h3>
+<p class="reveal">Faz auto-stage de todas as alterações e commit com prefixo <code>speckit:</code>.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /commit &lt;mensagem&gt;
+@speckit /commit
+</code></pre>
+<p class="reveal">Sem <code>&lt;mensagem&gt;</code>, o comando tenta derivar um padrão automático com base na spec ativa (Story/Fix) e no gate atual.</p>
+<p class="reveal"><strong>Exemplos:</strong></p>
+<pre class="reveal"><code>@speckit /commit feat(STORY-001): implementar cálculo de comissão
+@speckit /commit fix(FIX-001): tratar TokenExpiredError no middleware
+@speckit /commit refactor: extrair validação de gate
+@speckit /commit test: adicionar cenários de edge case
+</code></pre>
+<p class="reveal"><strong>Exemplo de output:</strong></p>
+<pre class="reveal"><code>✅ Commit realizado:
+
+[feature/001-calculo-comissao 3a1b2c3] speckit: feat(STORY-001): implementar cálculo de comissão
+ 4 files changed, 120 insertions(+), 15 deletions(-)
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal">O commit só executa se houver alterações pendentes. Caso contrário: <code>✅ Nada para commitar — working tree limpa.</code></p>
+</blockquote>
+<blockquote class="reveal callout"><p class="reveal">Se o workspace ainda não for um repositório Git, o <code>/commit</code> executa <code>git init</code> automaticamente antes de verificar alterações e commitar. Os agentes implementadores gerados também recebem um preflight Git: ao encontrar <code>not a git repository</code> em <code>checkout</code>, <code>pull</code> ou <code>commit</code>, devem executar <code>git init</code> no workspace e repetir o mesmo commit uma única vez.</p>
+</blockquote>
+<blockquote class="reveal callout"><p class="reveal">No fechamento do Gate 2, os protocolos de Story passam a exigir tentativa de commit automático pelo agente e só permitem ação manual do usuário como fallback em erro operacional.</p>
+</blockquote>
+<blockquote class="reveal callout"><p class="reveal">Todos os commits são registrados no audit log automaticamente.</p>
+</blockquote>
+<hr>
+<h3 id="speckit-review-auto" class="reveal"><code>@speckit /review-auto</code></h3>
+<p class="reveal">Orquestra a revisão automática da Story ativa e as transições de gate com protocolo determinístico e saída Markdown explícita no chat.</p>
+<p class="reveal"><strong>O que faz:</strong></p>
+<ol class="reveal"><li><p class="reveal">Propõe transições de gate/status e exige confirmação explícita antes da persistência (<code>--confirm &lt;intent-id&gt;</code>)</li>
+<li><p class="reveal">Coleta evidências automáticas (arquivos alterados e cobertura <code>lcov</code> quando disponível)</li>
+<li><p class="reveal">Aplica bloqueios automáticos mínimos (ex.: cobertura ausente/abaixo de 80%, CRAP por função acima do limite)</li>
+<li><p class="reveal">Emite veredito orquestrado e força continuidade do checklist completo de revisão no mesmo fluxo</li>
+<li><p class="reveal">Expõe toda transição de gate/status com bloco Markdown <code>Antes</code> → <code>Depois</code></li>
+</ol>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /review-auto
+@speckit /review-auto --confirm &lt;intent-id&gt;
+@speckit /review-auto --changes-requested
+@speckit /review-auto --approved
+@speckit /review-auto --batch-consent
+@speckit /review-auto --batch-consent --confirm &lt;intent-id&gt;
+@speckit /review-auto --auto
+@speckit /review-auto --mutation
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal">Fora do modo <code>--auto</code>, toda transição proposta por <code>/review-auto</code> exige confirmação explícita com <code>--confirm &lt;intent-id&gt;</code>.
+No modo unificado, confirme um consentimento único de sessão com <code>/review-auto --batch-consent</code> antes de usar <code>/review-auto --auto</code>.
+Se o veredito for <strong>ALTERAÇÕES SOLICITADAS</strong> no unificado, execute <code>/review-auto --changes-requested --auto</code>.
+Se o veredito for <strong>APROVADO</strong> no unificado, execute <code>/review-auto --approved --auto</code> (Gate 4 fica em <code>status: ready-to-commit</code> até o commit final com <code>/commit</code>).
+Comandos <code>@speckit /...</code> devem ser acionados pelo participant no chat (ex.: <code>speckit.runChatQuickAction</code> via <code>vscode/runCommand</code>), não via terminal/PowerShell.</p>
+</blockquote>
+<hr>
+<h3 id="speckit-verify" class="reveal"><code>@speckit /verify</code></h3>
+<p class="reveal">Executa a <strong>validação determinística automática</strong> da Story ativa para o próximo Gate (ou um Gate específico via <code>--gate N</code>) e grava evidência consumível pelo <strong>Revisor</strong>.</p>
+<p class="reveal"><strong>O que faz:</strong></p>
+<ol class="reveal"><li><p class="reveal">Lê a spec ativa em <code>.speckit/</code> e identifica o Gate alvo (<code>currentGate + 1</code> por padrão).</li>
+<li><p class="reveal">Roda o conjunto de validadores apropriado ao Gate alvo:<ul class="reveal"><li><p class="reveal">StoryHeuristicValidator (disciplinas ausentes: idempotência, máquina de estado, recovery, BVA)</li>
+<li><p class="reveal">TypecheckValidator (<code>tsc --noEmit</code> para TS/JS; demais stacks → delegado ao Revisor)</li>
+<li><p class="reveal">AcceptanceCriteriaTestPresenceValidator (cada AC tem ≥1 teste rastreável)</li>
+<li><p class="reveal">TestExecutionValidator (<code>vitest related</code> para arquivos da story)</li>
+<li><p class="reveal">CoverageThresholdValidator (≥80% por arquivo, lendo <code>coverage/coverage-summary.json</code>)</li>
+<li><p class="reveal">CrapValidator (CRAP &gt; 30 em função tocada pela story)</li>
+</ul>
+</li>
+<li><p class="reveal">Persiste evidência em <code>.speckit/evidence/&lt;specId&gt;-&lt;runId&gt;.{md,json}</code> e atualiza <code>.speckit/evidence/latest.md</code> (consumido pelo Revisor no próximo turno).</li>
+<li><p class="reveal">Emite no chat o resumo determinístico (<code>✅ APROVADO</code> / <code>🛑 BLOQUEADO</code>) e o prompt formatado para o Implementador corrigir achados.</li>
+</ol>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /verify
+@speckit /verify --gate 2
+@speckit /verify --gate 3
+</code></pre>
+<p class="reveal"><strong>Quando dispara automaticamente (sem precisar do comando):</strong></p>
+<ul class="reveal"><li><p class="reveal">Ao <strong>salvar a spec</strong> (<code>.speckit/**/*.md</code>): heurística de disciplinas é recalculada → <code>.speckit/evidence/latest-heuristic.md</code>.</li>
+<li><p class="reveal">Ao <strong>salvar arquivo de código</strong> TS/JS, se a story estiver em Gate ≥ 2: CRAP do arquivo é recalculado → <code>.speckit/evidence/latest-crap.md</code>.</li>
+<li><p class="reveal">Ao <strong>transitar de Gate</strong> via <code>/review-auto</code>: o conjunto completo do Gate alvo roda e o resumo aparece no chat. Falhas no hook nunca abortam a transição (informacional).</li>
+</ul>
+<blockquote class="reveal callout"><p class="reveal">A camada é <strong>stack-agnóstica</strong>: nativa apenas para TS/JS. Para Java/Kotlin/Python/C#/Go, o achado vem com <code>delegatedToRevisor</code> contendo o comando exato a executar (<code>mvn test -pl ...</code>, <code>pytest --cov=...</code>, <code>dotnet test --filter</code>, <code>go test ./... -cover</code>).</p>
+</blockquote>
+<hr>
+<h3 id="speckit-metrics" class="reveal"><code>@speckit /metrics</code></h3>
+<p class="reveal">Resume métricas locais persistidas em <code>.speckit/metrics/events.jsonl</code>: total de execuções, pass rate, p95 de duração, validadores mais executados, eventos por gate/spec. Não envia dados a nenhum serviço externo; é puramente local.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /metrics
+</code></pre>
+<h3 id="speckit-score" class="reveal"><code>@speckit /score</code></h3>
+<p class="reveal">Avalia a completude estrutural da spec ativa em uma escala 0…100, com breakdown por dimensão (metadata, requisito de negócio, spec funcional/não-funcional, DoD, disciplinas de teste, rastreabilidade) e recomendações práticas para subir o score. Roda em &lt;5ms sem usar LLM.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /score
+</code></pre>
+<h3 id="status-bar-e-problems" class="reveal">Status Bar e Problems</h3>
+<p class="reveal">A extensão agora mantém um item de <strong>Status Bar</strong> com a spec ativa, gate corrente e status da última validação (✓ / ✗). Clicar abre <code>/metrics</code>. Findings da última evidência também aparecem no painel <strong>Problems</strong> do VS Code com origem <code>speckit/&lt;validator&gt;</code>, navegáveis por arquivo:linha.</p>
+<hr>
+<h3 id="speckit-context" class="reveal"><code>@speckit /context</code></h3>
+<p class="reveal">Gerencia arquivos de contexto adicionais que o agente deve considerar durante a implementação.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /context                              → Listar arquivos de contexto
+@speckit /context list                         → Listar arquivos de contexto
+@speckit /context add src/auth/service.ts      → Adicionar arquivo
+@speckit /context add src/middleware/auth.ts    → Adicionar outro arquivo
+@speckit /context remove src/auth/service.ts   → Remover arquivo
+@speckit /context clear                        → Limpar todos
+</code></pre>
+<p class="reveal"><strong>Exemplo de output (listar):</strong></p>
+<pre class="reveal"><code>📂 Contexto ativo — 3 arquivo(s)
+
+- src/auth/service.ts
+- src/middleware/auth.ts
+- src/config/oauth.ts
+</code></pre>
+<p class="reveal"><strong>Validações automáticas:</strong></p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Situação</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Arquivo existe no workspace</td>
+<td>✅ <code>Adicionado: src/auth/service.ts</code></td>
+</tr>
+<tr>
+<td>Arquivo já no contexto</td>
+<td>ℹ️ <code>Já está no contexto: src/auth/service.ts</code></td>
+</tr>
+<tr>
+<td>Arquivo não encontrado</td>
+<td>❌ <code>Arquivo não encontrado: src/xxx.ts</code></td>
+</tr>
+<tr>
+<td>Caminho fora do workspace</td>
+<td>❌ <code>Caminho inválido — não é permitido referenciar arquivos fora do workspace</code></td>
+</tr>
+</tbody>
+</table></div><blockquote class="reveal callout"><p class="reveal">Útil para apontar ao agente arquivos que não são detectados automaticamente, como configurações ou contratos.</p>
+</blockquote>
+<hr>
+<h3 id="speckit-doctor" class="reveal"><code>@speckit /doctor</code></h3>
+<p class="reveal">Diagnóstico de saúde do workspace — verifica se os diretórios, specs e configurações estão corretos.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /doctor
+</code></pre>
+<p class="reveal"><strong>Exemplo de output:</strong></p>
+<pre class="reveal"><code>🩺 Diagnóstico do Workspace
+
+| Status | Item                                          |
+|--------|-----------------------------------------------|
+| ✅     | .speckit/                                     |
+| ✅     | .github/                                      |
+| ✅     | defaults.yml                                  |
+| ✅     | Stories — 2 encontrada(s)                     |
+| ✅     | Fixes — 1 encontrado(s)                       |
+| ✅     | Tech Stack — typescript / react (high)        |
+
+Resultado: 6/6 verificações OK
+</code></pre>
+<p class="reveal"><strong>Exemplo com problemas:</strong></p>
+<pre class="reveal"><code>🩺 Diagnóstico do Workspace
+
+| Status | Item                                          |
+|--------|-----------------------------------------------|
+| ❌     | .speckit/                                     |
+| ❌     | .github/                                      |
+| ❌     | defaults.yml                                  |
+| ❌     | Stories                                       |
+| ❌     | Fixes                                         |
+| ✅     | Tech Stack — java / springboot (high)         |
+
+Resultado: 1/6 verificações OK
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal">Execute <code>/doctor</code> antes de começar a trabalhar para garantir que o workspace está preparado. Ideal como primeiro passo após clonar um repositório.</p>
+</blockquote>
+<hr>
+<h3 id="speckit-batch" class="reveal"><code>@speckit /batch</code></h3>
+<p class="reveal">Processa <strong>todas</strong> as specs em <code>.speckit/</code> em lote — validação paralela + geração de configuração Copilot.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /batch                        → Valida todas as specs e mostra resumo
+@speckit /batch --generate             → Valida + gera config Copilot para cada spec válida
+@speckit /batch --generate --unified   → Gera agentes unificados (implementador + revisor por story)
+@speckit /batch --generate --unified --story &lt;id&gt; → Gera agente unificado apenas da story informada
+@speckit /batch --generate --unified --branch-strategy &lt;session|cited&gt; → Resolve a governança de branch quando a story cita branch
+@speckit /batch --generate --unified --branch-strategy session --confirm &lt;intent-id&gt; → Confirma a criação da branch sugerida para a sessão
+@speckit /batch-generate               → Atalho para /batch --generate
+@speckit /batch-unified                → Atalho para /batch --generate --unified
+</code></pre>
+<p class="reveal">Se você passar um parâmetro inválido, o comando retorna o uso correto e sugere a combinação recomendada.</p>
+<p class="reveal"><strong>Resumo de validação:</strong></p>
+<p class="reveal">O batch executa parse + validação de <strong>todas</strong> as specs em paralelo e exibe uma tabela:</p>
+<pre class="reveal"><code>Resultado do batch — 4 spec(s) encontrada(s):
+
+| Status             | Spec            | Tipo  | Título              | Gate              | Stack            |
+|--------------------|-----------------|-------|---------------------|-------------------|------------------|
+| ✅ Válida          | STORY-001.md    | story | Auth OAuth2         | 1 — Implementação | typescript/react |
+| ✅ Válida          | FIX-001.md      | fix   | Login 500           | 0 — Alinhamento   | java/springboot  |
+| ⚠️ 3 lacuna(s)    | STORY-002.md    | story | Dashboard vendas    | 0 — Alinhamento   | typescript/react |
+| ⏭️ done           | STORY-003.md    | story | Feature concluída   | 4 — Entrega       | —                |
+
+Totais: ✅ 2 válida(s) | ⚠️ 1 inválida(s) | ❌ 0 erro(s) | ⏭️ 1 finalizada(s)
+</code></pre>
+<p class="reveal"><strong>Flag <code>--generate</code> (modo clássico):</strong></p>
+<p class="reveal">Gera config Copilot individualmente para cada spec válida — mesmo comportamento de <code>/validate</code> mas em lote. A última spec processada define o <code>copilot-instructions.md</code> ativo.</p>
+<p class="reveal"><strong>Flag <code>--generate --unified</code> (modo unificado):</strong></p>
+<p class="reveal">Gera um <strong>agente unificado por story</strong> — cada agente contém o protocolo completo de implementação (Gates 0-2) + revisão (Gates 3-4) com ping-pong interno. Adicionalmente:</p>
+<ol class="reveal"><li><p class="reveal"><strong>Análise de dependências</strong> — identifica stories independentes (prontas) e bloqueadas (dependências pendentes) usando somente o metadata <code>depends-on</code></li>
+<li><p class="reveal"><strong>Agentes por story</strong> — cria <code>.github/agents/speckit-story-{id}.agent.md</code> com ambos os modos</li>
+<li><p class="reveal"><strong>Batch index</strong> — gera <code>copilot-instructions.md</code> listando todas as stories ativas, skills e agents</li>
+<li><p class="reveal"><strong>Transição automática de revisão com consentimento</strong> — ao concluir Gate 2, o protocolo unificado exige consentimento único (<code>@speckit /review-auto --batch-consent</code>) e então aciona <code>@speckit /review-auto --auto</code> para persistir <code>gate: 3</code> e <code>status: review</code></li>
+<li><p class="reveal"><strong>Execução imediata da revisão</strong> — após o handoff, o próprio agente deve acionar <code>@speckit /review-auto --auto</code> e executar o checklist completo do Gate 3 no mesmo fluxo (sem aguardar novo comando do usuário), emitindo veredito</li>
+<li><p class="reveal"><strong>Handoff explícito</strong> — a transição Gate 2 → Gate 3 deve emitir no chat o bloco de handoff (<code>IMPLEMENTADOR → REVISOR</code>) com gate/status atualizados</li>
+<li><p class="reveal"><strong>Outcomes explícitos no chat</strong> — após o veredito, o agente deve executar <code>@speckit /review-auto --changes-requested --auto</code> (Gate 3 → 2) ou <code>@speckit /review-auto --approved --auto</code> (Gate 3 → 4 com <code>status: ready-to-commit</code> até <code>/commit</code>)</li>
+<li><p class="reveal"><strong>Filtro por story</strong> — use <code>--story &lt;id&gt;</code> em conjunto com <code>--generate --unified</code> para gerar somente o agente da story reaberta/selecionada</li>
+<li><p class="reveal"><strong>Governança explícita de branch citada</strong> — se alguma story citar <code>develop</code>, <code>main</code> ou outra branch, o comando pausa a geração e pede ao usuário escolher entre:<ul class="reveal"><li><p class="reveal"><code>--branch-strategy session</code> → usar sempre a branch carregada na sessão do VS Code como fonte canônica</li>
+<li><p class="reveal"><code>--branch-strategy cited</code> → respeitar as branch(es) citada(s) na spec</li>
+</ul>
+</li>
+<li><p class="reveal"><strong>Criação controlada da branch da sessão</strong> — quando o usuário escolhe <code>session</code> e o Git não tem branch ativa resolvível, o SpecKit sugere uma branch <code>feature/batch-&lt;yyyymmdd&gt;-&lt;slug&gt;</code> e exige confirmação explícita via <code>--confirm &lt;intent-id&gt;</code> antes de criar e fixar essa branch para o restante da sessão atual</li>
+</ol>
+<blockquote class="reveal callout"><p class="reveal">Referências narrativas a outras stories ou fixes dentro do corpo da história não entram na análise de dependências. Para bloquear uma story, declare explicitamente o ID no campo <code>depends-on</code> do metadata.</p>
+</blockquote>
+<p class="reveal"><strong>Exemplo de output (modo unificado):</strong></p>
+<pre class="reveal"><code>⏳ Gerando agentes unificados + análise de dependências...
+
+💾 Backup do copilot-instructions.md anterior salvo.
+
+### ⚠️ Dependências pendentes
+
+- `002` bloqueada por: `001`
+
+### ✅ Stories independentes (prontas para execução)
+
+- `001`
+
+✅ Agente unificado: speckit-story-001.agent.md
+✅ Agente unificado: speckit-story-002.agent.md
+
+✅ copilot-instructions.md atualizado (modo batch).
+
+---
+
+Resumo (modo unificado):
+- 🤖 2 agente(s) unificado(s) gerado(s)
+- 🔗 1 independente(s), 1 bloqueada(s)
+- 📄 copilot-instructions.md gerado em modo batch
+
+Próximo passo: Abra o Copilot Chat e selecione o agente da story desejada no dropdown.
+Importante: no modo unificado, confirme um consentimento único com `@speckit /review-auto --batch-consent` antes de handoffs automáticos.
+Importante: a transição Gate 2 → Gate 3 usa `@speckit /review-auto --auto` e atualiza o metadata da story para `gate: 3` e `status: review`.
+Importante: após o veredito, use `@speckit /review-auto --changes-requested --auto` (rework) ou `@speckit /review-auto --approved --auto` (Gate 4 com `status: ready-to-commit` até o commit final).
+Importante: no modo unificado, a transição também tenta fechar automaticamente commit pendente do Gate 2 antes da revisão.
+</code></pre>
+<p class="reveal"><strong>Protocolo do agente unificado:</strong></p>
+<p class="reveal">Cada agente unificado contém 4 protocolos embutidos:</p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Protocolo</th>
+<th>Quando ativa</th>
+<th>O que faz</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dependência</td>
+<td>Gate 0 (pré-condição)</td>
+<td>Verifica apenas o metadata canônico <code>depends-on</code>; bloqueia se pendentes</td>
+</tr>
+<tr>
+<td>Transição</td>
+<td>Gate 2 → Gate 3</td>
+<td>Tenta commit automático do Gate 2, exige consentimento batch único, aciona <code>/review-auto --auto</code>, persiste metadata (<code>gate: 3</code>, <code>status: review</code>) e emite handoff explícito</td>
+</tr>
+<tr>
+<td>Desfecho</td>
+<td>Gate 3 → Gate 2 ou Gate 4</td>
+<td>Comandos explícitos no unificado: <code>/review-auto --changes-requested --auto</code> (retrabalho) ou <code>/review-auto --approved --auto</code> (Gate 4 com <code>status: ready-to-commit</code>) com transição visível no chat</td>
+</tr>
+<tr>
+<td>Retorno</td>
+<td>Revisor emite “ALTERAÇÕES SOLICITADAS”</td>
+<td>Documenta fixes, retorna ao implementador, aplica correções, re-executa revisão</td>
+</tr>
+<tr>
+<td>Inviolável</td>
+<td>Sempre ativo no modo revisor</td>
+<td>Revisor <strong>nunca</strong> implementa — apenas documenta bloqueios e devolve ao implementador</td>
+</tr>
+</tbody>
+</table></div><blockquote class="reveal callout"><p class="reveal">Stories independentes podem ser executadas em paralelo (abas de chat separadas). Stories bloqueadas aguardam conclusão das dependências.</p>
+</blockquote>
+<hr>
+<h3 id="speckit-init" class="reveal"><code>@speckit /init</code></h3>
+<p class="reveal">Inicializa o workspace e consolida specs dispersas em <code>.speckit/</code>.</p>
+<p class="reveal"><strong>Uso:</strong></p>
+<pre class="reveal"><code>@speckit /init
+</code></pre>
+<p class="reveal"><strong>O que faz:</strong></p>
+<ol class="reveal"><li><p class="reveal"><strong>Garante <code>.speckit/</code> existe</strong> — cria o diretório se ausente</li>
+<li><p class="reveal"><strong>Busca specs dispersas</strong> — encontra recursivamente arquivos <code>STORY-*.md</code> e <code>US-*.md</code> fora de <code>.speckit/</code></li>
+<li><p class="reveal"><strong>Consolida</strong> — move cada arquivo encontrado para <code>.speckit/</code>, preservando o conteúdo</li>
+<li><p class="reveal"><strong>Detecta conflitos</strong> — se já existe um arquivo com mesmo nome em <code>.speckit/</code>, não sobrescreve</li>
+</ol>
+<p class="reveal"><strong>Diretórios ignorados:</strong> <code>node_modules</code>, <code>.git</code>, <code>dist</code>, <code>out</code>, <code>.venv</code>, <code>__pycache__</code>, <code>.next</code>, <code>.nuxt</code>, <code>coverage</code>, <code>build</code></p>
+<p class="reveal"><strong>Exemplo de output (specs encontradas):</strong></p>
+<pre class="reveal"><code>✅ Workspace inicializado.
+
+📁 `.speckit/` — criado
+📄 2 arquivo(s) movido(s) para `.speckit/`:
+  - docs/STORY-001.md → .speckit/STORY-001.md
+  - US-AUTH-002.md → .speckit/US-AUTH-002.md
+</code></pre>
+<p class="reveal"><strong>Exemplo de output (com conflitos):</strong></p>
+<pre class="reveal"><code>✅ Workspace inicializado.
+
+📁 `.speckit/` — já existia
+📄 1 arquivo(s) movido(s) para `.speckit/`:
+  - src/STORY-002.md → .speckit/STORY-002.md
+
+⚠️ 1 conflito(s) — não movido(s) (já existem no destino):
+  - STORY-001.md
+</code></pre>
+<p class="reveal"><strong>Exemplo de output (nada a fazer):</strong></p>
+<pre class="reveal"><code>✅ Workspace inicializado.
+
+📁 `.speckit/` — já existia
+📄 Nenhum arquivo de estória encontrado fora de `.speckit/`.
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal">Execute <code>/init</code> logo após clonar um repositório para garantir que todas as specs estejam centralizadas. Complementa o <code>/doctor</code>.</p>
+</blockquote>
+<hr>
+<h3 id="sem-comando-help" class="reveal">Sem comando (help)</h3>
+<p class="reveal">Se chamar <code>@speckit</code> sem comando ou com comando desconhecido, exibe a lista de comandos disponíveis.</p>
+<p class="reveal">Para ajuda detalhada por comando, use <code>@speckit /help</code>.</p>
+<hr>
+<h2 id="acesso-pela-paleta-de-comandos" class="reveal section-title">Acesso pela paleta de comandos</h2>
+<p class="reveal">Além do Copilot Chat, o plugin registra atalhos na paleta de comandos (<code>Ctrl+Shift+P</code>):</p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Paleta de comandos</th>
+<th>Equivalente no chat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SpecKit: Nova História</strong></td>
+<td><code>@speckit /new</code></td>
+</tr>
+<tr>
+<td><strong>SpecKit: Novo Fix</strong></td>
+<td><code>@speckit /fix</code></td>
+</tr>
+<tr>
+<td><strong>SpecKit: Validar Spec</strong></td>
+<td><code>@speckit /validate</code></td>
+</tr>
+<tr>
+<td><strong>SpecKit: Status</strong></td>
+<td><code>@speckit /status</code></td>
+</tr>
+</tbody>
+</table></div><p class="reveal">Cada comando da paleta abre automaticamente o Copilot Chat com o comando correspondente.</p>
+<hr>
+<h2 id="configuracao-do-workspace" class="reveal section-title">Configuração do workspace</h2>
+<h3 id="defaults-defaultsyml" class="reveal">Defaults (<code>defaults.yml</code>)</h3>
+<p class="reveal">Crie <code>.speckit/defaults.yml</code> para pré-preencher campos do template em <code>/new</code> e <code>/draft</code>:</p>
+<pre class="reveal"><code class="language-yaml"># .speckit/defaults.yml
+language: typescript
+framework: react
+architecture: hexagonal
+target: frontend
+projectStage: greenfield
+database: PostgreSQL
+infrastructure: AWS
+</code></pre>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Campo</th>
+<th>Valores aceitos</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>language</code></td>
+<td><code>typescript</code> · <code>javascript</code> · <code>java</code> · <code>csharp</code> · <code>python</code></td>
+</tr>
+<tr>
+<td><code>framework</code></td>
+<td><code>dotnet</code> · <code>springboot</code> · <code>angular</code> · <code>react</code> · <code>fastapi</code> · <code>other</code></td>
+</tr>
+<tr>
+<td><code>architecture</code></td>
+<td><code>hexagonal</code> · <code>layered</code> · <code>microservices</code> · <code>monolith</code> · <code>serverless</code></td>
+</tr>
+<tr>
+<td><code>target</code></td>
+<td><code>backend</code> · <code>frontend</code> · <code>bff</code> · <code>script</code> · <code>library</code></td>
+</tr>
+<tr>
+<td><code>projectStage</code></td>
+<td><code>greenfield</code> · <code>brownfield</code></td>
+</tr>
+<tr>
+<td><code>database</code></td>
+<td>texto livre (ex: <code>PostgreSQL 15</code>, <code>DynamoDB</code>)</td>
+</tr>
+<tr>
+<td><code>infrastructure</code></td>
+<td>texto livre (ex: <code>AWS</code>, <code>Kafka, Docker, EKS</code>)</td>
+</tr>
+</tbody>
+</table></div><blockquote class="reveal callout"><p class="reveal">Quando defaults existem, <code>/new</code> exibe <code>💡 Defaults aplicados de .speckit/defaults.yml</code> e o template já vem preenchido.</p>
+</blockquote>
+<h3 id="deteccao-automatica-de-stack-fix" class="reveal">Detecção automática de stack (Fix)</h3>
+<p class="reveal">Para fixes, a stack é detectada automaticamente do workspace sem precisar de <code>defaults.yml</code>:</p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Arquivo detectado</th>
+<th>Language</th>
+<th>Framework</th>
+<th>Lógica adicional</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>package.json</code></td>
+<td>TS ou JS</td>
+<td>react/angular/other</td>
+<td>TS se <code>tsconfig.json</code> existir. React se <code>react</code> nas deps. Angular se <code>@angular/core</code>.</td>
+</tr>
+<tr>
+<td><code>pom.xml</code></td>
+<td>java</td>
+<td>springboot</td>
+<td>Sempre Spring Boot se pom presente</td>
+</tr>
+<tr>
+<td><code>*.csproj</code></td>
+<td>csharp</td>
+<td>dotnet</td>
+<td>Glob match em qualquer <code>.csproj</code></td>
+</tr>
+<tr>
+<td><code>requirements.txt</code></td>
+<td>python</td>
+<td>fastapi/other</td>
+<td>FastAPI se <code>fastapi</code> nos requirements</td>
+</tr>
+<tr>
+<td><code>pyproject.toml</code></td>
+<td>python</td>
+<td>fastapi/other</td>
+<td>FastAPI se <code>fastapi</code> no conteúdo</td>
+</tr>
+</tbody>
+</table></div><p class="reveal"><strong>Detecção adicional:</strong> <code>target</code> (backend/frontend/bff/library), <code>architecture</code> (hexagonal/layered via estrutura de pastas), <code>messaging</code> (kafka se <code>kafkajs</code>/<code>spring-kafka</code> nas deps), <code>projectStage</code> (greenfield se &lt; 10 arquivos fonte).</p>
+<hr>
+<h2 id="backup-e-logging" class="reveal section-title">Backup e logging</h2>
+<h3 id="backup-automatico" class="reveal">Backup automático</h3>
+<p class="reveal">Antes de cada regeneração (<code>/validate</code> com spec válida), o plugin faz backup do <code>copilot-instructions.md</code> existente:</p>
+<pre class="reveal"><code>.speckit/backups/
++-- 2026-03-19T10-30-00-000Z/
+|   +-- copilot-instructions.md
++-- 2026-03-19T14-15-00-000Z/
+|   +-- copilot-instructions.md
++-- ...
+</code></pre>
+<ul class="reveal"><li><p class="reveal">Máximo de <strong>5 backups</strong> — os mais antigos são podados automaticamente</li>
+<li><p class="reveal">Backup só ocorre se o arquivo existir e tiver conteúdo</li>
+<li><p class="reveal">Mensagem <code>💾 Backup do copilot-instructions.md anterior salvo</code> exibida no chat</li>
+</ul>
+<h3 id="session-logging" class="reveal">Session logging</h3>
+<p class="reveal">Cada execução de <code>/validate</code> e <code>/draft</code> é registrada em log Markdown diário:</p>
+<pre class="reveal"><code>.speckit/logs/
++-- session-2026-03-19.md
+</code></pre>
+<p class="reveal">Formato de cada entrada:</p>
+<pre class="reveal"><code class="language-markdown">## 2026-03-19 10:30 — @speckit /validate
+
+**Spec:** 001 — Cálculo de comissão
+**Resultado:** ✅ Válida — 9 arquivo(s) gerado(s)
+SessionAlias: Calculo de comissao + implementador + Gate-2
+AgentMode: implementador
+Gate: 2
+CommandExecutionId: exec-...
+SessionId: session-...
+BatchId: batch-...
+LLMResponseReceived: false
+
+- .github/copilot-instructions.md
+- .github/skills/speckit-baseline/SKILL.md
+- ...
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal">Falhas de logging nunca interrompem o comando — o log é best-effort.</p>
+</blockquote>
+<hr>
+<h2 id="arquivos-gerados" class="reveal section-title">Arquivos gerados</h2>
+<p class="reveal">O conjunto exato varia conforme a stack declarada. Abaixo a estrutura completa com todos os triggers ativos.</p>
+<details>
+<summary><strong>Árvore — Stories (9 arquivos + 1 opcional)</strong></summary>
+<pre class="reveal"><code>.github/
++-- copilot-instructions.md            ← Índice always-on (~400 tokens)
++-- workflows/
+|   +-- quality-gate.yml               ← Lint + Build + Testes ≥80%
+|   +-- security-scan.yml              ← TruffleHog + Semgrep
++-- prompts/
+|   +-- run.prompt.md                  ← Sessão única (Gates 0–4)
++-- skills/
+|   +-- speckit-baseline/SKILL.md      ← 10 seções NFR (keyword-activated)
+|   +-- speckit-stack/SKILL.md         ← Linguagem + framework + infra + patterns
+|   +-- speckit-context-STORY-{id}/SKILL.md ← Contexto específico da story
+|   +-- speckit-devtools/SKILL.md      ← (opcional) DevTools: ESLint, Prettier, husky, lint-staged
++-- agents/
+    +-- speckit-implementador.agent.md ← Gates 0–2 (dropdown Copilot)
+    +-- speckit-revisor.agent.md       ← Gates 3–4 (dropdown Copilot)
+    +-- speckit-story-{id}.agent.md    ← (batch) Gates 0–4 unificados
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal">A sessão de implementação usa o <strong>agent implementador</strong> (dropdown) para Gates 0–2. A revisão usa o <strong>agent revisor</strong> em nova sessão. O <code>run.prompt.md</code> é uma alternativa monolítica (todos os gates em uma sessão).
+Em modo <strong>batch unificado</strong> (<code>/batch --generate --unified</code>), cada story recebe um agente <code>speckit-story-{id}</code> que conduz o ciclo completo com transição interna entre modos, consentimento único de sessão e atualização de metadata ao final do Gate 2 via <code>/review-auto --auto</code>.
+O skill DevTools é gerado apenas quando o usuário aceita a oferta via botão ou <code>--devtools</code>.</p>
+</blockquote>
+</details>
+<details>
+<summary><strong>Árvore — Fixes (7 arquivos + 1 opcional — sem workflows CI)</strong></summary>
+<pre class="reveal"><code>.github/
++-- copilot-instructions.md            ← Índice always-on (~400 tokens)
++-- prompts/
+|   +-- fix-run.prompt.md              ← Sessão única (Gates 0–4)
++-- skills/
+|   +-- speckit-baseline/SKILL.md      ← 10 seções NFR (keyword-activated)
+|   +-- speckit-stack/SKILL.md         ← Stack auto-detectada do workspace
+|   +-- speckit-context-FIX-{id}/SKILL.md ← Contexto específico do fix
+|   +-- speckit-devtools/SKILL.md      ← (opcional) DevTools: ESLint, Prettier, husky, lint-staged
++-- agents/
+    +-- speckit-fix-implementador.agent.md ← Gates 0–2 (dropdown Copilot)
+    +-- speckit-fix-revisor.agent.md       ← Gates 3–4 (dropdown Copilot)
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal">Fixes <strong>não geram workflows CI</strong> — a premissa é que os workflows do projeto já existem. A stack técnica é <strong>detectada automaticamente</strong> do workspace.
+O skill DevTools é gerado apenas quando o usuário aceita a oferta via botão ou <code>--devtools</code>.</p>
+</blockquote>
+</details>
+<details>
+<summary><strong>O que cada arquivo instrui o Copilot a fazer</strong></summary>
+<h4 id="baseline-secoes-dentro-de-speckit-baselineskillmd" class="reveal">Baseline (seções dentro de <code>speckit-baseline/SKILL.md</code>)</h4>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Seção</th>
+<th>Instrui o agente a…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>00-agent-integrity</code></td>
+<td>Nunca assumir nomes sem vê-los; declarar incerteza; respeitar escopo; exigir 80% cobertura</td>
+</tr>
+<tr>
+<td><code>01-performance</code></td>
+<td>Big-O antes de propor; <code>Promise.all</code>/<code>Task.WhenAll</code> para I/O paralelo; paginação + caching. <strong>SLOs da story</strong> (ou baseline <code>P99 &lt; 500ms</code> / <code>99,9%</code>)</td>
+</tr>
+<tr>
+<td><code>02-architecture</code></td>
+<td>Respeitar arquitetura definida; SOLID; <strong>timeout + retry + circuit breaker</strong> em todo cliente HTTP; propagar <code>traceparent</code></td>
+</tr>
+<tr>
+<td><code>03-context-management</code></td>
+<td>Não misturar módulos; pedir arquivos antes de propor; declarar contexto insuficiente</td>
+</tr>
+<tr>
+<td><code>04-testing-standards</code></td>
+<td>Happy path + edge + error; AAA obrigatório; <strong>cenários dos critérios de aceite</strong>; testes de carga com SLO declarado ou baseline; preflight Testcontainers com Docker/Podman</td>
+</tr>
+<tr>
+<td><code>05-git-workflow</code></td>
+<td>Conventional Commits; branch <code>feature/&lt;id&gt;-&lt;slug&gt;</code>; preflight <code>git init</code> quando workspace ainda não é repo; nunca commit direto em main</td>
+</tr>
+<tr>
+<td><code>06-credential-security</code></td>
+<td>IAM roles; secrets via SecretsManager/Vault; nunca logar tokens/senhas</td>
+</tr>
+<tr>
+<td><code>07-observability</code></td>
+<td>JSON com <code>traceId</code>; <code>traceparent</code> W3C; Prometheus; <strong>SLOs parametrizados</strong>; consumer lag em Kafka/SQS</td>
+</tr>
+<tr>
+<td><code>08-security-tests</code></td>
+<td>Sem token → 401; expirado → 401; role insuficiente → 403; SQL injection → 400; sem stack trace no response</td>
+</tr>
+</tbody>
+</table></div><blockquote class="reveal callout"><p class="reveal">Quando testes de integração usam Testcontainers e Docker não está disponível, o agente deve verificar Podman, executar <code>podman machine start</code> se a máquina estiver parada e só então repetir a execução dos testes.
+Quando uma sessão com agente implementador executa Git diretamente, o agente deve validar <code>git rev-parse --is-inside-work-tree</code> antes de <code>checkout</code>/<code>commit</code>; se receber <code>not a git repository</code>, deve executar <code>git init</code>, confirmar com <code>git status</code> e repetir o mesmo <code>git add</code>/<code>git commit</code> apenas uma vez.</p>
+</blockquote>
+<h4 id="infraestrutura-secoes-em-speckit-stackskillmd-se-detectadas" class="reveal">Infraestrutura (seções em <code>speckit-stack/SKILL.md</code>, se detectadas)</h4>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Arquivo</th>
+<th>Instrui o agente a…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>infra-kafka</code></td>
+<td><code>acks=all</code>; idempotence no producer; dedup no consumer; DLQ com headers; backoff + jitter; graceful shutdown</td>
+</tr>
+<tr>
+<td><code>infra-aws</code></td>
+<td>DynamoDB: access patterns first, single-table, optimistic locking. RDS: pool (HikariCP/EF Core), Flyway</td>
+</tr>
+<tr>
+<td><code>infra-glue</code></td>
+<td>GlueJob Python; logging estruturado; falhas parciais em ETL</td>
+</tr>
+</tbody>
+</table></div><h4 id="padroes-secoes-em-speckit-stackskillmd-se-aplicaveis" class="reveal">Padrões (seções em <code>speckit-stack/SKILL.md</code>, se aplicáveis)</h4>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Arquivo</th>
+<th>Instrui o agente a…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pattern-crud</code></td>
+<td>Repository → Service → Controller; paginação; RFC 7807 ProblemDetail; validação no controller</td>
+</tr>
+<tr>
+<td><code>pattern-idempotency</code></td>
+<td><code>Idempotency-Key</code> para POST; dedup por chave de negócio; TTL; 201/200/409</td>
+</tr>
+<tr>
+<td><code>pattern-bff</code></td>
+<td>Orquestração sem domínio; fan-out paralelo; circuit breaker; partial response; RFC 7807</td>
+</tr>
+<tr>
+<td><code>pattern-contract-testing</code></td>
+<td>WireMock stubs; Pact consumer-driven; testar: happy, 404, 500, timeout</td>
+</tr>
+</tbody>
+</table></div><h4 id="workflows-ci" class="reveal">Workflows CI</h4>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Arquivo</th>
+<th>O que faz</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>quality-gate.yml</code></td>
+<td>PR → lint → build → testes ≥80%. Comando parametrizado por linguagem. Upload de cobertura como artefato</td>
+</tr>
+<tr>
+<td><code>security-scan.yml</code></td>
+<td>PRs + semanal: TruffleHog (secrets) + Semgrep (SAST → SARIF → GitHub Security)</td>
+</tr>
+</tbody>
+</table></div></details>
+<hr>
+<h2 id="gates-de-implementacao" class="reveal section-title">Gates de implementação</h2>
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Linha do tempo dos cinco gates</figcaption>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">flowchart LR
+    G0([Gate 0<br/>Story Draft]):::g0 --> G1([Gate 1<br/>Spec Review]):::g1
+    G1 --> G2([Gate 2<br/>Implementation]):::g2
+    G2 --> G3([Gate 3<br/>Testing & Review]):::g3
+    G3 --> G4([Gate 4<br/>Done]):::g4
+    classDef g0 fill:#1c2541,stroke:#7aa2ff,color:#e8ecf6
+    classDef g1 fill:#1c2541,stroke:#9d7aff,color:#e8ecf6
+    classDef g2 fill:#1c2541,stroke:#4cc9f0,color:#e8ecf6
+    classDef g3 fill:#1c2541,stroke:#ffb454,color:#e8ecf6
+    classDef g4 fill:#1c2541,stroke:#38d39f,color:#e8ecf6</pre>
+  </div>
+</figure>
+
+<p class="reveal">O SpecKit estrutura a implementação em <strong>5 gates</strong> distribuídos em duas sessões:</p>
+<pre class="reveal"><code>  +== Sessao A: agent implementador ===================+     +== Sessao B: agent revisor ==+
+  |                                                     |     |                              |
+  |  Gate 0 --&gt; Gate 1 --&gt; Gate 2 --- Novo Chat ----------&gt;  Gate 3 --&gt; Gate 4            |
+  |  Alinhamento  Implementacao  Testes                 |     |  Revisao       Entrega       |
+  |                                                     |     |                              |
+  +=====================================================+     +==============================+
+</code></pre>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Gate</th>
+<th>Nome</th>
+<th>O que acontece</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>Alinhamento</td>
+<td>Lê a spec, verifica gaps, apresenta plano e aguarda confirmação antes de escrever código</td>
+</tr>
+<tr>
+<td>1</td>
+<td>Implementação</td>
+<td>Cria branch, implementa feature/fix seguindo stack e arquitetura. Sem refatorações fora de escopo. Commits incrementais</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Testes</td>
+<td>Cenários dos critérios de aceite + edge cases + error cases. Cobertura ≥80%. Fix: regressão deve <strong>falhar sem o fix</strong> e passar com ele</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Revisão</td>
+<td>Nova sessão sem memória. Verifica funcionalidade, arquitetura, qualidade, testes, segurança, observabilidade, git, DoD/DoF + checklist NFRs expandido</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Entrega</td>
+<td>Rebase na main, re-executa testes, valida DoD/DoF item por item, commit de encerramento</td>
+</tr>
+</tbody>
+</table></div><blockquote class="reveal callout"><p class="reveal"><strong>Sessão única:</strong> use <code>run.prompt.md</code> (Stories) ou <code>fix-run.prompt.md</code> (Fixes) via ▶ Run in Copilot Chat para todos os gates em uma sessão. Indicado para features pequenas.</p>
+</blockquote>
+<hr>
+<h2 id="estrategia-de-prompt-layering-e-tokens" class="reveal section-title">Estratégia de prompt layering e tokens</h2>
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">As cinco camadas do prompt</figcaption>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">flowchart TB
+    L1[Layer 1<br/>System Identity]:::a --> L2[Layer 2<br/>Workflow Rules]:::b
+    L2 --> L3[Layer 3<br/>Gate Context]:::c
+    L3 --> L4[Layer 4<br/>Story Spec]:::d
+    L4 --> L5[Layer 5<br/>User Intent]:::e
+    L5 --> OUT([LLM Call]):::out
+    classDef a fill:#1c2541,stroke:#7aa2ff,color:#e8ecf6
+    classDef b fill:#1c2541,stroke:#9d7aff,color:#e8ecf6
+    classDef c fill:#1c2541,stroke:#4cc9f0,color:#e8ecf6
+    classDef d fill:#1c2541,stroke:#ffb454,color:#e8ecf6
+    classDef e fill:#1c2541,stroke:#58e1c2,color:#e8ecf6
+    classDef out fill:#243057,stroke:#c98bff,color:#e8ecf6,font-weight:bold</pre>
+  </div>
+</figure>
+
+<p class="reveal">O SpecKit distribui o contexto em <strong>3 camadas on-demand</strong> para minimizar o consumo de tokens por interação. Em vez de carregar tudo de uma vez, cada camada é ativada por keyword matching ou seleção explícita.</p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Camada</th>
+<th>Conteúdo</th>
+<th>Tokens</th>
+<th>Carregamento</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tier 1 — Always-on</strong></td>
+<td><code>copilot-instructions.md</code> — índice mínimo com metadata da story, regras globais e referências aos skills/agents</td>
+<td>~400</td>
+<td>Automático, toda interação</td>
+</tr>
+<tr>
+<td><strong>Tier 2 — Skills on-demand</strong></td>
+<td>3–4 pastas de skills ativadas por keyword</td>
+<td>~1500–2500 cada</td>
+<td>Automático via keyword match</td>
+</tr>
+<tr>
+<td><strong>Tier 3 — Agents</strong></td>
+<td>Agents com protocolo completo de gates, selecionados via dropdown</td>
+<td>~2000–2500</td>
+<td>Manual, dropdown do Copilot</td>
+</tr>
+</tbody>
+</table></div><h3 id="skills-ativacao-por-keyword" class="reveal">Skills — ativação por keyword</h3>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Skill</th>
+<th>Pasta</th>
+<th>Ativação</th>
+<th>Conteúdo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Baseline</strong></td>
+<td><code>.github/skills/speckit-baseline/</code></td>
+<td>Keywords: agent, integrity, performance, testing, git, security, observability</td>
+<td>10 seções NFR: integridade do agente, performance, arquitetura, context management, testing standards, git workflow, credential security, observability, security tests, idempotency</td>
+</tr>
+<tr>
+<td><strong>Stack</strong></td>
+<td><code>.github/skills/speckit-stack/</code></td>
+<td>Keywords: nome da linguagem ou framework</td>
+<td>Regras por linguagem + framework + infra + patterns. Composição condicional — inclui apenas seções relevantes à stack declarada</td>
+</tr>
+<tr>
+<td><strong>Context</strong></td>
+<td><code>.github/skills/speckit-context-{ID}/</code></td>
+<td>Keywords: ID da story ou fix</td>
+<td>Spec completa: requisito de negócio, critérios de aceite, NFRs, stack técnica, DoR/DoD</td>
+</tr>
+<tr>
+<td><strong>DevTools</strong></td>
+<td><code>.github/skills/speckit-devtools/</code></td>
+<td>Keywords: devtools, lint, eslint, prettier, format, husky, pre-commit</td>
+<td>Instruções de instalação de ESLint, Prettier, husky e lint-staged adaptadas à stack. Gerado sob demanda via botão ou <code>--devtools</code></td>
+</tr>
+</tbody>
+</table></div><h3 id="conteudo-do-skill-stack-regras-por-linguagem-framework-e-logica" class="reveal">Conteúdo do skill Stack — regras por linguagem, framework e lógica</h3>
+<p class="reveal">O skill <code>speckit-stack</code> é composto dinamicamente. Cada seção abaixo só é incluída se a stack declarada na spec a referenciar.</p>
+<details>
+<summary><strong>Linguagens — ~10 regras por linguagem</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Linguagem</th>
+<th>Regras-chave</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>TypeScript</strong></td>
+<td><code>strict: true</code> obrigatório; branded types para domain IDs; discriminated unions (não enums); Zod para runtime validation; <code>unknown</code> (nunca <code>any</code>); async/await only; <code>noUncheckedIndexedAccess</code></td>
+</tr>
+<tr>
+<td><strong>Java 17+</strong></td>
+<td>Records para DTOs; sealed classes para ADTs; pattern matching em switch; Optional apenas como retorno; constructor injection; Java 21: virtual threads + StructuredTaskScope</td>
+</tr>
+<tr>
+<td><strong>C# .NET 8+</strong></td>
+<td><code>Nullable enable</code>; records para DTOs; pattern matching; async obrigatório (sem <code>.Result</code>/<code>.Wait()</code>); <code>required</code> keyword; <code>TimeProvider</code> injetado (não <code>DateTime.Now</code>); primary constructors</td>
+</tr>
+<tr>
+<td><strong>Python 3.11+</strong></td>
+<td>Type hints em tudo; Pydantic v2 para dados externos; <code>dataclasses(slots=True)</code> interno; asyncio + TaskGroup; match/case; structlog + request_id; ruff + mypy</td>
+</tr>
+<tr>
+<td><strong>JavaScript ES2022+</strong></td>
+<td>ESM only; <code>const</code> default; optional chaining + nullish coalescing; async/await + <code>Promise.all</code>; array methods sobre loops; feature-based organization; <code>Object.freeze</code></td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>Frameworks — ~10 regras por framework</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Framework</th>
+<th>Regras-chave</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>React</strong></td>
+<td>Functional components only; smart/dumb separation; <code>useReducer</code> para estado complexo; <code>useEffect</code> só para sync externo; React 19: Actions + <code>useFormStatus</code> + <code>useOptimistic</code>; React Compiler; Zod + react-hook-form</td>
+</tr>
+<tr>
+<td><strong>Angular</strong></td>
+<td><code>OnPush</code> obrigatório; Signals para estado; <code>async</code> pipe (não <code>subscribe()</code>); Angular 17+: <code>input()</code>/<code>output()</code> functions; Angular 19: Zoneless + <code>linkedSignal()</code> + <code>resource()</code>; <code>trackBy</code> em todos os <code>*ngFor</code>; interceptors HTTP</td>
+</tr>
+<tr>
+<td><strong>Spring Boot</strong></td>
+<td>Constructor injection + <code>@RequiredArgsConstructor</code>; Controller/Service/Repository; <code>@Transactional</code> no service; <code>ProblemDetail</code> RFC 7807; <code>@RetryableTopic</code> + DLT; Spring Boot 3.3+: virtual threads; <code>@HttpExchange</code> client; MDC com traceId</td>
+</tr>
+<tr>
+<td><strong><a href="http://ASP.NET">ASP.NET</a> Core</strong></td>
+<td>Clean Architecture; async <code>Task&lt;T&gt;</code> em todo I/O; <code>IOptions&lt;T&gt;</code> para config; <code>ILogger&lt;T&gt;</code> estruturado; middleware global de erros; query projection (nunca <code>SELECT *</code>); <code>ValidateOnStart()</code></td>
+</tr>
+<tr>
+<td><strong>FastAPI</strong></td>
+<td><code>APIRouter</code> por domínio; <code>/api/v1/&lt;resource&gt;</code>; routers/services/repositories; Pydantic v2 schemas separados por intent; async endpoints; <code>Depends()</code> para DI; exception handlers globais</td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>Padrões arquiteturais — composição condicional</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Padrão</th>
+<th>Regras-chave</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CRUD</strong></td>
+<td>Repository pattern; DTOs separados (Create/Update/Response); paginação obrigatória (max 100); Specification para filtros; RFC 7807 ProblemDetail; Idempotency-Key no POST; audit fields UTC; soft delete documentado</td>
+</tr>
+<tr>
+<td><strong>BFF</strong></td>
+<td>Orquestração sem domínio; fan-out paralelo obrigatório; token relay (validar + forward); timeout 3s por downstream; circuit breaker; partial response &gt; falha total; stateless; RFC 7807</td>
+</tr>
+<tr>
+<td><strong>Contract Testing</strong></td>
+<td>WireMock stubs por downstream; cenários: happy, 404, 500, timeout; Pact consumer-driven; Gate 2 só passa com todos os contract tests verdes</td>
+</tr>
+<tr>
+<td><strong>Idempotência</strong></td>
+<td>PUT natural; POST com <code>Idempotency-Key</code> UUID v4; store com TTL &gt;= 24h; dedup por business key; <code>ON CONFLICT DO NOTHING</code>; respostas: 201/200/409; Kafka: dedup por messageKey+offset</td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>Infraestrutura — composição condicional</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Infra</th>
+<th>Regras-chave</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Kafka</strong></td>
+<td>Consumer group por serviço; at-least-once + idempotência; dedup antes de processar; <code>acks=all</code> + producer idempotente; DLQ com headers; backoff exponencial + jitter; graceful shutdown; topic naming: <code>&lt;domain&gt;.&lt;entity&gt;.&lt;event&gt;.v&lt;N&gt;</code></td>
+</tr>
+<tr>
+<td><strong>AWS</strong></td>
+<td>DynamoDB: access patterns first, single-table, <code>ConditionExpression</code> optimistic locking; RDS: HikariCP min=2/max=10, Flyway, prepared statements only; IAM roles (nunca access keys manuais); <code>DefaultCredentialsProvider</code></td>
+</tr>
+<tr>
+<td><strong>Glue Job</strong></td>
+<td><code>getResolvedOptions</code> para params; <code>job.commit()</code> obrigatório; DynamicFrame para schema variável; pushdown predicates; erros para S3; Parquet snappy; Glue Catalog &gt; raw S3; nunca <code>collect()</code> em datasets grandes</td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>Padrões de arquitetura (por story)</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Arquitetura</th>
+<th>Regras geradas na skill de contexto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Hexagonal</strong></td>
+<td>Domain puro, Application, Ports Input/Output, Adapters; direção nunca invertida</td>
+</tr>
+<tr>
+<td><strong>Layered</strong></td>
+<td>Presentation, Application, Domain, Infrastructure; controller nunca acessa repository</td>
+</tr>
+<tr>
+<td><strong>Microservices</strong></td>
+<td>SRP por serviço; timeout 3s; circuit breaker; fan-out paralelo; schema isolation; Sagas</td>
+</tr>
+<tr>
+<td><strong>Monolith</strong></td>
+<td>Modular com interfaces explícitas; sem dependências circulares</td>
+</tr>
+<tr>
+<td><strong>Serverless</strong></td>
+<td>Stateless; cold start mínimo; optimistic locking; idempotência; IAM least-privilege</td>
+</tr>
+</tbody>
+</table></div></details>
+<h3 id="agents-protocolo-de-gates" class="reveal">Agents — protocolo de gates</h3>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Agent</th>
+<th>Arquivo</th>
+<th>Gates</th>
+<th>Seleção</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Implementador</strong></td>
+<td><code>.github/agents/speckit-implementador.agent.md</code></td>
+<td>0–2 (alinhamento, implementação, testes)</td>
+<td>Dropdown no Copilot Chat</td>
+</tr>
+<tr>
+<td><strong>Revisor</strong></td>
+<td><code>.github/agents/speckit-revisor.agent.md</code></td>
+<td>3–4 (revisão independente, entrega)</td>
+<td>Dropdown no Copilot Chat</td>
+</tr>
+<tr>
+<td><strong>Unificado (batch)</strong></td>
+<td><code>.github/agents/speckit-story-{id}.agent.md</code></td>
+<td>0–4 (ciclo completo com ping-pong interno)</td>
+<td>Dropdown no Copilot Chat</td>
+</tr>
+<tr>
+<td><strong>Fix Implementador</strong></td>
+<td><code>.github/agents/speckit-fix-implementador.agent.md</code></td>
+<td>0–2 (investigação, fix cirúrgico, regressão)</td>
+<td>Dropdown no Copilot Chat</td>
+</tr>
+<tr>
+<td><strong>Fix Revisor</strong></td>
+<td><code>.github/agents/speckit-fix-revisor.agent.md</code></td>
+<td>3–4 (verificação, encerramento)</td>
+<td>Dropdown no Copilot Chat</td>
+</tr>
+</tbody>
+</table></div><h3 id="economia-de-tokens" class="reveal">Economia de tokens</h3>
+<p class="reveal">Sem layering, cada interação carregaria spec + regras + gates + exemplos (~10.000+ tokens de contexto). Com a estratégia de 3 camadas:</p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Cenário</th>
+<th>Sem layering</th>
+<th>Com layering</th>
+<th>Economia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pergunta geral sobre o projeto</td>
+<td>~10.000</td>
+<td>~400 (tier 1)</td>
+<td>~96%</td>
+</tr>
+<tr>
+<td>Implementando feature</td>
+<td>~10.000</td>
+<td>~5.000 (tier 1 + baseline + stack + context)</td>
+<td>~50%</td>
+</tr>
+<tr>
+<td>Sessão de review</td>
+<td>~10.000</td>
+<td>~5.500 (tier 1 + baseline + context + agent revisor)</td>
+<td>~45%</td>
+</tr>
+</tbody>
+</table></div><hr>
+<h2 id="modos-de-agente" class="reveal section-title">Modos de agente</h2>
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Loop Implementador ↔ Revisor</figcaption>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">stateDiagram-v2
+    [*] --> Implementador
+    Implementador --> Revisor: findings encontrados
+    Revisor --> Implementador: ajustes solicitados
+    Revisor --> Aprovado: tudo passou
+    Implementador --> LimiteAtingido: 5 tentativas
+    Aprovado --> [*]
+    LimiteAtingido --> [*]</pre>
+  </div>
+</figure>
+
+<p class="reveal">O SpecKit oferece <strong>5 modos de operação</strong> que alteram o comportamento, os guardrails e os protocolos do agente. Use <code>/agent &lt;modo&gt;</code> para alternar.</p>
+<pre class="reveal"><code>  +---------+   +---------------+   +---------+   +----------+   +----------+
+  | default |--&gt;| implementador |--&gt;| revisor |--&gt;| debugger |--&gt;| refactor |
+  +---------+   +---------------+   +---------+   +----------+   +----------+
+       ^                                                               |
+       +---------------------------------------------------------------+
+                            @speckit /agent &lt;modo&gt;
+</code></pre>
+<h3 id="mode-default" class="reveal">Mode: Default</h3>
+<p class="reveal">Modo conversacional sem protocolo de gate. Útil para perguntas gerais, testes de conceito e exploração livre.</p>
+<p class="reveal"><strong>Quando usar:</strong></p>
+<ul class="reveal"><li><p class="reveal">Perguntas gerais sobre o projeto</li>
+<li><p class="reveal">Testes rápidos de conceito</li>
+<li><p class="reveal">Exploração de código sem story/fix ativa</li>
+</ul>
+<p class="reveal"><strong>Exemplo de interação:</strong></p>
+<pre class="reveal"><code>Você:    @speckit /agent default
+SpecKit: ✅ Modo alterado para Default (conversacional)
+
+Você:    Como devo organizar os testes de integração neste projeto?
+Agente:  Com base na stack detectada (TypeScript / React), recomendo...
+</code></pre>
+<h3 id="mode-implementador-gates-0-2" class="reveal">Mode: Implementador (Gates 0-2)</h3>
+<p class="reveal">Protocolo completo de implementação: leitura de spec → plano → implementação → testes. Para features e fixes.</p>
+<p class="reveal"><strong>Quando usar:</strong></p>
+<ul class="reveal"><li><p class="reveal">Ao iniciar a implementação de uma Story (Gates 0-2)</li>
+<li><p class="reveal">Ao iniciar a implementação de um Fix (Gates 0-2)</li>
+</ul>
+<p class="reveal"><strong>Protocolo injetado:</strong></p>
+<ol class="reveal"><li><p class="reveal">NUNCA comece a codificar sem ler a spec ativa primeiro</li>
+<li><p class="reveal">Se surgir ambiguidade → pare e pergunte</li>
+<li><p class="reveal">Se o escopo mudar → replaneje antes de continuar</li>
+<li><p class="reveal">Exija aprovação explícita do usuário antes de escrever código</li>
+</ol>
+<p class="reveal"><strong>Exemplo de interação:</strong></p>
+<pre class="reveal"><code>Você:    @speckit /agent implementador
+SpecKit: ✅ Modo alterado para Implementador (Gates 0-2)
+
+Você:    Implementar STORY-001 — cálculo de comissão Kafka
+Agente:  Lendo spec .speckit/STORY-001.md...
+
+         📋 Plano de implementação:
+         TASK-1: Criar consumer Kafka para movimentacoes.v1
+         TASK-2: Implementar engine de regras (4 tipos)
+         TASK-3: Persistir comissão em PostgreSQL
+         TASK-4: Emitir evento comissoes.calculadas.v1
+         TASK-5: DLQ para eventos inválidos
+
+         Confirma o plano? (sim/não)
+Você:    sim
+Agente:  Iniciando TASK-1...
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal">Para protocolo completo, selecione o agent <strong>speckit-implementador</strong> (Story) ou <strong>speckit-fix-implementador</strong> (Fix) no dropdown do Copilot Chat.</p>
+</blockquote>
+<h3 id="mode-revisor-gates-3-4" class="reveal">Mode: Revisor (Gates 3-4)</h3>
+<p class="reveal">Revisão independente com checklist de 11 dimensões. Nova sessão obrigatória — sem memória da implementação.</p>
+<p class="reveal"><strong>Quando usar:</strong></p>
+<ul class="reveal"><li><p class="reveal">Após completar Gates 0-2 (testes passando)</li>
+<li><p class="reveal">Obrigatoriamente em <strong>nova sessão</strong> do Copilot Chat</li>
+</ul>
+<p class="reveal"><strong>Protocolo injetado:</strong></p>
+<ol class="reveal"><li><p class="reveal">Leia a spec completa ANTES de iniciar qualquer avaliação</li>
+<li><p class="reveal">Ao encontrar decisão questionável: pergunte a razão antes de marcar como bloqueante</li>
+<li><p class="reveal">Todos os 11 itens do checklist devem ser verificados — não pule nenhum</li>
+</ol>
+<p class="reveal"><strong>Exemplo de interação:</strong></p>
+<pre class="reveal"><code>Você:    @speckit /agent revisor
+SpecKit: ✅ Modo alterado para Revisor (Gates 3-4)
+
+Você:    Revisar STORY-001
+Agente:  Lendo spec .speckit/STORY-001.md...
+
+         📋 Checklist de Revisão — STORY-001
+         1. ✅ Funcionalidade — 6/6 critérios de aceite verificados
+         2. ✅ Arquitetura — Hexagonal, direção respeitada
+         3. ✅ Qualidade de código — Sem dead code
+         4. ✅ Testes — 22 testes, cobertura 87%
+         5. ⚠️ Segurança — Logger inclui vendedorId nos logs (é PII?)
+         6. ✅ Observabilidade — Health check presente
+         ...
+
+         VEREDITO: ALTERAÇÕES SOLICITADAS
+         Blockers: 1 (segurança — PII em logs)
+         Suggestions: 0
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal">Para protocolo completo, selecione o agent <strong>speckit-revisor</strong> (Story) ou <strong>speckit-fix-revisor</strong> (Fix) no dropdown do Copilot Chat.</p>
+</blockquote>
+<h3 id="mode-debugger" class="reveal">Mode: Debugger</h3>
+<p class="reveal">Protocolo de investigação: captura → hipótese → evidência → fix mínimo → verificação → documentação. Stack-aware.</p>
+<p class="reveal"><strong>Quando usar:</strong></p>
+<ul class="reveal"><li><p class="reveal">Bugs que precisam de investigação além de um fix simples</li>
+<li><p class="reveal">Problemas sem causa raiz clara</li>
+<li><p class="reveal">Issues de runtime/performance</li>
+</ul>
+<p class="reveal"><strong>Protocolo injetado (adaptado à stack detectada):</strong></p>
+<pre class="reveal"><code>1. Captura    — Mensagem de erro, stack trace e passos para reprodução
+2. Hipótese   — Formular hipótese sobre a causa raiz
+3. Evidência  — Ler código, verificar logs, isolar a falha
+4. Fix Mínimo — Correção cirúrgica atacando a causa raiz
+5. Verificação — Teste que reproduz falha + validação:
+   → TypeScript: npx vitest run --coverage --coverage.thresholds.lines=80
+   → Java:       ./mvnw verify -Djacoco.haltOnFailure=true
+   → C#:         dotnet test --collect:&quot;XPlat Code Coverage&quot;
+   → Python:     pytest --cov=src --cov-fail-under=80
+6. Documentação — Causa raiz e recomendações de prevenção
+</code></pre>
+<p class="reveal"><strong>Exemplo de interação:</strong></p>
+<pre class="reveal"><code>Você:    @speckit /agent debugger
+SpecKit: ✅ Modo alterado para Debugger
+         Stack detectada: typescript / react
+
+Você:    O dashboard trava quando o array de vendas é vazio
+Agente:  📋 Etapa 1 — Captura
+         Erro: TypeError: Cannot read properties of undefined (reading 'map')
+         Local: src/components/SalesDashboard.tsx:47
+
+         📋 Etapa 2 — Hipótese
+         O hook useQuery retorna undefined antes do fetch resolver.
+         O componente não trata o estado de loading.
+
+         📋 Etapa 3 — Evidência
+         Confirmado: SalesDashboard.tsx:47 → sales.map() sem guard
+         sales é undefined durante o loading, não array vazio.
+
+         📋 Etapa 4 — Fix Mínimo
+         + const items = sales ?? [];
+         + return items.length === 0 ? &lt;EmptyState /&gt; : items.map(...)
+
+         📋 Etapa 5 — Verificação
+         npx vitest run --coverage → 14 passed, 0 failed
+
+         📋 Etapa 6 — Documentação
+         Causa raiz: useQuery retorna undefined antes da resolução.
+         Prevenção: Sempre inicializar com fallback em hooks de data fetching.
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal"><strong>Regra cardinal:</strong> NÃO corrija sintomas. NÃO adivinhe — verifique com evidência.</p>
+</blockquote>
+<h3 id="mode-refactor" class="reveal">Mode: Refactor</h3>
+<p class="reveal">Protocolo de refatoração segura: snapshot → refatorar → validar continuamente → rollback se falhar.</p>
+<p class="reveal"><strong>Quando usar:</strong></p>
+<ul class="reveal"><li><p class="reveal">Refatorações estruturais que não alteram comportamento externo</li>
+<li><p class="reveal">Extração de módulos, consolidação de duplicação</li>
+<li><p class="reveal">Migração de padrões (class → function, callback → async/await)</li>
+</ul>
+<p class="reveal"><strong>Protocolo injetado (adaptado à stack detectada):</strong></p>
+<pre class="reveal"><code>1. Snapshot     — Documentar comportamento atual e cobertura de testes
+2. Verificação  — Garantir que todos os testes passam ANTES de qualquer mudança
+3. Refatoração  — Mudanças estruturais SEM alterar comportamento externo
+4. Validação    — Após CADA mudança, executar todos os testes existentes
+5. Rollback     — Se algum teste falhar, reverter imediatamente
+</code></pre>
+<p class="reveal"><strong>Exemplo de interação:</strong></p>
+<pre class="reveal"><code>Você:    @speckit /agent refactor
+SpecKit: ✅ Modo alterado para Refactor
+         Stack detectada: java / springboot
+
+Você:    Extrair as regras de comissão para um engine separado
+Agente:  📋 Etapa 1 — Snapshot
+         Comportamento atual: ComissaoService.calcular() com 4 if/else
+         Cobertura: 87% (22 testes)
+
+         📋 Etapa 2 — Verificação Prévia
+         ./mvnw verify → BUILD SUCCESS (22 tests passed)
+
+         📋 Etapa 3 — Refatoração
+         - Criar interface RegraComissao com método calcular()
+         - Implementar TaxaFixaRegra, EscalonadaRegra, ComTetoRegra, BonusCategoriaRegra
+         - Criar RegraComissaoEngine com Strategy pattern
+         - Refatorar ComissaoService para usar engine
+
+         📋 Etapa 4 — Validação
+         ./mvnw verify → BUILD SUCCESS (22 tests passed) ✅
+         Comportamento externo inalterado.
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal"><strong>Regra cardinal:</strong> NÃO adicione features durante a refatoração. NÃO altere contratos externos.</p>
+</blockquote>
+<hr>
+<h2 id="garantias-de-qualidade-por-gate" class="reveal section-title">Garantias de qualidade por gate</h2>
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Mapa validador × gate (v0.5.0)</figcaption>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">flowchart LR
+    subgraph G1[Gate 1]
+        H1[heuristic]
+        T1[typecheck]
+    end
+    subgraph G2[Gate 2]
+        T2[typecheck]
+        A2[ac-presence]
+        S2[secret-leak]
+    end
+    subgraph G3[Gate 3]
+        A3[ac-presence]
+        TE3[test-execution]
+        C3[coverage]
+        CR3[crap]
+        S3[secret-leak]
+    end
+    G1 --> G2 --> G3
+    style G1 fill:#11172b,stroke:#7aa2ff
+    style G2 fill:#11172b,stroke:#4cc9f0
+    style G3 fill:#11172b,stroke:#ffb454</pre>
+  </div>
+</figure>
+
+<p class="reveal">Cada gate impõe verificações específicas. Nenhum gate pode ser pulado.</p>
+<h3 id="gate-0-alinhamento-e-confirmacao" class="reveal">Gate 0 — Alinhamento e confirmação</h3>
+<ul class="reveal"><li><p class="reveal">Leitura obrigatória de <code>.speckit/STORY-{id}.md</code> ou <code>FIX-{id}.md</code></li>
+<li><p class="reveal">Verificação de campos preenchidos (título, valor, stack, critérios de aceite, DoD/DoF)</li>
+<li><p class="reveal"><strong>Story</strong>: apresenta plano completo (arquivos, cenários de teste, riscos, mitigações, checklist DoD)</li>
+<li><p class="reveal"><strong>Fix</strong>: inspeciona arquivos suspeitos via <code>git log --follow -p</code> e <code>git blame</code>, confirma ou revisa hipótese de causa raiz</li>
+<li><p class="reveal"><strong>Gate bloqueante</strong>: agente aguarda confirmação explícita antes de prosseguir</li>
+</ul>
+<h3 id="gate-1-implementacao-disciplinada" class="reveal">Gate 1 — Implementação disciplinada</h3>
+<ul class="reveal"><li><p class="reveal"><strong>Story</strong>: 1 task atômico por critério de aceite ou camada de arquitetura. Conventional Commit por task: <code>feat({storyId}): TASK-N — descrição</code></li>
+<li><p class="reveal"><strong>Fix</strong>: correção cirúrgica apenas. Zero refatoração. Commit único: <code>fix({fixId}): descrição</code></li>
+<li><p class="reveal">Aderência à arquitetura declarada (sem imports cross-layer, direção de dependência respeitada)</li>
+<li><p class="reveal">Pré-requisito: código compila, testes existentes não quebram</li>
+</ul>
+<h3 id="gate-2-testes-e-cobertura" class="reveal">Gate 2 — Testes e cobertura</h3>
+<ul class="reveal"><li><p class="reveal"><strong>0 falhas de teste</strong> (condição inviolável)</li>
+<li><p class="reveal"><strong>Cobertura &gt;= 80%</strong> (exigida com evidência)</li>
+<li><p class="reveal">Happy path: cada critério de aceite gera no mínimo 1 teste</li>
+<li><p class="reveal">Edge cases: null, vazio, limites</li>
+<li><p class="reveal">Error cases: not found, invalid, permission, timeout</li>
+<li><p class="reveal">Estrutura AAA obrigatória (Arrange, Act, Assert)</li>
+<li><p class="reveal"><strong>Fix</strong>: teste de regressão obrigatório — deve <strong>falhar sem o fix</strong> e passar com ele</li>
+</ul>
+<h3 id="gate-3-revisao-independente-nova-sessao" class="reveal">Gate 3 — Revisão independente (nova sessão)</h3>
+<p class="reveal">Checklist de 11 dimensões verificadas pelo agent revisor:</p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>#</th>
+<th>Dimensão</th>
+<th>Verificação</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Funcionalidade</td>
+<td>Todos os critérios de aceite funcionando</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Arquitetura</td>
+<td>Direção de dependência, isolamento de camadas</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Qualidade de código</td>
+<td>Convenções, sem dead code, sem comentários injustificados</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Testes</td>
+<td>0 falhas, cobertura &gt;= 80%, cenários happy/edge/error</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Segurança</td>
+<td>Rotas protegidas retornam 401/403. Input inválido retorna 400 (não 500). Sem tokens/senhas em DTOs ou logs</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Observabilidade</td>
+<td>Health check presente e sem auth. Logs JSON com traceId/requestId. traceId propagado em erros. Sem PII em logs</td>
+</tr>
+<tr>
+<td>7</td>
+<td>NFRs</td>
+<td>Performance (P99), segurança, escalabilidade, idempotência</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Git</td>
+<td>Branch naming, Conventional Commits</td>
+</tr>
+<tr>
+<td>9</td>
+<td>DoD/DoF</td>
+<td>Todos os itens verificados</td>
+</tr>
+<tr>
+<td>10</td>
+<td>Veredito</td>
+<td>APROVADO ou ALTERAÇÕES SOLICITADAS (com blockers vs suggestions)</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Revalidação</td>
+<td>Se alterações, commits atômicos de fix e re-execução completa do checklist</td>
+</tr>
+</tbody>
+</table></div><h3 id="gate-4-entrega" class="reveal">Gate 4 — Entrega</h3>
+<ul class="reveal"><li><p class="reveal">Rebase na main (sem fast-forward)</li>
+<li><p class="reveal">Re-execução de todos os testes com report de cobertura</li>
+<li><p class="reveal">Verificação item por item de DoD (Story) ou DoF (Fix)</li>
+<li><p class="reveal">Commit de encerramento</li>
+</ul>
+<hr>
+<h2 id="guia-pratico-do-zero-a-entrega" class="reveal section-title">Guia prático — do zero à entrega</h2>
+<p class="reveal">Passo a passo completo: da instalação até o commit de entrega. Aplicável a qualquer Story.</p>
+<h3 id="visao-geral-do-fluxo" class="reveal">Visão geral do fluxo</h3>
+<pre class="reveal"><code>  +== Sessao 1: SpecKit Chat ===+   +== Sessao 2: Implementador ====+   +== Sessao 3: Revisor ==+
+  |                              |   |                               |   |                        |
+  |  1. Instalar plugin          |   |  4. Gate 0 -- Alinhar         |   |  7. Gate 3 -- Revisar  |
+  |  2. Criar spec               |--&gt;|  5. Gate 1 -- Implementar     |--&gt;|  8. Gate 4 -- Entregar |
+  |  3. Validar spec             |   |  6. Gate 2 -- Testar          |   |                        |
+  |                              |   |                               |   |                        |
+  +==============================+   +===============================+   +========================+
+</code></pre>
+<h3 id="passo-1-instalar-o-plugin" class="reveal">Passo 1 — Instalar o plugin</h3>
+<pre class="reveal"><code>Ctrl+Shift+P → Extensions: Install from VSIX → selecionar arquivo .vsix
+</code></pre>
+<h3 id="passo-2-criar-a-spec" class="reveal">Passo 2 — Criar a spec</h3>
+<p class="reveal">Abra o Copilot Chat e escolha um dos caminhos:</p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Cenário</th>
+<th>Comando</th>
+<th>Para quem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Já tenho a ideia clara</td>
+<td><code>@speckit /draft Calcular comissão via Kafka</code></td>
+<td>Quem prefere texto livre + entrevista</td>
+</tr>
+<tr>
+<td>Quero template e preencher</td>
+<td><code>@speckit /new</code></td>
+<td>Quem prefere preencher campos manualmente</td>
+</tr>
+<tr>
+<td>Bug para corrigir</td>
+<td><code>@speckit /fix</code> ou <code>@speckit /draft &quot;Login retorna 500&quot;</code></td>
+<td>Ambos caminhos</td>
+</tr>
+</tbody>
+</table></div><p class="reveal"><strong>Via /draft — o agente entrevista você:</strong></p>
+<pre class="reveal"><code>Você:    @speckit /draft Quero calcular comissão de vendedores a partir de eventos Kafka
+SpecKit: ✅ Criado elicit-story-001.prompt.md — abra em novo chat no modo agente
+
+[Novo Chat → Modo Agente]
+Agente:  📋 Fase 1 — Requisito de Negócio
+         Qual é a dor que esta feature resolve?
+Você:    Cálculo de comissão é batch noturno, visibilidade apenas em D+1
+Agente:  ✓ Registrado. Qual o valor que vai gerar?
+Você:    Cálculo em tempo real, dashboards ao vivo, fechamento financeiro faster
+Agente:  ✓ Fase 1 completa.
+
+         📋 Fase 2 — Especificação Funcional...
+         [continua por 6 fases]
+
+Agente:  ✅ STORY-001.md criado em .speckit/
+         Execute @speckit /validate para gerar os arquivos do Copilot.
+</code></pre>
+<p class="reveal"><strong>Via /new — preencha o template:</strong></p>
+<pre class="reveal"><code>Você:    @speckit /new
+SpecKit: ✅ Criado .speckit/STORY-002.md — preencha e execute /validate
+</code></pre>
+<h3 id="passo-3-validar-a-spec" class="reveal">Passo 3 — Validar a spec</h3>
+<pre class="reveal"><code>Você:    @speckit /validate
+</code></pre>
+<p class="reveal"><strong>Se a spec estiver completa:</strong></p>
+<pre class="reveal"><code>SpecKit: ✅ DoR atingido — Story completa
+         📁 9 arquivos gerados em .github/
+         +-- copilot-instructions.md
+         +-- workflows/ quality-gate.yml · security-scan.yml
+         +-- prompts/   run.prompt.md
+         +-- skills/    speckit-baseline · speckit-stack · speckit-context-STORY-001
+         +-- agents/    speckit-implementador · speckit-revisor
+
+         🔧 DevTools: ESLint, Prettier e husky não detectados. Deseja gerar skill?
+</code></pre>
+<p class="reveal"><strong>Se a spec tiver lacunas:</strong></p>
+<pre class="reveal"><code>SpecKit: ⚠️ 3 lacunas encontradas — responda cada pergunta:
+
+         1. Qual o valor de negócio?
+Você:    Eliminar lag D+1, dashboards ao vivo
+SpecKit: ✓ Atualizado.
+
+         2. Quais requisitos não-funcionais?
+Você:    P99 &lt; 300ms, 1k eventos/min
+SpecKit: ✓ Atualizado.
+
+         3. Qual a arquitetura?
+Você:    Hexagonal
+SpecKit: ✓ Todas as lacunas preenchidas. Execute /validate novamente.
+</code></pre>
+<h3 id="passo-4-gate-0-alinhamento" class="reveal">Passo 4 — Gate 0: Alinhamento</h3>
+<p class="reveal">Abra um <strong>novo chat</strong> → selecione o agent <strong>speckit-implementador</strong> no dropdown.</p>
+<pre class="reveal"><code>Você:    Implementar STORY-001
+Agente:  Lendo spec .speckit/STORY-001.md...
+
+         📋 Plano de implementação:
+         TASK-1: Criar consumer Kafka para movimentacoes.v1
+         TASK-2: Implementar engine de regras (4 tipos)
+         TASK-3: Persistir comissão em PostgreSQL
+         TASK-4: Emitir evento comissoes.calculadas.v1
+         TASK-5: Testes e DLQ
+
+         Riscos identificados:
+         - Regras escalonadas podem ter edge cases nos limites de faixa
+         - Dedup por movimentacaoId precisa de constraint no banco
+
+         Confirma o plano? (sim/não)
+Você:    sim
+Agente:  ✅ Gate 0 concluído. Iniciando Gate 1...
+</code></pre>
+<h3 id="passo-5-gate-1-implementacao" class="reveal">Passo 5 — Gate 1: Implementação</h3>
+<p class="reveal">O agente implementa task por task com commits atômicos:</p>
+<pre class="reveal"><code>Agente:  📋 TASK-1 — Criar consumer Kafka
+         feat(STORY-001): TASK-1 — consumer movimentacoes.v1 ✅
+
+         📋 TASK-2 — Implementar engine de regras
+         feat(STORY-001): TASK-2 — engine com 4 tipos de regra ✅
+
+         📋 TASK-3 — Persistir comissão
+         feat(STORY-001): TASK-3 — repository + migration ✅
+
+         📋 TASK-4 — Emitir evento
+         feat(STORY-001): TASK-4 — producer comissoes.calculadas.v1 ✅
+
+         📋 TASK-5 — DLQ
+         feat(STORY-001): TASK-5 — DLQ com causa no header ✅
+
+         ✅ Gate 1 concluído. Iniciando Gate 2...
+</code></pre>
+<h3 id="passo-6-gate-2-testes" class="reveal">Passo 6 — Gate 2: Testes</h3>
+<pre class="reveal"><code>Agente:  📋 Testes — STORY-001
+         Happy path: 6 critérios de aceite → 12 testes
+         Edge cases: limites de faixa, valor zero, categoria inexistente → 8 testes
+         Error cases: evento inválido, DLQ, timeout → 6 testes
+
+         ./mvnw verify → BUILD SUCCESS
+         Cobertura: 91% (mínimo: 80%) ✅
+         26 testes passando, 0 falhas ✅
+
+         Tentativa de commit automático do Gate 2:
+         speckit: test(STORY-001): fechamento do gate 2 ✅
+
+         Handoff no chat:
+         ✅ Gates 0-2 concluídos
+         🔁 Handoff: IMPLEMENTADOR → REVISOR
+         🚪 Gate atualizado: 2 → 3
+         📌 Status atualizado: in-progress/open → review
+
+         ✅ Gate 2 concluído. Próximo: Gate 3 (abra nova sessão → agent revisor).
+</code></pre>
+<h3 id="passo-7-gate-3-revisao" class="reveal">Passo 7 — Gate 3: Revisão</h3>
+<p class="reveal">Abra <strong>novo chat</strong> → selecione o agent <strong>speckit-revisor</strong> no dropdown. O revisor não participou da implementação.</p>
+<pre class="reveal"><code>Você:    Revisar STORY-001
+Agente:  📋 Checklist de Revisão (11 dimensões)
+
+         1. ✅ Funcionalidade — 6/6 critérios de aceite verificados
+         2. ✅ Arquitetura — Hexagonal, sem imports cross-layer
+         3. ✅ Qualidade de código — Nomeação consistente, sem dead code
+         4. ✅ Testes — 26 testes, cobertura 91%
+         5. ✅ Segurança — Sem PII em logs, credenciais via env vars
+         6. ✅ Observabilidade — Health check, logs JSON com traceId
+         7. ✅ NFRs — P99 validado via benchmark
+         8. ✅ Git — Branch naming ok, Conventional Commits ok
+         9. ✅ DoD — Todos os itens verificados
+         10. ✅ VEREDITO: APROVADO
+         11. — Revalidação: N/A (aprovado na primeira revisão)
+
+         ✅ Gate 3 concluído. Prosseguir para Gate 4.
+</code></pre>
+<h3 id="passo-8-gate-4-entrega" class="reveal">Passo 8 — Gate 4: Entrega</h3>
+<pre class="reveal"><code>Agente:  📋 Gate 4 — Entrega
+
+         1. Rebase na main... ✅ (sem conflitos)
+         2. Re-execução de testes... 26 passed, 0 failed ✅
+         3. Verificação DoD item por item... 7/7 ✅
+         4. Commit de encerramento:
+            feat(STORY-001): entrega — cálculo de comissão a partir de eventos Kafka
+
+         ✅ Story STORY-001 entregue. Status: done.
+</code></pre>
+<blockquote class="reveal callout"><p class="reveal"><strong>Dica:</strong> Para features pequenas, use <code>run.prompt.md</code> (Stories) ou <code>fix-run.prompt.md</code> (Fixes) via ▶ Run in Copilot Chat para executar todos os gates em uma sessão única.</p>
+</blockquote>
+<hr>
+<h2 id="exemplos-praticos" class="reveal section-title">Exemplos práticos</h2>
+<details>
+<summary><strong>Story via /draft (elicitação por texto livre)</strong></summary>
+<h3 id="sequencia-draft-elicitacao-validate" class="reveal">Sequência: /draft → elicitação → /validate</h3>
+<pre class="reveal"><code>  Voce                        @speckit                    Copilot Agente
+   |                             |                             |
+   |  /draft &quot;Calcular           |                             |
+   |   comissao via Kafka&quot;       |                             |
+   |----------------------------&gt;|                             |
+   |    elicit-story-001.prompt  |                             |
+   |&lt;----------------------------|                             |
+   |                             |  Abra em Novo Chat Agente  |
+   |---------------------------------------------------------&gt;|
+   |                             |                             |
+   |              +---- loop 6 Fases (1 pergunta por vez) ----+
+   |              |  Pergunta Negocio/Funcional/NFR/Tech/DoR  ||
+   |&lt;---------------------------------------------------------|
+   |  Responde    |                                           ||
+   |---------------------------------------------------------&gt;|
+   |              |  Registrado. Proxima...                   ||
+   |&lt;---------------------------------------------------------|
+   |              +-------------------------------------------+
+   |                             |    STORY-001.md criado      |
+   |&lt;---------------------------------------------------------|
+   |                             |                             |
+   |  /validate                  |                             |
+   |----------------------------&gt;|                             |
+   |    DoR atingido — 9 arqs    |                             |
+   |&lt;----------------------------|                             |
+   |                             |  Novo Chat → implementador  |
+</code></pre>
+<p class="reveal"><strong>Input:</strong></p>
+<pre class="reveal"><code>@speckit /draft Quero calcular comissão de vendedores baseado em eventos Kafka quando uma venda é concluída
+</code></pre>
+<p class="reveal"><strong>Trecho da entrevista (Fase 1 — Requisito de Negócio):</strong></p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Passo</th>
+<th>Agente pergunta</th>
+<th>Você responde</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.1</td>
+<td>Qual dor isso resolve?</td>
+<td>Cálculo em batch noturno, visibilidade D+1, atraso no fechamento financeiro</td>
+</tr>
+<tr>
+<td>1.2</td>
+<td>Por que agora?</td>
+<td>Time comercial pedindo há 3 meses, pressão crescente</td>
+</tr>
+<tr>
+<td>1.3</td>
+<td>Que KPI muda?</td>
+<td>Tempo venda → comissão: de D+1 para &lt; 5 min</td>
+</tr>
+<tr>
+<td>1.4</td>
+<td>Stakeholders?</td>
+<td>Comercial, Financeiro, Plataforma de Dados</td>
+</tr>
+</tbody>
+</table></div><blockquote class="reveal callout"><p class="reveal">As fases 2–5 seguem o mesmo padrão: uma pergunta por vez, resumo ao final de cada fase, confirmação antes de avançar.</p>
+<p class="reveal"><strong>Fase 6</strong> — Agente monta o <code>STORY-001.md</code> completo e instrui: <em>“Execute <code>@speckit /validate</code>”</em>.</p>
+</blockquote>
+</details>
+<details>
+<summary><strong>Fix via /draft (detecção automática de intent)</strong></summary>
+<h3 id="sequencia-draft-elicitacao-fix-validate" class="reveal">Sequência: /draft → elicitação fix → /validate</h3>
+<pre class="reveal"><code>  Voce                        @speckit                    Copilot Agente
+   |                             |                             |
+   |  /draft &quot;Login OAuth2       |                             |
+   |   retorna 500 apos token&quot;   |                             |
+   |----------------------------&gt;|                             |
+   |                     Detecta keyword &quot;500&quot; → intent fix    |
+   |    elicit-fix-001.prompt    |                             |
+   |&lt;----------------------------|                             |
+   |                             |  Abra em Novo Chat Agente  |
+   |---------------------------------------------------------&gt;|
+   |                             |                             |
+   |              +---- loop 7 Fases -------------------------+
+   |              |  Bug/Hipotese/Impacto/Regressao/Ctx/DoF   ||
+   |&lt;---------------------------------------------------------|
+   |  Responde    |                                           ||
+   |---------------------------------------------------------&gt;|
+   |              +-------------------------------------------+
+   |                             |    FIX-001.md criado        |
+   |&lt;---------------------------------------------------------|
+   |                             |                             |
+   |  /validate                  |                             |
+   |----------------------------&gt;|                             |
+   |    Fix valido — 7 arqs      |                             |
+   |&lt;----------------------------|                             |
+   |                             |  Novo Chat → fix-implem.    |
+</code></pre>
+<p class="reveal"><strong>Input:</strong></p>
+<pre class="reveal"><code>@speckit /draft O login OAuth2 retorna 500 após expiração do token de refresh
+</code></pre>
+<p class="reveal">O SpecKit detecta <code>retorna 500</code> e roteia para fix automaticamente, sem <code>--fix</code>.</p>
+<p class="reveal"><strong>Trecho da entrevista (Fase 1 — Bug Description):</strong></p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Passo</th>
+<th>Agente pergunta</th>
+<th>Você responde</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.1</td>
+<td>Sintomas e stack trace?</td>
+<td><code>TokenExpiredError: jwt expired</code> no servidor, cliente recebe 500 genérico</td>
+</tr>
+<tr>
+<td>1.2</td>
+<td>Quando começou?</td>
+<td>Após deploy de sexta-feira — regressão</td>
+</tr>
+<tr>
+<td>1.3</td>
+<td>Passos para reproduzir?</td>
+<td>1. Auth OAuth2 → 2. Esperar 1h → 3. Qualquer request. 100% reproduzível</td>
+</tr>
+<tr>
+<td>1.4</td>
+<td>Workaround?</td>
+<td>Logout + login resolve</td>
+</tr>
+<tr>
+<td>1.5</td>
+<td>Urgência?</td>
+<td>Cliente enterprise, resolver no dia</td>
+</tr>
+</tbody>
+</table></div><blockquote class="reveal callout"><p class="reveal">Fases 2–6 aprofundam hipótese, impacto, regressão e DoF. <strong>Fase 7</strong> monta o <code>FIX-001.md</code>.</p>
+</blockquote>
+</details>
+<details>
+<summary><strong>Story via /new (template direto) — completa e incompleta</strong></summary>
+<h3 id="story-completa-vai-direto-para-geracao" class="reveal">Story completa — vai direto para geração</h3>
+<p class="reveal">Serviço backend: consome eventos Kafka de movimentação de vendas, calcula comissão em 4 tipos de regra, persiste e emite evento.</p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Passo</th>
+<th>Ação</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>@speckit /new</code> → cria <code>.speckit/STORY-001.md</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Preencha todos os campos (ver template abaixo)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>@speckit /validate</code> → DoR atingido → gera <code>.github/</code> (9 arquivos)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Copilot Chat → selecione agent <strong>speckit-implementador</strong> (Gates 0–2)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Novo Chat → selecione agent <strong>speckit-revisor</strong> (Gates 3–4)</td>
+</tr>
+</tbody>
+</table></div><details>
+<summary>Template preenchido: <code>.speckit/STORY-001.md</code></summary>
+<pre class="reveal"><code class="language-markdown"># História 001
+
+&lt;!-- metadata
+id: 001
+title: Cálculo de comissão a partir de eventos Kafka de movimentação
+createdAt: 2026-03-19
+version: 1
+--&gt;
+
+---
+
+## Requisito de Negócio
+
+### Problema
+
+O cálculo de comissões é executado em batch noturno, causando visibilidade defasada para o time comercial
+e atraso no fechamento financeiro do mês.
+
+### Valor
+
+Cálculo de comissão em tempo real, por evento de movimentação, eliminando o lag de D+1. Habilita dashboards
+de comissão ao vivo para o time comercial e antecipa em até 24h o fechamento financeiro mensal.
+
+### Stakeholders
+
+- Time Comercial (visibilidade de comissão em tempo real)
+- Financeiro (fechamento mensal mais rápido)
+- Plataforma de Dados (consumo do evento de saída para o data lake)
+
+---
+
+## Especificação Funcional
+
+### User Stories
+
+- Como sistema, ao receber evento no tópico `movimentacoes.v1`, quero classificar em um dos 4 tipos de regra e calcular a comissão
+- Como sistema, quero persistir a comissão para histórico auditável
+- Como sistema, quero emitir evento `comissoes.calculadas.v1` para consumidores downstream
+
+### Critérios de Aceite
+
+- Consumir `movimentacoes.v1`: `{ movimentacaoId, vendedorId, produtoId, categoriaId, valor, timestamp }`
+- TAXA_FIXA: percentual fixo sobre o valor
+- ESCALONADA: faixas progressivas (2% até R$10k, 3% R$10k–R$50k, 4% acima)
+- COM_TETO: percentual com valor máximo (5% limitado a R$500)
+- BONUS_CATEGORIA: bônus fixo por categoria elegível
+- Idempotente: mesmo `movimentacaoId` não gera duplicata
+- Evento inválido → DLQ `movimentacoes.v1.dlq` com causa no header
+
+### Fora de Escopo
+
+- Pagamento das comissões
+- API REST de consulta
+- Recálculo retroativo
+- Configuração de regras via API
+
+---
+
+## Especificação Não-Funcional
+
+### Performance
+
+P99 &lt; 300ms por evento. 1.000 eventos/min por partição.
+
+### Segurança
+
+Sem PII nos logs. Payload validado contra schema. Credenciais via env vars.
+
+### Escalabilidade
+
+Consumer group Kafka: 10 partições.
+
+### Usabilidade
+
+N/A — system-to-system.
+
+### Disponibilidade
+
+99,5% uptime. Retry com backoff exponencial (3x, 500ms inicial).
+
+---
+
+## Especificação Técnica
+
+### Linguagem
+
+java
+
+### Framework
+
+springboot
+
+### Arquitetura
+
+hexagonal
+
+### Target
+
+backend
+
+### Banco de Dados
+
+PostgreSQL 15
+
+### Infraestrutura
+
+Apache Kafka (AWS MSK), Docker, Kubernetes (EKS), GitHub Actions
+
+---
+
+## DoR — Definition of Ready
+
+- [x] Requisito de negócio documentado e aprovado
+- [x] User stories com critérios de aceite mensuráveis
+- [x] Escopo delimitado
+- [x] Requisitos não-funcionais definidos
+- [x] Stack técnica decidida
+- [x] Padrão arquitetural definido
+- [x] DoD acordado com o time
+
+---
+
+## DoD — Definition of Done
+
+- Todos os critérios de aceite validados por testes automatizados
+- Cobertura ≥ 80%
+- 4 regras validadas com casos numéricos explícitos
+- Idempotência verificada
+- DLQ funcional com causa no header
+- Evento `comissoes.calculadas.v1` validado
+- Sem PII nos logs
+- Commit em `feature/001-calculo-comissao-kafka`
+</code></pre>
+</details>
+<h4 id="arquivos-gerados-para-java-kafka-postgresql-backend" class="reveal">Arquivos gerados para Java + Kafka + PostgreSQL + backend</h4>
+<pre class="reveal"><code>.github/  (9 arquivos)
++-- copilot-instructions.md
++-- workflows/  quality-gate.yml · security-scan.yml
++-- prompts/    run.prompt.md
++-- skills/     speckit-baseline · speckit-stack · speckit-context-STORY-001
++-- agents/     speckit-implementador · speckit-revisor
+</code></pre>
+<hr>
+<h3 id="story-incompleta-fluxo-de-alinhamento" class="reveal">Story incompleta — fluxo de alinhamento</h3>
+<pre class="reveal"><code>  Voce                                           @speckit
+   |                                                |
+   |  /validate (story com lacunas)                 |
+   |-----------------------------------------------&gt;|
+   |                          6 lacunas encontradas |
+   |&lt;-----------------------------------------------|
+   |                                                |
+   |  Lacuna 1 — Valor de negocio?                  |
+   |&lt;-----------------------------------------------|
+   |  &quot;Eliminar lag D+1, dashboards ao vivo&quot;        |
+   |-----------------------------------------------&gt;|
+   |                                                |
+   |  Lacuna 2 — Tipos de regra de comissao?        |
+   |&lt;-----------------------------------------------|
+   |  &quot;Taxa fixa, escalonada, teto, bonus&quot;          |
+   |-----------------------------------------------&gt;|
+   |                                                |
+   |  Lacuna 3 — Fora de escopo?                    |
+   |&lt;-----------------------------------------------|
+   |  &quot;Pagamento, API REST, recalculo&quot;              |
+   |-----------------------------------------------&gt;|
+   |                                                |
+   |  Lacuna 4 — SLA de performance?                |
+   |&lt;-----------------------------------------------|
+   |  &quot;P99 &lt; 300ms, 1k eventos/min&quot;                 |
+   |-----------------------------------------------&gt;|
+   |                                                |
+   |  Lacuna 5 — Arquitetura?                       |
+   |&lt;-----------------------------------------------|
+   |  &quot;Hexagonal&quot;                                   |
+   |-----------------------------------------------&gt;|
+   |                                                |
+   |  Lacuna 6 — DoD?                               |
+   |&lt;-----------------------------------------------|
+   |  &quot;Idempotencia, DLQ, sem PII, branch&quot;          |
+   |-----------------------------------------------&gt;|
+   |                  Todas as lacunas preenchidas   |
+   |                                                |
+   |  /validate (novamente)                         |
+   |-----------------------------------------------&gt;|
+   |               DoR atingido — 9 arquivos gerados|
+   |&lt;-----------------------------------------------|
+</code></pre>
+</details>
+<details>
+<summary><strong>Fix via /fix (template direto) — completo e incompleto</strong></summary>
+<h3 id="fix-completo-vai-direto-para-geracao" class="reveal">Fix completo — vai direto para geração</h3>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Passo</th>
+<th>Ação</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>@speckit /fix</code> → cria <code>.speckit/FIX-001.md</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Preencha todos os campos (ver template abaixo)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>@speckit /validate</code> → Fix válido → gera <code>.github/</code> (7 arquivos)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Copilot Chat → selecione agent <strong>speckit-fix-implementador</strong> (Gates 0–2)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Novo Chat → selecione agent <strong>speckit-fix-revisor</strong> (Gates 3–4)</td>
+</tr>
+</tbody>
+</table></div><details>
+<summary>Template preenchido: <code>.speckit/FIX-001.md</code></summary>
+<pre class="reveal"><code class="language-markdown"># Fix 001
+
+&lt;!-- metadata
+id: 001
+title: Login OAuth2 retorna 500 após expiração do token
+createdAt: 2026-03-19
+version: 1
+type: fix
+status: open
+--&gt;
+
+## Bug Description
+
+### Título do Bug
+
+Login OAuth2 retorna erro 500 quando token expirado
+
+### Sintomas
+
+`/api/auth/callback` retorna HTTP 500 ao invés de 401 com token expirado.
+Cliente recebe erro genérico e é deslogado sem mensagem.
+
+### Passos para Reproduzir
+
+1. Autenticar via GitHub OAuth2
+2. Aguardar token expirar (1h)
+3. Qualquer requisição autenticada → 500
+
+### Ambiente Afetado
+
+Production — Node.js 20, Express 4.18, Ubuntu 22.04
+
+### Frequência de Ocorrência
+
+100% reproduzível após expiração.
+
+---
+
+## Root Cause Hypothesis
+
+### Hipótese
+
+Middleware não trata `TokenExpiredError` do JWT. Erro propaga sem handler → Express retorna 500.
+
+### Arquivos/Componentes Suspeitos
+
+- `src/middleware/auth.ts`
+- `src/routes/auth.ts`
+
+---
+
+## Impact Assessment
+
+### Severidade
+
+high
+
+### Usuários/Sistemas Afetados
+
+~60% dos usuários ativos/dia (sessões &gt; 1h).
+
+### Risco de Regressão
+
+Middleware impacta: refresh token, API key auth, rotas públicas opcionais.
+
+---
+
+## Regression Prevention
+
+### Testes a Adicionar
+
+- Unitário: middleware retorna 401 para `TokenExpiredError`
+- Unitário: middleware retorna 401 para `JsonWebTokenError`
+- Integração: `GET /api/me` com token expirado → 401 + `{ error: &quot;token_expired&quot; }`
+- Integração: `GET /api/me` com token válido continua OK
+
+---
+
+## DoF — Definition of Fixed
+
+- [ ] Bug não reproduz com passos documentados
+- [ ] Root cause endereçado (não apenas patched)
+- [ ] Testes de regressão passando
+- [ ] Cobertura ≥ 80%
+- [ ] Commit em `fix/001-oauth2-token-expired-500`
+</code></pre>
+</details>
+<blockquote class="reveal callout"><p class="reveal">A <strong>stack técnica é detectada automaticamente</strong> do workspace (<code>package.json</code>, <code>pom.xml</code>, etc.).</p>
+</blockquote>
+<hr>
+<h3 id="fix-incompleto-fluxo-de-alinhamento" class="reveal">Fix incompleto — fluxo de alinhamento</h3>
+<pre class="reveal"><code>  Voce                                           @speckit
+   |                                                |
+   |  /validate (fix com lacunas)                   |
+   |-----------------------------------------------&gt;|
+   |                          4 lacunas encontradas |
+   |&lt;-----------------------------------------------|
+   |                                                |
+   |  Lacuna 1 — Passos para reproduzir?            |
+   |&lt;-----------------------------------------------|
+   |  &quot;Relatorio &gt; Exportar PDF. TypeError&quot;         |
+   |-----------------------------------------------&gt;|
+   |                                                |
+   |  Lacuna 2 — Hipotese da causa raiz?            |
+   |&lt;-----------------------------------------------|
+   |  &quot;Firefox bloqueia window.print() em async&quot;    |
+   |-----------------------------------------------&gt;|
+   |                                                |
+   |  Lacuna 3 — Severidade?                        |
+   |&lt;-----------------------------------------------|
+   |  &quot;High — usado diariamente pelo financeiro&quot;    |
+   |-----------------------------------------------&gt;|
+   |                                                |
+   |  Lacuna 4 — Testes de regressao?               |
+   |&lt;-----------------------------------------------|
+   |  &quot;Unitario: print sincrono. Integracao: cliq&quot; |
+   |-----------------------------------------------&gt;|
+   |                       Todas as lacunas preench. |
+   |                                                |
+   |  /validate (novamente)                         |
+   |-----------------------------------------------&gt;|
+   |                Fix valido — 7 arquivos gerados |
+   |&lt;-----------------------------------------------|
+</code></pre>
+</details>
+<hr>
+<h2 id="rastreabilidade-e-auditoria" class="reveal section-title">Rastreabilidade e auditoria</h2>
+<figure class="diagram-figure reveal">
+  <figcaption class="diagram-caption">Rastreabilidade ponta-a-ponta</figcaption>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">flowchart LR
+    SPEC[.speckit/specs/<br/>story.md]:::s --> CODE[src/feature/<br/>*.ts]:::c
+    CODE --> TEST[tests/<br/>*.test.ts]:::t
+    TEST --> EVID[.speckit/evidence/<br/>latest.md]:::e
+    EVID --> METR[.speckit/metrics/<br/>events.jsonl]:::m
+    METR --> AUDIT[Auditoria local]:::a
+    classDef s fill:#1c2541,stroke:#58e1c2,color:#e8ecf6
+    classDef c fill:#1c2541,stroke:#7aa2ff,color:#e8ecf6
+    classDef t fill:#1c2541,stroke:#9d7aff,color:#e8ecf6
+    classDef e fill:#1c2541,stroke:#ffb454,color:#e8ecf6
+    classDef m fill:#1c2541,stroke:#4cc9f0,color:#e8ecf6
+    classDef a fill:#243057,stroke:#c98bff,color:#e8ecf6,font-weight:bold</pre>
+  </div>
+</figure>
+
+<p class="reveal">O SpecKit mantém dois mecanismos de rastreio persistentes no workspace:</p>
+<h3 id="audit-log" class="reveal">Audit Log</h3>
+<p class="reveal">Todo comando executado é registrado automaticamente em <code>.speckit/audit.log</code> com timestamp, comando e resultado.</p>
+<pre class="reveal"><code>.speckit/
++-- audit.log
+</code></pre>
+<p class="reveal"><strong>Acessar:</strong> <code>@speckit /audit</code> ou <code>@speckit /audit 50</code></p>
+<p class="reveal"><strong>Formato de cada linha:</strong></p>
+<pre class="reveal"><code>2026-03-19T10:15:00Z [command] /validate
+2026-03-19T10:15:01Z [command] /validate — ok
+</code></pre>
+<p class="reveal"><strong>Casos de uso:</strong></p>
+<ul class="reveal"><li><p class="reveal">Auditoria de compliance — “quem fez o quê e quando”</li>
+<li><p class="reveal">Debugging de problemas — “o último comando executado antes do erro”</li>
+<li><p class="reveal">Métricas de uso — quantos /validate vs /new por sessão</li>
+</ul>
+<h3 id="trace-rastreabilidade-por-spec" class="reveal">Trace (Rastreabilidade por Spec)</h3>
+<p class="reveal">Cada spec tem seu próprio registro de rastreabilidade com todas as transições de estado.</p>
+<pre class="reveal"><code>.speckit/
++-- traces/
+    +-- STORY-001.trace.json
+    +-- STORY-002.trace.json
+    +-- FIX-001.trace.json
+</code></pre>
+<p class="reveal"><strong>Acessar:</strong> <code>@speckit /trace</code> (lista) ou <code>@speckit /trace STORY-001</code> (detalhe)</p>
+<p class="reveal"><strong>O que é rastreado:</strong></p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Evento</th>
+<th>Descrição</th>
+<th>Exemplo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>created</code></td>
+<td>Spec criada</td>
+<td><code>/new</code> ou <code>/draft</code></td>
+</tr>
+<tr>
+<td><code>validated</code></td>
+<td>Validação executada</td>
+<td><code>/validate</code> — DoR atingido</td>
+</tr>
+<tr>
+<td><code>gate-transition</code></td>
+<td>Mudança de gate</td>
+<td>Gate 1 → Gate 2</td>
+</tr>
+<tr>
+<td><code>status-change</code></td>
+<td>Mudança de status</td>
+<td><code>in-progress</code> → <code>review</code></td>
+</tr>
+<tr>
+<td><code>agent-change</code></td>
+<td>Modo de agente alterado</td>
+<td><code>default</code> → <code>implementador</code></td>
+</tr>
+</tbody>
+</table></div><h3 id="session-logging" class="reveal">Session Logging</h3>
+<p class="reveal">Além do audit log e traces, o plugin grava logs de sessão em Markdown:</p>
+<pre class="reveal"><code>.speckit/
++-- logs/
+    +-- session-2026-03-19.md
+</code></pre>
+<p class="reveal">Cada entrada contém o comando executado, o resultado e metadados relevantes. Útil para revisão pós-sessão.</p>
+<blockquote class="reveal callout"><p class="reveal">Limitação de plataforma: a API atual de Chat Participant do VS Code/Copilot não permite renomear programaticamente o título nativo da conversa.
+Para facilitar navegação no histórico, o SpecKit grava e exibe um alias canônico de sessão no formato <code>Story + Agente + Gate</code> via <code>/history</code> e session logs.</p>
+</blockquote>
+<hr>
+<h2 id="referencia-rapida-o-que-dizer-ao-agente" class="reveal section-title">Referência rápida — o que dizer ao agente</h2>
+<h3 id="criando-specs" class="reveal">Criando specs</h3>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Você quer…</th>
+<th>Diga</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Criar story por texto livre</td>
+<td><code>@speckit /draft Quero calcular comissão via Kafka</code></td>
+</tr>
+<tr>
+<td>Criar story por template</td>
+<td><code>@speckit /new</code></td>
+</tr>
+<tr>
+<td>Criar fix por texto livre</td>
+<td><code>@speckit /draft Login retorna 500 após expirar token</code></td>
+</tr>
+<tr>
+<td>Criar fix por template</td>
+<td><code>@speckit /fix</code></td>
+</tr>
+<tr>
+<td>Validar e gerar arquivos</td>
+<td><code>@speckit /validate</code></td>
+</tr>
+<tr>
+<td>Ver todas as specs abertas</td>
+<td><code>@speckit /status</code></td>
+</tr>
+<tr>
+<td>Incluir concluídas/canceladas</td>
+<td><code>@speckit /status --all</code></td>
+</tr>
+<tr>
+<td>Ver histórico agregado</td>
+<td><code>@speckit /history</code></td>
+</tr>
+</tbody>
+</table></div><h3 id="trabalhando-com-gates" class="reveal">Trabalhando com gates</h3>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Você quer…</th>
+<th>Diga</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ver regras de gate</td>
+<td><code>@speckit /gate</code></td>
+</tr>
+<tr>
+<td>Validar se pode avançar</td>
+<td><code>@speckit /gate check gate 1 2</code></td>
+</tr>
+<tr>
+<td>Validar mudança de status</td>
+<td><code>@speckit /gate check status open in-progress</code></td>
+</tr>
+</tbody>
+</table></div><h3 id="controlando-o-agente" class="reveal">Controlando o agente</h3>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Você quer…</th>
+<th>Diga</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Entrar em modo debugger</td>
+<td><code>@speckit /agent debugger</code></td>
+</tr>
+<tr>
+<td>Entrar em modo refactor</td>
+<td><code>@speckit /agent refactor</code></td>
+</tr>
+<tr>
+<td>Entrar em modo implementador</td>
+<td><code>@speckit /agent implementador</code></td>
+</tr>
+<tr>
+<td>Entrar em modo revisor</td>
+<td><code>@speckit /agent revisor</code></td>
+</tr>
+<tr>
+<td>Voltar ao modo padrão</td>
+<td><code>@speckit /agent default</code></td>
+</tr>
+<tr>
+<td>Ver modo ativo</td>
+<td><code>@speckit /agent</code></td>
+</tr>
+</tbody>
+</table></div><h3 id="git-e-contexto" class="reveal">Git e contexto</h3>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Você quer…</th>
+<th>Diga</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ver alterações pendentes</td>
+<td><code>@speckit /diff</code></td>
+</tr>
+<tr>
+<td>Ver diff completo</td>
+<td><code>@speckit /diff --full</code></td>
+</tr>
+<tr>
+<td>Commitar com prefixo</td>
+<td><code>@speckit /commit feat(STORY-001): implementar engine</code></td>
+</tr>
+<tr>
+<td>Adicionar contexto</td>
+<td><code>@speckit /context add src/auth/service.ts</code></td>
+</tr>
+<tr>
+<td>Listar contexto ativo</td>
+<td><code>@speckit /context</code></td>
+</tr>
+<tr>
+<td>Limpar contexto</td>
+<td><code>@speckit /context clear</code></td>
+</tr>
+</tbody>
+</table></div><h3 id="diagnostico-e-rastreio" class="reveal">Diagnóstico e rastreio</h3>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Você quer…</th>
+<th>Diga</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Verificar saúde do workspace</td>
+<td><code>@speckit /doctor</code></td>
+</tr>
+<tr>
+<td>Ver log de auditoria</td>
+<td><code>@speckit /audit</code></td>
+</tr>
+<tr>
+<td>Ver últimas N entradas</td>
+<td><code>@speckit /audit 50</code></td>
+</tr>
+<tr>
+<td>Ver rastreabilidade</td>
+<td><code>@speckit /trace</code></td>
+</tr>
+<tr>
+<td>Detalhes de uma spec</td>
+<td><code>@speckit /trace STORY-001</code></td>
+</tr>
+</tbody>
+</table></div><hr>
+<h2 id="faq" class="reveal section-title">FAQ</h2>
+<details>
+<summary><strong>Posso usar o SpecKit sem GitHub Copilot?</strong></summary>
+<p class="reveal">Não. O SpecKit é um Chat Participant do GitHub Copilot Chat. Requer a extensão <strong>GitHub Copilot Chat</strong> instalada e ativa no VS Code <code>^1.93.0</code>.</p>
+</details>
+<details>
+<summary><strong>Preciso de workspace aberto?</strong></summary>
+<p class="reveal">Sim. O SpecKit requer ao menos uma pasta aberta no VS Code. Sem workspace carregado, todos os comandos retornam erro informando que é necessário abrir uma pasta.</p>
+</details>
+<details>
+<summary><strong>Posso ter múltiplas stories/fixes abertas ao mesmo tempo?</strong></summary>
+<p class="reveal">Sim. O plugin rastreia múltiplas specs no diretório <code>.speckit/</code>. Use <code>@speckit /status</code> para ver todas. A validação (<code>/validate</code>) atua sobre a spec ativa (a mais recente, ou a última referenciada).</p>
+</details>
+<details>
+<summary><strong>O /draft detecta automaticamente se é story ou fix?</strong></summary>
+<p class="reveal">Sim. O <code>/draft</code> analisa o texto fornecido e detecta intent:</p>
+<ul class="reveal"><li><p class="reveal">Keywords de bug (500, erro, falha, crash, timeout, regressão) → roteia para <strong>fix</strong></li>
+<li><p class="reveal">Demais textos → roteia para <strong>story</strong></li>
+<li><p class="reveal">Se houver ambiguidade, você pode forçar com <code>--fix</code> ou <code>--story</code></li>
+</ul>
+</details>
+<details>
+<summary><strong>Como o plugin detecta a stack técnica?</strong></summary>
+<p class="reveal">Automaticamente via análise de arquivos no workspace:</p>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Arquivo detectado</th>
+<th>Stack inferida</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>package.json</code> + <code>tsconfig.json</code></td>
+<td>TypeScript</td>
+</tr>
+<tr>
+<td><code>package.json</code> (sem tsconfig)</td>
+<td>JavaScript</td>
+</tr>
+<tr>
+<td><code>pom.xml</code></td>
+<td>Java</td>
+</tr>
+<tr>
+<td><code>*.csproj</code> / <code>*.sln</code></td>
+<td>C#</td>
+</tr>
+<tr>
+<td><code>pyproject.toml</code> / <code>requirements.txt</code></td>
+<td>Python</td>
+</tr>
+</tbody>
+</table></div><p class="reveal">Framework e banco de dados são inferidos a partir de dependências no manifesto.</p>
+</details>
+<details>
+<summary><strong>Os arquivos gerados sobrescrevem meus .github/ existentes?</strong></summary>
+<p class="reveal">Sim — o plugin gera os arquivos dentro de <code>.github/</code> e sobrescreve os existentes para manter consistência com a spec validada. Antes de cada geração, é criado um backup em <code>.speckit/backups/</code> com timestamp.</p>
+<p class="reveal">O backup inclui:</p>
+<ul class="reveal"><li><p class="reveal">Diretório <code>.github/</code> completo</li>
+<li><p class="reveal">Arquivo spec (<code>.speckit/STORY-*.md</code> ou <code>.speckit/FIX-*.md</code>)</li>
+<li><p class="reveal">Retenção: até <strong>20 backups</strong> ou <strong>60 dias</strong> (o que vier primeiro)</li>
+</ul>
+</details>
+<details>
+<summary><strong>O que é o DevTools skill?</strong></summary>
+<p class="reveal">Quando o <code>/validate</code> detecta que o workspace não possui ESLint, Prettier, husky ou lint-staged configurados, ele oferece gerar um skill adicional:</p>
+<pre class="reveal"><code>🔧 DevTools: ferramentas não detectadas. Gerar skill speckit-devtools?
+</code></pre>
+<p class="reveal">O skill <code>speckit-devtools</code> instrui o agente a configurar essas ferramentas adaptadas à stack do projeto.</p>
+</details>
+<details>
+<summary><strong>Qual a diferença entre /agent implementador e o agent no dropdown?</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Mecanismo</th>
+<th>O que faz</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@speckit /agent implementador</code></td>
+<td>Injeta guardrails resumidos e protocolos na sessão do Chat Participant</td>
+</tr>
+<tr>
+<td>Agent <strong>speckit-implementador</strong> (dropdown)</td>
+<td>Carrega o protocolo completo de Gates 0-2 como .agent.md com todas as regras detalhadas</td>
+</tr>
+</tbody>
+</table></div><p class="reveal">Para implementação real, use o <strong>dropdown</strong> (protocolo completo). O <code>/agent</code> é útil para ativar rapidamente guardrails em sessões informais.</p>
+</details>
+<details>
+<summary><strong>Posso pular gates?</strong></summary>
+<p class="reveal">Não. As transições de gate são controladas e cada avanço é no máximo +1. Use <code>@speckit /gate check gate 0 3</code> para verificar — retornará <code>❌ Transição bloqueada</code>.</p>
+<p class="reveal">Para validar transições permitidas: <code>@speckit /gate</code></p>
+</details>
+<details>
+<summary><strong>O que acontece se eu fechar o VS Code no meio de um gate?</strong></summary>
+<p class="reveal">O estado da spec (gate atual, status) é persistido no arquivo <code>.speckit/STORY-*.md</code> ou <code>FIX-*.md</code> e nos traces. Ao reabrir, continue de onde parou.</p>
+<p class="reveal">O modo do agente (<code>/agent</code>) volta para <code>default</code> ao reiniciar o VS Code, pois é mantido em memória da sessão.</p>
+</details>
+<details>
+<summary><strong>Como reverto para uma versão anterior da spec?</strong></summary>
+<p class="reveal">Os backups ficam em <code>.speckit/backups/</code> com timestamp. Copie o arquivo desejado de volta para <code>.speckit/</code> e execute <code>/validate</code> novamente.</p>
+</details>
+<details>
+<summary><strong>O plugin funciona com múltiplos workspaces (multi-root)?</strong></summary>
+<p class="reveal">Atualmente o plugin opera sobre o <strong>primeiro workspace carregado</strong>. Suporte completo a multi-root com SQLite está planejado para uma versão futura.</p>
+</details>
+<details>
+<summary><strong>O `/commit` faz push automaticamente?</strong></summary>
+<p class="reveal">Não. O <code>/commit</code> apenas executa stage + commit local (prefixo <code>speckit:</code>). O push é deliberadamente manual para permitir revisão antes de enviar ao remote. Se você omitir a mensagem, o SpecKit tenta derivar uma mensagem automática da spec ativa e do gate atual.</p>
+</details>
+<details>
+<summary><strong>Como debugar problemas com o plugin?</strong></summary>
+<ol class="reveal"><li><p class="reveal">Execute <code>@speckit /doctor</code> para verificar a saúde do workspace</li>
+<li><p class="reveal">Consulte <code>@speckit /audit</code> para ver o histórico de comandos e erros</li>
+<li><p class="reveal">Verifique os logs de sessão em <code>.speckit/logs/session-*.md</code></li>
+<li><p class="reveal">Se necessário, verifique o Output Channel do VS Code (View → Output → selecione “SpecKit”)</li>
+</ol>
+</details>
+<hr>
+<h2 id="limitacoes-conhecidas" class="reveal section-title">Limitações conhecidas</h2>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Limitação</th>
+<th>Status</th>
+<th>Workaround</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Multi-root workspace: opera apenas no primeiro workspace carregado</td>
+<td>Planejado (SQLite)</td>
+<td>Abrir um workspace por vez</td>
+</tr>
+<tr>
+<td>Modo do agente (<code>/agent</code>) não persiste entre reinicializações do VS Code</td>
+<td>By design</td>
+<td>Re-executar <code>/agent &lt;modo&gt;</code> ao reabrir</td>
+</tr>
+<tr>
+<td>Transições automáticas de gate para Fix ainda são manuais</td>
+<td>Planejado</td>
+<td>Atualizar metadata do FIX no Gate 4</td>
+</tr>
+<tr>
+<td>Sem telemetria interna do plugin (métricas de uso)</td>
+<td>Planejado (opt-in)</td>
+<td>Usar audit log para rastreio manual</td>
+</tr>
+<tr>
+<td>Sem <code>CONTRIBUTING.md</code> para contribuições externas</td>
+<td>Planejado</td>
+<td>—</td>
+</tr>
+<tr>
+<td>Sem CI/CD own pipeline (GitHub Actions para o repo do plugin)</td>
+<td>Planejado</td>
+<td>Build e lint locais</td>
+</tr>
+</tbody>
+</table></div><hr>
+<h2 id="matriz-de-maturidade" class="reveal section-title">Matriz de maturidade</h2>
+<p class="reveal">Avaliação baseada na versão <strong>0.3.1</strong> do plugin com evidências verificáveis do código-fonte.</p>
+<h3 id="visao-geral" class="reveal">Visão geral</h3>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Dimensão</th>
+<th>Nível</th>
+<th>Score</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Arquitetura</td>
+<td>Avançado</td>
+<td>5/5</td>
+</tr>
+<tr>
+<td>Qualidade de código</td>
+<td>Avançado</td>
+<td>5/5</td>
+</tr>
+<tr>
+<td>Testes</td>
+<td>Avançado</td>
+<td>5/5</td>
+</tr>
+<tr>
+<td>Segurança</td>
+<td>Avançado</td>
+<td>5/5</td>
+</tr>
+<tr>
+<td>Funcionalidades</td>
+<td>Avançado</td>
+<td>4/5</td>
+</tr>
+<tr>
+<td>Observabilidade</td>
+<td>Consolidado</td>
+<td>4/5</td>
+</tr>
+<tr>
+<td>Documentação</td>
+<td>Consolidado</td>
+<td>4/5</td>
+</tr>
+<tr>
+<td>DevOps / Linting</td>
+<td>Consolidado</td>
+<td>4/5</td>
+</tr>
+<tr>
+<td>Resiliência / Erros</td>
+<td>Avançado</td>
+<td>5/5</td>
+</tr>
+</tbody>
+</table></div><h3 id="detalhamento-por-dimensao" class="reveal">Detalhamento por dimensão</h3>
+<details>
+<summary><strong>Arquitetura — 5/5</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Critério</th>
+<th>Status</th>
+<th>Evidência</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SOLID compliance</td>
+<td>OK</td>
+<td>Generators sao funcoes puras; Single Responsibility por arquivo</td>
+</tr>
+<tr>
+<td>Dependency Inversion</td>
+<td>OK</td>
+<td>IFileSystem + IWorkspace injetados em todos os commands</td>
+</tr>
+<tr>
+<td>Composicao sobre heranca</td>
+<td>OK</td>
+<td>Nenhuma heranca entre generators; composicao via parametro</td>
+</tr>
+<tr>
+<td>Separacao de camadas</td>
+<td>OK</td>
+<td>Parser, Validator, Generator, FileSystem em modulos distintos</td>
+</tr>
+<tr>
+<td>Extension Host safety</td>
+<td>OK</td>
+<td>Nenhum bloqueio sincrono; async/await em todo I/O</td>
+</tr>
+<tr>
+<td>Disposal correto</td>
+<td>OK</td>
+<td>context.subscriptions.push em todas as subscriptions</td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>Qualidade de codigo — 5/5</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Critério</th>
+<th>Status</th>
+<th>Evidência</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TypeScript strict mode</td>
+<td>OK</td>
+<td>tsconfig.json: strict: true</td>
+</tr>
+<tr>
+<td>Parser single-pass</td>
+<td>OK</td>
+<td>BaseParser com regex compilado em nivel de modulo</td>
+</tr>
+<tr>
+<td>Idempotencia de geracao</td>
+<td>OK</td>
+<td>Mesmos inputs geram mesmos outputs sem side effects</td>
+</tr>
+<tr>
+<td>Sem credenciais hardcoded</td>
+<td>OK</td>
+<td>Zero ocorrencias em src/</td>
+</tr>
+<tr>
+<td>Encoding cross-platform</td>
+<td>OK</td>
+<td>Suporte a CRLF, LF e CR via LineEndings tests</td>
+</tr>
+<tr>
+<td>Tamanho de arquivos</td>
+<td>OK</td>
+<td>Nenhum arquivo src/ excede 300 linhas</td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>Testes — 5/5</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Critério</th>
+<th>Status</th>
+<th>Evidência</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Testes unitarios</td>
+<td>794 passando</td>
+<td>53 arquivos de teste cobrindo parsers, validators, generators, commands</td>
+</tr>
+<tr>
+<td>Testes de integracao</td>
+<td>OK</td>
+<td>@vscode/test-electron com workspace isolado</td>
+</tr>
+<tr>
+<td>Testes comportamentais</td>
+<td>OK</td>
+<td>E2E com Anthropic API real; valida pipeline completo</td>
+</tr>
+<tr>
+<td>Fixtures reutilizaveis</td>
+<td>OK</td>
+<td>11 fixtures em tests/fixtures/ (completo, parcial, vazio, H4)</td>
+</tr>
+<tr>
+<td>Mocks isolados</td>
+<td>OK</td>
+<td>tests/<strong>mocks</strong>/vscode.ts com VS Code API completa</td>
+</tr>
+<tr>
+<td>Edge cases</td>
+<td>OK</td>
+<td>Line endings, campos vazios, severity invalida, story parcial</td>
+</tr>
+<tr>
+<td>Comportamento sobre implementacao</td>
+<td>OK</td>
+<td>Testes verificam resultado, nao detalhes internos</td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>Seguranca — 5/5</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Critério</th>
+<th>Status</th>
+<th>Evidência</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Generators de seguranca</td>
+<td>OK</td>
+<td>CredentialSecurityGenerator + SecurityTestsGenerator</td>
+</tr>
+<tr>
+<td>IAM e rotacao de credenciais</td>
+<td>OK</td>
+<td>Regras para AWS Secrets Manager, Key Vault, Vault</td>
+</tr>
+<tr>
+<td>Input validation</td>
+<td>OK</td>
+<td>StoryValidator e FixValidator com campos obrigatorios</td>
+</tr>
+<tr>
+<td>HTML sanitization</td>
+<td>OK</td>
+<td>Parser remove HTML comments via regex seguro</td>
+</tr>
+<tr>
+<td>Pre-commit hooks gerados</td>
+<td>OK</td>
+<td>git-secrets + trufflehog nas instrucoes geradas</td>
+</tr>
+<tr>
+<td>SAST/SCA no CI</td>
+<td>OK</td>
+<td>security-scan.yml com Semgrep + TruffleHog</td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>Funcionalidades — 4/5</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Critério</th>
+<th>Status</th>
+<th>Evidência</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Commands core</td>
+<td>5/5</td>
+<td>/new, /fix, /draft, /validate, /status</td>
+</tr>
+<tr>
+<td>Linguagens suportadas</td>
+<td>5/5</td>
+<td>TypeScript, JavaScript, Java, C#, Python</td>
+</tr>
+<tr>
+<td>Frameworks suportados</td>
+<td>5/5</td>
+<td>React, Angular, SpringBoot, .NET, FastAPI</td>
+</tr>
+<tr>
+<td>Infraestrutura</td>
+<td>3/3</td>
+<td>AWS, Kafka, Glue Job</td>
+</tr>
+<tr>
+<td>Patterns</td>
+<td>3/3</td>
+<td>BFF, CRUD, Contract Testing</td>
+</tr>
+<tr>
+<td>CI/CD gerado</td>
+<td>OK</td>
+<td>quality-gate.yml + security-scan.yml por linguagem</td>
+</tr>
+<tr>
+<td>Agents autonomos</td>
+<td>OK</td>
+<td>Implementador + Revisor para Story e Fix</td>
+</tr>
+<tr>
+<td>DevTools assessment</td>
+<td>OK</td>
+<td>/validate avalia ESLint, Prettier, husky, lint-staged e oferece skill</td>
+</tr>
+<tr>
+<td>Multi-workspace</td>
+<td>Parcial</td>
+<td>Funciona por workspace aberto; sem SQLite ainda</td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>Observabilidade — 4/5</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Critério</th>
+<th>Status</th>
+<th>Evidência</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Log estruturado</td>
+<td>OK</td>
+<td>SessionLogger grava .speckit/logs/session-<date>.md</td>
+</tr>
+<tr>
+<td>Health check gerado</td>
+<td>OK</td>
+<td>Liveness + Readiness nos prompts</td>
+</tr>
+<tr>
+<td>Metricas geradas</td>
+<td>OK</td>
+<td>Prometheus /metrics nas instrucoes</td>
+</tr>
+<tr>
+<td>Tracing distribuido</td>
+<td>OK</td>
+<td>W3C traceparent propagation</td>
+</tr>
+<tr>
+<td>Kafka consumer lag</td>
+<td>OK</td>
+<td>Monitoramento + threshold de alerta</td>
+</tr>
+<tr>
+<td>Metricas do proprio plugin</td>
+<td>Ausente</td>
+<td>Sem telemetria interna do plugin</td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>Documentacao — 4/5</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Critério</th>
+<th>Status</th>
+<th>Evidência</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>README usuario</td>
+<td>OK</td>
+<td>Guia completo com diagramas, exemplos, templates</td>
+</tr>
+<tr>
+<td>JSDoc em funcoes criticas</td>
+<td>OK</td>
+<td>BaseParser, generators, test headers</td>
+</tr>
+<tr>
+<td>Templates documentados</td>
+<td>OK</td>
+<td>Story e Fix com todos os campos</td>
+</tr>
+<tr>
+<td>Gates documentados</td>
+<td>OK</td>
+<td>5 gates com descricao detalhada</td>
+</tr>
+<tr>
+<td>Limitacoes conhecidas</td>
+<td>Ausente</td>
+<td>Sem secao de limitacoes ou troubleshooting</td>
+</tr>
+<tr>
+<td>Contribuicao</td>
+<td>Ausente</td>
+<td>Sem <a href="http://CONTRIBUTING.md">CONTRIBUTING.md</a></td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>DevOps / Linting — 4/5</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Critério</th>
+<th>Status</th>
+<th>Evidência</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ESLint configurado</td>
+<td>OK</td>
+<td>eslint.config.mjs (flat config v10) + typescript-eslint</td>
+</tr>
+<tr>
+<td>Prettier configurado</td>
+<td>OK</td>
+<td>.prettierrc + .prettierignore</td>
+</tr>
+<tr>
+<td>npm run lint</td>
+<td>OK</td>
+<td><code>lint</code>, <code>lint:fix</code>, <code>format</code>, <code>format:check</code> no package.json</td>
+</tr>
+<tr>
+<td>Pre-commit hooks locais</td>
+<td>OK</td>
+<td>husky + lint-staged — executa ESLint + Prettier nos arquivos staged</td>
+</tr>
+<tr>
+<td>CI lint gate</td>
+<td>Ausente</td>
+<td>Sem GitHub Actions configurado para o repo do plugin</td>
+</tr>
+</tbody>
+</table></div></details>
+<details>
+<summary><strong>Resiliencia / Erros — 5/5</strong></summary>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Critério</th>
+<th>Status</th>
+<th>Evidência</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Generators idempotentos</td>
+<td>OK</td>
+<td>Sem state mutation; safe to re-run</td>
+</tr>
+<tr>
+<td>Fallback em validacao</td>
+<td>OK</td>
+<td>Gaps reportados um a um ao usuario</td>
+</tr>
+<tr>
+<td>Filesystem errors</td>
+<td>OK</td>
+<td>try/catch em todos os commands (readFile, writeFile) com mensagem amigavel</td>
+</tr>
+<tr>
+<td>Spec size guard</td>
+<td>OK</td>
+<td>Aviso quando spec &gt; 50 KB com dicas de otimizacao; fluxo nunca bloqueado</td>
+</tr>
+<tr>
+<td>Graceful degradation</td>
+<td>OK</td>
+<td>Generators com write individual try/catch; CancellationToken checado entre gates</td>
+</tr>
+</tbody>
+</table></div></details>
+<h3 id="roadmap-de-melhoria" class="reveal">Roadmap de melhoria</h3>
+<div class="table-wrap reveal"><table><thead>
+<tr>
+<th>Prioridade</th>
+<th>Acao</th>
+<th>Dimensao impactada</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Media</td>
+<td>Secao de limitacoes conhecidas no README</td>
+<td>Documentacao</td>
+</tr>
+<tr>
+<td>Media</td>
+<td>Automatizar transicoes de gate para Fix</td>
+<td>Funcionalidades</td>
+</tr>
+<tr>
+<td>Baixa</td>
+<td>Telemetria interna do plugin (opt-in)</td>
+<td>Observabilidade</td>
+</tr>
+<tr>
+<td>Baixa</td>
+<td><a href="http://CONTRIBUTING.md">CONTRIBUTING.md</a></td>
+<td>Documentacao</td>
+</tr>
+<tr>
+<td>Planejado</td>
+<td>SQLite para estado multi-workspace</td>
+<td>Funcionalidades</td>
+</tr>
+</tbody>
+</table></div>
+    </main>
+
+    <footer>
+      <h3>SpecKit · README · v0.5.0</h3>
+      <p>Gerado a partir de <code>README.md</code> · Branch <code>feat/v0.5-improvements</code></p>
+      <p style="margin-top: 12px;">Para impressão use o diálogo do navegador (Ctrl+P) — o layout está calibrado para <strong>A3 landscape</strong>.</p>
+      <p style="margin-top: 14px; font-size: 12px;">Documento gerado em 13/05/2026 · Co-authored-by Copilot</p>
+    </footer>
+
+    <script>
+      // Progress bar
+      (function () {
+        var bar = document.getElementById("progressBar");
+        if (!bar) return;
+        function update() {
+          var h = document.documentElement;
+          var pct = h.scrollHeight - h.clientHeight > 0 ? (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100 : 0;
+          bar.style.width = pct + "%";
+        }
+        window.addEventListener("scroll", update, { passive: true });
+        window.addEventListener("resize", update);
+        update();
+      })();
+
+      // Mermaid
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "dark",
+        securityLevel: "loose",
+        themeVariables: {
+          primaryColor: "#243057",
+          primaryTextColor: "#e8ecf6",
+          primaryBorderColor: "#7aa2ff",
+          lineColor: "#7aa2ff",
+          secondaryColor: "#1c2541",
+          tertiaryColor: "#11172b",
+          background: "#11172b",
+          fontFamily: "Inter, sans-serif",
+        },
+        flowchart: { curve: "basis", padding: 20, useMaxWidth: true },
+        sequence: { actorMargin: 60, boxMargin: 12, messageMargin: 36 },
+        state: { sectionFontSize: 14 },
+      });
+
+      // Scroll reveal
+      (function () {
+        var els = document.querySelectorAll(".reveal");
+        if (!("IntersectionObserver" in window)) {
+          els.forEach(function (el) { el.classList.add("is-visible"); });
+          return;
+        }
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) {
+              e.target.classList.add("is-visible");
+              io.unobserve(e.target);
+            }
+          });
+        }, { threshold: 0.08, rootMargin: "0px 0px -60px 0px" });
+        els.forEach(function (el) { io.observe(el); });
+      })();
+    </script>
+  </body>
+</html>
