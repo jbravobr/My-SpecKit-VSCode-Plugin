@@ -72,11 +72,11 @@ const injections = [
     G1 --> G2([Gate 2<br/>Implementation]):::g2
     G2 --> G3([Gate 3<br/>Testing & Review]):::g3
     G3 --> G4([Gate 4<br/>Done]):::g4
-    classDef g0 fill:#1c2541,stroke:#7aa2ff,color:#e8ecf6
-    classDef g1 fill:#1c2541,stroke:#9d7aff,color:#e8ecf6
-    classDef g2 fill:#1c2541,stroke:#4cc9f0,color:#e8ecf6
-    classDef g3 fill:#1c2541,stroke:#ffb454,color:#e8ecf6
-    classDef g4 fill:#1c2541,stroke:#38d39f,color:#e8ecf6`,
+    classDef g0 fill:#243057,stroke:#7aa2ff,stroke-width:2px,color:#e8ecf6
+    classDef g1 fill:#2a2557,stroke:#9d7aff,stroke-width:2px,color:#e8ecf6
+    classDef g2 fill:#1b3a4d,stroke:#4cc9f0,stroke-width:2px,color:#e8ecf6
+    classDef g3 fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    classDef g4 fill:#1a3a2e,stroke:#38d39f,stroke-width:2px,color:#e8ecf6`,
     title: "Linha do tempo dos cinco gates",
   },
   {
@@ -104,12 +104,12 @@ const injections = [
     L3 --> L4[Layer 4<br/>Story Spec]:::d
     L4 --> L5[Layer 5<br/>User Intent]:::e
     L5 --> OUT([LLM Call]):::out
-    classDef a fill:#1c2541,stroke:#7aa2ff,color:#e8ecf6
-    classDef b fill:#1c2541,stroke:#9d7aff,color:#e8ecf6
-    classDef c fill:#1c2541,stroke:#4cc9f0,color:#e8ecf6
-    classDef d fill:#1c2541,stroke:#ffb454,color:#e8ecf6
-    classDef e fill:#1c2541,stroke:#58e1c2,color:#e8ecf6
-    classDef out fill:#243057,stroke:#c98bff,color:#e8ecf6,font-weight:bold`,
+    classDef a fill:#243057,stroke:#7aa2ff,stroke-width:2px,color:#e8ecf6
+    classDef b fill:#2a2557,stroke:#9d7aff,stroke-width:2px,color:#e8ecf6
+    classDef c fill:#1b3a4d,stroke:#4cc9f0,stroke-width:2px,color:#e8ecf6
+    classDef d fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    classDef e fill:#1a3a2e,stroke:#58e1c2,stroke-width:2px,color:#e8ecf6
+    classDef out fill:#3a1f4d,stroke:#c98bff,stroke-width:3px,color:#e8ecf6`,
     title: "As cinco camadas do prompt",
   },
   {
@@ -128,25 +128,28 @@ const injections = [
     after: "garantias-de-qualidade-por-gate",
     code: `flowchart LR
     subgraph G1[Gate 1]
-        H1[heuristic]
-        T1[typecheck]
+        H1[heuristic]:::v1
+        T1[typecheck]:::v1
     end
     subgraph G2[Gate 2]
-        T2[typecheck]
-        A2[ac-presence]
-        S2[secret-leak]
+        T2[typecheck]:::v2
+        A2[ac-presence]:::v2
+        S2[secret-leak]:::v2
     end
     subgraph G3[Gate 3]
-        A3[ac-presence]
-        TE3[test-execution]
-        C3[coverage]
-        CR3[crap]
-        S3[secret-leak]
+        A3[ac-presence]:::v3
+        TE3[test-execution]:::v3
+        C3[coverage]:::v3
+        CR3[crap]:::v3
+        S3[secret-leak]:::v3
     end
     G1 --> G2 --> G3
-    style G1 fill:#11172b,stroke:#7aa2ff
-    style G2 fill:#11172b,stroke:#4cc9f0
-    style G3 fill:#11172b,stroke:#ffb454`,
+    classDef v1 fill:#243057,stroke:#7aa2ff,stroke-width:2px,color:#e8ecf6
+    classDef v2 fill:#1b3a4d,stroke:#4cc9f0,stroke-width:2px,color:#e8ecf6
+    classDef v3 fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    style G1 fill:#11172b,stroke:#7aa2ff,stroke-width:2px,color:#7aa2ff
+    style G2 fill:#11172b,stroke:#4cc9f0,stroke-width:2px,color:#4cc9f0
+    style G3 fill:#11172b,stroke:#ffb454,stroke-width:2px,color:#ffb454`,
     title: "Mapa validador × gate (v0.5.0)",
   },
   {
@@ -157,12 +160,12 @@ const injections = [
     TEST --> EVID[.speckit/evidence/<br/>latest.md]:::e
     EVID --> METR[.speckit/metrics/<br/>events.jsonl]:::m
     METR --> AUDIT[Auditoria local]:::a
-    classDef s fill:#1c2541,stroke:#58e1c2,color:#e8ecf6
-    classDef c fill:#1c2541,stroke:#7aa2ff,color:#e8ecf6
-    classDef t fill:#1c2541,stroke:#9d7aff,color:#e8ecf6
-    classDef e fill:#1c2541,stroke:#ffb454,color:#e8ecf6
-    classDef m fill:#1c2541,stroke:#4cc9f0,color:#e8ecf6
-    classDef a fill:#243057,stroke:#c98bff,color:#e8ecf6,font-weight:bold`,
+    classDef s fill:#1a3a2e,stroke:#58e1c2,stroke-width:2px,color:#e8ecf6
+    classDef c fill:#243057,stroke:#7aa2ff,stroke-width:2px,color:#e8ecf6
+    classDef t fill:#2a2557,stroke:#9d7aff,stroke-width:2px,color:#e8ecf6
+    classDef e fill:#3d2e1a,stroke:#ffb454,stroke-width:2px,color:#e8ecf6
+    classDef m fill:#1b3a4d,stroke:#4cc9f0,stroke-width:2px,color:#e8ecf6
+    classDef a fill:#3a1f4d,stroke:#c98bff,stroke-width:3px,color:#e8ecf6,font-weight:bold`,
     title: "Rastreabilidade ponta-a-ponta",
   },
 ];
@@ -549,10 +552,13 @@ const html = `<!doctype html>
         margin-bottom: 14px; text-align: left;
       }
       .mermaid-wrap {
-        background: var(--bg-2);
+        background:
+          radial-gradient(ellipse at top left, rgba(122,162,255,0.10), transparent 60%),
+          radial-gradient(ellipse at bottom right, rgba(157,122,255,0.10), transparent 60%),
+          var(--bg-2);
         border: 1px solid var(--line);
         border-radius: 16px;
-        padding: 36px 30px;
+        padding: 40px 32px;
         margin: 18px 0 32px;
         text-align: center;
         overflow-x: auto;
@@ -560,33 +566,108 @@ const html = `<!doctype html>
       }
       .mermaid-wrap::before {
         content: ""; position: absolute; inset: 0;
-        background: linear-gradient(90deg, transparent, rgba(122,162,255,0.06), transparent);
-        background-size: 1000px 100%;
-        animation: shimmer 6s linear infinite;
+        background: linear-gradient(90deg, transparent, rgba(122,162,255,0.07), transparent);
+        background-size: 1200px 100%;
+        animation: shimmer 7s linear infinite;
         pointer-events: none; border-radius: 16px;
       }
       .mermaid { font-family: "Inter", sans-serif !important; position: relative; z-index: 1; }
       .mermaid svg { max-width: 100%; height: auto !important; }
-      /* Animação: draw das linhas + fade dos nós quando aparecem no viewport */
-      .mermaid-wrap.is-visible .mermaid g.node,
-      .mermaid-wrap.is-visible .mermaid g.actor {
-        animation: fadeNode 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+
+      /* Animação NÃO destrutiva: apenas opacity nos grupos. Não usar transform
+         em g.node — quebra o posicionamento absoluto interno do Mermaid. */
+      .mermaid-wrap .mermaid g.node,
+      .mermaid-wrap .mermaid g.cluster,
+      .mermaid-wrap .mermaid g.actor,
+      .mermaid-wrap .mermaid g.label,
+      .mermaid-wrap .mermaid g.statediagram-state,
+      .mermaid-wrap .mermaid .edgeLabel { opacity: 0; }
+      .mermaid-wrap.is-visible .mermaid g.node { animation: fadeIn 0.6s ease forwards; }
+      .mermaid-wrap.is-visible .mermaid g.cluster { animation: fadeIn 0.6s ease forwards; }
+      .mermaid-wrap.is-visible .mermaid g.actor { animation: fadeIn 0.6s ease forwards; }
+      .mermaid-wrap.is-visible .mermaid g.label { animation: fadeIn 0.6s ease forwards; }
+      .mermaid-wrap.is-visible .mermaid g.statediagram-state { animation: fadeIn 0.6s ease forwards; }
+      .mermaid-wrap.is-visible .mermaid .edgeLabel { animation: fadeIn 0.5s ease 0.8s forwards; }
+
+      /* Staggered delays */
+      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(1)  { animation-delay: 0.05s; }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(2)  { animation-delay: 0.12s; }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(3)  { animation-delay: 0.19s; }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(4)  { animation-delay: 0.26s; }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(5)  { animation-delay: 0.33s; }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(6)  { animation-delay: 0.40s; }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(7)  { animation-delay: 0.47s; }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(8)  { animation-delay: 0.54s; }
+      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(n+9){ animation-delay: 0.60s; }
+
+      /* Linhas: stroke-dash drawing animation. Safe because dasharray/offset
+         are on the path itself, not on transform. */
+      .mermaid-wrap .mermaid .edgePath path,
+      .mermaid-wrap .mermaid .flowchart-link,
+      .mermaid-wrap .mermaid path.transition,
+      .mermaid-wrap .mermaid line.messageLine0,
+      .mermaid-wrap .mermaid line.messageLine1 {
+        stroke-dasharray: 1500;
+        stroke-dashoffset: 1500;
       }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-child(1) { animation-delay: 0.05s; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-child(2) { animation-delay: 0.15s; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-child(3) { animation-delay: 0.25s; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-child(4) { animation-delay: 0.35s; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-child(5) { animation-delay: 0.45s; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-child(n+6) { animation-delay: 0.55s; }
+      .mermaid-wrap.is-visible .mermaid .edgePath path,
       .mermaid-wrap.is-visible .mermaid .flowchart-link,
       .mermaid-wrap.is-visible .mermaid path.transition,
-      .mermaid-wrap.is-visible .mermaid .messageLine0,
-      .mermaid-wrap.is-visible .mermaid .messageLine1 {
-        stroke-dasharray: 1200;
-        stroke-dashoffset: 1200;
-        animation: drawLine 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s forwards;
+      .mermaid-wrap.is-visible .mermaid line.messageLine0,
+      .mermaid-wrap.is-visible .mermaid line.messageLine1 {
+        animation: drawLine 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s forwards;
       }
-      .mermaid g.node:hover { filter: brightness(1.25) drop-shadow(0 0 12px rgba(122,162,255,0.6)); cursor: pointer; transition: filter 0.25s ease; }
+
+      /* Cores vibrantes via paleta: tinge shapes via filter:hue-rotate
+         leve e drop-shadow colorida nas formas, sem mexer em fill/stroke
+         (evita quebrar gradientes/labels do Mermaid). */
+      .mermaid-wrap .mermaid g.node rect,
+      .mermaid-wrap .mermaid g.node polygon,
+      .mermaid-wrap .mermaid g.node circle,
+      .mermaid-wrap .mermaid g.node ellipse,
+      .mermaid-wrap .mermaid g.node path {
+        filter: drop-shadow(0 0 6px rgba(122,162,255,0.35));
+        transition: filter 0.4s ease;
+      }
+      .mermaid-wrap .mermaid g.node:hover rect,
+      .mermaid-wrap .mermaid g.node:hover polygon,
+      .mermaid-wrap .mermaid g.node:hover circle,
+      .mermaid-wrap .mermaid g.node:hover ellipse,
+      .mermaid-wrap .mermaid g.node:hover path {
+        filter: drop-shadow(0 0 14px rgba(157,122,255,0.85)) brightness(1.15);
+        cursor: pointer;
+      }
+
+      /* Pulse glow contínuo, sutil, em nós (sem transform) */
+      @keyframes nodeGlow {
+        0%, 100% { filter: drop-shadow(0 0 6px rgba(122,162,255,0.35)); }
+        50%      { filter: drop-shadow(0 0 12px rgba(157,122,255,0.55)); }
+      }
+      .mermaid-wrap.is-visible .mermaid g.node rect,
+      .mermaid-wrap.is-visible .mermaid g.node polygon,
+      .mermaid-wrap.is-visible .mermaid g.node circle,
+      .mermaid-wrap.is-visible .mermaid g.node ellipse {
+        animation: nodeGlow 6s ease-in-out infinite;
+      }
+
+      /* Setas/marker tips: pulso de cor */
+      @keyframes markerPulse {
+        0%, 100% { fill: var(--accent); }
+        50%      { fill: var(--accent-2); }
+      }
+      .mermaid-wrap.is-visible .mermaid marker path,
+      .mermaid-wrap.is-visible .mermaid defs marker path {
+        animation: markerPulse 4s ease-in-out infinite;
+      }
+
+      /* Texto: garantir visibilidade mesmo durante fade dos nós-pai */
+      .mermaid-wrap .mermaid g.node text,
+      .mermaid-wrap .mermaid g.label text,
+      .mermaid-wrap .mermaid g.actor text { fill: var(--text) !important; }
+      .mermaid-wrap .mermaid .edgeLabel,
+      .mermaid-wrap .mermaid .edgeLabel rect { background-color: transparent !important; fill: var(--bg-2) !important; }
+      .mermaid-wrap .mermaid .edgeLabel span,
+      .mermaid-wrap .mermaid .edgeLabel p { color: var(--text-dim) !important; background: transparent !important; }
 
       /* ==================== REVEAL ON SCROLL ==================== */
       .reveal {
@@ -694,7 +775,7 @@ const html = `<!doctype html>
         update();
       })();
 
-      // Mermaid
+      // Mermaid — tema vibrante e linhas mais grossas
       mermaid.initialize({
         startOnLoad: true,
         theme: "dark",
@@ -703,16 +784,51 @@ const html = `<!doctype html>
           primaryColor: "#243057",
           primaryTextColor: "#e8ecf6",
           primaryBorderColor: "#7aa2ff",
-          lineColor: "#7aa2ff",
-          secondaryColor: "#1c2541",
-          tertiaryColor: "#11172b",
+          lineColor: "#9d7aff",
+          secondaryColor: "#1b3a4d",
+          tertiaryColor: "#3d2e1a",
           background: "#11172b",
+          mainBkg: "#243057",
+          secondBkg: "#1b3a4d",
+          tertiaryBkg: "#3d2e1a",
+          edgeLabelBackground: "#161e36",
+          clusterBkg: "#11172b",
+          clusterBorder: "#7aa2ff",
+          titleColor: "#e8ecf6",
+          actorBkg: "#243057",
+          actorBorder: "#7aa2ff",
+          actorTextColor: "#e8ecf6",
+          actorLineColor: "#9d7aff",
+          signalColor: "#9d7aff",
+          signalTextColor: "#e8ecf6",
+          labelBoxBkgColor: "#243057",
+          labelBoxBorderColor: "#7aa2ff",
+          labelTextColor: "#e8ecf6",
+          loopTextColor: "#e8ecf6",
+          noteBorderColor: "#ffb454",
+          noteBkgColor: "#3d2e1a",
+          noteTextColor: "#e8ecf6",
+          activationBorderColor: "#4cc9f0",
+          activationBkgColor: "#1b3a4d",
           fontFamily: "Inter, sans-serif",
         },
-        flowchart: { curve: "basis", padding: 20, useMaxWidth: true },
-        sequence: { actorMargin: 60, boxMargin: 12, messageMargin: 36 },
+        flowchart: { curve: "basis", padding: 22, useMaxWidth: true, htmlLabels: true },
+        sequence: { actorMargin: 60, boxMargin: 12, messageMargin: 36, mirrorActors: false },
         state: { sectionFontSize: 14 },
       });
+
+      // Após renderização do Mermaid, marcar os wraps visíveis para já dispararem
+      // a animação inicial dos diagramas que estão na primeira viewport.
+      function activateVisibleDiagrams() {
+        document.querySelectorAll(".mermaid-wrap").forEach(function (w) {
+          var r = w.getBoundingClientRect();
+          if (r.top < window.innerHeight && r.bottom > 0) {
+            w.classList.add("is-visible");
+          }
+        });
+      }
+      // Mermaid v10 expõe Promise; usamos timeout como fallback.
+      setTimeout(activateVisibleDiagrams, 800);
 
       // Scroll reveal
       (function () {
