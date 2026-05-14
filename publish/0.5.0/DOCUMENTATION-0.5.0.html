@@ -1,0 +1,983 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>SpecKit 0.5.0 · Release Notes Técnico-Executivo</title>
+        <meta
+            name="description"
+            content="SpecKit 0.5.0 entrega seis melhorias incrementais sobre a camada de validação determinística: detecção de segredos, métricas locais, score de spec, loop com memória, timeouts e UI nativa."
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+            rel="stylesheet"
+        />
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+        <style>
+            :root {
+                --bg-0: #0b1020;
+                --bg-1: #11172b;
+                --bg-2: #161e36;
+                --surface: #1c2541;
+                --surface-2: #243057;
+                --line: #2a3760;
+                --text: #e8ecf6;
+                --text-dim: #b0b9d4;
+                --text-muted: #7c87a9;
+                --accent: #7aa2ff;
+                --accent-2: #9d7aff;
+                --user: #58e1c2;
+                --participant: #ffb454;
+                --llm: #c98bff;
+                --success: #38d39f;
+                --warn: #ffb454;
+                --danger: #ff6b8a;
+                --gate: #4cc9f0;
+                --gradient-hero: linear-gradient(135deg, #0b1020 0%, #1a1d4d 50%, #2a1d5d 100%);
+                --gradient-accent: linear-gradient(135deg, #7aa2ff 0%, #9d7aff 100%);
+                --gradient-success: linear-gradient(135deg, #38d39f 0%, #4cc9f0 100%);
+                --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.45);
+                --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+                --doc-max: 1480px;
+                --doc-pad-x: 80px;
+            }
+
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            html { scroll-behavior: smooth; }
+            body {
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                background: var(--bg-0);
+                color: var(--text);
+                line-height: 1.65;
+                -webkit-font-smoothing: antialiased;
+                overflow-x: hidden;
+            }
+            code, pre, .mono { font-family: "JetBrains Mono", "Consolas", monospace; }
+
+            /* ======= PROGRESS BAR (sem animação, só largura) ======= */
+            .progress-bar {
+                position: fixed;
+                top: 0; left: 0;
+                height: 3px;
+                width: 0%;
+                background: var(--gradient-accent);
+                z-index: 1000;
+            }
+
+            /* ======= NAV ======= */
+            .topnav {
+                position: fixed;
+                top: 14px; right: 18px;
+                z-index: 999;
+                background: rgba(17,23,43,0.85);
+                backdrop-filter: blur(12px);
+                border: 1px solid var(--line);
+                border-radius: 100px;
+                padding: 8px 14px;
+                display: flex; gap: 4px;
+                font-size: 12px; font-weight: 600;
+            }
+            .topnav a {
+                color: var(--text-dim);
+                text-decoration: none;
+                padding: 6px 12px;
+                border-radius: 100px;
+            }
+            .topnav a:hover { color: var(--text); background: rgba(122,162,255,0.12); }
+            @media (max-width: 1100px) { .topnav { display: none; } }
+
+            /* ======= HERO ======= */
+            .hero {
+                background: var(--gradient-hero);
+                padding: 140px var(--doc-pad-x) 110px;
+                position: relative;
+                overflow: hidden;
+                border-bottom: 1px solid var(--line);
+            }
+            .hero::before {
+                content: ""; position: absolute;
+                top: -50%; left: -10%;
+                width: 60%; height: 200%;
+                background: radial-gradient(circle, rgba(157,122,255,0.18) 0%, transparent 70%);
+                pointer-events: none;
+            }
+            .hero::after {
+                content: ""; position: absolute;
+                bottom: -50%; right: -10%;
+                width: 60%; height: 200%;
+                background: radial-gradient(circle, rgba(122,162,255,0.15) 0%, transparent 70%);
+                pointer-events: none;
+            }
+            .hero-inner { max-width: var(--doc-max); margin: 0 auto; position: relative; z-index: 1; }
+            .eyebrow {
+                display: inline-flex; align-items: center; gap: 10px;
+                padding: 8px 18px;
+                background: rgba(122,162,255,0.12);
+                border: 1px solid rgba(122,162,255,0.35);
+                border-radius: 100px;
+                font-size: 13px; font-weight: 600;
+                color: var(--accent);
+                letter-spacing: 0.08em; text-transform: uppercase;
+                margin-bottom: 28px;
+            }
+            .eyebrow .dot {
+                width: 8px; height: 8px;
+                background: var(--success);
+                border-radius: 50%;
+                box-shadow: 0 0 12px var(--success);
+            }
+            .hero h1 {
+                font-size: clamp(38px, 5.8vw, 68px);
+                font-weight: 800; line-height: 1.06;
+                letter-spacing: -0.02em;
+                background: linear-gradient(135deg, #ffffff 0%, #b0b9d4 100%);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 24px;
+            }
+            .hero h1 .highlight {
+                background: var(--gradient-accent);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .hero-lead {
+                font-size: clamp(17px, 1.6vw, 21px);
+                color: var(--text-dim);
+                margin-bottom: 48px; font-weight: 400;
+                text-align: justify; hyphens: auto; max-width: 1100px;
+            }
+            .hero-meta {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 16px;
+            }
+            .meta-card {
+                background: rgba(28,37,65,0.6);
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: 18px 20px;
+                backdrop-filter: blur(8px);
+            }
+            .meta-card .label {
+                font-size: 11px; letter-spacing: 0.12em;
+                text-transform: uppercase; color: var(--text-muted);
+                font-weight: 600; margin-bottom: 8px;
+            }
+            .meta-card .value { font-size: 22px; font-weight: 700; color: var(--text); }
+            .meta-card .value small { font-size: 13px; color: var(--text-dim); font-weight: 500; margin-left: 4px; }
+
+            /* ======= SECTION ======= */
+            section { padding: 100px var(--doc-pad-x); position: relative; }
+            .section-inner { max-width: var(--doc-max); margin: 0 auto; }
+            section h1, section h2, section h3, section h4, section p, section li, section .section-lead {
+                text-align: justify;
+                text-justify: inter-word;
+                hyphens: auto;
+                -webkit-hyphens: auto;
+            }
+            section.alt { background: var(--bg-1); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+            .section-tag {
+                display: inline-block; font-size: 12px; font-weight: 700;
+                letter-spacing: 0.18em; text-transform: uppercase;
+                color: var(--accent); margin-bottom: 16px;
+                text-align: left;
+            }
+            h2 {
+                font-size: clamp(28px, 3.5vw, 44px); font-weight: 800;
+                line-height: 1.15; letter-spacing: -0.015em;
+                margin-bottom: 18px; color: var(--text);
+            }
+            h3 { font-size: 22px; font-weight: 700; margin: 28px 0 14px; color: var(--text); }
+            h4 { font-size: 17px; font-weight: 700; margin: 22px 0 10px; color: var(--accent); }
+            .section-lead { font-size: 18px; color: var(--text-dim); margin-bottom: 48px; max-width: 1100px; }
+            p { margin-bottom: 14px; color: var(--text-dim); }
+            ul, ol { margin: 12px 0 18px 22px; color: var(--text-dim); }
+            li { margin-bottom: 6px; }
+            strong { color: var(--text); font-weight: 600; }
+
+            /* ======= METRICS ======= */
+            .metrics {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 20px;
+                margin-bottom: 16px;
+            }
+            .metric {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 28px 26px;
+                position: relative; overflow: hidden;
+            }
+            .metric::before {
+                content: ""; position: absolute;
+                top: 0; left: 0; width: 4px; height: 100%;
+                background: var(--gradient-accent);
+            }
+            .metric .icon { font-size: 28px; margin-bottom: 14px; display: block; }
+            .metric .number {
+                font-size: 38px; font-weight: 800; line-height: 1;
+                background: var(--gradient-accent);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 8px;
+            }
+            .metric .label { font-size: 14px; color: var(--text-dim); font-weight: 500; }
+
+            /* ======= FEATURE GRID ======= */
+            .feature-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+                gap: 22px;
+                margin: 12px 0 8px;
+            }
+            .feature-card {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 26px;
+                border-left: 5px solid var(--accent);
+            }
+            .feature-card.success { border-left-color: var(--success); }
+            .feature-card.warn { border-left-color: var(--warn); }
+            .feature-card.danger { border-left-color: var(--danger); }
+            .feature-card.gate { border-left-color: var(--gate); }
+            .feature-card h4 { color: var(--text); margin-top: 0; margin-bottom: 10px; font-size: 18px; }
+            .feature-card .tag {
+                display: inline-block; font-size: 10px;
+                letter-spacing: 0.14em; text-transform: uppercase;
+                color: var(--accent); font-weight: 700; margin-bottom: 10px;
+            }
+            .feature-card p { font-size: 14px; margin-bottom: 8px; }
+
+            /* ======= CODE ======= */
+            pre.code, .code-block {
+                background: #0a0f1f;
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                padding: 18px 20px;
+                margin: 14px 0 22px;
+                overflow-x: auto;
+                font-size: 13px;
+                line-height: 1.6;
+                color: #d4dbef;
+            }
+            code.inline {
+                background: rgba(122,162,255,0.12);
+                color: var(--accent);
+                padding: 2px 7px;
+                border-radius: 5px;
+                font-size: 0.92em;
+            }
+
+            /* ======= TABLE ======= */
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 16px 0 24px;
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                overflow: hidden;
+                font-size: 14px;
+            }
+            thead { background: var(--surface-2); }
+            th, td {
+                text-align: left;
+                padding: 12px 16px;
+                border-bottom: 1px solid var(--line);
+                color: var(--text-dim);
+            }
+            th { color: var(--text); font-weight: 700; font-size: 13px; letter-spacing: 0.04em; }
+            tbody tr:last-child td { border-bottom: none; }
+
+            /* ======= MERMAID (sem animações) ======= */
+            .mermaid-wrap {
+                background: var(--bg-2);
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                padding: 32px;
+                margin: 18px 0 32px;
+                text-align: center;
+                overflow-x: auto;
+            }
+            .mermaid { font-family: "Inter", sans-serif !important; }
+            .mermaid svg { max-width: 100%; height: auto !important; }
+            /* Sem :hover em nós, sem transitions */
+
+            /* ======= CALLOUT ======= */
+            .callout {
+                background: rgba(122,162,255,0.08);
+                border-left: 4px solid var(--accent);
+                border-radius: 8px;
+                padding: 16px 20px;
+                margin: 18px 0 24px;
+                color: var(--text-dim);
+                font-size: 15px;
+            }
+            .callout.success { background: rgba(56,211,159,0.08); border-left-color: var(--success); }
+            .callout.warn { background: rgba(255,180,84,0.08); border-left-color: var(--warn); }
+            .callout strong { color: var(--text); }
+
+            /* ======= FOOTER ======= */
+            footer {
+                background: var(--bg-1);
+                border-top: 1px solid var(--line);
+                padding: 60px var(--doc-pad-x) 40px;
+                text-align: center;
+                color: var(--text-muted);
+                font-size: 13px;
+            }
+            footer .footer-inner { max-width: var(--doc-max); margin: 0 auto; }
+            footer h3 { color: var(--text); margin-bottom: 12px; text-align: center; }
+
+            @media (max-width: 768px) {
+                :root { --doc-pad-x: 24px; }
+                section { padding: 60px var(--doc-pad-x); }
+                .hero { padding: 90px var(--doc-pad-x) 70px; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="progress-bar" id="progressBar"></div>
+
+        <nav class="topnav" aria-label="Sumário">
+            <a href="#sumario">Sumário</a>
+            <a href="#cap1">I · Visão</a>
+            <a href="#cap2">II · Segredos</a>
+            <a href="#cap3">III · Métricas</a>
+            <a href="#cap4">IV · Score</a>
+            <a href="#cap5">V · Revisor</a>
+            <a href="#cap6">VI · Timeout</a>
+            <a href="#cap7">VII · UI</a>
+            <a href="#cap8">VIII · Pipeline</a>
+            <a href="#cap9">IX · Compatibilidade</a>
+        </nav>
+
+        <!-- ============ HERO ============ -->
+        <header class="hero">
+            <div class="hero-inner">
+                <div class="eyebrow"><span class="dot"></span>SpecKit · Release 0.5.0 · MINOR</div>
+                <h1>
+                    Validação <span class="highlight">com memória</span>,<br />
+                    métricas locais e UI nativa.
+                </h1>
+                <p class="hero-lead">
+                    A versão 0.5.0 consolida a camada de validação determinística introduzida em 0.4.0 com seis
+                    melhorias incrementais: detecção automática de segredos hardcoded, métricas locais persistidas,
+                    score de completude de spec, consciência de iteração no loop Revisor↔Implementador, timeout
+                    por validador, e duas superfícies nativas do VS Code (Status Bar e painel Problems). Tudo
+                    100% local, best-effort e sem dependência de rede.
+                </p>
+                <div class="hero-meta">
+                    <div class="meta-card">
+                        <div class="label">Release</div>
+                        <div class="value">0.5.0 <small>MINOR</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Data</div>
+                        <div class="value">13/05/2026</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Branch base</div>
+                        <div class="value">main <small>v0.4.0</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Artefato</div>
+                        <div class="value">1.2 MB <small>VSIX</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Testes</div>
+                        <div class="value">1273 <small>passing</small></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============ SUMÁRIO EXECUTIVO ============ -->
+        <section id="sumario">
+            <div class="section-inner">
+                <span class="section-tag">Sumário executivo</span>
+                <h2>Seis entregas sob um único princípio</h2>
+                <p class="section-lead">
+                    Cada item desta release reforça a tese da 0.4.0: a evidência é local, persistente, auditável
+                    e nunca depende de uma ação manual do desenvolvedor. As métricas que aparecem em um dashboard,
+                    o score que orienta a spec, o segredo que vaza num refator, o aviso de regressão entre iterações
+                    do Revisor — tudo é colocado no caminho natural do fluxo SDD, sem novos passos obrigatórios.
+                </p>
+
+                <div class="metrics">
+                    <div class="metric">
+                        <span class="icon">🔐</span>
+                        <div class="number">8</div>
+                        <div class="label">regras de detecção de segredos</div>
+                    </div>
+                    <div class="metric">
+                        <span class="icon">📊</span>
+                        <div class="number">2&nbsp;MiB</div>
+                        <div class="label">cap rotativo do JSONL local</div>
+                    </div>
+                    <div class="metric">
+                        <span class="icon">🎯</span>
+                        <div class="number">7</div>
+                        <div class="label">dimensões avaliadas pelo /score</div>
+                    </div>
+                    <div class="metric">
+                        <span class="icon">🔁</span>
+                        <div class="number">5</div>
+                        <div class="label">iterações máx. por gate (com memória)</div>
+                    </div>
+                    <div class="metric">
+                        <span class="icon">⏱️</span>
+                        <div class="number">∞→T</div>
+                        <div class="label">timeout configurável por validador</div>
+                    </div>
+                    <div class="metric">
+                        <span class="icon">🖥️</span>
+                        <div class="number">2</div>
+                        <div class="label">superfícies nativas do VS Code</div>
+                    </div>
+                </div>
+
+                <h3>Diagrama da release</h3>
+                <div class="mermaid-wrap">
+                    <pre class="mermaid">
+flowchart LR
+    subgraph V05["SpecKit 0.5.0"]
+        SL["SecretLeakValidator<br/>8 regras"]
+        MR["MetricsRecorder<br/>JSONL local"]
+        SC["SpecCompletenessScorer<br/>0..100"]
+        RV["Revisor IterationContext<br/>delta + tentativa"]
+        TO["ValidationRegistry<br/>timeout por validador"]
+        UI["VS Code UI<br/>StatusBar + Problems"]
+    end
+    SL --> GATE["Gates 2 & 3"]
+    MR --> CMD1["/metrics"]
+    SC --> CMD2["/score"]
+    RV --> HOOK["GateVerificationHook"]
+    TO --> REG["Workers de validação"]
+    UI --> EXT["extension.ts"]
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ CAP I · VISÃO ============ -->
+        <section class="alt" id="cap1">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo I · Visão da release</span>
+                <h2>O que muda — e o que continua valendo</h2>
+                <p class="section-lead">
+                    Nada do fluxo SDD foi reinventado. As cinco gates, os atores (User, Participant, LLM), a camada
+                    de prompts e os comandos existentes em 0.4.0 permanecem. A 0.5.0 adiciona seis instrumentos
+                    paralelos que tornam o pipeline mais seguro, mais transparente e mais resistente a falhas.
+                </p>
+
+                <div class="feature-grid">
+                    <div class="feature-card success">
+                        <div class="tag">Quality-of-life</div>
+                        <h4>Detecção de segredos</h4>
+                        <p>
+                            Validador novo (<code class="inline">SecretLeakValidator</code>) executa nas transições
+                            de gate 2 e 3 e em <code class="inline">/verify</code>. Reconhece AWS, GitHub, JWT, PEM,
+                            Slack, Google e padrões genéricos. Placeholders óbvios são ignorados.
+                        </p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">Observabilidade</div>
+                        <h4>Métricas locais</h4>
+                        <p>
+                            <code class="inline">MetricsRecorder</code> persiste cada execução em
+                            <code class="inline">.speckit/metrics/events.jsonl</code> com cap rotativo de 2 MiB.
+                            Comando <code class="inline">/metrics</code> resume p95, pass rate e top validators.
+                        </p>
+                    </div>
+                    <div class="feature-card gate">
+                        <div class="tag">Spec quality</div>
+                        <h4>Score de spec</h4>
+                        <p>
+                            <code class="inline">SpecCompletenessScorer</code> calcula nota 0..100 em 7 dimensões.
+                            Sem LLM, roda em milissegundos. Comando <code class="inline">/score</code> mostra
+                            breakdown e recomendações concretas.
+                        </p>
+                    </div>
+                    <div class="feature-card warn">
+                        <div class="tag">Loop inteligente</div>
+                        <h4>Revisor com memória</h4>
+                        <p>
+                            O prompt do Revisor passa a incluir tentativa atual vs limite, lista de validadores
+                            regredidos e validadores resolvidos. Acaba o "pedir a mesma correção de novo".
+                        </p>
+                    </div>
+                    <div class="feature-card danger">
+                        <div class="tag">Robustez</div>
+                        <h4>Timeout por validador</h4>
+                        <p>
+                            <code class="inline">ValidationRegistry</code> aceita <code class="inline">timeoutMs</code>
+                            por execução. Em estouro, aborta via <code class="inline">AbortController</code> e
+                            emite finding sintético — sem travar o pipeline.
+                        </p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">UX nativa</div>
+                        <h4>Status Bar + Problems</h4>
+                        <p>
+                            Item esquerdo do status bar mostra spec/gate/status. Painel Problems do VS Code recebe
+                            os findings da última evidência, navegáveis por arquivo:linha.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ CAP II · SEGREDOS ============ -->
+        <section id="cap2">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo II · Detecção de segredos</span>
+                <h2>SecretLeakValidator — oito olhos no diff</h2>
+                <p class="section-lead">
+                    O validador analisa arquivos tocados pela story (descontando <code class="inline">node_modules</code>,
+                    <code class="inline">dist</code> e arquivos de teste) e produz finding <strong>error</strong>
+                    quando reconhece padrões conhecidos de credenciais. A regex final foi calibrada com o caso de
+                    teste padrão do SDK da AWS (<code class="inline">AKIAIOSFODNN7EXAMPLE</code>) para evitar
+                    falsos positivos em material didático.
+                </p>
+
+                <h3>Regras embarcadas</h3>
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Padrão</th><th>Origem</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>aws-access-key</td><td><code class="inline">AKIA[0-9A-Z]{16}</code></td><td>AWS Access Key</td></tr>
+                        <tr><td>github-pat</td><td><code class="inline">ghp_[A-Za-z0-9]{36}</code></td><td>GitHub PAT</td></tr>
+                        <tr><td>jwt</td><td><code class="inline">eyJ[A-Za-z0-9_-]+\.eyJ[...]</code></td><td>JSON Web Token</td></tr>
+                        <tr><td>pem</td><td><code class="inline">-----BEGIN [A-Z ]+PRIVATE KEY-----</code></td><td>PEM/PKCS</td></tr>
+                        <tr><td>slack</td><td><code class="inline">xox[baprs]-[A-Za-z0-9-]+</code></td><td>Slack token</td></tr>
+                        <tr><td>google-api</td><td><code class="inline">AIza[0-9A-Za-z\-_]{35}</code></td><td>Google API</td></tr>
+                        <tr><td>api-key-generic</td><td><code class="inline">api_key=...</code> (longa)</td><td>Genérico</td></tr>
+                        <tr><td>secret-with-value</td><td><code class="inline">secret\|token\|password = "..."</code></td><td>Atribuição literal</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>Placeholders ignorados</h4>
+                <pre class="code">${...}    {{...}}    &lt;your-...&gt;    placeholder    changeme
+dummy_secret    fake_secret    xxxxxx    0000000</pre>
+
+                <h3>Fluxo de decisão por finding</h3>
+                <div class="mermaid-wrap">
+                    <pre class="mermaid">
+flowchart TD
+    A[Arquivo lido] --> B{node_modules<br/>dist / test?}
+    B -- sim --> SKIP[Skip]
+    B -- não --> C{Match de uma das 8 regras?}
+    C -- não --> OK[Sem finding]
+    C -- sim --> D{Trecho é placeholder<br/>conhecido?}
+    D -- sim --> OK
+    D -- não --> F[Emite Finding<br/>severity=error]
+    F --> G[Bloqueia transição<br/>de gate 2 ou 3]
+                    </pre>
+                </div>
+
+                <div class="callout success">
+                    <strong>Onde dispara:</strong> automaticamente nas transições de Gate 2 e Gate 3 via
+                    <code class="inline">/review-auto</code>, e sempre que o desenvolvedor roda
+                    <code class="inline">@speckit /verify</code>.
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ CAP III · MÉTRICAS ============ -->
+        <section class="alt" id="cap3">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo III · Métricas locais</span>
+                <h2>MetricsRecorder e o comando /metrics</h2>
+                <p class="section-lead">
+                    Toda execução do pipeline (gate-verification, verify-command, spec-heuristic, incremental-crap)
+                    grava uma linha JSONL em <code class="inline">.speckit/metrics/events.jsonl</code>. O arquivo
+                    tem cap rotativo de 2 MiB: ao ultrapassar, as linhas mais antigas são descartadas. Nenhum dado
+                    sai da máquina.
+                </p>
+
+                <h3>Anatomia de um evento</h3>
+                <pre class="code">{
+  "ts": "2026-05-13T20:00:00.000Z",
+  "type": "gate-verification",
+  "specId": "S-014",
+  "gate": 3,
+  "passed": false,
+  "durationMs": 1284,
+  "validators": ["heuristic","secret-leak","crap","coverage"],
+  "blockingCount": 2
+}</pre>
+
+                <h3>O que /metrics resume</h3>
+                <div class="feature-grid">
+                    <div class="feature-card"><h4>Pass rate</h4><p>Percentual de execuções com <code class="inline">passed=true</code>.</p></div>
+                    <div class="feature-card"><h4>p95 de duração</h4><p>95º percentil de <code class="inline">durationMs</code>, indicador de cauda.</p></div>
+                    <div class="feature-card"><h4>Top validators</h4><p>Validadores mais executados por frequência.</p></div>
+                    <div class="feature-card"><h4>By gate / by spec</h4><p>Distribuição de execuções por gate e por story.</p></div>
+                </div>
+
+                <h3>Pipeline de coleta</h3>
+                <div class="mermaid-wrap">
+                    <pre class="mermaid">
+sequenceDiagram
+    participant H as Hook (save / gate)
+    participant V as Validator
+    participant M as MetricsRecorder
+    participant F as events.jsonl
+    H->>V: run()
+    V-->>H: Finding[]
+    H->>M: recordEvidence(type, report)
+    M->>F: append JSONL
+    M->>F: rotate se &gt; 2MiB
+    Note over M,F: 100% local · best-effort
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ CAP IV · SCORE ============ -->
+        <section id="cap4">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo IV · Score de spec</span>
+                <h2>SpecCompletenessScorer — 0..100 sem LLM</h2>
+                <p class="section-lead">
+                    Função pura <code class="inline">scoreStory(story)</code> percorre sete dimensões com pesos
+                    pré-definidos. Retorna score numérico, nível qualitativo (baixa, média, alta, excelente),
+                    breakdown por dimensão e recomendações concretas para subir o score.
+                </p>
+
+                <h3>Matriz de pesos</h3>
+                <table>
+                    <thead>
+                        <tr><th>Dimensão</th><th>Peso</th><th>Critério mínimo para nota cheia</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Metadata</td><td>10</td><td>id, título, autor, data, estado, prioridade</td></tr>
+                        <tr><td>Requisito de negócio</td><td>15</td><td>R + V + lista de stakeholders</td></tr>
+                        <tr><td>Spec funcional</td><td>25</td><td>≥ 4 acceptance criteria estruturados</td></tr>
+                        <tr><td>Spec não-funcional</td><td>15</td><td>5 dimensões NFR cobertas</td></tr>
+                        <tr><td>DoD</td><td>15</td><td>≥ 5 itens verificáveis</td></tr>
+                        <tr><td>Disciplinas de teste</td><td>10</td><td>≥ 3 entre happy/edge/idempot/cov/resil</td></tr>
+                        <tr><td>Rastreabilidade</td><td>10</td><td>links bidirecionais código↔spec</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Mapa de níveis</h3>
+                <div class="mermaid-wrap">
+                    <pre class="mermaid">
+flowchart LR
+    A[Score 0..100] --> B{Faixa?}
+    B -- 0..49 --> N1["baixa<br/>spec esqueleto"]
+    B -- 50..69 --> N2["média<br/>spec utilizável"]
+    B -- 70..89 --> N3["alta<br/>spec robusta"]
+    B -- 90..100 --> N4["excelente<br/>pronta p/ produção"]
+                    </pre>
+                </div>
+
+                <div class="callout">
+                    <strong>Custo:</strong> &lt; 5 ms por execução. Pode ser chamado em qualquer save da spec sem
+                    impacto perceptível. Não há rede, não há cache, não há LLM.
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ CAP V · REVISOR ============ -->
+        <section class="alt" id="cap5">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo V · Revisor com memória</span>
+                <h2>IterationContext — o loop que aprende</h2>
+                <p class="section-lead">
+                    Em 0.4.0 o loop Revisor↔Implementador tinha um contador interno mas não expunha histórico ao
+                    agente. Na 0.5.0 o <code class="inline">GateVerificationHook</code> lê a evidência anterior do
+                    mesmo (spec, gate), calcula delta (regredidos vs resolvidos) e injeta um
+                    <code class="inline">IterationContext</code> no prompt enviado ao Revisor.
+                </p>
+
+                <h3>Conteúdo do IterationContext</h3>
+                <pre class="code">interface IterationContext {
+  attempt: number;          // tentativa atual (1..N)
+  limit: number;            // 5 por padrão
+  regressed: string[];      // validadores que voltaram a falhar
+  resolved: string[];       // validadores que foram corrigidos
+  limitReached: boolean;    // true quando attempt === limit
+}</pre>
+
+                <h3>Fluxo de iteração</h3>
+                <div class="mermaid-wrap">
+                    <pre class="mermaid">
+sequenceDiagram
+    participant U as User
+    participant P as Participant
+    participant R as Revisor (LLM)
+    participant I as Implementador (LLM)
+    participant H as GateVerificationHook
+    U->>P: /review-auto
+    P->>H: collect(gate N)
+    H->>H: lê evidência anterior
+    H->>H: calcula delta
+    H->>R: prompt + IterationContext
+    R-->>I: instruções específicas<br/>+ atenção a regressões
+    I-->>H: código corrigido
+    H->>H: re-run validadores
+    alt passed
+        H->>U: ✓ avança gate
+    else attempt &lt; limit
+        H->>R: nova iteração com delta
+    else attempt === limit
+        H->>U: ✗ LIMITE ATINGIDO
+    end
+                    </pre>
+                </div>
+
+                <div class="callout warn">
+                    <strong>Limite:</strong> mantido em 5 por (spec, gate). Ao atingir, o prompt traz
+                    <code class="inline">LIMITE ATINGIDO</code> e o pipeline pára de tentar para evitar loop infinito.
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ CAP VI · TIMEOUT ============ -->
+        <section id="cap6">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo VI · Robustez · timeout por validador</span>
+                <h2>ValidationRegistry com AbortController</h2>
+                <p class="section-lead">
+                    Validadores externos (test-execution, coverage) podem demorar — ou pendurar — em monorepos
+                    grandes, redes lentas ou arquivos patológicos. O registry agora aceita
+                    <code class="inline">timeoutMs</code> por execução, encapsula cada validator num
+                    <code class="inline">Promise.race</code> e cancela via <code class="inline">AbortController</code>
+                    quando o limite é atingido, emitindo um <strong>finding sintético</strong> em vez de travar.
+                </p>
+
+                <h3>Sequência de cancelamento</h3>
+                <div class="mermaid-wrap">
+                    <pre class="mermaid">
+sequenceDiagram
+    participant Reg as ValidationRegistry
+    participant Local as localAbort (AbortController)
+    participant V as Validator.run()
+    participant T as Timer
+    Reg->>Local: new AbortController()
+    Reg->>V: run({ signal })
+    Reg->>T: setTimeout(timeoutMs)
+    alt validator termina antes do timer
+        V-->>Reg: Finding[]
+        Reg->>T: clearTimeout
+    else timer dispara primeiro
+        T-->>Local: abort()
+        Local-->>V: signal.aborted
+        Reg->>Reg: emite Finding{severity: error,<br/>msg: "excedeu timeout de Xms"}
+        Reg->>Reg: marca perValidator com error="timeout"
+    end
+                    </pre>
+                </div>
+
+                <pre class="code">// Uso típico:
+await collector.collect({
+  story, gate: 3,
+  timeoutMs: 30_000   // novo em 0.5.0
+});</pre>
+
+                <div class="callout">
+                    <strong>Compatibilidade:</strong> parâmetro opcional. Quando ausente, comportamento idêntico a
+                    0.4.0 (sem timeout).
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ CAP VII · UI ============ -->
+        <section class="alt" id="cap7">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo VII · UI nativa do VS Code</span>
+                <h2>Status Bar e painel Problems</h2>
+                <p class="section-lead">
+                    Duas superfícies pequenas, mas com alto retorno de UX: o status bar mantém visível a story
+                    ativa e o status da última validação; o painel Problems vira ponto de entrada para os findings
+                    com navegação clicável até arquivo:linha. Tudo se atualiza no save.
+                </p>
+
+                <h3>SpeckitStatusBar</h3>
+                <ul>
+                    <li><strong>Alinhamento:</strong> esquerda, priority 50.</li>
+                    <li><strong>Conteúdo:</strong> <code class="inline">spec/gate/status (✓ ou ✗ N)</code>.</li>
+                    <li><strong>Clique:</strong> dispara comando <code class="inline">speckit.openMetrics</code> que abre <code class="inline">/metrics</code>.</li>
+                    <li><strong>Refresh:</strong> <code class="inline">onDidSaveTextDocument</code> e ao avançar gate.</li>
+                </ul>
+
+                <h3>SpeckitDiagnostics</h3>
+                <ul>
+                    <li><strong>Fonte:</strong> arquivo mais recente em <code class="inline">.speckit/evidence/*.json</code>.</li>
+                    <li><strong>Mapeamento:</strong> Finding → <code class="inline">vscode.Diagnostic</code> com severity preservada e <code class="inline">Range</code> ajustado (1-based → 0-based).</li>
+                    <li><strong>Origem:</strong> <code class="inline">speckit/&lt;validator-id&gt;</code> aparece na coluna "Source".</li>
+                </ul>
+
+                <h3>Wiring na extension</h3>
+                <div class="mermaid-wrap">
+                    <pre class="mermaid">
+flowchart TD
+    A[extension.ts activate] --> B[new SpeckitStatusBar]
+    A --> C[new SpeckitDiagnostics]
+    A --> D[registerCommand speckit.openMetrics]
+    B --> E[onDidSaveTextDocument]
+    C --> E
+    E --> F[refresh ambos]
+    G[/review-auto avança gate/] --> B
+    G --> C
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ CAP VIII · PIPELINE ============ -->
+        <section id="cap8">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo VIII · Pipeline de release</span>
+                <h2>Como esta versão foi construída</h2>
+                <p class="section-lead">
+                    O pacote 0.5.0 segue o mesmo rito da 0.4.0: branch de feature off main, type-check, lint,
+                    vitest, esbuild de produção, package via vsce com <code class="inline">--no-dependencies</code>,
+                    verificação de changelog e auditoria do VSIX. Nenhuma etapa nova foi introduzida.
+                </p>
+
+                <h3>Sequência de validação executada</h3>
+                <div class="mermaid-wrap">
+                    <pre class="mermaid">
+flowchart LR
+    A[git checkout<br/>feat/v0.5-improvements] --> B[npx tsc --noEmit]
+    B --> C[npx eslint src]
+    C --> D[npx vitest run]
+    D --> E[node esbuild.js<br/>--production]
+    E --> F[vsce package<br/>--no-dependencies]
+    F --> G[check-changelog.mjs]
+    G --> H[verify-vsix.mjs]
+    H --> I[publish/0.5.0/<br/>vscode-plugin-speckit-0.5.0.vsix]
+                    </pre>
+                </div>
+
+                <h3>Resultados verificados</h3>
+                <table>
+                    <thead>
+                        <tr><th>Etapa</th><th>Resultado</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code class="inline">tsc --noEmit</code></td><td>0 erros</td></tr>
+                        <tr><td><code class="inline">eslint src</code></td><td>0 erros (corrigido 1 escape desnecessário)</td></tr>
+                        <tr><td><code class="inline">vitest run</code></td><td>1273 passed · 1 failed (pré-existente em main)</td></tr>
+                        <tr><td><code class="inline">esbuild --production</code></td><td>bundle <code class="inline">dist/extension.js</code> ~3.85 MB</td></tr>
+                        <tr><td><code class="inline">vsce package</code></td><td>7 arquivos · <strong>1.2 MB</strong></td></tr>
+                        <tr><td><code class="inline">check-changelog.mjs</code></td><td>✅ technical + user válidos</td></tr>
+                        <tr><td><code class="inline">verify-vsix.mjs</code></td><td>✅</td></tr>
+                    </tbody>
+                </table>
+
+                <div class="callout success">
+                    <strong>Tamanho preservado:</strong> a regra <code class="inline">.vscodeignore</code> introduzida
+                    em 0.4.0 (que exclui <code class="inline">packages/intellij/</code> e
+                    <code class="inline">packages/core-server/</code>) continua intacta. O VSIX inflado de 17 MB
+                    da release anterior não retorna.
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ CAP IX · COMPATIBILIDADE ============ -->
+        <section class="alt" id="cap9">
+            <div class="section-inner">
+                <span class="section-tag">Capítulo IX · Compatibilidade e impacto</span>
+                <h2>O que muda para quem já usa 0.4.0</h2>
+                <p class="section-lead">
+                    Nada que você usava deixa de funcionar. Os comandos novos (<code class="inline">/metrics</code>,
+                    <code class="inline">/score</code>) são adições. O <code class="inline">SecretLeakValidator</code>
+                    pode produzir findings novos se você já tivesse segredos hardcoded — exatamente o ponto. O
+                    Revisor passa a receber contexto adicional, mas o formato do prompt segue retrocompatível.
+                </p>
+
+                <table>
+                    <thead>
+                        <tr><th>Aspecto</th><th>0.4.0</th><th>0.5.0</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Comandos chat</td><td>11 comandos</td><td>13 comandos (+/metrics, +/score)</td></tr>
+                        <tr><td>Validadores embarcados</td><td>6</td><td>7 (+secret-leak)</td></tr>
+                        <tr><td>Hooks de auto-validação</td><td>3 (spec save, code save, gate)</td><td>3 (inalterado)</td></tr>
+                        <tr><td>Loop Revisor</td><td>contador interno</td><td>+ IterationContext exposto</td></tr>
+                        <tr><td>Timeout de validator</td><td>—</td><td>opcional via <code class="inline">timeoutMs</code></td></tr>
+                        <tr><td>UI nativa</td><td>—</td><td>StatusBar + Problems</td></tr>
+                        <tr><td>Tamanho VSIX</td><td>1.2 MB</td><td>1.2 MB</td></tr>
+                        <tr><td>Rede</td><td>nenhuma</td><td>nenhuma</td></tr>
+                    </tbody>
+                </table>
+
+                <div class="callout">
+                    <strong>Falsos positivos do secret-leak:</strong> se algum match indesejado ocorrer, use
+                    placeholders explícitos (<code class="inline">${ENV_VAR}</code>, <code class="inline">&lt;your-key&gt;</code>,
+                    <code class="inline">changeme</code>) — a detecção os ignora por design.
+                </div>
+
+                <h3>Roadmap pós-0.5.0 (não incluído nesta release)</h3>
+                <ul>
+                    <li>Integrações com runners externos (item 6 da proposta) — adiado.</li>
+                    <li>Heurísticas assistidas por LLM para score (item 8) — adiado.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- ============ FOOTER ============ -->
+        <footer>
+            <div class="footer-inner">
+                <h3>SpecKit 0.5.0</h3>
+                <p>
+                    Branch: <code class="inline">feat/v0.5-improvements</code> · Base: <code class="inline">main @ v0.4.0</code> ·
+                    Commit: <code class="inline">1ea4611</code>
+                </p>
+                <p style="margin-top: 14px;">
+                    Artefato: <code class="inline">publish/0.5.0/vscode-plugin-speckit-0.5.0.vsix</code> (1.2 MB)
+                </p>
+                <p style="margin-top: 14px; font-size: 12px;">
+                    Documento gerado em 13/05/2026 · Co-authored-by Copilot
+                </p>
+            </div>
+        </footer>
+
+        <script>
+            // Progress bar mínima (apenas largura, sem easing)
+            (function () {
+                var bar = document.getElementById("progressBar");
+                if (!bar) return;
+                function update() {
+                    var h = document.documentElement;
+                    var scrolled = h.scrollTop;
+                    var height = h.scrollHeight - h.clientHeight;
+                    var pct = height > 0 ? (scrolled / height) * 100 : 0;
+                    bar.style.width = pct + "%";
+                }
+                window.addEventListener("scroll", update, { passive: true });
+                window.addEventListener("resize", update);
+                update();
+            })();
+
+            // Mermaid: tema dark, sem animações de loop
+            mermaid.initialize({
+                startOnLoad: true,
+                theme: "dark",
+                securityLevel: "loose",
+                themeVariables: {
+                    primaryColor: "#243057",
+                    primaryTextColor: "#e8ecf6",
+                    primaryBorderColor: "#7aa2ff",
+                    lineColor: "#7aa2ff",
+                    secondaryColor: "#1c2541",
+                    tertiaryColor: "#11172b",
+                    background: "#11172b",
+                    fontFamily: "Inter, sans-serif",
+                },
+                flowchart: { curve: "basis", padding: 16, useMaxWidth: true },
+                sequence: { actorMargin: 50, boxMargin: 10, messageMargin: 32, mirrorActors: false },
+            });
+        </script>
+    </body>
+</html>
