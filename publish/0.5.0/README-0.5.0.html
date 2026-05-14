@@ -399,54 +399,39 @@
         animation: shimmer 8s linear infinite;
         pointer-events: none; border-radius: 18px;
       }
-      .mermaid { font-family: var(--font-body) !important; position: relative; z-index: 1; }
+      /* ==================== MERMAID — animações sutis e seguras ==================== */
+      .mermaid { position: relative; z-index: 1; }
       .mermaid svg { max-width: 100%; height: auto !important; }
-
-      /* Animação só com opacity (não quebra geometria) */
-      .mermaid-wrap .mermaid g.node,
-      .mermaid-wrap .mermaid g.cluster,
-      .mermaid-wrap .mermaid g.actor,
-      .mermaid-wrap .mermaid g.label,
-      .mermaid-wrap .mermaid g.statediagram-state,
-      .mermaid-wrap .mermaid .edgeLabel { opacity: 0; }
-      .mermaid-wrap.is-visible .mermaid g.node,
-      .mermaid-wrap.is-visible .mermaid g.cluster,
-      .mermaid-wrap.is-visible .mermaid g.actor,
-      .mermaid-wrap.is-visible .mermaid g.label,
-      .mermaid-wrap.is-visible .mermaid g.statediagram-state { animation: fadeIn 0.6s ease forwards; }
-      .mermaid-wrap.is-visible .mermaid .edgeLabel { animation: fadeIn 0.5s ease 0.7s forwards; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(1)  { animation-delay: 0.05s; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(2)  { animation-delay: 0.12s; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(3)  { animation-delay: 0.19s; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(4)  { animation-delay: 0.26s; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(5)  { animation-delay: 0.33s; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(6)  { animation-delay: 0.40s; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(7)  { animation-delay: 0.47s; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(8)  { animation-delay: 0.54s; }
-      .mermaid-wrap.is-visible .mermaid g.node:nth-of-type(n+9){ animation-delay: 0.60s; }
+      /* Princípio: NUNCA aplicar opacity:0 nem transform em g.node/g.actor/g.cluster
+         por default. Se algo der errado no observer, os elementos precisam
+         permanecer VISÍVEIS. Animamos apenas:
+           - opacity do <svg> inteiro (fade-in suave)
+           - stroke-dashoffset das arestas (drawLine sutil)
+           - filter glow em hover (interativo, opcional) */
+      .mermaid-wrap .mermaid svg {
+        opacity: 0;
+        transition: opacity 0.9s cubic-bezier(0.2,0.8,0.2,1);
+      }
+      .mermaid-wrap.is-visible .mermaid svg { opacity: 1; }
 
       .mermaid-wrap .mermaid .edgePath path,
       .mermaid-wrap .mermaid .flowchart-link,
-      .mermaid-wrap .mermaid path.transition,
-      .mermaid-wrap .mermaid line.messageLine0,
-      .mermaid-wrap .mermaid line.messageLine1 {
-        stroke-dasharray: 1500;
-        stroke-dashoffset: 1500;
+      .mermaid-wrap .mermaid path.transition {
+        stroke-dasharray: 1200;
+        stroke-dashoffset: 1200;
       }
       .mermaid-wrap.is-visible .mermaid .edgePath path,
       .mermaid-wrap.is-visible .mermaid .flowchart-link,
-      .mermaid-wrap.is-visible .mermaid path.transition,
-      .mermaid-wrap.is-visible .mermaid line.messageLine0,
-      .mermaid-wrap.is-visible .mermaid line.messageLine1 {
-        animation: drawLine 1.6s cubic-bezier(0.2,0.8,0.2,1) 0.5s forwards;
+      .mermaid-wrap.is-visible .mermaid path.transition {
+        animation: drawLine 1.4s cubic-bezier(0.2,0.8,0.2,1) 0.3s forwards;
       }
 
+      /* Hover glow (sutil, opcional, não afeta geometria) */
       .mermaid-wrap .mermaid g.node rect,
       .mermaid-wrap .mermaid g.node polygon,
       .mermaid-wrap .mermaid g.node circle,
       .mermaid-wrap .mermaid g.node ellipse,
       .mermaid-wrap .mermaid g.node path {
-        filter: drop-shadow(0 0 8px rgba(122,162,255,0.4));
         transition: filter 0.4s ease;
       }
       .mermaid-wrap .mermaid g.node:hover rect,
@@ -454,34 +439,45 @@
       .mermaid-wrap .mermaid g.node:hover circle,
       .mermaid-wrap .mermaid g.node:hover ellipse,
       .mermaid-wrap .mermaid g.node:hover path {
-        filter: drop-shadow(0 0 18px rgba(201,139,255,0.9)) brightness(1.18);
+        filter: drop-shadow(0 0 10px rgba(201,139,255,0.65));
         cursor: pointer;
       }
-      @keyframes nodeGlow {
-        0%, 100% { filter: drop-shadow(0 0 8px rgba(122,162,255,0.4)); }
-        50%      { filter: drop-shadow(0 0 14px rgba(201,139,255,0.6)); }
-      }
-      .mermaid-wrap.is-visible .mermaid g.node rect,
-      .mermaid-wrap.is-visible .mermaid g.node polygon,
-      .mermaid-wrap.is-visible .mermaid g.node circle,
-      .mermaid-wrap.is-visible .mermaid g.node ellipse {
-        animation: nodeGlow 6s ease-in-out infinite;
-      }
+
+      /* Pulse suave nas pontas de seta */
       @keyframes markerPulse {
-        0%, 100% { fill: var(--accent); }
-        50%      { fill: var(--accent-2); }
+        0%, 100% { opacity: 0.85; }
+        50%      { opacity: 1; }
       }
-      .mermaid-wrap.is-visible .mermaid marker path,
-      .mermaid-wrap.is-visible .mermaid defs marker path {
-        animation: markerPulse 4s ease-in-out infinite;
+      .mermaid-wrap.is-visible .mermaid marker path {
+        animation: markerPulse 3.5s ease-in-out infinite;
+      }
+
+      /* Tipografia coerente com o documento */
+      .mermaid-wrap .mermaid,
+      .mermaid-wrap .mermaid foreignObject div,
+      .mermaid-wrap .mermaid foreignObject span {
+        font-family: var(--font-body) !important;
+      }
+      .mermaid-wrap .mermaid text,
+      .mermaid-wrap .mermaid g.node text,
+      .mermaid-wrap .mermaid g.label text,
+      .mermaid-wrap .mermaid g.actor text,
+      .mermaid-wrap .mermaid .nodeLabel,
+      .mermaid-wrap .mermaid .edgeLabel,
+      .mermaid-wrap .mermaid .messageText,
+      .mermaid-wrap .mermaid .actor,
+      .mermaid-wrap .mermaid .cluster text {
+        font-family: var(--font-body) !important;
+        font-weight: 500;
+        font-size: 14px !important;
       }
       .mermaid-wrap .mermaid g.node text,
       .mermaid-wrap .mermaid g.label text,
-      .mermaid-wrap .mermaid g.actor text { fill: var(--text) !important; font-family: var(--font-body) !important; font-weight: 500; }
+      .mermaid-wrap .mermaid g.actor text { fill: var(--text) !important; }
       .mermaid-wrap .mermaid .edgeLabel,
       .mermaid-wrap .mermaid .edgeLabel rect { background-color: transparent !important; fill: var(--bg-2) !important; }
       .mermaid-wrap .mermaid .edgeLabel span,
-      .mermaid-wrap .mermaid .edgeLabel p { color: var(--text-dim) !important; background: transparent !important; font-family: var(--font-body) !important; }
+      .mermaid-wrap .mermaid .edgeLabel p { color: var(--text-dim) !important; background: transparent !important; }
 
       /* ==================== REVEAL ==================== */
       .reveal {
@@ -4484,25 +4480,40 @@ Para facilitar navegação no histórico, o SpecKit grava e exibe um alias canô
           noteTextColor: "#e8ecf6",
           activationBorderColor: "#4cc9f0",
           activationBkgColor: "#1b3a4d",
-          fontFamily: "Inter, sans-serif",
+          fontFamily: '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
         },
         flowchart: { curve: "basis", padding: 22, useMaxWidth: true, htmlLabels: true },
         sequence: { actorMargin: 60, boxMargin: 12, messageMargin: 36, mirrorActors: false },
         state: { sectionFontSize: 14 },
       });
 
-      // Após renderização do Mermaid, marcar os wraps visíveis para já dispararem
-      // a animação inicial dos diagramas que estão na primeira viewport.
-      function activateVisibleDiagrams() {
-        document.querySelectorAll(".mermaid-wrap").forEach(function (w) {
-          var r = w.getBoundingClientRect();
-          if (r.top < window.innerHeight && r.bottom > 0) {
-            w.classList.add("is-visible");
-          }
-        });
+      // Após renderização do Mermaid, ativa via IntersectionObserver para
+      // que TODOS os diagramas (não só os do primeiro viewport) recebam
+      // is-visible quando entrarem em cena. Fallback: ativa todos.
+      function observeDiagrams() {
+        var wraps = document.querySelectorAll(".mermaid-wrap");
+        if (!("IntersectionObserver" in window)) {
+          wraps.forEach(function (w) { w.classList.add("is-visible"); });
+          return;
+        }
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) {
+              e.target.classList.add("is-visible");
+              io.unobserve(e.target);
+            }
+          });
+        }, { threshold: 0.05, rootMargin: "0px 0px -40px 0px" });
+        wraps.forEach(function (w) { io.observe(w); });
       }
-      // Mermaid v10 expõe Promise; usamos timeout como fallback.
-      setTimeout(activateVisibleDiagrams, 800);
+      // Mermaid v10 renderiza após DOMContentLoaded; damos um tempo curto e observamos.
+      // Em qualquer falha do observer, fallback de segurança após 3s ativa tudo.
+      setTimeout(observeDiagrams, 600);
+      setTimeout(function () {
+        document.querySelectorAll(".mermaid-wrap:not(.is-visible)").forEach(function (w) {
+          w.classList.add("is-visible");
+        });
+      }, 3500);
 
       // Scroll reveal
       (function () {
