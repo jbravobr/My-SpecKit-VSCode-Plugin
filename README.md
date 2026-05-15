@@ -42,6 +42,13 @@ O Copilot passa a conhecer o requisito de negócio, critérios de aceite, restri
 - VS Code `^1.93.0`
 - Extensão **GitHub Copilot Chat** instalada e ativa
 
+## Controles de segurança para ambiente corporativo
+
+- **Redação automática de segredos** em artefatos de runtime (`.speckit/logs`, `.speckit/audit.log`, `.speckit/evidence`).
+- **Hardening de quick actions**: apenas comandos `@speckit /...` allowlisted são aceitos; ações sensíveis exigem confirmação explícita.
+- **Validação de execução de testes endurecida** para evitar option smuggling por caminhos maliciosos.
+- **Secret scanning local em commit**: hook pre-commit executa `npm run security:scan-staged`.
+
 ---
 
 ## Instalação
@@ -161,7 +168,7 @@ Os comandos do participant seguem um padrão unificado de resposta:
 
 - bloco principal em Markdown (resultado, contexto e orientação),
 - seção **Comandos disponíveis agora (contextuais)** quando aplicável,
-- quick actions via botão (`stream.button`) com `speckit.openChatWithQuery`.
+- quick actions via botão (`stream.button`) com `speckit.runChatQuickAction`.
 
 Isso vale também para fallback/default do participant, reduzindo respostas “sem próximo passo” e melhorando a navegação entre fluxos no chat.
 

@@ -1,0 +1,101 @@
+SpecKit — Security Report 0.5.1
+================================
+Data: 15/05/2026
+Escopo: Plugin VS Code SpecKit (uso corporativo interno)
+
+1) Objetivo
+-----------
+Documentar a postura de segurança da release 0.5.1 para apoiar a avaliação de liberação por
+Segurança da Informação (SI), com foco em superfície de ataque local, proteção de segredos e
+governança do artefato distribuído.
+
+2) Contexto e fronteiras
+------------------------
+- Produto avaliado: extensão VS Code (`vscode-plugin-speckit`).
+- Execução: host de extensões do VS Code, sem backend remoto obrigatório para operação base.
+- Persistência local: diretório `.speckit` no workspace do usuário.
+- Artefato de distribuição: `publish/0.5.1/vscode-plugin-speckit-0.5.1.vsix`.
+- Fora de escopo: segurança de repositórios de código de usuários e hardening do próprio VS Code.
+
+3) Principais riscos avaliados
+------------------------------
+- Invocação indevida de comandos públicos por outras extensões.
+- Vazamento de segredos em artefatos locais de auditoria/rastreabilidade/governança.
+- Inclusão acidental de conteúdo sensível ou de desenvolvimento no VSIX distribuído.
+- Exposição por automações CI do repositório (não desejadas para este plugin).
+
+4) Controles implementados na 0.5.1
+-----------------------------------
+4.1 Entrada de comandos e abuso entre extensões
+- Comando público redundante removido: `speckit.openChatWithQuery`.
+- Ponto de entrada único: `speckit.runChatQuickAction`.
+- Hardening aplicado no handler:
+  - allowlist de comandos permitidos `@speckit /...`;
+  - bloqueio de payloads com padrões maliciosos (ex.: multiline/backtick);
+  - confirmação modal para ações sensíveis.
+
+4.2 Proteção de dados sensíveis em disco
+- Redação de segredos em `TraceabilityManager` (descrição e metadados de trace).
+- Redação de segredos em `TransitionGovernance` (intent, consent, branch governance).
+- Redação aplicada tanto em persistência quanto em carga de estado/trace.
+
+4.3 Governança de empacotamento
+- CI de segurança removido do repositório do plugin: `.github/workflows/security-scan.yml`.
+- Scanner local de segredos mantido no pre-commit (`security:scan-staged`).
+- Exclusões de empacotamento reforçadas:
+  - `.vscodeignore`: exclui `.github`, `.copilot`, `.speckit` (além de `src`, `tests`, `scripts`, `packages`, `publish`).
+  - `scripts/lib/vsix.mjs`: bloqueio explícito adicional no verificador de VSIX para
+    `.github`, `.copilot`, `.speckit`, `packages`, `.husky`, `.claude`.
+
+5) Evidências técnicas (arquivos alterados)
+-------------------------------------------
+- `src/extension.ts`
+- `src/workflow/TraceabilityManager.ts`
+- `src/workflow/TransitionGovernance.ts`
+- `.vscodeignore`
+- `scripts/lib/vsix.mjs`
+- `README.md`
+- `.github/workflows/security-scan.yml` (removido)
+- `tests/unit/extension.test.ts`
+- `tests/unit/workflow/TraceabilityManager.test.ts`
+- `tests/unit/workflow/TransitionGovernance.test.ts`
+
+6) Estratégia de validação da release
+-------------------------------------
+- Type-safety: `npx tsc --noEmit`
+- Lint no escopo alterado (formatter JSON): `npx eslint <arquivos alterados> --format json`
+- Regressão de segurança (unit): testes de extension + traceability + governance
+- Empacotamento/controle de artefato: `npm run package` (inclui `check-changelog` e `verify-vsix`)
+
+7) Resultado da avaliação
+-------------------------
+Status: APTO PARA AVALIAÇÃO FINAL DE SI (com riscos residuais controlados).
+
+Não foram identificadas falhas críticas abertas no escopo desta release.
+Os riscos remanescentes são de natureza de plataforma/operação e possuem mitigação documentada.
+
+8) Riscos residuais e mitigação
+-------------------------------
+- Risco residual A: no ecossistema VS Code, outras extensões podem tentar invocar comandos por ID.
+  Mitigação: validação fail-closed no handler, allowlist, confirmação para ações sensíveis.
+- Risco residual B: specs funcionais (`.speckit/STORY-*.md`, `FIX-*.md`) podem conter dados de negócio
+  por decisão do usuário.
+  Mitigação: orientar política interna de classificação de dados e revisão de conteúdo de spec.
+- Risco residual C: falso positivo de scanner local em pre-commit.
+  Mitigação: allowlist explícita e revisão técnica de exceções.
+
+9) Recomendação para liberação corporativa
+------------------------------------------
+Recomenda-se liberação controlada para uso interno geral, com os seguintes critérios operacionais:
+- uso em workspaces corporativos com política de classificação de dados ativa;
+- manutenção do hook de pre-commit habilitado;
+- revisão periódica das regras de redaction e assinaturas de segredos;
+- validação de cada release via `npm run package` e inspeção do VSIX gerado.
+
+10) Rastreabilidade
+-------------------
+- Versão avaliada: 0.5.1
+- Artefato: `publish/0.5.1/vscode-plugin-speckit-0.5.1.vsix`
+- Changelogs:
+  - `publish/0.5.1/CHANGELOG-0.5.1.txt`
+  - `publish/0.5.1/CHANGELOG-USER-0.5.1.txt`

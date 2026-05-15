@@ -1,10 +1,12 @@
 {
   "name": "vscode-plugin-speckit",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "displayName": "SpecKit — Spec Driven Development",
   "description": "Defina sua história e configure o Copilot para desenvolvimento orientado a spec",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "icon": "assets/speckit_icon.png",
   "publisher": "local",
   "engines": {
@@ -137,10 +139,6 @@
         "title": "SpecKit: Nova História"
       },
       {
-        "command": "speckit.openChatWithQuery",
-        "title": "SpecKit: Executar Ação Rápida no Chat"
-      },
-      {
         "command": "speckit.newFix",
         "title": "SpecKit: Novo Fix"
       },
@@ -162,8 +160,9 @@
     "prebuild:prod": "npm run clean",
     "build:prod": "node esbuild.js --production",
     "check:changelog": "node ./scripts/check-changelog.mjs",
+    "security:scan-staged": "node ./scripts/scan-secrets-staged.mjs",
     "prepackage:vsix": "npm run check:changelog",
-    "package:vsix": "npm run build:prod && node ./scripts/package-vsix.mjs",
+    "package:vsix": "node esbuild.js --production && node ./scripts/package-vsix.mjs",
     "package:verify": "node ./scripts/verify-vsix.mjs",
     "package": "npm run package:vsix && npm run package:verify",
     "lint": "eslint .",

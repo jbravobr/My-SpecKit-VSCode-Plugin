@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { execFile } from 'child_process';
 import type { Finding, Validator, ValidatorContext } from './types';
 
@@ -77,19 +78,33 @@ export class TestExecutionValidator implements Validator {
   }
 
   private async runVitest(tsFiles: string[], ctx: ValidatorContext): Promise<Finding[]> {
+    const target = ctx.gateTarget ?? 3;
+    const blocking = target >= 3;
+    const { safeFiles, rejectedFiles } = normalizeVitestTargetFiles(tsFiles, ctx.workspaceRoot);
+    const rejectedFindings = rejectedFiles.map<Finding>((file) => ({
+      validator: this.id,
+      severity: blocking ? 'error' : 'warn',
+      message: `Arquivo inválido para execução de testes relacionados: ${file}`,
+      gateTarget: ctx.gateTarget,
+      metadata: { reason: 'unsafe-path-or-option-like' },
+    }));
+
+    if (safeFiles.length === 0) {
+      return rejectedFindings;
+    }
+
     const { stdout, stderr, exitCode } = await this.runner(
       'npx',
-      ['--no-install', 'vitest', 'related', ...tsFiles, '--run', '--reporter=basic'],
+      ['--no-install', 'vitest', 'related', '--run', '--reporter=basic', ...safeFiles],
       ctx.workspaceRoot,
       ctx.signal,
     );
-    const target = ctx.gateTarget ?? 3;
-    const blocking = target >= 3;
-    if (exitCode === 0) return [];
+    if (exitCode === 0) return rejectedFindings;
 
     const failures = parseVitestFailures(`${stdout}\n${stderr}`);
     if (failures.length === 0) {
       return [
+        ...rejectedFindings,
         {
           validator: this.id,
           severity: blocking ? 'error' : 'warn',
@@ -99,16 +114,19 @@ export class TestExecutionValidator implements Validator {
         },
       ];
     }
-    return failures.map<Finding>((f) => ({
-      validator: this.id,
-      severity: blocking ? 'error' : 'warn',
-      message: `Teste falhou: ${f.title}`,
-      gateTarget: ctx.gateTarget,
-      path: f.file,
-      suggestedFix:
-        'Implementador deve corrigir comportamento ou ajustar o teste se a expectativa estiver incorreta.',
-      metadata: { title: f.title },
-    }));
+    return [
+      ...rejectedFindings,
+      ...failures.map<Finding>((f) => ({
+        validator: this.id,
+        severity: blocking ? 'error' : 'warn',
+        message: `Teste falhou: ${f.title}`,
+        gateTarget: ctx.gateTarget,
+        path: f.file,
+        suggestedFix:
+          'Implementador deve corrigir comportamento ou ajustar o teste se a expectativa estiver incorreta.',
+        metadata: { title: f.title },
+      })),
+    ];
   }
 
   private delegateNonTs(files: string[], ctx: ValidatorContext): Finding[] {
@@ -179,4 +197,29 @@ function stackForFile(file: string): string | undefined {
 
 function truncate(s: string, n = 800): string {
   return s.length > n ? `${s.slice(0, n)}…` : s;
+}
+
+function normalizeVitestTargetFiles(
+  files: string[],
+  workspaceRoot: string,
+): { safeFiles: string[]; rejectedFiles: string[] } {
+  const safeFiles: string[] = [];
+  const rejectedFiles: string[] = [];
+
+  for (const file of files) {
+    const resolved = path.resolve(workspaceRoot, file);
+    const relative = path.relative(workspaceRoot, resolved);
+    const escapedWorkspace = relative.startsWith('..') || path.isAbsolute(relative);
+    const normalized = relative.replace(/\\/g, '/');
+    const base = path.basename(normalized);
+
+    if (escapedWorkspace || base.startsWith('-') || normalized.length === 0) {
+      rejectedFiles.push(file);
+      continue;
+    }
+
+    safeFiles.push(normalized.startsWith('./') ? normalized : `./${normalized}`);
+  }
+
+  return { safeFiles, rejectedFiles };
 }

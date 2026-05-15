@@ -6,6 +6,7 @@
 import * as path from 'path';
 
 import type { IFileSystem } from '../generator/utils/IFileSystem';
+import { redactSensitiveText } from '../security/Redaction';
 
 export interface TraceEntry {
   timestamp: string;
@@ -37,6 +38,27 @@ export class TraceabilityManager {
     return path.join(this.traceDir, `${safe}.json`);
   }
 
+  private sanitizeData(data: Record<string, string>): Record<string, string> {
+    return Object.fromEntries(
+      Object.entries(data).map(([key, value]) => [key, redactSensitiveText(value)]),
+    );
+  }
+
+  private sanitizeEntry(entry: TraceEntry): TraceEntry {
+    return {
+      ...entry,
+      description: redactSensitiveText(entry.description),
+      data: this.sanitizeData(entry.data),
+    };
+  }
+
+  private sanitizeTrace(trace: SpecTrace): SpecTrace {
+    return {
+      ...trace,
+      entries: trace.entries.map((entry) => this.sanitizeEntry(entry)),
+    };
+  }
+
   async record(
     specId: string,
     specType: 'story' | 'fix',
@@ -45,10 +67,16 @@ export class TraceabilityManager {
     await this.fs.ensureDir(this.traceDir);
     const existing = await this.load(specId);
     const now = new Date().toISOString();
-    const fullEntry: TraceEntry = { ...entry, timestamp: now };
+    const fullEntry: TraceEntry = this.sanitizeEntry({ ...entry, timestamp: now });
     const trace: SpecTrace = existing
       ? { ...existing, updatedAt: now, entries: [...existing.entries, fullEntry] }
-      : { specId, specType, createdAt: now, updatedAt: now, entries: [fullEntry] };
+      : {
+          specId: redactSensitiveText(specId),
+          specType,
+          createdAt: now,
+          updatedAt: now,
+          entries: [fullEntry],
+        };
     await this.fs.writeFile(this.traceFilePath(specId), JSON.stringify(trace, null, 2));
     return trace;
   }
@@ -59,7 +87,7 @@ export class TraceabilityManager {
     if (!exists) return null;
     try {
       const content = await this.fs.readFile(filePath);
-      return JSON.parse(content) as SpecTrace;
+      return this.sanitizeTrace(JSON.parse(content) as SpecTrace);
     } catch {
       return null;
     }

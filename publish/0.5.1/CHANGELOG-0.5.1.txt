@@ -1,0 +1,67 @@
+SpecKit — Changelog 0.5.1
+=========================
+Data: 15/05/2026
+Branch base: main
+
+PATCH — Security hardening, release hygiene e governança de artefato
+---------------------------------------------------------------------
+Esta release consolida hardening de segurança aplicado no plugin, remove workflow de CI
+do repositório do plugin, reforça regras de empacotamento do VSIX para evitar inclusão
+acidental de conteúdo de desenvolvimento/sensível e gera material de suporte para
+avaliação de Segurança da Informação (SI) em ambiente corporativo.
+
+Resumo da release
+-----------------
+Foi removido o comando de conveniência `speckit.openChatWithQuery` para reduzir a
+superfície pública e manter apenas `speckit.runChatQuickAction` com validação estrita e
+confirmação para operações sensíveis. A persistência local de rastreabilidade/governança
+foi endurecida com redação de dados sensíveis antes de escrita/leitura em artefatos
+`.speckit`. O workflow de CI de segurança adicionado anteriormente foi removido para manter
+o plugin sem pipeline de CI próprio no repositório. No fluxo de release, as regras de
+exclusão foram reforçadas em `.vscodeignore` e no gate de validação de VSIX para impedir
+empacotamento de diretórios operacionais e de metadados internos.
+
+Mudanças técnicas
+-----------------
+- `package.json`: bump de versão para `0.5.1`.
+- `package-lock.json`: sincronização de versão para `0.5.1`.
+- `src/extension.ts`: removido registro de `speckit.openChatWithQuery`; mantido
+  `speckit.runChatQuickAction` como ponto único com hardening.
+- `src/workflow/TraceabilityManager.ts`: redação de dados sensíveis em `description`/`data`
+  durante gravação e sanitização de conteúdo carregado.
+- `src/workflow/TransitionGovernance.ts`: redação de segredos em `command`, `payload`,
+  `note`, `citedMentions` e `sessionBranch`, incluindo sanitização de estado.
+- `.github/workflows/security-scan.yml`: removido do repositório do plugin.
+- `.vscodeignore`: exclusão explícita adicional de `.github`, `.copilot`, `.speckit`.
+- `scripts/lib/vsix.mjs`: lista proibida do verificador de VSIX expandida para
+  `.github`, `.copilot`, `.speckit`, `packages`, `.husky`, `.claude`.
+- `tests/unit/extension.test.ts`: reforço de regressão para garantir ausência de
+  `speckit.openChatWithQuery`.
+- `tests/unit/workflow/TraceabilityManager.test.ts`: cobertura de redação de segredo.
+- `tests/unit/workflow/TransitionGovernance.test.ts`: cobertura de redação em intent,
+  consentimento e governança de branch.
+
+Documentação
+------------
+- `README.md`: seção de controles de segurança ajustada para scanner local em pre-commit
+  e referência de quick action atualizada para `speckit.runChatQuickAction`.
+- `publish/0.5.1/CHANGELOG-0.5.1.txt` (este documento).
+- `publish/0.5.1/CHANGELOG-USER-0.5.1.txt` (visão para usuários).
+- `publish/0.5.1/SECURITY-REPORT-0.5.1.txt` (material para avaliação de SI).
+
+Testes adicionados
+------------------
+- Cobertura de regressão para comando rápido público removido.
+- Cobertura de regressão para redação de dados sensíveis em rastreabilidade.
+- Cobertura de regressão para redação de dados sensíveis em governança de transição.
+
+Validação executada antes do release
+------------------------------------
+- npx tsc --noEmit
+- npx eslint scripts/lib/vsix.mjs src/extension.ts src/workflow/TraceabilityManager.ts src/workflow/TransitionGovernance.ts tests/unit/extension.test.ts tests/unit/workflow/TraceabilityManager.test.ts tests/unit/workflow/TransitionGovernance.test.ts --format json
+- npm run test:unit -- tests/unit/extension.test.ts tests/unit/workflow/TraceabilityManager.test.ts tests/unit/workflow/TransitionGovernance.test.ts
+- npm run package
+
+Artefato gerado
+---------------
+- publish/0.5.1/vscode-plugin-speckit-0.5.1.vsix

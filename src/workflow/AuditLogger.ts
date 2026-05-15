@@ -5,6 +5,7 @@
 import * as path from 'path';
 
 import type { IFileSystem } from '../generator/utils/IFileSystem';
+import { redactSensitiveText } from '../security/Redaction';
 
 export type AuditEvent =
   | 'file_edit'
@@ -40,7 +41,7 @@ export class AuditLogger {
   }
 
   private async doLog(event: AuditEvent, detail: string, context?: AuditContext): Promise<void> {
-    const withContext = serializeContext(detail, context);
+    const withContext = serializeContext(redactSensitiveText(detail), context);
     const entry: AuditEntry = { timestamp: new Date().toISOString(), event, detail: withContext };
     const line = `[${entry.timestamp}] ${entry.event}: ${entry.detail}\n`;
     try {
@@ -74,12 +75,19 @@ export class AuditLogger {
 }
 
 function serializeContext(detail: string, context?: AuditContext): string {
-  if (!context) return detail;
+  const normalizedDetail = normalizeSingleLine(detail);
+  if (!context) return normalizedDetail;
 
   const parts = Object.entries(context)
     .filter(([, value]) => value !== undefined)
-    .map(([key, value]) => `${key}="${String(value).replace(/"/g, '\\"')}"`);
+    .map(([key, value]) =>
+      `${key}="${normalizeSingleLine(redactSensitiveText(String(value))).replace(/"/g, '\\"')}"`,
+    );
 
-  if (parts.length === 0) return detail;
-  return `${detail} | ${parts.join(' ')}`;
+  if (parts.length === 0) return normalizedDetail;
+  return `${normalizedDetail} | ${parts.join(' ')}`;
+}
+
+function normalizeSingleLine(value: string): string {
+  return value.replace(/[\r\n]+/g, ' ').trim();
 }

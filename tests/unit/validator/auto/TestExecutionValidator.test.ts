@@ -76,8 +76,9 @@ describe('TestExecutionValidator', () => {
     expect(calls).toHaveLength(1);
     expect(calls[0].command).toBe('npx');
     expect(calls[0].args).toContain('related');
-    expect(calls[0].args).toContain('src/a.ts');
-    expect(calls[0].args).toContain('src/b.ts');
+    expect(calls[0].args).toContain('./src/a.ts');
+    expect(calls[0].args).toContain('./src/b.ts');
+    expect(calls[0].args.indexOf('--run')).toBeLessThan(calls[0].args.indexOf('./src/a.ts'));
   });
 
   it('maps vitest failures to findings', async () => {
@@ -135,5 +136,26 @@ describe('TestExecutionValidator', () => {
     const findings = await v.run(ctx({ storyFiles: ['a.ts', 'b.py'] }));
     expect(calls).toHaveLength(1);
     expect(findings.filter((f) => f.delegatedToRevisor?.stack === 'python')).toHaveLength(1);
+  });
+
+  it('blocks option-like file names from vitest arguments', async () => {
+    const { runner, calls } = mockRunner({ exitCode: 0 });
+    const v = new TestExecutionValidator({ runner });
+    const findings = await v.run(ctx({ storyFiles: ['-evil.ts'], gateTarget: 3 }));
+
+    expect(calls).toHaveLength(0);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].severity).toBe('error');
+    expect(findings[0].metadata?.reason).toBe('unsafe-path-or-option-like');
+  });
+
+  it('rejects files that escape workspace root', async () => {
+    const { runner, calls } = mockRunner({ exitCode: 0 });
+    const v = new TestExecutionValidator({ runner });
+    const findings = await v.run(ctx({ storyFiles: ['../outside.ts'], gateTarget: 3 }));
+
+    expect(calls).toHaveLength(0);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain('../outside.ts');
   });
 });

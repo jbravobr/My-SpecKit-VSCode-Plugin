@@ -1,19 +1,22 @@
 import { spawnSync } from 'child_process';
 import console from 'console';
+import { resolve } from 'path';
 import process from 'process';
 import {
     ensureCleanVsixOutput,
     formatVsixPath,
-    getVsceBinPath,
     getVsixOutputPath,
 } from './lib/vsix.mjs';
 
 const vsixPath = getVsixOutputPath();
 ensureCleanVsixOutput(vsixPath);
 
+const vsceCliPath = resolve(process.cwd(), 'node_modules', '@vscode', 'vsce', 'vsce');
+
 const result = spawnSync(
-  getVsceBinPath(),
+  process.execPath,
   [
+    vsceCliPath,
     'package',
     '--no-dependencies',
     '--allow-missing-repository',
@@ -23,7 +26,7 @@ const result = spawnSync(
   ],
   {
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell: false,
   },
 );
 

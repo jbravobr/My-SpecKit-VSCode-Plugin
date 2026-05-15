@@ -98,6 +98,22 @@ describe('TraceabilityManager', () => {
       expect(writtenPath).not.toContain('<');
       expect(writtenPath).toContain('US_001_bad_');
     });
+
+    it('redacts sensitive data in trace entries before persistence', async () => {
+      const trace = await mgr.record('US-001', 'story', {
+        type: 'custom',
+        description: 'Authorization: Bearer top-secret-token',
+        data: {
+          auth: 'Bearer top-secret-token',
+          token: 'ghp_abcdefghijklmnopqrstuvwxyz123456789012',
+        },
+      });
+
+      expect(trace.entries[0].description).toContain('Bearer [REDACTED]');
+      expect(trace.entries[0].data.auth).toContain('Bearer [REDACTED]');
+      expect(trace.entries[0].data.token).toBe('[REDACTED]');
+      expect(trace.entries[0].description).not.toContain('top-secret-token');
+    });
   });
 
   describe('load', () => {
@@ -112,7 +128,14 @@ describe('TraceabilityManager', () => {
         specType: 'story',
         createdAt: '2024-01-01T00:00:00.000Z',
         updatedAt: '2024-01-01T00:00:00.000Z',
-        entries: [],
+        entries: [
+          {
+            timestamp: '2024-01-01T00:00:00.000Z',
+            type: 'custom',
+            description: 'Authorization: Bearer top-secret-token',
+            data: { token: 'ghp_abcdefghijklmnopqrstuvwxyz123456789012' },
+          },
+        ],
       };
       fs = createMockFs({
         fileExists: vi.fn().mockResolvedValue(true),
@@ -121,7 +144,8 @@ describe('TraceabilityManager', () => {
       mgr = new TraceabilityManager('/workspace', fs);
 
       const result = await mgr.load('US-001');
-      expect(result).toEqual(trace);
+      expect(result?.entries[0].description).toContain('Bearer [REDACTED]');
+      expect(result?.entries[0].data.token).toBe('[REDACTED]');
     });
 
     it('returns null on corrupted JSON', async () => {

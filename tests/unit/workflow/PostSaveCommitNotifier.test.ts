@@ -21,10 +21,10 @@ function storyAt(gate: number, status: string): string {
 }
 
 describe('checkPostSavePendingCommit', () => {
-  it('calls notify when active spec is gate 4/done and git is dirty', async () => {
+  it('calls notify when active spec is gate 4/ready-to-commit and git is dirty', async () => {
     const fs = new InMemoryFileSystem();
     const ws = new WorkspaceStub({ activeSpecPath: 'C:/workspace/.speckit/STORY-001.md' });
-    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyAt(4, 'done'));
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyAt(4, 'ready-to-commit'));
 
     const notify = vi.fn().mockResolvedValue(true);
 

@@ -19,6 +19,13 @@ import reviewAutoRoute from './routes/reviewAutoRoute';
 import contextRoute from './routes/contextRoute';
 import statusFixRoute from './routes/statusFixRoute';
 import agentRoute from './routes/agentRoute';
+import verifyRoute from './routes/verifyRoute';
+import metricsRoute from './routes/metricsRoute';
+import scoreRoute from './routes/scoreRoute';
+import { nodeFileSystem } from './fs/NodeFileSystem';
+import { AuditLogger } from '../../../src/workflow/AuditLogger';
+import { emitCommandTelemetry } from '../../../src/workflow/CommandTelemetry';
+import { createCorrelationId } from '../../../src/workflow/ObservabilityContext';
 
 const PORT = parseInt(process.env.SPECKIT_PORT ?? '4815', 10);
 
@@ -26,6 +33,51 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+const AUDIT_LOG_EXCLUDED_PATHS = new Set(['/health', '/audit', '/trace', '/history']);
+
+app.use((req, res, next) => {
+  if (AUDIT_LOG_EXCLUDED_PATHS.has(req.path)) {
+    next();
+    return;
+  }
+
+  const workspaceRootFromBody =
+    req.body && typeof req.body.workspaceRoot === 'string' ? req.body.workspaceRoot : undefined;
+  const workspaceRootFromQuery =
+    typeof req.query.workspaceRoot === 'string' ? req.query.workspaceRoot : undefined;
+  const workspaceRoot = workspaceRootFromBody ?? workspaceRootFromQuery;
+  if (!workspaceRoot) {
+    next();
+    return;
+  }
+
+  const commandExecutionId = createCorrelationId('exec');
+  const audit = new AuditLogger(workspaceRoot, nodeFileSystem);
+  const startedAt = Date.now();
+
+  res.on('finish', () => {
+    const durationMs = Date.now() - startedAt;
+    const outcomePrefix = res.statusCode >= 400 ? '❌' : '✅';
+    const method = req.method.toUpperCase();
+    const commandLabel = `${method} ${req.path}`;
+    void emitCommandTelemetry({
+      workspaceRoot,
+      fs: nodeFileSystem,
+      audit,
+      command: commandLabel,
+      outcome: `${outcomePrefix} ${commandLabel} -> ${res.statusCode}`,
+      detail: `durationMs=${durationMs}`,
+      commandExecutionId,
+      specId: 'GLOBAL-CORE-SERVER',
+      specTitle: 'Core Server Route',
+      specType: 'story',
+      llmResponseReceived: true,
+    }).catch(() => undefined);
+  });
+
+  next();
+});
 
 // Health check
 app.get('/health', (_req, res) => {
@@ -52,6 +104,9 @@ app.use(reviewAutoRoute);
 app.use(contextRoute);
 app.use(statusFixRoute);
 app.use(agentRoute);
+app.use(verifyRoute);
+app.use(metricsRoute);
+app.use(scoreRoute);
 
 // 404 fallback
 app.use((_req, res) => {

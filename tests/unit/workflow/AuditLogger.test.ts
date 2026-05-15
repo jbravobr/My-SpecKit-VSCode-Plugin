@@ -95,6 +95,28 @@ describe('AuditLogger', () => {
       const lines = content.split('\n').filter(Boolean);
       expect(lines).toHaveLength(3);
     });
+
+    it('redacts sensitive values from detail and context', async () => {
+      await logger.log('command', 'token="ghp_1234567890abcdefghijklmnopqrstuvwxyzAB"', {
+        authorization: 'Bearer eyJ12345678.eyJabcdefgh.abcdefghijk',
+      });
+
+      const content = fs.contentFor('audit.log')!;
+      expect(content).not.toContain('ghp_1234567890abcdefghijklmnopqrstuvwxyzAB');
+      expect(content).not.toContain('eyJ12345678.eyJabcdefgh.abcdefghijk');
+      expect(content).toContain('[REDACTED]');
+    });
+
+    it('normalizes multi-line payloads to avoid forged log lines', async () => {
+      await logger.log('command', 'first line\ninjected line', {
+        note: 'header\r\nforged',
+      });
+
+      const lines = (fs.contentFor('audit.log') ?? '').split('\n').filter(Boolean);
+      expect(lines).toHaveLength(1);
+      expect(lines[0]).toContain('first line injected line');
+      expect(lines[0]).toContain('note="header forged"');
+    });
   });
 
   describe('readLog', () => {

@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { IFileSystem } from './IFileSystem';
+import { redactSensitiveText } from '../../security/Redaction';
 
 export interface LogEntry {
   command: string;
@@ -29,25 +30,28 @@ function dateStamp(): string {
 }
 
 function formatEntry(entry: LogEntry): string {
-  const lines: string[] = [`## ${timestamp()} — @speckit ${entry.command}`];
+  const lines: string[] = [`## ${timestamp()} — @speckit ${redactSensitiveText(entry.command)}`];
   if (entry.specId || entry.specTitle) {
-    const parts = [entry.specId, entry.specTitle].filter(Boolean);
+    const parts = [entry.specId, entry.specTitle]
+      .filter(Boolean)
+      .map((value) => redactSensitiveText(String(value)));
     lines.push(`**Spec:** ${parts.join(' — ')}`);
   }
-  lines.push(`**Resultado:** ${entry.outcome}`);
+  lines.push(`**Resultado:** ${redactSensitiveText(entry.outcome)}`);
 
-  if (entry.sessionAlias) lines.push(`SessionAlias: ${entry.sessionAlias}`);
-  if (entry.agentMode) lines.push(`AgentMode: ${entry.agentMode}`);
+  if (entry.sessionAlias) lines.push(`SessionAlias: ${redactSensitiveText(entry.sessionAlias)}`);
+  if (entry.agentMode) lines.push(`AgentMode: ${redactSensitiveText(entry.agentMode)}`);
   if (entry.gate !== undefined) lines.push(`Gate: ${entry.gate}`);
-  if (entry.commandExecutionId) lines.push(`CommandExecutionId: ${entry.commandExecutionId}`);
-  if (entry.batchId) lines.push(`BatchId: ${entry.batchId}`);
-  if (entry.sessionId) lines.push(`SessionId: ${entry.sessionId}`);
+  if (entry.commandExecutionId)
+    lines.push(`CommandExecutionId: ${redactSensitiveText(entry.commandExecutionId)}`);
+  if (entry.batchId) lines.push(`BatchId: ${redactSensitiveText(entry.batchId)}`);
+  if (entry.sessionId) lines.push(`SessionId: ${redactSensitiveText(entry.sessionId)}`);
   if (entry.llmResponseReceived !== undefined) {
     lines.push(`LLMResponseReceived: ${entry.llmResponseReceived ? 'true' : 'false'}`);
   }
 
   if (entry.detail) {
-    lines.push(entry.detail);
+    lines.push(redactSensitiveText(entry.detail));
   }
   lines.push('');
   return lines.join('\n') + '\n';

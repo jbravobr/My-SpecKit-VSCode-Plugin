@@ -69,6 +69,14 @@ public class CoreServerClient {
         return execute(request);
     }
 
+    public ServerResponse getHelp(String topic) throws IOException {
+        if (topic == null || topic.isBlank()) return getHelp();
+        String url = baseUrl + "/help?topic=" +
+                java.net.URLEncoder.encode(topic, java.nio.charset.StandardCharsets.UTF_8);
+        Request request = new Request.Builder().url(url).get().build();
+        return execute(request);
+    }
+
     public ServerResponse createFix(String workspaceRoot) throws IOException {
         Map<String, String> body = new HashMap<>();
         body.put("workspaceRoot", workspaceRoot);
@@ -125,10 +133,23 @@ public class CoreServerClient {
     }
 
     public ServerResponse batch(String workspaceRoot, boolean generate, boolean unified) throws IOException {
+        return batch(workspaceRoot, BatchOptions.of(generate, unified));
+    }
+
+    public ServerResponse batch(String workspaceRoot, BatchOptions options) throws IOException {
         Map<String, Object> body = new HashMap<>();
         body.put("workspaceRoot", workspaceRoot);
-        body.put("generate", generate);
-        body.put("unified", unified);
+        body.put("generate", options.generate);
+        body.put("unified", options.unified);
+        if (options.storyId != null && !options.storyId.isBlank()) {
+            body.put("storyId", options.storyId);
+        }
+        if (options.branchStrategy != null && !options.branchStrategy.isBlank()) {
+            body.put("branchStrategy", options.branchStrategy);
+        }
+        if (options.confirmIntentId != null && !options.confirmIntentId.isBlank()) {
+            body.put("confirmIntentId", options.confirmIntentId);
+        }
         String json = gson.toJson(body);
         RequestBody requestBody = RequestBody.create(json, JSON_MEDIA_TYPE);
         Request request = new Request.Builder().url(baseUrl + "/batch").post(requestBody).build();
@@ -142,9 +163,26 @@ public class CoreServerClient {
     }
 
     public ServerResponse reviewAuto(String workspaceRoot, String specFile) throws IOException {
-        Map<String, String> body = new HashMap<>();
+        return reviewAuto(workspaceRoot, new ReviewAutoOptions(specFile, null, false, false, false, false, false, null));
+    }
+
+    public ServerResponse reviewAuto(String workspaceRoot, ReviewAutoOptions options) throws IOException {
+        Map<String, Object> body = new HashMap<>();
         body.put("workspaceRoot", workspaceRoot);
-        if (specFile != null) body.put("specFile", specFile);
+        if (options.specFile != null && !options.specFile.isBlank()) {
+            body.put("specFile", options.specFile);
+        }
+        if (options.action != null && !options.action.isBlank()) {
+            body.put("action", options.action);
+        }
+        if (options.approved) body.put("approved", true);
+        if (options.changesRequested) body.put("changesRequested", true);
+        if (options.mutation) body.put("mutation", true);
+        if (options.auto) body.put("auto", true);
+        if (options.batchConsent) body.put("batchConsent", true);
+        if (options.confirmIntentId != null && !options.confirmIntentId.isBlank()) {
+            body.put("confirmIntentId", options.confirmIntentId);
+        }
         return post("/review-auto", body);
     }
 
@@ -167,6 +205,51 @@ public class CoreServerClient {
         return execute(request);
     }
 
+    public ServerResponse getAgentModes(String workspaceRoot) throws IOException {
+        if (workspaceRoot == null || workspaceRoot.isBlank()) return getAgentModes();
+        String url = baseUrl + "/agent?workspaceRoot=" +
+                java.net.URLEncoder.encode(workspaceRoot, java.nio.charset.StandardCharsets.UTF_8);
+        Request request = new Request.Builder().url(url).get().build();
+        return execute(request);
+    }
+
+    public ServerResponse setAgentMode(String workspaceRoot, String mode) throws IOException {
+        return setAgentMode(workspaceRoot, mode, null);
+    }
+
+    public ServerResponse setAgentMode(String workspaceRoot, String mode, String confirmIntentId) throws IOException {
+        Map<String, String> body = new HashMap<>();
+        body.put("workspaceRoot", workspaceRoot);
+        if (mode != null && !mode.isBlank()) {
+            body.put("mode", mode);
+        }
+        if (confirmIntentId != null && !confirmIntentId.isBlank()) {
+            body.put("confirmIntentId", confirmIntentId);
+        }
+        return post("/agent", body);
+    }
+
+    public ServerResponse verify(String workspaceRoot, Integer gate) throws IOException {
+        Map<String, String> body = new HashMap<>();
+        body.put("workspaceRoot", workspaceRoot);
+        if (gate != null) body.put("gate", String.valueOf(gate));
+        return post("/verify", body);
+    }
+
+    public ServerResponse getMetrics(String workspaceRoot) throws IOException {
+        String url = baseUrl + "/metrics?workspaceRoot=" +
+                java.net.URLEncoder.encode(workspaceRoot, java.nio.charset.StandardCharsets.UTF_8);
+        Request request = new Request.Builder().url(url).get().build();
+        return execute(request);
+    }
+
+    public ServerResponse getScore(String workspaceRoot) throws IOException {
+        String url = baseUrl + "/score?workspaceRoot=" +
+                java.net.URLEncoder.encode(workspaceRoot, java.nio.charset.StandardCharsets.UTF_8);
+        Request request = new Request.Builder().url(url).get().build();
+        return execute(request);
+    }
+
     public boolean isHealthy() {
         try {
             Request request = new Request.Builder().url(baseUrl + "/health").get().build();
@@ -178,7 +261,7 @@ public class CoreServerClient {
         }
     }
 
-    private ServerResponse post(String path, Map<String, String> body) throws IOException {
+    private ServerResponse post(String path, Map<String, ?> body) throws IOException {
         String json = gson.toJson(body);
         RequestBody requestBody = RequestBody.create(json, JSON_MEDIA_TYPE);
         Request request = new Request.Builder()
@@ -212,6 +295,63 @@ public class CoreServerClient {
 
         public boolean isSuccess() {
             return statusCode >= 200 && statusCode < 300;
+        }
+    }
+
+    public static class BatchOptions {
+        public final boolean generate;
+        public final boolean unified;
+        public final String storyId;
+        public final String branchStrategy;
+        public final String confirmIntentId;
+
+        public BatchOptions(
+                boolean generate,
+                boolean unified,
+                String storyId,
+                String branchStrategy,
+                String confirmIntentId
+        ) {
+            this.generate = generate;
+            this.unified = unified;
+            this.storyId = storyId;
+            this.branchStrategy = branchStrategy;
+            this.confirmIntentId = confirmIntentId;
+        }
+
+        public static BatchOptions of(boolean generate, boolean unified) {
+            return new BatchOptions(generate, unified, null, null, null);
+        }
+    }
+
+    public static class ReviewAutoOptions {
+        public final String specFile;
+        public final String action;
+        public final boolean approved;
+        public final boolean changesRequested;
+        public final boolean mutation;
+        public final boolean auto;
+        public final boolean batchConsent;
+        public final String confirmIntentId;
+
+        public ReviewAutoOptions(
+                String specFile,
+                String action,
+                boolean approved,
+                boolean changesRequested,
+                boolean mutation,
+                boolean auto,
+                boolean batchConsent,
+                String confirmIntentId
+        ) {
+            this.specFile = specFile;
+            this.action = action;
+            this.approved = approved;
+            this.changesRequested = changesRequested;
+            this.mutation = mutation;
+            this.auto = auto;
+            this.batchConsent = batchConsent;
+            this.confirmIntentId = confirmIntentId;
         }
     }
 }

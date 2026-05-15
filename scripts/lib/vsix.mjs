@@ -3,6 +3,9 @@ import { dirname, join, resolve } from 'path';
 import process from 'process';
 
 export const FORBIDDEN_VSIX_PATHS = [
+  'extension/.github/',
+  'extension/.copilot/',
+  'extension/.speckit/',
   'extension/coverage/',
   'extension/assets/diagrams/',
   'extension/assets/presentation/',
@@ -10,7 +13,10 @@ export const FORBIDDEN_VSIX_PATHS = [
   'extension/src/',
   'extension/scripts/',
   'extension/publish/',
+  'extension/packages/',
   'extension/markdown-to-pdf/',
+  'extension/.husky/',
+  'extension/.claude/',
   'extension/.venv/',
   'extension/venv/',
   'extension/env/',

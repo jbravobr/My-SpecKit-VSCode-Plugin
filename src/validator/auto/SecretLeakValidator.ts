@@ -1,4 +1,5 @@
 import type { Finding, Validator, ValidatorContext } from './types';
+import { redactSensitiveText } from '../../security/Redaction';
 
 export interface SecretRule {
   id: string;
@@ -133,7 +134,7 @@ export class SecretLeakValidator implements Validator {
             line: i + 1,
             suggestedFix:
               'Remover o segredo do código, rotacionar a credencial vazada e movê-la para variável de ambiente ou cofre de segredos.',
-            metadata: { ruleId: rule.id, snippet: line.trim().slice(0, 120) },
+            metadata: { ruleId: rule.id, snippet: redactSensitiveText(line.trim().slice(0, 120)) },
           });
         }
       }

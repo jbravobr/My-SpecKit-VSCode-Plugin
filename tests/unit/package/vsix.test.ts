@@ -7,19 +7,31 @@ describe('VSIX packaging guard', () => {
     const { findForbiddenEntries } = await loadVsixHelpers();
     const forbiddenEntries = findForbiddenEntries([
       'extension/dist/extension.js',
+      'extension/.github/workflows/release.yml',
+      'extension/.copilot/session-state/plan.md',
+      'extension/.speckit/traceability/STORY-001.json',
       'extension/coverage/index.html',
       'extension/assets/diagrams/01-fluxo-resumo.mmd',
       'extension/assets/speckit_icon.png',
       'extension/scripts/package-vsix.mjs',
       'extension/tests/unit/example.test.ts',
+      'extension/packages/core-server/src/index.ts',
+      'extension/.husky/pre-commit',
+      'extension/.claude/settings.json',
       'extension/.venv/Scripts/python.exe',
     ]);
 
     expect(forbiddenEntries).toEqual([
+      'extension/.github/workflows/release.yml',
+      'extension/.copilot/session-state/plan.md',
+      'extension/.speckit/traceability/STORY-001.json',
       'extension/coverage/index.html',
       'extension/assets/diagrams/01-fluxo-resumo.mmd',
       'extension/scripts/package-vsix.mjs',
       'extension/tests/unit/example.test.ts',
+      'extension/packages/core-server/src/index.ts',
+      'extension/.husky/pre-commit',
+      'extension/.claude/settings.json',
       'extension/.venv/Scripts/python.exe',
     ]);
   });

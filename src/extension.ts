@@ -13,6 +13,76 @@ import { checkPostSavePendingCommit } from './workflow/PostSaveCommitNotifier';
 import { runIncrementalCrapForSavedFile } from './workflow/PostSaveIncrementalRunner';
 
 const POST_SAVE_DEBOUNCE_MS = 2000;
+const QUICK_ACTION_QUERY_RE = /^@speckit\s+\/([a-z0-9-]+)(?:\s+(.+))?$/i;
+const QUICK_ACTION_ALLOWED_COMMANDS = new Set<string>([
+  'new',
+  'fix',
+  'validate',
+  'status',
+  'status-all',
+  'status-fix',
+  'draft',
+  'agent',
+  'gate',
+  'audit',
+  'trace',
+  'history',
+  'diff',
+  'commit',
+  'context',
+  'doctor',
+  'batch',
+  'batch-generate',
+  'batch-unified',
+  'help',
+  'help-status',
+  'review-auto',
+  'init',
+  'verify',
+  'metrics',
+  'score',
+]);
+
+interface ParsedQuickAction {
+  command: string;
+  args: string;
+  canonicalQuery: string;
+}
+
+function parseQuickActionQuery(query: string): ParsedQuickAction | undefined {
+  const match = QUICK_ACTION_QUERY_RE.exec(query.trim());
+  if (!match) return undefined;
+
+  const command = (match[1] ?? '').toLowerCase();
+  const args = (match[2] ?? '').trim();
+  if (!QUICK_ACTION_ALLOWED_COMMANDS.has(command)) return undefined;
+  if (/[`\r\n]/.test(args)) return undefined;
+
+  return {
+    command,
+    args,
+    canonicalQuery: `@speckit /${command}${args ? ` ${args}` : ''}`,
+  };
+}
+
+function isHighRiskQuickAction(input: ParsedQuickAction): boolean {
+  const argsLower = input.args.toLowerCase();
+  if (input.command === 'commit' || input.command === 'init') return true;
+
+  if (input.command === 'review-auto') {
+    return /--(?:auto|approved|changes-requested|batch-consent|confirm)\b/.test(argsLower);
+  }
+
+  if (input.command === 'batch' || input.command === 'batch-generate' || input.command === 'batch-unified') {
+    return /--(?:generate|gen|unified|branch-strategy|confirm)\b/.test(argsLower) || input.command !== 'batch';
+  }
+
+  if (input.command === 'context') {
+    return /^(add|remove|clear)\b/.test(argsLower);
+  }
+
+  return false;
+}
 
 async function openCopilotChatWithQuery(query: string): Promise<void> {
   await vscode.commands.executeCommand('workbench.action.chat.open', { query });
@@ -26,7 +96,24 @@ async function runChatQuickAction(query: string): Promise<void> {
     return;
   }
 
-  await openCopilotChatWithQuery(query.trim());
+  const parsed = parseQuickActionQuery(query);
+  if (!parsed) {
+    vscode.window.showErrorMessage(
+      'SpecKit: Ação rápida bloqueada por política de segurança (comando não permitido).',
+    );
+    return;
+  }
+
+  if (isHighRiskQuickAction(parsed)) {
+    const confirmation = await vscode.window.showWarningMessage(
+      `SpecKit: confirmar execução de ação sensível (${parsed.command}).`,
+      { modal: true },
+      'Executar',
+    );
+    if (confirmation !== 'Executar') return;
+  }
+
+  await openCopilotChatWithQuery(parsed.canonicalQuery);
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -110,9 +197,6 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand('speckit.fixStory', async () => {
       await openCopilotChatWithQuery('@speckit /fix');
-    }),
-    vscode.commands.registerCommand('speckit.openChatWithQuery', async (query: string) => {
-      await runChatQuickAction(query);
     }),
     vscode.commands.registerCommand('speckit.runChatQuickAction', async (query: string) => {
       await runChatQuickAction(query);

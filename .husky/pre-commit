@@ -1,1 +1,2 @@
+npm run security:scan-staged
 npx lint-staged

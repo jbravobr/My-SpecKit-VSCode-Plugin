@@ -90,10 +90,46 @@ describe('EvidenceReportWriter', () => {
     expect(json.passed).toBe(false);
   });
 
+  it('redacts sensitive strings from evidence payload', async () => {
+    const w = new EvidenceReportWriter(fs, '/ws');
+    const result = await w.write(
+      {
+        gate: 3,
+        passed: false,
+        runId: 'run-sensitive',
+        durationMs: 22,
+        validatorsRun: ['secret-leak'],
+        findings: [
+          {
+            validator: 'secret-leak',
+            severity: 'error',
+            message: 'Bearer eyJ12345678.eyJabcdefgh.abcdefghijk',
+            path: 'src/auth.ts',
+            metadata: { snippet: 'ghp_1234567890abcdefghijklmnopqrstuvwxyzAB' },
+          },
+        ],
+      },
+      'STORY-SENSITIVE',
+    );
+
+    const jsonRaw = fs.files.get(result.jsonPath)!;
+    expect(jsonRaw).not.toContain('eyJ12345678.eyJabcdefgh.abcdefghijk');
+    expect(jsonRaw).not.toContain('ghp_1234567890abcdefghijklmnopqrstuvwxyzAB');
+    expect(jsonRaw).toContain('[REDACTED]');
+  });
+
   it('works without specId', async () => {
     const w = new EvidenceReportWriter(fs, '/ws');
     const result = await w.write(report(true));
     expect(result.reportPath).toBe('/ws/.speckit/evidence/run-123.md');
+  });
+
+  it('sanitizes runId/specId to keep evidence inside target directory', async () => {
+    const w = new EvidenceReportWriter(fs, '/ws');
+    const result = await w.write({ ...report(true), runId: '../unsafe/run' }, '../STORY-1');
+
+    expect(result.reportPath).toBe('/ws/.speckit/evidence/.-STORY-1-.-unsafe-run.md');
+    expect(result.jsonPath).toBe('/ws/.speckit/evidence/.-STORY-1-.-unsafe-run.json');
   });
 
   it('overwrites latest.md on each write', async () => {

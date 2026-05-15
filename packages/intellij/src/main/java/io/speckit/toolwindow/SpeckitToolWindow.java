@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * SpecKit Tool Window — Redesigned UI.
@@ -79,14 +81,17 @@ public class SpeckitToolWindow {
             {"🐛 /fix",             "/fix",                        "Specs"},
             {"📝 /draft",           "/draft",                      "Specs"},
             {"📊 /status",          "/status",                     "Specs"},
-            {"📊 /status --all",    "/status --all",               "Specs"},
+            {"📊 /status-all",      "/status-all",                 "Specs"},
             {"🔧 /status-fix",      "/status-fix",                 "Specs"},
             // Group 3 — Workflow
             {"✅ /validate",        "/validate",                   "Workflow"},
+            {"🧪 /verify",          "/verify",                     "Workflow"},
+            {"📈 /metrics",         "/metrics",                    "Workflow"},
+            {"🎯 /score",           "/score",                      "Workflow"},
             {"🚪 /gate",            "/gate",                       "Workflow"},
             {"📦 /batch",           "/batch",                      "Workflow"},
-            {"⚙ /batch --generate", "/batch --generate",           "Workflow"},
-            {"⚙ /batch --unified",  "/batch --generate --unified", "Workflow"},
+            {"⚙ /batch-generate",  "/batch-generate",             "Workflow"},
+            {"⚙ /batch-unified",   "/batch-unified",              "Workflow"},
             {"🔄 /review-auto",     "/review-auto",                "Workflow"},
             // Group 4 — History & Context
             {"📋 /audit",           "/audit",                      "History & Context"},
@@ -98,6 +103,7 @@ public class SpeckitToolWindow {
             {"💾 /commit",          "/commit",                     "Git"},
             // Group 6 — Info
             {"❓ /help",            "/help",                       "Info"},
+            {"❔ /help-status",     "/help-status",                "Info"},
     };
 
     private enum MessageType { USER, BOT, SYSTEM }
@@ -808,6 +814,9 @@ public class SpeckitToolWindow {
         String[] parts  = input.trim().split("\\s+", 2);
         String   command = parts[0].toLowerCase();
         final String finalRoot = workspaceRoot;
+        final boolean hasGateFlag = hasFlag(input, "--gate");
+        final Integer verifyGate = extractGateArg(input);
+        final CoreServerClient.BatchOptions batchOptions = parseBatchOptions(input);
 
         switch (command) {
             case "/new":      return client.createNew(finalRoot).markdown;
@@ -822,11 +831,14 @@ public class SpeckitToolWindow {
             }
             case "/status":
                 return client.getStatus(finalRoot, input.contains("--all") || input.contains("--closed")).markdown;
+            case "/status-all":
+                return client.getStatus(finalRoot, true).markdown;
             case "/commit":
                 return client.commit(finalRoot, parts.length > 1 ? parts[1] : null).markdown;
             case "/diff":
                 return client.getDiff(finalRoot, input.contains("--full")).markdown;
             case "/help":     return client.getHelp().markdown;
+            case "/help-status": return client.getHelp("status").markdown;
             case "/fix":      return client.createFix(finalRoot).markdown;
             case "/draft": {
                 String desc = parts.length > 1 ? parts[1] : "";
@@ -839,27 +851,190 @@ public class SpeckitToolWindow {
             case "/trace":    return client.getTrace(finalRoot, null).markdown;
             case "/history":  return client.getHistory(finalRoot, 50, "all").markdown;
             case "/doctor":   return client.getDoctor(finalRoot).markdown;
+            case "/verify":
+                if (hasGateFlag && verifyGate == null) {
+                    return "❌ Valor inválido para `--gate`. Use um número entre 0 e 4.";
+                }
+                return client.verify(finalRoot, verifyGate).markdown;
+            case "/metrics":  return client.getMetrics(finalRoot).markdown;
+            case "/score":    return client.getScore(finalRoot).markdown;
             case "/batch": {
-                boolean generate = input.contains("--generate");
-                boolean unified  = input.contains("--unified");
-                CoreServerClient.ServerResponse batchResp = client.batch(finalRoot, generate, unified);
+                CoreServerClient.ServerResponse batchResp = client.batch(finalRoot, batchOptions);
                 // After a generate --unified, suggest opening AI Chat for each valid spec
-                if (generate && batchResp.isSuccess()) {
+                if (batchOptions.generate && batchResp.isSuccess()) {
+                    LLMBridge.openSpecInAIChat(project, null, finalRoot);
+                }
+                return batchResp.markdown;
+            }
+            case "/batch-generate": {
+                CoreServerClient.ServerResponse batchResp =
+                        client.batch(finalRoot, new CoreServerClient.BatchOptions(
+                                true,
+                                false,
+                                extractFlagValue(input, "--story"),
+                                extractFlagValue(input, "--branch-strategy"),
+                                extractFlagValue(input, "--confirm")
+                        ));
+                if (batchResp.isSuccess()) {
+                    LLMBridge.openSpecInAIChat(project, null, finalRoot);
+                }
+                return batchResp.markdown;
+            }
+            case "/batch-unified": {
+                CoreServerClient.ServerResponse batchResp =
+                        client.batch(finalRoot, new CoreServerClient.BatchOptions(
+                                true,
+                                true,
+                                extractFlagValue(input, "--story"),
+                                extractFlagValue(input, "--branch-strategy"),
+                                extractFlagValue(input, "--confirm")
+                        ));
+                if (batchResp.isSuccess()) {
                     LLMBridge.openSpecInAIChat(project, null, finalRoot);
                 }
                 return batchResp.markdown;
             }
             case "/init":     return client.init(finalRoot).markdown;
-            case "/review-auto": return client.reviewAuto(finalRoot, null).markdown;
+            case "/review-auto": {
+                CoreServerClient.ReviewAutoOptions reviewAutoOptions;
+                try {
+                    reviewAutoOptions = parseReviewAutoOptions(input);
+                } catch (IllegalArgumentException ex) {
+                    return "❌ " + ex.getMessage();
+                }
+                return client.reviewAuto(finalRoot, reviewAutoOptions).markdown;
+            }
             case "/context":  return client.getContext(finalRoot).markdown;
             case "/status-fix": return client.getStatusFix(finalRoot).markdown;
-            case "/agent":    return client.getAgentModes().markdown;
+            case "/agent": {
+                String confirmIntentId = extractFlagValue(input, "--confirm");
+                boolean hasConfirmFlag = hasFlag(input, "--confirm");
+                if (hasConfirmFlag && (confirmIntentId == null || confirmIntentId.isBlank())) {
+                    return "❌ Use `/agent --confirm <intent-id>` para confirmar uma troca de modo pendente.";
+                }
+
+                String requestedMode = null;
+                if (parts.length > 1) {
+                    String[] agentTokens = parts[1].trim().split("\\s+");
+                    if (agentTokens.length > 0) {
+                        String firstToken = agentTokens[0].trim();
+                        if (!firstToken.isEmpty() && !firstToken.startsWith("--")) {
+                            requestedMode = firstToken.toLowerCase();
+                        }
+                    }
+                }
+
+                if ((requestedMode == null || requestedMode.isBlank()) &&
+                        (confirmIntentId == null || confirmIntentId.isBlank())) {
+                    return client.getAgentModes(finalRoot).markdown;
+                }
+                return client.setAgentMode(finalRoot, requestedMode, confirmIntentId).markdown;
+            }
             default:
                 return "❓ Comando desconhecido: `" + command + "`\n\n" +
-                        "Disponíveis: /new /fix /draft /validate /status /status --all /status-fix\n" +
-                        "/gate /batch /review-auto /audit /trace /history /context\n" +
-                        "/diff /commit /init /doctor /agent /help";
+                        "Disponíveis: /new /fix /draft /validate /verify /metrics /score\n" +
+                        "/status /status-all /status-fix /gate /batch /batch-generate /batch-unified /review-auto\n" +
+                        "/audit /trace /history /context /diff /commit /init /doctor /agent /help /help-status";
         }
+    }
+
+    private Integer extractGateArg(String input) {
+        String gateValue = extractFlagValue(input, "--gate");
+        if (gateValue == null || gateValue.isBlank()) return null;
+        try {
+            int value = Integer.parseInt(gateValue.trim());
+            if (value >= 0 && value <= 4) return value;
+            return null;
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private CoreServerClient.BatchOptions parseBatchOptions(String input) {
+        boolean generate = input.contains("--generate") || input.contains("--gen");
+        boolean unified = input.contains("--unified");
+        String storyId = extractFlagValue(input, "--story");
+        String branchStrategy = extractFlagValue(input, "--branch-strategy");
+        String confirmIntentId = extractFlagValue(input, "--confirm");
+        return new CoreServerClient.BatchOptions(
+                generate,
+                unified,
+                storyId,
+                branchStrategy,
+                confirmIntentId
+        );
+    }
+
+    private String extractFlagValue(String input, String flag) {
+        Pattern inlinePattern = Pattern.compile(Pattern.quote(flag) + "=([^\\s]+)");
+        Matcher inlineMatcher = inlinePattern.matcher(input);
+        if (inlineMatcher.find()) {
+            return inlineMatcher.group(1).trim();
+        }
+        Pattern spacedPattern = Pattern.compile(Pattern.quote(flag) + "\\s+([^\\s]+)");
+        Matcher spacedMatcher = spacedPattern.matcher(input);
+        if (spacedMatcher.find()) {
+            return spacedMatcher.group(1).trim();
+        }
+        return null;
+    }
+
+    private boolean hasFlag(String input, String flag) {
+        Pattern flagPattern = Pattern.compile("(^|\\s)" + Pattern.quote(flag) + "(\\s|=|$)");
+        return flagPattern.matcher(input).find();
+    }
+
+    private CoreServerClient.ReviewAutoOptions parseReviewAutoOptions(String input) {
+        boolean approved = hasFlag(input, "--approved") || hasFlag(input, "--approve");
+        boolean changesRequested =
+                hasFlag(input, "--changes-requested") ||
+                hasFlag(input, "--changes") ||
+                hasFlag(input, "--rework");
+        boolean mutation = hasFlag(input, "--mutation") || hasFlag(input, "--mut");
+        boolean auto = hasFlag(input, "--auto");
+        boolean batchConsent = hasFlag(input, "--batch-consent");
+        boolean hasConfirmFlag = hasFlag(input, "--confirm");
+        String confirmIntentId = extractFlagValue(input, "--confirm");
+
+        if (hasConfirmFlag && (confirmIntentId == null || confirmIntentId.isBlank())) {
+            throw new IllegalArgumentException("Use `/review-auto --confirm <intent-id>` para confirmar uma transição pendente.");
+        }
+
+        int explicitActions = 0;
+        if (approved) explicitActions++;
+        if (changesRequested) explicitActions++;
+        if (mutation) explicitActions++;
+        if (explicitActions > 1) {
+            throw new IllegalArgumentException("Flags conflitantes: use apenas uma entre `--approved`, `--changes-requested` e `--mutation`.");
+        }
+
+        if (batchConsent && explicitActions > 0) {
+            throw new IllegalArgumentException("Use `--batch-consent` isoladamente para consentimento de sessão batch.");
+        }
+
+        if (auto && batchConsent) {
+            throw new IllegalArgumentException("Flags incompatíveis: `--auto` não pode ser combinado com `--batch-consent`.");
+        }
+
+        if (mutation && auto) {
+            throw new IllegalArgumentException("Flags incompatíveis: `--mutation` não pode ser combinado com `--auto`.");
+        }
+
+        String action = null;
+        if (approved) action = "approved";
+        else if (changesRequested) action = "changes-requested";
+        else if (mutation) action = "mutation";
+
+        return new CoreServerClient.ReviewAutoOptions(
+                null,
+                action,
+                approved,
+                changesRequested,
+                mutation,
+                auto,
+                batchConsent,
+                confirmIntentId
+        );
     }
 
     // Inner: StatusDot

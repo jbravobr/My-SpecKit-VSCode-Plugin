@@ -14,6 +14,7 @@ const vscodeMock = vi.hoisted(() => {
     executeCommand: vi.fn(),
     showErrorMessage: vi.fn(),
     showInformationMessage: vi.fn(),
+    showWarningMessage: vi.fn(async () => 'Executar'),
     onDidSaveTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
   };
 });
@@ -29,6 +30,7 @@ vi.mock('vscode', () => ({
   window: {
     showErrorMessage: vscodeMock.showErrorMessage,
     showInformationMessage: vscodeMock.showInformationMessage,
+    showWarningMessage: vscodeMock.showWarningMessage,
     createStatusBarItem: vi.fn(() => ({
       text: '',
       tooltip: '',
@@ -107,6 +109,7 @@ describe('extension quick action commands', () => {
     vscodeMock.executeCommand.mockClear();
     vscodeMock.showErrorMessage.mockClear();
     vscodeMock.showInformationMessage.mockClear();
+    vscodeMock.showWarningMessage.mockClear();
     vscodeMock.onDidSaveTextDocument.mockClear();
   });
 
@@ -115,6 +118,7 @@ describe('extension quick action commands', () => {
 
     activate(context);
 
+    expect(vscodeMock.registeredCommands.has('speckit.openChatWithQuery')).toBe(false);
     const handler = vscodeMock.registeredCommands.get('speckit.runChatQuickAction');
 
     expect(handler).toBeTypeOf('function');
@@ -124,6 +128,7 @@ describe('extension quick action commands', () => {
     expect(vscodeMock.executeCommand).toHaveBeenCalledWith('workbench.action.chat.open', {
       query: '@speckit /status',
     });
+    expect(vscodeMock.showWarningMessage).not.toHaveBeenCalled();
   });
 
   it('rejects invalid quick action queries', async () => {
@@ -138,6 +143,57 @@ describe('extension quick action commands', () => {
     expect(vscodeMock.executeCommand).not.toHaveBeenCalled();
     expect(vscodeMock.showErrorMessage).toHaveBeenCalledWith(
       'SpecKit: Não foi possível executar a ação rápida (query inválida).',
+    );
+  });
+
+  it('rejects non-speckit quick action commands', async () => {
+    const context = { subscriptions: [] } as never;
+    activate(context);
+
+    const handler = vscodeMock.registeredCommands.get('speckit.runChatQuickAction');
+    await handler?.('@other /status');
+
+    expect(vscodeMock.executeCommand).not.toHaveBeenCalled();
+    expect(vscodeMock.showErrorMessage).toHaveBeenCalledWith(
+      'SpecKit: Ação rápida bloqueada por política de segurança (comando não permitido).',
+    );
+  });
+
+  it('requires explicit confirmation for high-risk quick actions', async () => {
+    const context = { subscriptions: [] } as never;
+    activate(context);
+
+    const handler = vscodeMock.registeredCommands.get('speckit.runChatQuickAction');
+    await handler?.('@speckit /commit');
+
+    expect(vscodeMock.showWarningMessage).toHaveBeenCalled();
+    expect(vscodeMock.executeCommand).toHaveBeenCalledWith('workbench.action.chat.open', {
+      query: '@speckit /commit',
+    });
+  });
+
+  it('does not execute sensitive quick action when confirmation is denied', async () => {
+    const context = { subscriptions: [] } as never;
+    activate(context);
+    vscodeMock.showWarningMessage.mockResolvedValueOnce('Cancelar');
+
+    const handler = vscodeMock.registeredCommands.get('speckit.runChatQuickAction');
+    await handler?.('@speckit /commit');
+
+    expect(vscodeMock.showWarningMessage).toHaveBeenCalled();
+    expect(vscodeMock.executeCommand).not.toHaveBeenCalled();
+  });
+
+  it('blocks quick action payloads with multiline/backtick injection', async () => {
+    const context = { subscriptions: [] } as never;
+    activate(context);
+
+    const handler = vscodeMock.registeredCommands.get('speckit.runChatQuickAction');
+    await handler?.('@speckit /status `bad`');
+
+    expect(vscodeMock.executeCommand).not.toHaveBeenCalled();
+    expect(vscodeMock.showErrorMessage).toHaveBeenCalledWith(
+      'SpecKit: Ação rápida bloqueada por política de segurança (comando não permitido).',
     );
   });
 });

@@ -40,6 +40,8 @@ describe('SecretLeakValidator', () => {
     expect(findings[0].severity).toBe('blocker');
     expect(findings[0].line).toBe(1);
     expect(findings[0].path).toBe('src/a.ts');
+    expect(String(findings[0].metadata?.snippet)).toContain('[REDACTED]');
+    expect(String(findings[0].metadata?.snippet)).not.toContain('AKIAIOSFODNN7EXAMPLE');
   });
 
   it('detects GitHub token', async () => {

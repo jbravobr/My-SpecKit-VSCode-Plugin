@@ -8,6 +8,7 @@ import {
   inferAgentModeFromGate,
 } from './ObservabilityContext';
 import { TraceabilityManager } from './TraceabilityManager';
+import { redactSensitiveText } from '../security/Redaction';
 
 type TraceType = 'commit' | 'file' | 'gate' | 'review' | 'custom';
 
@@ -36,6 +37,15 @@ export interface CommandTelemetryInput {
 }
 
 export async function emitCommandTelemetry(input: CommandTelemetryInput): Promise<void> {
+  const safeOutcome = redactSensitiveText(input.outcome);
+  const safeDetail = input.detail ? redactSensitiveText(input.detail) : undefined;
+  const safeTraceData = Object.fromEntries(
+    Object.entries(input.traceData ?? {}).map(([key, value]) => [key, redactSensitiveText(value)]),
+  );
+  const safeTraceDescription = redactSensitiveText(
+    input.traceDescription ?? `${input.command}: ${input.outcome}`,
+  );
+
   const sessionId = input.sessionId ?? createCorrelationId('session');
   const gate = input.gate;
   const agentMode = input.agentMode ?? inferAgentModeFromGate(gate);
@@ -48,8 +58,8 @@ export async function emitCommandTelemetry(input: CommandTelemetryInput): Promis
       command: input.command,
       specId: input.specId,
       specTitle: input.specTitle,
-      outcome: input.outcome,
-      detail: input.detail,
+      outcome: safeOutcome,
+      detail: safeDetail,
       commandExecutionId: input.commandExecutionId,
       sessionId,
       batchId: input.batchId,
@@ -61,7 +71,7 @@ export async function emitCommandTelemetry(input: CommandTelemetryInput): Promis
     input.fs,
   );
 
-  await input.audit.log(input.auditEvent ?? 'command', `${input.command}: ${input.outcome}`, {
+  await input.audit.log(input.auditEvent ?? 'command', `${input.command}: ${safeOutcome}`, {
     command: input.command,
     commandExecutionId: input.commandExecutionId,
     sessionId,
@@ -77,7 +87,7 @@ export async function emitCommandTelemetry(input: CommandTelemetryInput): Promis
   try {
     await input.tracer.record(input.specId, input.specType, {
       type: input.traceType ?? 'custom',
-      description: input.traceDescription ?? `${input.command}: ${input.outcome}`,
+      description: safeTraceDescription,
       data: {
         command: input.command,
         commandExecutionId: input.commandExecutionId ?? '',
@@ -87,7 +97,7 @@ export async function emitCommandTelemetry(input: CommandTelemetryInput): Promis
         agentMode,
         gate: gate !== undefined ? String(gate) : '',
         sessionAlias,
-        ...(input.traceData ?? {}),
+        ...safeTraceData,
       },
     });
   } catch {

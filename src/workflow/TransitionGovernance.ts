@@ -1,5 +1,6 @@
 import * as path from 'path';
 import { IFileSystem } from '../generator/utils/IFileSystem';
+import { redactSensitiveText } from '../security/Redaction';
 import { createCorrelationId } from './ObservabilityContext';
 
 const GOVERNANCE_DIR = path.join('.speckit', 'governance');
@@ -74,6 +75,56 @@ function isExpired(isoDate: string): boolean {
   return new Date(isoDate).getTime() <= Date.now();
 }
 
+function sanitizePayload(payload: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(payload).map(([key, value]) => [key, redactSensitiveText(value)]),
+  );
+}
+
+function sanitizeTransitionIntent(intent: TransitionIntent): TransitionIntent {
+  return {
+    ...intent,
+    command: redactSensitiveText(intent.command),
+    payload: sanitizePayload(intent.payload),
+  };
+}
+
+function sanitizeBatchSessionConsent(consent: BatchSessionConsent): BatchSessionConsent {
+  return {
+    ...consent,
+    commandExecutionId: consent.commandExecutionId
+      ? redactSensitiveText(consent.commandExecutionId)
+      : undefined,
+    note: consent.note ? redactSensitiveText(consent.note) : undefined,
+  };
+}
+
+function sanitizeBranchSessionGovernance(
+  governance: BranchSessionGovernance,
+): BranchSessionGovernance {
+  return {
+    ...governance,
+    command: redactSensitiveText(governance.command),
+    citedMentions: governance.citedMentions.map((mention) => redactSensitiveText(mention)),
+    sessionBranch: governance.sessionBranch
+      ? redactSensitiveText(governance.sessionBranch)
+      : undefined,
+  };
+}
+
+function sanitizeState(state: GovernanceState): GovernanceState {
+  return {
+    ...state,
+    intents: state.intents.map((intent) => sanitizeTransitionIntent(intent)),
+    batchSessionConsent: state.batchSessionConsent
+      ? sanitizeBatchSessionConsent(state.batchSessionConsent)
+      : undefined,
+    branchSessionGovernance: state.branchSessionGovernance
+      ? sanitizeBranchSessionGovernance(state.branchSessionGovernance)
+      : undefined,
+  };
+}
+
 async function loadState(workspaceRoot: string, fs: IFileSystem): Promise<GovernanceState> {
   const filePath = statePath(workspaceRoot);
   const exists = await fs.fileExists(filePath);
@@ -85,12 +136,12 @@ async function loadState(workspaceRoot: string, fs: IFileSystem): Promise<Govern
     if (parsed.version !== 1 || !Array.isArray(parsed.intents)) {
       return { ...EMPTY_STATE };
     }
-    return {
+    return sanitizeState({
       version: 1,
       intents: parsed.intents,
       batchSessionConsent: parsed.batchSessionConsent,
       branchSessionGovernance: parsed.branchSessionGovernance,
-    };
+    });
   } catch {
     return { ...EMPTY_STATE };
   }
@@ -103,7 +154,7 @@ async function saveState(
 ): Promise<void> {
   const dirPath = path.join(workspaceRoot, GOVERNANCE_DIR);
   await fs.ensureDir(dirPath);
-  await fs.writeFile(statePath(workspaceRoot), JSON.stringify(state, null, 2));
+  await fs.writeFile(statePath(workspaceRoot), JSON.stringify(sanitizeState(state), null, 2));
 }
 
 function pruneExpiredState(state: GovernanceState): GovernanceState {
@@ -141,10 +192,10 @@ export async function createTransitionIntent(
   const intent: TransitionIntent = {
     id: createCorrelationId('exec'),
     kind: input.kind,
-    command: input.command,
+    command: redactSensitiveText(input.command),
     createdAt: nowIso(),
     expiresAt: withExpiry(ttlMinutes),
-    payload: input.payload,
+    payload: sanitizePayload(input.payload),
   };
 
   const nextState: GovernanceState = {
@@ -203,8 +254,10 @@ export async function setBatchSessionConsent(
     id: createCorrelationId('session'),
     createdAt: nowIso(),
     expiresAt: withExpiry(ttlMinutes),
-    commandExecutionId: input.commandExecutionId,
-    note: input.note,
+    commandExecutionId: input.commandExecutionId
+      ? redactSensitiveText(input.commandExecutionId)
+      : undefined,
+    note: input.note ? redactSensitiveText(input.note) : undefined,
   };
 
   const nextState: GovernanceState = {
@@ -264,11 +317,11 @@ export async function setBranchSessionGovernance(
     id: state.branchSessionGovernance?.id ?? createCorrelationId('session'),
     sessionId: RUNTIME_SESSION_ID,
     strategy: input.strategy,
-    command: input.command,
+    command: redactSensitiveText(input.command),
     createdAt,
     updatedAt: nowIso(),
-    citedMentions: [...input.citedMentions],
-    sessionBranch: input.sessionBranch,
+    citedMentions: input.citedMentions.map((mention) => redactSensitiveText(mention)),
+    sessionBranch: input.sessionBranch ? redactSensitiveText(input.sessionBranch) : undefined,
     sessionBranchSource: input.sessionBranchSource,
   };
 

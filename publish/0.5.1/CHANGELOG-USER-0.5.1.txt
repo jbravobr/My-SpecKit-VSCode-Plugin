@@ -1,0 +1,45 @@
+SpecKit — Novidades para usuários — 0.5.1
+=========================================
+Data: 15/05/2026
+
+Resumo
+------
+Esta versão reforça segurança e governança de release sem mudar o fluxo normal de uso do
+plugin. O comportamento principal permanece igual para criação/validação de specs e uso dos
+comandos no `@speckit`.
+
+Novas features
+--------------
+- Endurecimento de persistência local: dados sensíveis são redigidos em artefatos de
+  rastreabilidade e governança antes de gravação.
+- Reforço de segurança no ponto de entrada de ações rápidas via comando único
+  `speckit.runChatQuickAction`.
+- Pacote VSIX com validação de exclusões mais rígida para evitar conteúdo indevido no
+  artefato final.
+
+Melhorias de experiência
+------------------------
+- Mantido funcionamento normal do plugin sem novos passos obrigatórios para operação diária.
+- Mensagens e fluxo de quick action permanecem consistentes para o usuário final.
+- Processo de release mais previsível com controles de empacotamento adicionais.
+
+Correções e segurança de release
+--------------------------------
+- Removido comando público redundante `speckit.openChatWithQuery`, reduzindo superfície de
+  invocação.
+- Removido workflow de CI do repositório do plugin, conforme diretriz operacional.
+- Atualizadas regras de exclusão para build VSIX (`.vscodeignore` + gate de verificação).
+- Mantido scanner local de segredos em pre-commit (`npm run security:scan-staged`).
+
+Como usar rapidamente
+---------------------
+1. Use o plugin normalmente no VS Code (`/new`, `/fix`, `/validate`, `/status` etc.).
+2. Para ações rápidas em botões/contexto, o fluxo continua usando `speckit.runChatQuickAction`.
+3. Para release local, execute:
+   - `npm run package`
+4. Para revisão de segurança da versão, consulte:
+   - `publish/0.5.1/SECURITY-REPORT-0.5.1.txt`
+
+Artefato
+--------
+- publish/0.5.1/vscode-plugin-speckit-0.5.1.vsix
