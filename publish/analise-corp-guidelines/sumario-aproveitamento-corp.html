@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Sumário · Aproveitamento do data--copilot-guidelines no SpecKit</title>
+        <meta
+            name="description"
+            content="Sumário do que o plugin SpecKit aproveita e do que não absorve do repositório data--copilot-guidelines, com justificativa técnica por item."
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                --bg-0: #0b1020;
+                --bg-1: #11172b;
+                --bg-2: #161e36;
+                --surface: #1c2541;
+                --surface-2: #243057;
+                --line: #2a3760;
+                --text: #e8ecf6;
+                --text-dim: #b0b9d4;
+                --text-muted: #7c87a9;
+                --accent: #7aa2ff;
+                --accent-2: #9d7aff;
+                --success: #38d39f;
+                --warn: #ffb454;
+                --danger: #ff6b8a;
+                --gate: #4cc9f0;
+                --gradient-hero: linear-gradient(135deg, #0b1020 0%, #1a1d4d 50%, #2a1d5d 100%);
+                --gradient-accent: linear-gradient(135deg, #7aa2ff 0%, #9d7aff 100%);
+                --gradient-success: linear-gradient(135deg, #38d39f 0%, #4cc9f0 100%);
+                --gradient-danger: linear-gradient(135deg, #ff6b8a 0%, #ffb454 100%);
+                --doc-max: 1480px;
+                --doc-pad-x: 80px;
+            }
+
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            html { scroll-behavior: smooth; }
+            body {
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                background: var(--bg-0);
+                color: var(--text);
+                line-height: 1.65;
+                -webkit-font-smoothing: antialiased;
+                overflow-x: hidden;
+            }
+            code, pre, .mono { font-family: "JetBrains Mono", "Consolas", monospace; }
+
+            .progress-bar {
+                position: fixed;
+                top: 0; left: 0;
+                height: 3px; width: 0%;
+                background: var(--gradient-accent);
+                z-index: 1000;
+            }
+
+            .topnav {
+                position: fixed;
+                top: 14px; right: 18px;
+                z-index: 999;
+                background: rgba(17,23,43,0.85);
+                backdrop-filter: blur(12px);
+                border: 1px solid var(--line);
+                border-radius: 100px;
+                padding: 8px 14px;
+                display: flex; gap: 4px;
+                font-size: 12px; font-weight: 600;
+            }
+            .topnav a {
+                color: var(--text-dim);
+                text-decoration: none;
+                padding: 6px 12px;
+                border-radius: 100px;
+            }
+            .topnav a:hover { color: var(--text); background: rgba(122,162,255,0.12); }
+            @media (max-width: 1100px) { .topnav { display: none; } }
+
+            .hero {
+                background: var(--gradient-hero);
+                padding: 140px var(--doc-pad-x) 110px;
+                position: relative;
+                overflow: hidden;
+                border-bottom: 1px solid var(--line);
+            }
+            .hero::before {
+                content: ""; position: absolute;
+                top: -50%; left: -10%;
+                width: 60%; height: 200%;
+                background: radial-gradient(circle, rgba(157,122,255,0.18) 0%, transparent 70%);
+                pointer-events: none;
+            }
+            .hero::after {
+                content: ""; position: absolute;
+                bottom: -50%; right: -10%;
+                width: 60%; height: 200%;
+                background: radial-gradient(circle, rgba(122,162,255,0.15) 0%, transparent 70%);
+                pointer-events: none;
+            }
+            .hero-inner { max-width: var(--doc-max); margin: 0 auto; position: relative; z-index: 1; }
+            .eyebrow {
+                display: inline-flex; align-items: center; gap: 10px;
+                padding: 8px 18px;
+                background: rgba(56,211,159,0.12);
+                border: 1px solid rgba(56,211,159,0.35);
+                border-radius: 100px;
+                font-size: 13px; font-weight: 600;
+                color: var(--success);
+                letter-spacing: 0.08em; text-transform: uppercase;
+                margin-bottom: 28px;
+            }
+            .eyebrow .dot {
+                width: 8px; height: 8px;
+                background: var(--success);
+                border-radius: 50%;
+                box-shadow: 0 0 12px var(--success);
+            }
+            .hero h1 {
+                font-size: clamp(38px, 5.8vw, 68px);
+                font-weight: 800; line-height: 1.06;
+                letter-spacing: -0.02em;
+                background: linear-gradient(135deg, #ffffff 0%, #b0b9d4 100%);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 24px;
+            }
+            .hero h1 .highlight {
+                background: var(--gradient-success);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .hero-lead {
+                font-size: clamp(17px, 1.6vw, 21px);
+                color: var(--text-dim);
+                margin-bottom: 48px; font-weight: 400;
+                text-align: justify; hyphens: auto; max-width: 1100px;
+            }
+            .hero-meta {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 16px;
+            }
+            .meta-card {
+                background: rgba(28,37,65,0.6);
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: 18px 20px;
+                backdrop-filter: blur(8px);
+            }
+            .meta-card .label {
+                font-size: 11px; letter-spacing: 0.12em;
+                text-transform: uppercase; color: var(--text-muted);
+                font-weight: 600; margin-bottom: 8px;
+            }
+            .meta-card .value { font-size: 22px; font-weight: 700; color: var(--text); }
+            .meta-card .value small { font-size: 13px; color: var(--text-dim); font-weight: 500; margin-left: 4px; }
+
+            section { padding: 100px var(--doc-pad-x); position: relative; }
+            .section-inner { max-width: var(--doc-max); margin: 0 auto; }
+            section h1, section h2, section h3, section h4, section p, section li, section .section-lead {
+                text-align: justify;
+                text-justify: inter-word;
+                hyphens: auto;
+                -webkit-hyphens: auto;
+            }
+            section.alt { background: var(--bg-1); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+            .section-tag {
+                display: inline-block; font-size: 12px; font-weight: 700;
+                letter-spacing: 0.18em; text-transform: uppercase;
+                color: var(--accent); margin-bottom: 16px;
+                text-align: left;
+            }
+            .section-tag.success { color: var(--success); }
+            .section-tag.warn { color: var(--warn); }
+            .section-tag.danger { color: var(--danger); }
+            h2 {
+                font-size: clamp(28px, 3.5vw, 44px); font-weight: 800;
+                line-height: 1.15; letter-spacing: -0.015em;
+                margin-bottom: 18px; color: var(--text);
+            }
+            h3 { font-size: 22px; font-weight: 700; margin: 28px 0 14px; color: var(--text); }
+            h4 { font-size: 17px; font-weight: 700; margin: 22px 0 10px; color: var(--accent); }
+            .section-lead { font-size: 18px; color: var(--text-dim); margin-bottom: 48px; max-width: 1100px; }
+            p { margin-bottom: 14px; color: var(--text-dim); }
+            ul, ol { margin: 12px 0 18px 22px; color: var(--text-dim); }
+            li { margin-bottom: 6px; }
+            strong { color: var(--text); font-weight: 600; }
+
+            .metrics {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 20px;
+                margin-bottom: 16px;
+            }
+            .metric {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 28px 26px;
+                position: relative; overflow: hidden;
+            }
+            .metric::before {
+                content: ""; position: absolute;
+                top: 0; left: 0; width: 4px; height: 100%;
+                background: var(--gradient-accent);
+            }
+            .metric.success::before { background: var(--gradient-success); }
+            .metric.warn::before { background: var(--gradient-danger); }
+            .metric .icon { font-size: 28px; margin-bottom: 14px; display: block; }
+            .metric .number {
+                font-size: 38px; font-weight: 800; line-height: 1;
+                background: var(--gradient-accent);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 8px;
+            }
+            .metric.success .number { background: var(--gradient-success); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+            .metric.warn .number { background: var(--gradient-danger); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+            .metric .label { font-size: 14px; color: var(--text-dim); font-weight: 500; }
+
+            .feature-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+                gap: 22px;
+                margin: 12px 0 8px;
+            }
+            .feature-card {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 26px;
+                border-left: 5px solid var(--accent);
+            }
+            .feature-card.success { border-left-color: var(--success); }
+            .feature-card.warn { border-left-color: var(--warn); }
+            .feature-card.danger { border-left-color: var(--danger); }
+            .feature-card.gate { border-left-color: var(--gate); }
+            .feature-card h4 { color: var(--text); margin-top: 0; margin-bottom: 10px; font-size: 18px; }
+            .feature-card .tag {
+                display: inline-block; font-size: 10px;
+                letter-spacing: 0.14em; text-transform: uppercase;
+                color: var(--accent); font-weight: 700; margin-bottom: 10px;
+            }
+            .feature-card.success .tag { color: var(--success); }
+            .feature-card.warn .tag { color: var(--warn); }
+            .feature-card.danger .tag { color: var(--danger); }
+            .feature-card.gate .tag { color: var(--gate); }
+            .feature-card p { font-size: 14px; margin-bottom: 8px; }
+
+            code.inline {
+                background: rgba(122,162,255,0.12);
+                color: var(--accent);
+                padding: 2px 7px;
+                border-radius: 5px;
+                font-size: 0.92em;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 16px 0 24px;
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                overflow: hidden;
+                font-size: 14px;
+            }
+            thead { background: var(--surface-2); }
+            th, td {
+                text-align: left;
+                padding: 12px 16px;
+                border-bottom: 1px solid var(--line);
+                color: var(--text-dim);
+                vertical-align: top;
+            }
+            th { color: var(--text); font-weight: 700; font-size: 13px; letter-spacing: 0.04em; }
+            tbody tr:last-child td { border-bottom: none; }
+            .skill-pill {
+                display: inline-block;
+                font-family: "JetBrains Mono", monospace;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 3px 10px;
+                border-radius: 6px;
+                background: rgba(56,211,159,0.12);
+                color: var(--success);
+                border: 1px solid rgba(56,211,159,0.25);
+            }
+            .group-badge {
+                display: inline-block;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                padding: 4px 10px;
+                border-radius: 6px;
+                text-transform: uppercase;
+                margin-bottom: 12px;
+            }
+            .group-badge.a { background: rgba(122,162,255,0.15); color: var(--accent); }
+            .group-badge.b { background: rgba(76,201,240,0.15); color: var(--gate); }
+            .group-badge.c { background: rgba(255,180,84,0.15); color: var(--warn); }
+            .group-badge.d { background: rgba(157,122,255,0.15); color: var(--accent-2); }
+
+            .callout {
+                background: rgba(122,162,255,0.08);
+                border-left: 4px solid var(--accent);
+                border-radius: 8px;
+                padding: 16px 20px;
+                margin: 18px 0 24px;
+                color: var(--text-dim);
+                font-size: 15px;
+            }
+            .callout.success { background: rgba(56,211,159,0.08); border-left-color: var(--success); }
+            .callout.warn { background: rgba(255,180,84,0.08); border-left-color: var(--warn); }
+            .callout.danger { background: rgba(255,107,138,0.08); border-left-color: var(--danger); }
+            .callout strong { color: var(--text); }
+
+            .step-list {
+                counter-reset: step;
+                list-style: none;
+                margin-left: 0;
+                padding-left: 0;
+            }
+            .step-list li {
+                counter-increment: step;
+                position: relative;
+                padding-left: 56px;
+                margin-bottom: 18px;
+                min-height: 36px;
+            }
+            .step-list li::before {
+                content: counter(step);
+                position: absolute;
+                left: 0; top: 0;
+                width: 36px; height: 36px;
+                background: var(--gradient-accent);
+                color: #fff;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 800;
+                font-size: 15px;
+            }
+
+            footer {
+                background: var(--bg-1);
+                border-top: 1px solid var(--line);
+                padding: 60px var(--doc-pad-x) 40px;
+                text-align: center;
+                color: var(--text-muted);
+                font-size: 13px;
+            }
+            footer .footer-inner { max-width: var(--doc-max); margin: 0 auto; }
+            footer h3 { color: var(--text); margin-bottom: 12px; text-align: center; }
+
+            @media (max-width: 768px) {
+                :root { --doc-pad-x: 24px; }
+                section { padding: 60px var(--doc-pad-x); }
+                .hero { padding: 90px var(--doc-pad-x) 70px; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="progress-bar" id="progressBar"></div>
+
+        <nav class="topnav" aria-label="Sumário">
+            <a href="#contexto">Contexto</a>
+            <a href="#aproveitamos">O que aproveitamos</a>
+            <a href="#nao-absorvemos">O que não absorvemos</a>
+            <a href="#sugestoes">Sugestões</a>
+            <a href="#proximo-passo">Próximo passo</a>
+        </nav>
+
+        <header class="hero">
+            <div class="hero-inner">
+                <div class="eyebrow"><span class="dot"></span>data--copilot-guidelines × SpecKit Plugin</div>
+                <h1>
+                    Como o SpecKit <span class="highlight">aproveita</span><br />
+                    o data--copilot-guidelines
+                </h1>
+                <p class="hero-lead">
+                    Este documento detalha o que o plugin SpecKit integra a partir do repositório
+                    <code class="inline">data--copilot-guidelines</code>, o que permanece fora do plugin e a
+                    justificativa técnica de cada decisão. As escolhas decorrem de três premissas do plugin:
+                    cobertura multi-stack, geração derivada por Story e eficiência de contexto como guardrail.
+                </p>
+                <div class="hero-meta">
+                    <div class="meta-card">
+                        <div class="label">Aproveitados</div>
+                        <div class="value">~13 <small>contribuições</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Skills geradas</div>
+                        <div class="value">~13 <small>corp-*</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Modo de carga</div>
+                        <div class="value">On-demand</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Aplicabilidade</div>
+                        <div class="value">Multi-stack <small>+ 3 Java/Spring</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Premissa</div>
+                        <div class="value">Plugin <small>fonte da verdade</small></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============ CONTEXTO ============ -->
+        <section id="contexto">
+            <div class="section-inner">
+                <span class="section-tag">§ 1 · Contexto para a leitura</span>
+                <h2>Três premissas que orientam toda decisão</h2>
+                <p class="section-lead">
+                    Antes de listar o que entra e o que não entra, é útil alinhar três premissas estruturais do
+                    plugin SpecKit. Elas explicam por que determinadas regras do repositório corp não podem ser
+                    adotadas no namespace global, e por que a integração acontece via skills <code class="inline">corp-*</code>
+                    on-demand.
+                </p>
+
+                <div class="feature-grid">
+                    <div class="feature-card gate">
+                        <div class="tag">Premissa 1</div>
+                        <h4>Camada universal multi-stack</h4>
+                        <p>O plugin atende projetos em TypeScript, JavaScript, Python, C# e Java. Regras escritas como globais que pressupõem stack específico (Java + Spring + Gradle + AWS) <strong>não podem viver no namespace global</strong> sem quebrar projetos de outras linguagens.</p>
+                    </div>
+                    <div class="feature-card gate">
+                        <div class="tag">Premissa 2</div>
+                        <h4>Geração derivada por Story</h4>
+                        <p>Artefatos do plugin são gerados <strong>por workspace</strong> (em <code class="inline">&lt;workspace&gt;/.github/</code>), a partir da Story ativa e da stack detectada. Não há diretório global escrito pelo plugin no perfil do usuário. Diferença de escopo <strong>estrutural</strong>.</p>
+                    </div>
+                    <div class="feature-card gate">
+                        <div class="tag">Premissa 3</div>
+                        <h4>Eficiência de contexto é guardrail</h4>
+                        <p>Cada token consumido pelo prompt-system é um token a menos para o código do usuário. Por isso o plugin mantém o <code class="inline">copilot-instructions.md</code> always-on em ~400 tokens e organiza skills em três camadas (baseline + stack + context).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ O QUE APROVEITAMOS ============ -->
+        <section id="aproveitamos" class="alt">
+            <div class="section-inner">
+                <span class="section-tag success">§ 2 · O que aproveitamos</span>
+                <h2>Treze contribuições, em sua maioria multi-stack</h2>
+                <p class="section-lead">
+                    Os itens abaixo são integrados como skills <code class="inline">corp-*</code> carregadas
+                    on-demand. O <code class="inline">applyTo</code> de cada skill é definido pelo
+                    <strong>escopo técnico real</strong> do conteúdo: apenas três arquivos são intrinsecamente
+                    Spring e ficam restritos a Java; os demais valem para qualquer projeto que use a tecnologia
+                    correspondente (AWS, MongoDB, AMQP/RabbitMQ, Kafka, HTTP, padrões de naming/data access)
+                    independente da linguagem.
+                </p>
+
+                <h3>Itens Java/Spring específicos (3) — <code class="inline">applyTo: "**/*.java"</code></h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:30%;">Item corp</th>
+                            <th style="width:25%;">Skill resultante</th>
+                            <th>Justificativa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="inline">spring-scheduled-tasks.instructions.md</code></td>
+                            <td><span class="skill-pill">corp-spring-scheduled</span></td>
+                            <td>Anotações <code class="inline">@Scheduled</code> e padrão ShedLock para cluster são intrinsecamente Spring; sem equivalente fora do framework.</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">spring-config-beans.instructions.md</code></td>
+                            <td><span class="skill-pill">corp-spring-config</span></td>
+                            <td><code class="inline">@Configuration</code>, <code class="inline">@Bean</code> e <code class="inline">@ConfigurationProperties</code> são API Spring; sem equivalente conceitual em outras stacks.</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">spring-rest-controllers.instructions.md</code></td>
+                            <td><span class="skill-pill">corp-spring-rest</span></td>
+                            <td><code class="inline">@RestController</code>, <code class="inline">ResponseEntity</code>, <code class="inline">@ControllerAdvice</code> e versionamento <code class="inline">/api/v{n}</code> em Spring MVC.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Itens multi-stack — completos (5)</h3>
+                <p style="color: var(--text-2); font-size: 0.95rem; margin: -8px 0 16px 0;">
+                    <code class="inline">applyTo</code> definido pela tecnologia (AWS, Mongo, AMQP) e não pela
+                    linguagem. Trechos Java/Spring presentes no conteúdo original permanecem como um dos exemplos
+                    de implementação dentro da skill.
+                </p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:28%;">Item corp</th>
+                            <th style="width:22%;">Skill resultante</th>
+                            <th style="width:22%;">Aplicabilidade</th>
+                            <th>Justificativa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="inline">aws-secrets-retrieval.instructions.md</code></td>
+                            <td><span class="skill-pill">corp-aws-secrets</span></td>
+                            <td>Qualquer consumidor do AWS Secrets Manager (Node, Python, .NET, Java)</td>
+                            <td>Convenções de cache, deserialização tipada, retry e tratamento de erro são SDK-agnósticas. Plugin não cobre Secrets Manager em nenhuma stack.</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">aws-integration.instructions.md</code></td>
+                            <td><span class="skill-pill">corp-aws-credentials</span></td>
+                            <td>Qualquer runtime AWS com IRSA/IAM Roles</td>
+                            <td>Estratégia de credential provider chain (WebIdentityTokenFile + Default) vale para todo SDK AWS, independente de linguagem.</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">mongo-connection.instructions.md</code></td>
+                            <td><span class="skill-pill">corp-mongo</span></td>
+                            <td>Qualquer projeto MongoDB (driver nativo, Mongoose, Motor, Mongo.Driver, Spring Data)</td>
+                            <td>Pool, índices, modelagem de documento e tratamento de exceções são conceituais. Plugin não cobre MongoDB em nenhuma stack.</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">rabbitmq-listener-resilience.instructions.md</code></td>
+                            <td><span class="skill-pill">corp-rabbitmq-listener</span></td>
+                            <td>Qualquer consumidor AMQP (<code class="inline">amqplib</code>, <code class="inline">pika</code>, <code class="inline">RabbitMQ.Client</code>, Spring AMQP)</td>
+                            <td>DLX, retry/backoff, requeue e idempotência são padrões AMQP universais. Plugin cobre Kafka, não RabbitMQ.</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">rabbitmq-producer-consumer-config.instructions.md</code></td>
+                            <td><span class="skill-pill">corp-rabbitmq-config</span></td>
+                            <td>Idem acima</td>
+                            <td>Declaração de exchanges/queues/bindings, publisher confirms, mandatory flag e prefetch são conceitos do protocolo AMQP.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Itens multi-stack — extração de trechos específicos (4 parciais)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:28%;">Item corp</th>
+                            <th style="width:22%;">Skill resultante</th>
+                            <th style="width:22%;">Aplicabilidade</th>
+                            <th>O que será extraído</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="inline">usecase-service-class.instructions.md</code></td>
+                            <td><span class="skill-pill">corp-naming-conventions</span></td>
+                            <td>Multi-stack (qualquer linguagem OO)</td>
+                            <td>Convenções de nomenclatura (<code class="inline">*UseCase</code>, <code class="inline">*Gateway</code>) e estrutura de pacotes corporativa. Princípios universais (SRP, no framework leakage) já vivem em <code class="inline">ArchitectureGenerator</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">database-integration.instructions.md</code></td>
+                            <td><span class="skill-pill">corp-data-access</span></td>
+                            <td>Multi-stack (qualquer ORM/data access)</td>
+                            <td>Auditoria (created/updated), prevenção de N+1, fetch graphs e optimistic locking são conceitos universais. <code class="inline">@EntityGraph</code> permanece como exemplo Spring Data dentro da skill.</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">general-integration</code> + <code class="inline">http-integration</code></td>
+                            <td><span class="skill-pill">corp-http-integration</span></td>
+                            <td>Multi-stack (qualquer cliente HTTP)</td>
+                            <td>Gateway pattern naming, Resilience4j/Polly/equivalentes (retry + circuit breaker), timeouts e propagação de correlation-id. Complementam <code class="inline">BffPatternGenerator</code>.</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">kafka-listener-resilience</code> + <code class="inline">kafka-producer-consumer-config</code></td>
+                            <td><span class="skill-pill">corp-kafka</span> (multi-stack) <strong>+</strong> <span class="skill-pill">corp-kafka-spring</span> (Java)</td>
+                            <td>Conceitos: multi-stack · Spring Kafka: Java-only</td>
+                            <td>Conceitos Kafka (at-least-once, idempotência, DLT, semântica de offset) vão para <code class="inline">corp-kafka</code> multi-stack. Apenas <code class="inline">@RetryableTopic</code>, container factory e SASL JAAS programático vão para <code class="inline">corp-kafka-spring</code>.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="callout success">
+                    <strong>Resumo numérico:</strong> 3 itens Java-only (Spring) + 5 itens multi-stack completos +
+                    trechos de 4 itens parciais (um deles produz duas skills) →
+                    <strong>~13 contribuições efetivas</strong>. A maior parte é reaproveitável fora de Java,
+                    estendendo o alcance do conteúdo do repositório para projetos em outras linguagens.
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ O QUE NÃO ABSORVEMOS ============ -->
+        <section id="nao-absorvemos">
+            <div class="section-inner">
+                <span class="section-tag warn">§ 3 · O que não absorvemos</span>
+                <h2>Quatro grupos de incompatibilidade arquitetural</h2>
+                <p class="section-lead">
+                    Os itens abaixo ficam fora do plugin por motivos de escopo, sobreposição com guardrails
+                    universais ou geometria de carga de contexto. Cada grupo recebe um tratamento explícito.
+                </p>
+
+                <!-- Grupo A -->
+                <div class="feature-card warn" style="margin-bottom: 28px;">
+                    <span class="group-badge a">Grupo A</span>
+                    <h4>Conflitam com a natureza multi-stack do plugin</h4>
+                    <p>Regras escritas como globais no <code class="inline">copilot-instructions.md</code> do corp pressupõem Java/Spring/Gradle/<code class="inline">com.grupopan</code>/Docker Compose. São válidas para projetos corporativos Java, mas <strong>inaplicáveis fora desse contexto</strong>. O plugin atende TS/JS/Python/C#/Java; aplicar essas regras como globais quebraria projetos das demais linguagens.</p>
+                    <p><strong>Tratamento:</strong> conteúdo movido para skill <code class="inline">corp-java-spring</code> com <code class="inline">applyTo: "**/*.java"</code>. As regras continuam efetivas para projetos Java, apenas não são globais.</p>
+                </div>
+
+                <!-- Grupo B -->
+                <div class="feature-card gate" style="margin-bottom: 28px;">
+                    <span class="group-badge b">Grupo B</span>
+                    <h4>Escopo de instalação diferente</h4>
+                    <p>O instalador Gradle entrega arquivos em <code class="inline">~/.copilot/instructions/</code> e <code class="inline">~/.config/github-copilot/intellij/global-copilot-instructions.md</code> (global do usuário). O plugin opera em <code class="inline">&lt;workspace&gt;/.github/</code> (chat participant do VS Code, por workspace).</p>
+                    <p><strong>Tratamento:</strong> são <strong>canais diferentes que continuam coexistindo</strong> no ambiente do desenvolvedor. Não há colisão de funcionalidade, apenas escopos distintos.</p>
+                </div>
+
+                <!-- Grupo C -->
+                <div class="feature-card warn" style="margin-bottom: 28px;">
+                    <span class="group-badge c">Grupo C</span>
+                    <h4>Sobreposição com guardrails universais do plugin</h4>
+                    <p>Estes itens existem em ambos os lados; o plugin mantém a versão própria por motivos de cobertura multi-stack e rigor adicional. Manter os dois resultaria em conteúdo duplicado carregado pelo Copilot.</p>
+                    <table style="margin-top: 16px;">
+                        <thead>
+                            <tr>
+                                <th style="width:35%;">Item corp</th>
+                                <th>Motivo de manter a versão do plugin</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Seções "Plan Mode", "Verification Before Done", "Demand Elegance", "Core Principles"</td>
+                                <td>Equivalentes em <code class="inline">AgentIntegrityGenerator</code>, <code class="inline">TestingStandardsGenerator</code>, <code class="inline">ArchitectureGenerator</code> com gate inegociável e CRAP score formalizado.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">java.instructions.md</code></td>
+                                <td><code class="inline">JavaGenerator</code> cobre Java 17/21 (virtual threads, sealed, pattern matching, <code class="inline">SequencedCollection</code>, <code class="inline">StructuredTaskScope</code>, text blocks). É superset técnico do conteúdo corp.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">metrics-observability</code> com <strong><code class="inline">PanLogger</code></strong></td>
+                                <td><code class="inline">ObservabilityGenerator</code> é agnóstico (OTel, <code class="inline">traceparent</code> W3C). <code class="inline">PanLogger</code> é mantido como <strong>complemento</strong> em <code class="inline">corp-java-spring</code>, não como substituto do baseline.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">global-git-commit-instructions</code> com gitmoji</td>
+                                <td><code class="inline">GitWorkflowGenerator</code> usa Conventional Commits puros, compatíveis com <code class="inline">commitlint</code> padrão e hooks de CI. Localização PT-BR é preservada.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">feature-creation</code> SKILL (workflow 8 passos)</td>
+                                <td>Equivalente aos gates 1→2→3→4 do plugin, orquestrados pelo <code class="inline">StoryUnifiedAgentGenerator</code>. Manter ambos cria dois fluxos competindo.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">refinador-tarefas</code> agent</td>
+                                <td>Coberto pelo custom agent <code class="inline">engenheiro-senior</code> e <code class="inline">StoryImplementadorAgentGenerator</code>. Além disso, o agente corp declara tools de escrita amplas (<code class="inline">apply_patch</code>, <code class="inline">run_in_terminal</code>) — o plugin restringe ferramentas por modo e por gate como contrato de segurança.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">usecase-service-class</code> (princípios universais)</td>
+                                <td>Single responsibility, no framework leakage, constructor injection, custom exceptions já cobertos pelo <code class="inline">ArchitectureGenerator</code>. Convenções locais (naming, packages) são aproveitadas — ver §2.</td>
+                            </tr>
+                            <tr>
+                                <td><code class="inline">usecase-service-class</code>: "try/catch local em todo endpoint"</td>
+                                <td>Conflita com <code class="inline">@ControllerAdvice</code> global, padrão recomendado pelo <code class="inline">SpringBootGenerator</code>. Decisão técnica: manter <code class="inline">@ControllerAdvice</code> e relegar try/catch local a casos justificados.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Grupo D -->
+                <div class="feature-card danger" style="margin-bottom: 12px;">
+                    <span class="group-badge d">Grupo D</span>
+                    <h4>Aspectos do build Gradle que multiplicam contexto</h4>
+                    <p><strong>Wrapping triplo:</strong> cada <code class="inline">*.instructions.md</code> vira simultaneamente instructions + SKILL + prompt. O plugin adota apenas o formato adequado por arquivo (SKILL on-demand para conteúdo de stack; instructions para regras de path). Resultado: ~3× menos tokens carregados.</p>
+                    <p><strong>Múltiplas skills always-on:</strong> instructions com <code class="inline">description</code> ampla viram skills ativas por keyword simultaneamente. O plugin mantém apenas 3 always-on (<code class="inline">speckit-baseline</code>, <code class="inline">speckit-stack</code>, <code class="inline">speckit-context-STORY-&lt;id&gt;</code>); demais são on-demand.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ SUGESTÕES ============ -->
+        <section id="sugestoes" class="alt">
+            <div class="section-inner">
+                <span class="section-tag">§ 4 · Sugestões para o repositório</span>
+                <h2>Pontos que tornariam o repositório mais útil em qualquer cenário</h2>
+                <p class="section-lead">
+                    Observações independentes da integração com o plugin. Tornariam o repositório mais robusto
+                    para qualquer consumidor — humano ou automatizado.
+                </p>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="tag">S1 · Duplicação</div>
+                        <h4>Consolidar princípios duplicados</h4>
+                        <p><code class="inline">copilot-instructions.md</code> e <code class="inline">java.instructions.md</code> repetem literalmente "Plan Mode", "Self-Improvement Loop", "Verification Before Done", "Demand Elegance", "Core Principles". Consolidar em um único arquivo evita inconsistência futura.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">S2 · Build</div>
+                        <h4>Tornar wrapping triplo opcional</h4>
+                        <p>Permitir que cada <code class="inline">*.instructions.md</code> declare no frontmatter quais formatos quer gerar (apenas SKILL, apenas instruction, ou ambos). Reduz 3× o contexto carregado em consumidores que aproveitam o repo.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">S3 · Acoplamento</div>
+                        <h4>Desacoplar feature-creation SKILL</h4>
+                        <p>O arquivo incorpora trechos copiados do <code class="inline">copilot-instructions.md</code> (seção "ask for inputs"). Desacoplar evita quebras silenciosas quando o copilot-instructions for alterado.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">S4 · Visibilidade</div>
+                        <h4>Promover "Related Customizations"</h4>
+                        <p>No <code class="inline">usecase-service-class</code>, os 7 bullets sob "Related Customizations to Consider" são <strong>regras importantes disfarçadas</strong> (custom exceptions, mapeamento HTTP, logging, wrapping de gateway). Promover a regras explícitas aumenta a chance de o Copilot honrá-las.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">S5 · Frontmatter</div>
+                        <h4>Padronizar frontmatter</h4>
+                        <p><code class="inline">feature-creation</code> está sem <code class="inline">applyTo</code>. <code class="inline">refinador-tarefas</code> declara <code class="inline">argument-hint</code> com texto de template não preenchido. Pequenas correções que melhoram o roteamento do Copilot.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">S6 · Coesão</div>
+                        <h4>Separar commit e code review</h4>
+                        <p><code class="inline">global-git-commit-instructions.md</code> mistura convenção de commit (linhas 1-46) com prompt de code review (linhas 47-61). São duas responsabilidades; separar em dois arquivos facilita a manutenção.</p>
+                    </div>
+                </div>
+
+                <div class="callout">
+                    Estas seis sugestões correspondem às incoerências internas I1–I7 mapeadas na análise técnica
+                    detalhada e são independentes da integração com o plugin SpecKit.
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ PRÓXIMO PASSO ============ -->
+        <section id="proximo-passo">
+            <div class="section-inner">
+                <span class="section-tag">§ 5 · Próximo passo técnico</span>
+                <h2>Alinhar o schema do manifesto de distribuição</h2>
+                <p class="section-lead">
+                    A integração entre o instalador Gradle do repositório e o plugin SpecKit precisa de um
+                    contrato técnico explícito. Esse contrato é o <strong>manifesto de bundle</strong> entregue
+                    pelo instalador e consumido pelo plugin.
+                </p>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="tag">Campo 1</div>
+                        <h4><code class="inline">bundleVersion</code></h4>
+                        <p>Versão semântica do conjunto entregue. Habilita a comparação no plugin e a decisão de atualizar ou não.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">Campo 2</div>
+                        <h4>Lista de arquivos por skill</h4>
+                        <p>Caminho relativo, skill de destino (<code class="inline">corp-*</code>) e <code class="inline">applyTo</code> resultante. Define o que entra em cada namespace.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">Campo 3</div>
+                        <h4><code class="inline">contentHash</code> SHA-256</h4>
+                        <p>Hash por arquivo para detecção de drift e validação de integridade no momento do install.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">Campo 4 (opcional)</div>
+                        <h4>Assinatura do manifesto</h4>
+                        <p>Garante autenticidade da origem corporativa. Recomendado para o canal de distribuição em produção.</p>
+                    </div>
+                </div>
+
+                <div class="callout">
+                    Definido o schema do manifesto, a integração passa a operar de forma reproduzível: o plugin
+                    consegue verificar versão, validar integridade e exibir ao usuário o status do bundle
+                    <code class="inline">corp-*</code> em uso.
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <div class="footer-inner">
+                <h3>Sumário de aproveitamento · SpecKit Plugin × data--copilot-guidelines</h3>
+                <p>
+                    Repositório avaliado: <code class="inline">data--copilot-guidelines</code> ·
+                    Plataforma de destino: <code class="inline">My-SpecKit-VSCode-Plugin</code>.
+                </p>
+            </div>
+        </footer>
+
+        <script>
+            const progressBar = document.getElementById("progressBar");
+            window.addEventListener("scroll", () => {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                const scrolled = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+                progressBar.style.width = scrolled + "%";
+            });
+        </script>
+    </body>
+</html>

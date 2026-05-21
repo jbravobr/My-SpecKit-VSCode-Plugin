@@ -1,0 +1,975 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Análise · data--copilot-guidelines vs SpecKit Plugin</title>
+        <meta
+            name="description"
+            content="Inventário técnico de conflitos, sobreposições, incoerências e itens complementares entre o repositório corporativo data--copilot-guidelines e os guardrails do plugin SpecKit."
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                --bg-0: #0b1020;
+                --bg-1: #11172b;
+                --bg-2: #161e36;
+                --surface: #1c2541;
+                --surface-2: #243057;
+                --line: #2a3760;
+                --text: #e8ecf6;
+                --text-dim: #b0b9d4;
+                --text-muted: #7c87a9;
+                --accent: #7aa2ff;
+                --accent-2: #9d7aff;
+                --user: #58e1c2;
+                --participant: #ffb454;
+                --llm: #c98bff;
+                --success: #38d39f;
+                --warn: #ffb454;
+                --danger: #ff6b8a;
+                --gate: #4cc9f0;
+                --gradient-hero: linear-gradient(135deg, #0b1020 0%, #1a1d4d 50%, #2a1d5d 100%);
+                --gradient-accent: linear-gradient(135deg, #7aa2ff 0%, #9d7aff 100%);
+                --gradient-success: linear-gradient(135deg, #38d39f 0%, #4cc9f0 100%);
+                --gradient-danger: linear-gradient(135deg, #ff6b8a 0%, #ffb454 100%);
+                --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.45);
+                --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+                --doc-max: 1480px;
+                --doc-pad-x: 80px;
+            }
+
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            html { scroll-behavior: smooth; }
+            body {
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                background: var(--bg-0);
+                color: var(--text);
+                line-height: 1.65;
+                -webkit-font-smoothing: antialiased;
+                overflow-x: hidden;
+            }
+            code, pre, .mono { font-family: "JetBrains Mono", "Consolas", monospace; }
+
+            .progress-bar {
+                position: fixed;
+                top: 0; left: 0;
+                height: 3px;
+                width: 0%;
+                background: var(--gradient-accent);
+                z-index: 1000;
+            }
+
+            .topnav {
+                position: fixed;
+                top: 14px; right: 18px;
+                z-index: 999;
+                background: rgba(17,23,43,0.85);
+                backdrop-filter: blur(12px);
+                border: 1px solid var(--line);
+                border-radius: 100px;
+                padding: 8px 14px;
+                display: flex; gap: 4px;
+                font-size: 12px; font-weight: 600;
+            }
+            .topnav a {
+                color: var(--text-dim);
+                text-decoration: none;
+                padding: 6px 12px;
+                border-radius: 100px;
+            }
+            .topnav a:hover { color: var(--text); background: rgba(122,162,255,0.12); }
+            @media (max-width: 1100px) { .topnav { display: none; } }
+
+            .hero {
+                background: var(--gradient-hero);
+                padding: 140px var(--doc-pad-x) 110px;
+                position: relative;
+                overflow: hidden;
+                border-bottom: 1px solid var(--line);
+            }
+            .hero::before {
+                content: ""; position: absolute;
+                top: -50%; left: -10%;
+                width: 60%; height: 200%;
+                background: radial-gradient(circle, rgba(157,122,255,0.18) 0%, transparent 70%);
+                pointer-events: none;
+            }
+            .hero::after {
+                content: ""; position: absolute;
+                bottom: -50%; right: -10%;
+                width: 60%; height: 200%;
+                background: radial-gradient(circle, rgba(122,162,255,0.15) 0%, transparent 70%);
+                pointer-events: none;
+            }
+            .hero-inner { max-width: var(--doc-max); margin: 0 auto; position: relative; z-index: 1; }
+            .eyebrow {
+                display: inline-flex; align-items: center; gap: 10px;
+                padding: 8px 18px;
+                background: rgba(122,162,255,0.12);
+                border: 1px solid rgba(122,162,255,0.35);
+                border-radius: 100px;
+                font-size: 13px; font-weight: 600;
+                color: var(--accent);
+                letter-spacing: 0.08em; text-transform: uppercase;
+                margin-bottom: 28px;
+            }
+            .eyebrow .dot {
+                width: 8px; height: 8px;
+                background: var(--success);
+                border-radius: 50%;
+                box-shadow: 0 0 12px var(--success);
+            }
+            .hero h1 {
+                font-size: clamp(38px, 5.8vw, 68px);
+                font-weight: 800; line-height: 1.06;
+                letter-spacing: -0.02em;
+                background: linear-gradient(135deg, #ffffff 0%, #b0b9d4 100%);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 24px;
+            }
+            .hero h1 .highlight {
+                background: var(--gradient-accent);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .hero h1 .highlight-danger {
+                background: var(--gradient-danger);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .hero-lead {
+                font-size: clamp(17px, 1.6vw, 21px);
+                color: var(--text-dim);
+                margin-bottom: 48px; font-weight: 400;
+                text-align: justify; hyphens: auto; max-width: 1100px;
+            }
+            .hero-meta {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 16px;
+            }
+            .meta-card {
+                background: rgba(28,37,65,0.6);
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: 18px 20px;
+                backdrop-filter: blur(8px);
+            }
+            .meta-card .label {
+                font-size: 11px; letter-spacing: 0.12em;
+                text-transform: uppercase; color: var(--text-muted);
+                font-weight: 600; margin-bottom: 8px;
+            }
+            .meta-card .value { font-size: 22px; font-weight: 700; color: var(--text); }
+            .meta-card .value small { font-size: 13px; color: var(--text-dim); font-weight: 500; margin-left: 4px; }
+
+            section { padding: 100px var(--doc-pad-x); position: relative; }
+            .section-inner { max-width: var(--doc-max); margin: 0 auto; }
+            section h1, section h2, section h3, section h4, section p, section li, section .section-lead {
+                text-align: justify;
+                text-justify: inter-word;
+                hyphens: auto;
+                -webkit-hyphens: auto;
+            }
+            section.alt { background: var(--bg-1); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+            .section-tag {
+                display: inline-block; font-size: 12px; font-weight: 700;
+                letter-spacing: 0.18em; text-transform: uppercase;
+                color: var(--accent); margin-bottom: 16px;
+                text-align: left;
+            }
+            .section-tag.danger { color: var(--danger); }
+            .section-tag.warn { color: var(--warn); }
+            .section-tag.success { color: var(--success); }
+            h2 {
+                font-size: clamp(28px, 3.5vw, 44px); font-weight: 800;
+                line-height: 1.15; letter-spacing: -0.015em;
+                margin-bottom: 18px; color: var(--text);
+            }
+            h3 { font-size: 22px; font-weight: 700; margin: 28px 0 14px; color: var(--text); }
+            h4 { font-size: 17px; font-weight: 700; margin: 22px 0 10px; color: var(--accent); }
+            .section-lead { font-size: 18px; color: var(--text-dim); margin-bottom: 48px; max-width: 1100px; }
+            p { margin-bottom: 14px; color: var(--text-dim); }
+            ul, ol { margin: 12px 0 18px 22px; color: var(--text-dim); }
+            li { margin-bottom: 6px; }
+            strong { color: var(--text); font-weight: 600; }
+
+            .metrics {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 20px;
+                margin-bottom: 16px;
+            }
+            .metric {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 28px 26px;
+                position: relative; overflow: hidden;
+            }
+            .metric::before {
+                content: ""; position: absolute;
+                top: 0; left: 0; width: 4px; height: 100%;
+                background: var(--gradient-accent);
+            }
+            .metric.danger::before { background: var(--gradient-danger); }
+            .metric.success::before { background: var(--gradient-success); }
+            .metric .icon { font-size: 28px; margin-bottom: 14px; display: block; }
+            .metric .number {
+                font-size: 38px; font-weight: 800; line-height: 1;
+                background: var(--gradient-accent);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 8px;
+            }
+            .metric.danger .number { background: var(--gradient-danger); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+            .metric.success .number { background: var(--gradient-success); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+            .metric .label { font-size: 14px; color: var(--text-dim); font-weight: 500; }
+
+            .feature-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+                gap: 22px;
+                margin: 12px 0 8px;
+            }
+            .feature-card {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 26px;
+                border-left: 5px solid var(--accent);
+            }
+            .feature-card.success { border-left-color: var(--success); }
+            .feature-card.warn { border-left-color: var(--warn); }
+            .feature-card.danger { border-left-color: var(--danger); }
+            .feature-card.gate { border-left-color: var(--gate); }
+            .feature-card h4 { color: var(--text); margin-top: 0; margin-bottom: 10px; font-size: 18px; }
+            .feature-card .tag {
+                display: inline-block; font-size: 10px;
+                letter-spacing: 0.14em; text-transform: uppercase;
+                color: var(--accent); font-weight: 700; margin-bottom: 10px;
+            }
+            .feature-card.success .tag { color: var(--success); }
+            .feature-card.warn .tag { color: var(--warn); }
+            .feature-card.danger .tag { color: var(--danger); }
+            .feature-card p { font-size: 14px; margin-bottom: 8px; }
+
+            pre.code, .code-block {
+                background: #0a0f1f;
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                padding: 18px 20px;
+                margin: 14px 0 22px;
+                overflow-x: auto;
+                font-size: 13px;
+                line-height: 1.6;
+                color: #d4dbef;
+            }
+            code.inline {
+                background: rgba(122,162,255,0.12);
+                color: var(--accent);
+                padding: 2px 7px;
+                border-radius: 5px;
+                font-size: 0.92em;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 16px 0 24px;
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                overflow: hidden;
+                font-size: 14px;
+            }
+            thead { background: var(--surface-2); }
+            th, td {
+                text-align: left;
+                padding: 12px 16px;
+                border-bottom: 1px solid var(--line);
+                color: var(--text-dim);
+                vertical-align: top;
+            }
+            th { color: var(--text); font-weight: 700; font-size: 13px; letter-spacing: 0.04em; }
+            tbody tr:last-child td { border-bottom: none; }
+            td .id-cell {
+                display: inline-block;
+                font-family: "JetBrains Mono", monospace;
+                font-weight: 700;
+                padding: 2px 8px;
+                border-radius: 6px;
+                font-size: 12px;
+            }
+            td .id-cell.c { background: rgba(255,107,138,0.15); color: var(--danger); }
+            td .id-cell.s { background: rgba(255,180,84,0.15); color: var(--warn); }
+            td .id-cell.i { background: rgba(157,122,255,0.15); color: var(--accent-2); }
+            td .id-cell.a { background: rgba(56,211,159,0.15); color: var(--success); }
+            .verdict {
+                font-weight: 700;
+                color: var(--text);
+            }
+            .verdict.reject { color: var(--danger); }
+            .verdict.demote { color: var(--warn); }
+            .verdict.accept { color: var(--success); }
+            .verdict.partial { color: var(--accent); }
+
+            .callout {
+                background: rgba(122,162,255,0.08);
+                border-left: 4px solid var(--accent);
+                border-radius: 8px;
+                padding: 16px 20px;
+                margin: 18px 0 24px;
+                color: var(--text-dim);
+                font-size: 15px;
+            }
+            .callout.success { background: rgba(56,211,159,0.08); border-left-color: var(--success); }
+            .callout.warn { background: rgba(255,180,84,0.08); border-left-color: var(--warn); }
+            .callout.danger { background: rgba(255,107,138,0.08); border-left-color: var(--danger); }
+            .callout strong { color: var(--text); }
+
+            footer {
+                background: var(--bg-1);
+                border-top: 1px solid var(--line);
+                padding: 60px var(--doc-pad-x) 40px;
+                text-align: center;
+                color: var(--text-muted);
+                font-size: 13px;
+            }
+            footer .footer-inner { max-width: var(--doc-max); margin: 0 auto; }
+            footer h3 { color: var(--text); margin-bottom: 12px; text-align: center; }
+
+            @media (max-width: 768px) {
+                :root { --doc-pad-x: 24px; }
+                section { padding: 60px var(--doc-pad-x); }
+                .hero { padding: 90px var(--doc-pad-x) 70px; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="progress-bar" id="progressBar"></div>
+
+        <nav class="topnav" aria-label="Sumário">
+            <a href="#sumario">Sumário</a>
+            <a href="#fontes">Fontes</a>
+            <a href="#conflitos">Conflitos</a>
+            <a href="#sobreposicoes">Sobreposições</a>
+            <a href="#incoerencias">Incoerências</a>
+            <a href="#complementares">Complementares</a>
+            <a href="#tokens">Tokens</a>
+            <a href="#matriz">Matriz</a>
+            <a href="#principios">Princípios</a>
+        </nav>
+
+        <header class="hero">
+            <div class="hero-inner">
+                <div class="eyebrow"><span class="dot"></span>Análise técnica · Plugin = fonte da verdade</div>
+                <h1>
+                    Inventário <span class="highlight">data--copilot-guidelines</span><br />
+                    vs <span class="highlight-danger">SpecKit Plugin</span>
+                </h1>
+                <p class="hero-lead">
+                    Auditoria item-a-item dos artefatos do repositório corporativo
+                    <code class="inline">data--copilot-guidelines</code> em relação aos guardrails, gates e personas
+                    do plugin SpecKit. A premissa é inegociável: o plugin é a fonte da verdade, princípios universais
+                    vivem apenas em <code class="inline">speckit-baseline</code>, e eficiência de tokens é critério de
+                    aceite — duplicação textual é desperdício. Esta análise classifica cada artefato em
+                    <strong>conflito</strong>, <strong>sobreposição</strong>, <strong>incoerência interna</strong> ou
+                    <strong>complemento aceitável</strong>, e quantifica o impacto de uma adoção crua do build
+                    corporativo no contexto carregado pelo Copilot.
+                </p>
+                <div class="hero-meta">
+                    <div class="meta-card">
+                        <div class="label">Artefatos corp</div>
+                        <div class="value">19 <small>itens</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Aproveitáveis</div>
+                        <div class="value">~8 <small>parciais</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Rejeitáveis</div>
+                        <div class="value">11 <small>conflitos+overlap</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Risco tokens</div>
+                        <div class="value">5–8× <small>inflação</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Premissa</div>
+                        <div class="value">Plugin <small>verdade</small></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============ SUMÁRIO ============ -->
+        <section id="sumario">
+            <div class="section-inner">
+                <span class="section-tag">Sumário executivo</span>
+                <h2>Quatro categorias, uma conclusão</h2>
+                <p class="section-lead">
+                    Dos 17 arquivos de instructions, 1 skill e 1 agent presentes no repositório corporativo, somente
+                    ~8 itens — todos parciais — preenchem lacunas reais do plugin sem ferir guardrails. O restante
+                    deve ser rejeitado, rebaixado a complemento Java-only, ou refatorado pelo mantenedor do
+                    repo corp antes de qualquer integração. Mais grave: o build Gradle replica cada
+                    <code class="inline">*.instructions.md</code> em três formatos (instructions + SKILL + prompt),
+                    triplicando o conteúdo carregado pelo Copilot e duplicando princípios que o plugin já enuncia
+                    com mais rigor em <code class="inline">speckit-baseline</code>.
+                </p>
+
+                <div class="metrics">
+                    <div class="metric danger">
+                        <span class="icon">⚠️</span>
+                        <div class="number">9</div>
+                        <div class="label">conflitos diretos (C1–C9)</div>
+                    </div>
+                    <div class="metric">
+                        <span class="icon">🔁</span>
+                        <div class="number">9</div>
+                        <div class="label">sobreposições (S1–S9)</div>
+                    </div>
+                    <div class="metric">
+                        <span class="icon">🧩</span>
+                        <div class="number">7</div>
+                        <div class="label">incoerências internas (I1–I7)</div>
+                    </div>
+                    <div class="metric success">
+                        <span class="icon">✅</span>
+                        <div class="number">8</div>
+                        <div class="label">complementos aceitáveis (A1–A8)</div>
+                    </div>
+                    <div class="metric danger">
+                        <span class="icon">📈</span>
+                        <div class="number">3×</div>
+                        <div class="label">wrapping triplo do build corp</div>
+                    </div>
+                    <div class="metric">
+                        <span class="icon">🛡️</span>
+                        <div class="number">7</div>
+                        <div class="label">princípios invariantes propostos</div>
+                    </div>
+                </div>
+
+                <div class="callout danger">
+                    <strong>Risco crítico:</strong> instalar o build corp como-está faz com que ~17 skills corp fiquem
+                    disponíveis simultaneamente ao Copilot, todas duplicando princípios já presentes no
+                    <code class="inline">speckit-baseline</code>. Aumento estimado de contexto carregado:
+                    <strong>5 a 8 vezes</strong>.
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ FONTES ============ -->
+        <section id="fontes" class="alt">
+            <div class="section-inner">
+                <span class="section-tag">§ 0 · Fontes</span>
+                <h2>O que foi analisado</h2>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="tag">Repositório corporativo</div>
+                        <h4>data--copilot-guidelines</h4>
+                        <p><strong>Caminho:</strong> <code class="inline">C:\Users\800065405\Source Code\data--copilot-guidelines</code></p>
+                        <ul>
+                            <li><code class="inline">src/copilot-instructions.md</code> — global JetBrains</li>
+                            <li><code class="inline">src/instructions/*.instructions.md</code> — 17 arquivos, ~37 KB</li>
+                            <li><code class="inline">src/skills/feature-creation/SKILL.md</code></li>
+                            <li><code class="inline">src/agents/refinador-tarefas.agent.md</code></li>
+                            <li><strong>Build Gradle</strong>: cada <code class="inline">*.instructions.md</code> é replicado em 3 formatos (instructions + SKILL + prompt) → multiplicador de tokens</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card gate">
+                        <div class="tag">Plugin SpecKit (este repo)</div>
+                        <h4>My-SpecKit-VSCode-Plugin</h4>
+                        <ul>
+                            <li><code class="inline">src/generator/baseline/*</code> — 10 geradores always-on</li>
+                            <li><code class="inline">src/generator/{language,framework,infra,pattern}/*</code> — on-demand por stack</li>
+                            <li><code class="inline">src/generator/skill/*</code> compõem <code class="inline">speckit-baseline</code>, <code class="inline">speckit-stack</code>, <code class="inline">speckit-context-STORY-&lt;id&gt;</code></li>
+                            <li><code class="inline">src/generator/agent/*</code> — implementador, revisor, unified</li>
+                            <li><code class="inline">IndexGenerator.ts</code> emite <code class="inline">copilot-instructions.md</code> mínimo (~400 tokens)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ CONFLITOS ============ -->
+        <section id="conflitos">
+            <div class="section-inner">
+                <span class="section-tag danger">§ 1 · Conflitos diretos</span>
+                <h2>Corp contradiz guardrail do plugin</h2>
+                <p class="section-lead">
+                    Itens em que adotar a regra do repositório corporativo violaria diretamente um guardrail ativo
+                    do plugin. Nove ocorrências classificadas. Cada uma exige rejeição, rebaixamento de escopo ou
+                    isolamento em namespace Java-only.
+                </p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:60px;">#</th>
+                            <th style="width:30%;">Item corp</th>
+                            <th style="width:30%;">Guardrail do plugin que conflita</th>
+                            <th>Decisão</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="id-cell c">C1</span></td>
+                            <td><code class="inline">copilot-instructions.md</code> corp impõe "Always use the latest versions of dependencies"</td>
+                            <td><code class="inline">GitWorkflowGenerator</code> + práticas de versionamento (SemVer, lock files, supply chain)</td>
+                            <td><span class="verdict reject">Rejeitar</span> no namespace global; manter apenas em skill <code class="inline">corp-*</code> se aplicável a projeto Java específico</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell c">C2</span></td>
+                            <td>"Always write Java code as the Spring Boot application" + "Always use Gradle" + "<code class="inline">com.grupopan</code> group ID" + "Generate Docker Compose" no <code class="inline">copilot-instructions.md</code> global</td>
+                            <td>Plugin é multi-stack (TS/JS/Python/C#/Java) e detecta stack via Story</td>
+                            <td><span class="verdict reject">Rejeitar como global</span>. Mover para skill <code class="inline">corp-java-spring</code> com <code class="inline">applyTo: "**/*.java"</code></td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell c">C3</span></td>
+                            <td>Self-Improvement Loop com <code class="inline">tasks/lessons.md</code></td>
+                            <td>Plugin tem workflow story-driven com <code class="inline">.speckit/</code>; <code class="inline">tasks/lessons.md</code> não existe e contradiz a estrutura</td>
+                            <td><span class="verdict reject">Rejeitar</span>. Conceito incompatível</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell c">C4</span></td>
+                            <td><code class="inline">metrics-observability</code>: <code class="inline">PanLogger</code> como <strong>única</strong> forma aceita</td>
+                            <td><code class="inline">ObservabilityGenerator</code>: OTel, traceparent W3C, logs JSON estruturados agnósticos</td>
+                            <td><span class="verdict demote">Rebaixar a "complemento Java"</span>. Não pode ser global. Manter como adendo em skill <code class="inline">corp-java-spring</code> com aviso "padrão local Pan, não substitui baseline OTel"</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell c">C5</span></td>
+                            <td><code class="inline">global-git-commit-instructions</code> impõe <strong>gitmoji</strong> em PT-BR</td>
+                            <td><code class="inline">GitWorkflowGenerator</code>: Conventional Commits puro (<code class="inline">&lt;tipo&gt;(&lt;escopo&gt;): desc</code>); compatível com commitlint padrão</td>
+                            <td><span class="verdict reject">Rejeitar gitmoji obrigatório</span>. Quebra hooks/CI padrão. Manter apenas tradução PT-BR opcional</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell c">C6</span></td>
+                            <td><code class="inline">usecase-service-class</code>: "explicit local try/catch em todo endpoint"</td>
+                            <td><code class="inline">SpringBootGenerator</code>: <code class="inline">@ControllerAdvice</code> global</td>
+                            <td><span class="verdict partial">Conflito ativo</span> — escolher um padrão. Recomendação: manter <code class="inline">@ControllerAdvice</code> (plugin) e relegar try/catch local a casos excepcionais</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell c">C7</span></td>
+                            <td><code class="inline">copilot-instructions.md</code> corp instalado <strong>global</strong> em <code class="inline">~/.copilot/instructions/</code> e <code class="inline">~/.config/github-copilot/intellij/…</code></td>
+                            <td>Plugin opera em <code class="inline">&lt;workspace&gt;/.github/</code> (VS Code chat participant)</td>
+                            <td><span class="verdict reject">Escopo errado</span>. Global JetBrains não se aplica; instalação global em <code class="inline">~/.copilot/</code> colide silenciosamente com config do workspace</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell c">C8</span></td>
+                            <td>Frontmatter <code class="inline">applyTo</code> divergente: corp usa arrays Java-only; plugin usa <code class="inline">"**"</code> para baseline</td>
+                            <td>Misturar formatos quebra resolução do Copilot</td>
+                            <td><span class="verdict partial">Normalizar</span>: tudo do corp <strong>deve</strong> ter <code class="inline">applyTo</code> restrito à linguagem alvo</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell c">C9</span></td>
+                            <td>Agente <code class="inline">refinador-tarefas</code> declara tools de escrita (<code class="inline">apply_patch</code>, <code class="inline">insert_edit_into_file</code>, <code class="inline">create_file</code>, <code class="inline">run_in_terminal</code>)</td>
+                            <td>Plugin restringe ferramentas por modo (debugger/refactor/implementador/revisor) e por gate da story</td>
+                            <td><span class="verdict reject">Rejeitar como agente novo</span>. Conceito já existe via custom agent <code class="inline">engenheiro-senior</code> e <code class="inline">StoryImplementadorAgentGenerator</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="callout danger">
+                    <strong>Padrão observado:</strong> os conflitos não são acidentais — refletem uma premissa
+                    arquitetural diferente: o corp assume um stack único (Java/Spring/Gradle/AWS) e instala regras
+                    como globais. O plugin assume multi-stack, derivação por Story e separação rígida entre
+                    baseline universal e camadas específicas. Sem isolar o corp em namespace, qualquer regra global
+                    dele quebra o contrato.
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ SOBREPOSIÇÕES ============ -->
+        <section id="sobreposicoes" class="alt">
+            <div class="section-inner">
+                <span class="section-tag warn">§ 2 · Sobreposições</span>
+                <h2>Plugin já cobre, com mais profundidade</h2>
+                <p class="section-lead">
+                    Conteúdo do corp que o plugin já endereça, em geral com mais rigor, mais profundidade ou
+                    nomenclatura multi-stack. Manter ambos cria competição entre fontes de verdade e infla contexto.
+                </p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:60px;">#</th>
+                            <th style="width:30%;">Item corp</th>
+                            <th style="width:35%;">Cobertura equivalente no plugin</th>
+                            <th>Veredicto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="id-cell s">S1</span></td>
+                            <td>Seções "Plan Mode Default", "Verification Before Done", "Demand Elegance", "Core Principles" (duplicadas em <code class="inline">java.instructions.md</code>)</td>
+                            <td><code class="inline">AgentIntegrityGenerator</code>, <code class="inline">TestingStandardsGenerator</code>, <code class="inline">ArchitectureGenerator</code> (mais rigorosos: gate inegociável, CRAP score, testes comportamentais primários)</td>
+                            <td><span class="verdict reject">Descartar do corp</span>. Plugin é estritamente mais forte</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell s">S2</span></td>
+                            <td><code class="inline">java.instructions.md</code> (boas práticas básicas: constructor injection, Optional, Records)</td>
+                            <td><code class="inline">JavaGenerator</code> (Java 17/21: virtual threads, sealed, pattern matching, SequencedCollection, StructuredTaskScope, text blocks)</td>
+                            <td><span class="verdict reject">Descartar do corp</span>. Plugin tem ~3× mais profundidade</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell s">S3</span></td>
+                            <td><code class="inline">kafka-listener-resilience</code> + <code class="inline">kafka-producer-consumer-config</code></td>
+                            <td><code class="inline">KafkaGenerator</code> (idempotência, DLT com headers, semântica at-least-once, schema registry, retry com jitter)</td>
+                            <td><span class="verdict partial">Sobreposição alta</span>. Manter do corp apenas trechos Spring-specific (<code class="inline">@KafkaListener</code> config, <code class="inline">@RetryableTopic</code>) como complemento</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell s">S4</span></td>
+                            <td><code class="inline">feature-creation</code> SKILL (workflow TDD 8 passos)</td>
+                            <td>Gates do plugin (Gate 1→2→3→4) + <code class="inline">StoryUnifiedAgentGenerator</code> + <code class="inline">BaselineSkillGenerator</code> (TDD + CRAP)</td>
+                            <td><span class="verdict reject">Conceitualmente redundante</span>. Plugin já orquestra esse fluxo via gates; manter levaria a dois fluxos paralelos competindo</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell s">S5</span></td>
+                            <td>Agente <code class="inline">refinador-tarefas</code> (entrevista técnica, discovery)</td>
+                            <td>Custom agent <code class="inline">engenheiro-senior</code> + <code class="inline">StoryImplementadorAgentGenerator</code></td>
+                            <td><span class="verdict reject">Sobreposto</span>. Ver também C9</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell s">S6</span></td>
+                            <td><code class="inline">spring-rest-controllers</code> (REST conventions: <code class="inline">/api/v{n}</code>, ResponseEntity, DTOs)</td>
+                            <td><code class="inline">SpringBootGenerator</code> cobre camadas/JPA/configuração — <strong>não detalha REST controllers</strong></td>
+                            <td><span class="verdict accept">Lacuna útil do plugin</span>. Uma das poucas peças do corp que agrega valor sem conflitar</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell s">S7</span></td>
+                            <td><code class="inline">database-integration</code> (JPA, <code class="inline">@CreatedAt</code>/<code class="inline">@UpdatedAt</code>, N+1, optimistic locking)</td>
+                            <td><code class="inline">SpringBootGenerator</code> (JPA básico + paginação)</td>
+                            <td><span class="verdict partial">Sobreposição parcial</span>. Trechos sobre auditoria, N+1, <code class="inline">@EntityGraph</code> são complementares</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell s">S8</span></td>
+                            <td><code class="inline">general-integration</code> + <code class="inline">http-integration</code> (Gateway pattern + RestTemplate/WebClient/OpenFeign + Resilience4j)</td>
+                            <td><code class="inline">BffPatternGenerator</code>, <code class="inline">SpringBootGenerator</code> (parcial)</td>
+                            <td><span class="verdict partial">Sobreposição parcial</span>. Resilience4j + Gateway naming úteis como complemento</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell s">S9</span></td>
+                            <td><code class="inline">usecase-service-class</code> (single responsibility, no framework leakage, constructor injection, custom exceptions)</td>
+                            <td><code class="inline">ArchitectureGenerator</code> (hexagonal/clean) + <code class="inline">feature-creation</code> competindo</td>
+                            <td><span class="verdict partial">Princípios já cobertos</span>. Manter do corp apenas: nomenclatura <code class="inline">*UseCase</code>/<code class="inline">*Gateway</code> e estrutura de pacotes</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ============ INCOERÊNCIAS ============ -->
+        <section id="incoerencias">
+            <div class="section-inner">
+                <span class="section-tag">§ 3 · Incoerências internas</span>
+                <h2>Problemas do corp independentemente do plugin</h2>
+                <p class="section-lead">
+                    Inconsistências do próprio repositório corporativo, que existem mesmo sem considerar o plugin.
+                    Devem ser sinalizadas ao mantenedor antes de qualquer integração.
+                </p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:60px;">#</th>
+                            <th style="width:50%;">Problema</th>
+                            <th>Impacto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="id-cell i">I1</span></td>
+                            <td><code class="inline">copilot-instructions.md</code> e <code class="inline">java.instructions.md</code> duplicam literalmente "Plan Mode Default", "Self-Improvement Loop", "Verification Before Done", "Demand Elegance", "Core Principles"</td>
+                            <td>Mesmo conteúdo carregado 2× pelo Copilot → desperdício de contexto</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell i">I2</span></td>
+                            <td>Build Gradle gera <strong>3 formatos</strong> (<code class="inline">*.instructions.md</code> + <code class="inline">SKILL.md</code> + <code class="inline">*.prompt.md</code>) para <strong>cada</strong> arquivo de <code class="inline">instructions/</code></td>
+                            <td>Triplica tokens carregados; mesma regra aparece como instrução always-on, skill on-demand e prompt reutilizável simultaneamente</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell i">I3</span></td>
+                            <td>"Always use native language (e.g., Portuguese)" repetido em 3 lugares (copilot-instructions, java.instructions, feature-creation SKILL)</td>
+                            <td>Redundância pura</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell i">I4</span></td>
+                            <td><code class="inline">feature-creation</code> SKILL incorpora trechos do "ask for inputs" do copilot-instructions</td>
+                            <td>Acoplamento textual — manutenção quebra silenciosamente</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell i">I5</span></td>
+                            <td><code class="inline">usecase-service-class</code> lista "Related Customizations to Consider" com 7 bullets que são <strong>regras</strong> disfarçadas (custom exceptions, mapeamento HTTP, logging, wrapping de gateway)</td>
+                            <td>Regras importantes escondidas em seção "considerar" — Copilot pode ignorá-las</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell i">I6</span></td>
+                            <td>Frontmatter incompleto: <code class="inline">feature-creation</code> não tem <code class="inline">applyTo</code>; <code class="inline">refinador-tarefas</code> declara <code class="inline">argument-hint: "The inputs this agent expects, e.g., ..."</code> (template não preenchido)</td>
+                            <td>Frontmatter inconsistente reduz precisão de roteamento do Copilot</td>
+                        </tr>
+                        <tr>
+                            <td><span class="id-cell i">I7</span></td>
+                            <td><code class="inline">global-git-commit-instructions.md</code> mistura instruções de <strong>commit message</strong> com <strong>code review</strong> (linhas 47-61 são prompt de review)</td>
+                            <td>Arquivo com duas responsabilidades; difícil manter</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ============ COMPLEMENTARES ============ -->
+        <section id="complementares" class="alt">
+            <div class="section-inner">
+                <span class="section-tag success">§ 4 · Itens complementares</span>
+                <h2>O que do corp agrega valor sem conflitar</h2>
+                <p class="section-lead">
+                    Estes oito itens preenchem lacunas reais do plugin sem tocar em guardrails universais. São o
+                    núcleo aproveitável do bundle corporativo.
+                </p>
+
+                <div class="feature-grid">
+                    <div class="feature-card success">
+                        <div class="tag">A1 · AWS</div>
+                        <h4>aws-secrets-retrieval</h4>
+                        <p><code class="inline">SecretCache</code>, <code class="inline">@JsonAlias</code>, <code class="inline">CredentialsException</code>. Plugin tem <code class="inline">AwsGenerator</code> (DynamoDB/RDS) mas não cobre Secrets Manager.</p>
+                    </div>
+                    <div class="feature-card success">
+                        <div class="tag">A2 · Persistência</div>
+                        <h4>mongo-connection</h4>
+                        <p>Plugin não cobre MongoDB. Convenções de <code class="inline">@Document</code>, pool, índices, tratamento de exceções.</p>
+                    </div>
+                    <div class="feature-card success">
+                        <div class="tag">A3 · Mensageria</div>
+                        <h4>rabbitmq-* (listener + config)</h4>
+                        <p>Plugin cobre apenas Kafka. RabbitMQ tem semântica distinta (DLX, CachingConnectionFactory, <code class="inline">Declarables</code>).</p>
+                    </div>
+                    <div class="feature-card success">
+                        <div class="tag">A4 · Scheduling</div>
+                        <h4>spring-scheduled-tasks</h4>
+                        <p>ShedLock para cluster, idempotência, métricas de execução. Plugin não cobre jobs agendados.</p>
+                    </div>
+                    <div class="feature-card success">
+                        <div class="tag">A5 · Spring</div>
+                        <h4>spring-config-beans</h4>
+                        <p>Convenções <code class="inline">@Configuration</code>, <code class="inline">@ConfigurationProperties</code>, descritor de beans. Sem equivalente no plugin.</p>
+                    </div>
+                    <div class="feature-card success">
+                        <div class="tag">A6 · REST</div>
+                        <h4>spring-rest-controllers</h4>
+                        <p>Versionamento <code class="inline">/api/v{n}</code>, ResponseEntity, <code class="inline">@ControllerAdvice</code>. <code class="inline">SpringBootGenerator</code> não detalha controllers.</p>
+                    </div>
+                    <div class="feature-card success">
+                        <div class="tag">A7 · AWS</div>
+                        <h4>aws-integration</h4>
+                        <p>AwsCredentialsProvider com WebIdentityTokenFile + Default. Específico de runtime AWS — complementa, não substitui.</p>
+                    </div>
+                    <div class="feature-card success">
+                        <div class="tag">A8 · Naming</div>
+                        <h4>usecase-service-class (parcial)</h4>
+                        <p>Convenções de nomenclatura <code class="inline">*UseCase</code>/<code class="inline">*Gateway</code> + estrutura de pacotes corporativa. Baixo risco.</p>
+                    </div>
+                </div>
+
+                <div class="callout success">
+                    <strong>Condição para aceitar A1–A8:</strong> viver isoladas em namespace <code class="inline">corp-*</code>
+                    com <code class="inline">applyTo</code> restrito (Java/Spring), nunca tocar em arquivos
+                    <code class="inline">speckit-*</code>, nunca ser carregadas always-on.
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ TOKENS ============ -->
+        <section id="tokens">
+            <div class="section-inner">
+                <span class="section-tag warn">§ 5 · Eficiência de tokens</span>
+                <h2>O custo invisível da adoção crua</h2>
+                <p class="section-lead">
+                    O plugin foi desenhado com economia de contexto como guardrail. O bundle corp viola essa
+                    economia em três frentes simultâneas: duplicação literal entre arquivos, wrapping triplo do
+                    build, e proliferação de skills always-on.
+                </p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Métrica</th>
+                            <th>Repo corp</th>
+                            <th>Plugin</th>
+                            <th>Comentário</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="inline">copilot-instructions.md</code> baseline (sempre carregado)</td>
+                            <td>~3 KB (corp) + duplicação em cada instructions</td>
+                            <td>~400 tokens (apenas índice)</td>
+                            <td>Plugin é <strong>~10× mais econômico</strong> no always-on</td>
+                        </tr>
+                        <tr>
+                            <td>Multiplicação por wrapping triplo</td>
+                            <td>3× cada arquivo</td>
+                            <td>1×</td>
+                            <td>Adoção direta do build corp triplicaria contexto</td>
+                        </tr>
+                        <tr>
+                            <td>Sobreposição literal entre arquivos</td>
+                            <td>~30% do conteúdo (princípios repetidos)</td>
+                            <td>~0% (geradores compõem sem duplicar via <code class="inline">stripFrontmatter</code>)</td>
+                            <td>Plugin já elimina duplicação ao compor <code class="inline">speckit-baseline</code></td>
+                        </tr>
+                        <tr>
+                            <td>Skills always-on (descrição ativa por keyword)</td>
+                            <td>Todos os instructions viram skill ⇒ múltiplas always-on</td>
+                            <td>1 baseline + 1 stack + 1 context (3 fixos)</td>
+                            <td>Carregamento simultâneo de N skills corp polui o contexto</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="callout danger">
+                    <strong>Conclusão quantitativa:</strong> instalar o build corp como-está faz com que ~17 skills
+                    fiquem disponíveis simultaneamente ao Copilot, todas duplicando princípios já presentes no
+                    <code class="inline">speckit-baseline</code>. Aumento estimado de contexto: <strong>5 a 8 vezes</strong>.
+                    Isso comprime a janela útil para o código do usuário e degrada a qualidade das respostas.
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ MATRIZ ============ -->
+        <section id="matriz" class="alt">
+            <div class="section-inner">
+                <span class="section-tag">§ 6 · Matriz de decisão</span>
+                <h2>Saldo consolidado</h2>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Categoria</th>
+                            <th style="width:120px;">Quantidade</th>
+                            <th>Ação recomendada</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Conflitos diretos (C1–C9)</td>
+                            <td><strong>9</strong></td>
+                            <td><span class="verdict reject">Rejeitar ou rebaixar</span> antes de qualquer integração</td>
+                        </tr>
+                        <tr>
+                            <td>Sobreposições (S1–S9)</td>
+                            <td><strong>9</strong></td>
+                            <td><span class="verdict reject">Descartar do corp</span> e/ou extrair apenas trechos Spring-specific</td>
+                        </tr>
+                        <tr>
+                            <td>Incoerências internas (I1–I7)</td>
+                            <td><strong>7</strong></td>
+                            <td><span class="verdict demote">Sinalizar ao time mantenedor</span> do corp; não importar até saneamento</td>
+                        </tr>
+                        <tr>
+                            <td>Itens complementares (A1–A8)</td>
+                            <td><strong>8</strong></td>
+                            <td><span class="verdict accept">Aceitar</span> isolados em namespace <code class="inline">corp-*</code>, somente on-demand</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="callout">
+                    <strong>Saldo:</strong> dos 17 instructions + 1 skill + 1 agent do corp, apenas <strong>~8 itens
+                    (parciais)</strong> agregam valor sem ferir o plugin. O restante deve ser rejeitado, rebaixado
+                    ou refatorado pelo mantenedor do corp.
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ PRINCÍPIOS ============ -->
+        <section id="principios">
+            <div class="section-inner">
+                <span class="section-tag success">§ 7 · Princípios invariantes</span>
+                <h2>Sete regras para qualquer futura integração</h2>
+                <p class="section-lead">
+                    Estes princípios garantem que, qualquer que seja o mecanismo de distribuição conjunta adotado
+                    (Git, API, artifact, VSIX), os guardrails do plugin permaneçam intactos e a eficiência de tokens
+                    seja preservada.
+                </p>
+
+                <div class="feature-grid">
+                    <div class="feature-card gate">
+                        <div class="tag">P1</div>
+                        <h4>Namespace por prefixo</h4>
+                        <p><code class="inline">corp-*</code> vs <code class="inline">speckit-*</code> — invariante de separação física. Elimina merge de conteúdo Markdown (frágil) substituindo por composição de catálogo.</p>
+                    </div>
+                    <div class="feature-card gate">
+                        <div class="tag">P2</div>
+                        <h4>speckit-* é read-only</h4>
+                        <p>O instalador corp recebe deny-list explícita. Qualquer tentativa de escrita em <code class="inline">speckit-*</code> aborta a operação.</p>
+                    </div>
+                    <div class="feature-card gate">
+                        <div class="tag">P3</div>
+                        <h4>Sem wrapping triplo</h4>
+                        <p>Um único formato por arquivo. Preferência: SKILL on-demand para conteúdo de stack; instructions only para regras de path.</p>
+                    </div>
+                    <div class="feature-card gate">
+                        <div class="tag">P4</div>
+                        <h4>Princípios universais</h4>
+                        <p>TDD, plan-mode, verification, agent integrity, observability baseline <strong>só vivem em <code class="inline">speckit-baseline</code></strong>. Corp não pode redefini-los.</p>
+                    </div>
+                    <div class="feature-card gate">
+                        <div class="tag">P5</div>
+                        <h4>copilot-instructions.md</h4>
+                        <p>Continua sendo gerado <strong>exclusivamente pelo plugin</strong>; corp não escreve neste arquivo. Pode entregar um manifesto para o plugin referenciar suas skills.</p>
+                    </div>
+                    <div class="feature-card gate">
+                        <div class="tag">P6</div>
+                        <h4>Hash + snapshot test</h4>
+                        <p>Templates <code class="inline">speckit-*</code> têm hash interno; snapshot tests em <code class="inline">vitest</code> detectam adulteração inadvertida.</p>
+                    </div>
+                    <div class="feature-card gate">
+                        <div class="tag">P7</div>
+                        <h4>Frontmatter padronizado</h4>
+                        <p>Todo arquivo carrega <code class="inline">source: corp|plugin-static|plugin-derived</code>, <code class="inline">bundleVersion</code>, <code class="inline">contentHash</code>, <code class="inline">generatedAt</code>, <code class="inline">pluginVersion</code>.</p>
+                    </div>
+                </div>
+
+                <h3>Próximos passos sugeridos (fora do escopo deste inventário)</h3>
+                <ul>
+                    <li>Levar este relatório ao mantenedor do <code class="inline">data--copilot-guidelines</code> para refatoração (resolver I1–I7).</li>
+                    <li>Quando saneado, planejar o <code class="inline">BundleManager</code> no plugin (referenciado na análise anterior sobre distribuição conjunta).</li>
+                    <li>Adicionar snapshot tests dos <code class="inline">speckit-baseline*</code> para defesa imediata, independente do bundle.</li>
+                </ul>
+            </div>
+        </section>
+
+        <footer>
+            <div class="footer-inner">
+                <h3>Análise técnica · SpecKit Plugin</h3>
+                <p>
+                    Inventário gerado em 20/05/2026 · Premissa: plugin é fonte da verdade ·
+                    Guardrails universais vivem em <code class="inline">speckit-baseline</code>.
+                </p>
+                <p style="margin-top: 8px;">
+                    Repositório auditado: <code class="inline">data--copilot-guidelines</code> ·
+                    Repositório de referência: <code class="inline">My-SpecKit-VSCode-Plugin</code>.
+                </p>
+            </div>
+        </footer>
+
+        <script>
+            const progressBar = document.getElementById("progressBar");
+            window.addEventListener("scroll", () => {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                const scrolled = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+                progressBar.style.width = scrolled + "%";
+            });
+        </script>
+    </body>
+</html>
