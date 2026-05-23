@@ -1,0 +1,18 @@
+{
+  "_note": "Snapshot pre-Fase-4 (manual reconstruction). Baseline = single file (string contract).",
+  "generatedAt": "2026-pre-fase-4",
+  "results": [
+    { "skill": "speckit-baseline", "lines": 472, "chars": 25465, "useWhen": false, "files": 1 },
+    { "skill": "speckit-stack", "lines": 77, "chars": 4865, "useWhen": false, "files": 1 },
+    { "skill": "speckit-context", "lines": 102, "chars": 2702, "useWhen": false, "files": 1 },
+    { "skill": "corp-naming-conventions", "lines": 41, "chars": 1715, "useWhen": false, "files": 1 },
+    { "skill": "corp-http-integration", "lines": 41, "chars": 1961, "useWhen": false, "files": 1 },
+    { "skill": "corp-aws-secrets", "lines": 28, "chars": 1470, "useWhen": false, "files": 1 },
+    { "skill": "corp-aws-credentials", "lines": 26, "chars": 1359, "useWhen": false, "files": 1 },
+    { "skill": "corp-data-access", "lines": 31, "chars": 1787, "useWhen": false, "files": 1 }
+  ],
+  "totals": {
+    "alwaysOnCharsBaselineSkill": 25465,
+    "totalSkills": 8
+  }
+}

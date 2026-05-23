@@ -1,0 +1,132 @@
+{
+  "generatedAt": "2026-05-23T00:18:54.939Z",
+  "pluginVersion": "0.5.1",
+  "results": [
+    {
+      "label": "speckit-baseline/SKILL.md",
+      "lines": 182,
+      "chars": 9605,
+      "h1": 8,
+      "h2": 17,
+      "descriptionLength": 245,
+      "descriptionStartsWithUseWhen": true
+    },
+    {
+      "label": "speckit-baseline/REFERENCE-testing.md",
+      "lines": 118,
+      "chars": 6785,
+      "h1": 1,
+      "h2": 8,
+      "descriptionLength": 0,
+      "descriptionStartsWithUseWhen": false
+    },
+    {
+      "label": "speckit-baseline/REFERENCE-git.md",
+      "lines": 61,
+      "chars": 2409,
+      "h1": 1,
+      "h2": 7,
+      "descriptionLength": 0,
+      "descriptionStartsWithUseWhen": false
+    },
+    {
+      "label": "speckit-baseline/REFERENCE-credentials.md",
+      "lines": 53,
+      "chars": 2919,
+      "h1": 1,
+      "h2": 5,
+      "descriptionLength": 0,
+      "descriptionStartsWithUseWhen": false
+    },
+    {
+      "label": "speckit-baseline/REFERENCE-observability.md",
+      "lines": 49,
+      "chars": 2681,
+      "h1": 1,
+      "h2": 5,
+      "descriptionLength": 0,
+      "descriptionStartsWithUseWhen": false
+    },
+    {
+      "label": "speckit-baseline/REFERENCE-security.md",
+      "lines": 43,
+      "chars": 2039,
+      "h1": 1,
+      "h2": 5,
+      "descriptionLength": 0,
+      "descriptionStartsWithUseWhen": false
+    },
+    {
+      "label": "speckit-baseline/REFERENCE-idempotency.md",
+      "lines": 57,
+      "chars": 3019,
+      "h1": 1,
+      "h2": 6,
+      "descriptionLength": 0,
+      "descriptionStartsWithUseWhen": false
+    },
+    {
+      "label": "speckit-stack",
+      "lines": 87,
+      "chars": 5274,
+      "h1": 4,
+      "h2": 9,
+      "descriptionLength": 210,
+      "descriptionStartsWithUseWhen": true
+    },
+    {
+      "label": "speckit-context",
+      "lines": 102,
+      "chars": 2697,
+      "h1": 6,
+      "h2": 18,
+      "descriptionLength": 236,
+      "descriptionStartsWithUseWhen": true
+    },
+    {
+      "label": "corp-naming-conventions",
+      "lines": 41,
+      "chars": 1715,
+      "h1": 1,
+      "h2": 5,
+      "descriptionLength": 184,
+      "descriptionStartsWithUseWhen": true
+    },
+    {
+      "label": "corp-http-integration",
+      "lines": 41,
+      "chars": 1961,
+      "h1": 1,
+      "h2": 6,
+      "descriptionLength": 187,
+      "descriptionStartsWithUseWhen": true
+    },
+    {
+      "label": "corp-aws-secrets",
+      "lines": 28,
+      "chars": 1470,
+      "h1": 1,
+      "h2": 5,
+      "descriptionLength": 181,
+      "descriptionStartsWithUseWhen": true
+    },
+    {
+      "label": "corp-aws-credentials",
+      "lines": 26,
+      "chars": 1359,
+      "h1": 1,
+      "h2": 4,
+      "descriptionLength": 154,
+      "descriptionStartsWithUseWhen": true
+    },
+    {
+      "label": "corp-data-access",
+      "lines": 31,
+      "chars": 1787,
+      "h1": 1,
+      "h2": 5,
+      "descriptionLength": 223,
+      "descriptionStartsWithUseWhen": true
+    }
+  ]
+}
