@@ -19,7 +19,7 @@ export function generateFixContextSkill(fix: Fix, _stack: TechStackDetection): s
 
   return `---
 name: speckit-fix-context
-description: "SpecKit fix ${fixId} context — bug description, root cause analysis, impact assessment, regression prevention, and definition of fix. Activate when implementing or reviewing fix ${fixId}."
+description: "SpecKit fix ${fixId} context — bug description, root cause analysis, impact assessment, regression prevention, and definition of fix. Use when implementing or reviewing fix ${fixId}."
 ---
 
 ${sections.join('\n---\n\n')}

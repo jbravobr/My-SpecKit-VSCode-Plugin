@@ -14,7 +14,7 @@ export function generateDevToolsSkill(input: DevToolsSkillInput): string {
   sections.push(`---
 description: >-
   Instruções para configurar ferramentas de qualidade de código no projeto.
-  Ativado por keywords: devtools, lint, eslint, prettier, format, husky, pre-commit.
+  Use quando configurar lint, format, husky, pre-commit hooks ou quando o usuário mencionar devtools, eslint, prettier ou ferramentas de qualidade de código.
 globs: '**'
 ---
 

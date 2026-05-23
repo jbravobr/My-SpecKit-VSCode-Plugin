@@ -113,8 +113,18 @@ export function generateStackSkill(opts: StackSkillOptions, story?: Story): stri
 
   return `---
 name: speckit-stack
-description: "SpecKit stack conventions — ${stackLabel}. Best practices for ${opts.language || 'general'} language, ${opts.framework || 'general'} framework, infrastructure, and architectural patterns. Activate when writing or reviewing code in a SpecKit-managed project."
+description: "SpecKit stack conventions — ${stackLabel}. Best practices for ${opts.language || 'general'} language, ${opts.framework || 'general'} framework, infrastructure, and architectural patterns. Use when writing or reviewing code in a SpecKit-managed project."
 ---
+
+# SpecKit Stack — ${stackLabel}
+
+## Quick start
+
+Antes de tocar em qualquer código desta stack:
+
+1. **Qual contrato?** — confirme a assinatura/protocolo (HTTP, mensagem, interface) antes de implementar.
+2. **Qual o teste primeiro?** — escolha o tipo (unitário, integração, contrato) e escreva a expectativa antes do código.
+3. **Qual padrão da stack?** — siga os padrões abaixo desta seção, não invente novos.
 
 ${sections.join('\n---\n\n')}
 ${mockSection}

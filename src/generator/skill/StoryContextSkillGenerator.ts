@@ -21,7 +21,7 @@ export function generateStoryContextSkill(story: Story): string {
 
   return `---
 name: speckit-story-context
-description: "SpecKit story ${storyId} context — business requirement, functional spec with acceptance criteria, non-functional requirements, tech stack, architecture pattern, and definition of done. Activate when implementing or reviewing story ${storyId}."
+description: "SpecKit story ${storyId} context — business requirement, functional spec with acceptance criteria, non-functional requirements, tech stack, architecture pattern, and definition of done. Use when implementing or reviewing story ${storyId}."
 ---
 
 ${sections.join('\n---\n\n')}
