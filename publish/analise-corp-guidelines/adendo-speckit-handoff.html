@@ -422,8 +422,8 @@
                         <div class="value">~6 KB <small>~120 linhas</small></div>
                     </div>
                     <div class="meta-card">
-                        <div class="label">Inspiração</div>
-                        <div class="value">mattpocock/skills <small>productivity/handoff</small></div>
+                        <div class="label">Saída</div>
+                        <div class="value">.speckit/handoff/ <small>workspace local</small></div>
                     </div>
                     <div class="meta-card">
                         <div class="label">Cobertura de testes</div>
@@ -452,22 +452,22 @@
 
                 <div class="feature-grid">
                     <div class="feature-card gate">
-                        <div class="tag">Origem · external</div>
-                        <h4>Inspiração: mattpocock/skills</h4>
+                        <div class="tag">Princípio · documento curto</div>
+                        <h4>Referenciar em vez de duplicar</h4>
                         <p>
-                            O ponto de partida foi a skill pública <code class="inline">productivity/handoff</code>
-                            de Matt Pocock. A ideia central — produzir um documento curto, referenciar
-                            artefatos em vez de duplicá-los e listar skills sugeridas ao próximo agente —
-                            é preservada. O que muda é o encaixe no domínio do plugin.
+                            O handoff é deliberadamente enxuto: produz um documento curto que
+                            <em>referencia</em> os artefatos já existentes (spec.md, plan.md, tasks.md,
+                            commits) em vez de duplicar conteúdo. Isso reduz superfície para
+                            divergência e mantém a fonte de verdade onde ela já mora.
                         </p>
                     </div>
                     <div class="feature-card success">
                         <div class="tag">Adaptação · domínio SpecKit</div>
                         <h4>Encaixe no fluxo do plugin</h4>
                         <p>
-                            A versão do plugin grava o handoff em
+                            O handoff é gravado em
                             <code class="inline">.speckit/handoff/&lt;feature&gt;-&lt;YYYYMMDD-HHmm&gt;.md</code>
-                            dentro do workspace (não no diretório temporário do sistema). Pré-popula as
+                            dentro do workspace (não em diretório temporário do sistema). Pré-popula as
                             <em>suggested skills</em> com as skills já ativas na sessão, referencia
                             <code class="inline">spec.md</code>, <code class="inline">plan.md</code>,
                             <code class="inline">tasks.md</code> e impõe uma regra inegociável de
@@ -580,41 +580,41 @@
                     </tbody>
                 </table>
 
-                <h3>Diferenças deliberadas em relação à skill original</h3>
+                <h3>Decisões de desenho específicas do plugin</h3>
                 <table>
                     <thead>
-                        <tr><th>Aspecto</th><th>Versão original (Matt)</th><th>Versão do plugin</th></tr>
+                        <tr><th>Aspecto</th><th>Decisão adotada no plugin</th><th>Justificativa</th></tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td>Local de saída</td>
-                            <td><code class="inline">tmp/</code> do sistema operacional</td>
                             <td><code class="inline">.speckit/handoff/&lt;feature&gt;-&lt;timestamp&gt;.md</code> no workspace</td>
+                            <td>Descobrível pelo usuário, sobrevive a reboot, opcionalmente versionável</td>
                         </tr>
                         <tr>
                             <td>Suggested skills</td>
-                            <td>Sugestão livre</td>
                             <td>Pré-populada com as skills do plugin já ativas e os REFERENCE-*.md correspondentes</td>
+                            <td>O próximo agente sabe imediatamente o que carregar antes de agir</td>
                         </tr>
                         <tr>
                             <td>Referências a artefatos</td>
-                            <td>Princípio geral ("não duplicar")</td>
                             <td>Lista explícita: <code class="inline">spec.md</code>, <code class="inline">plan.md</code>, <code class="inline">tasks.md</code>, <code class="inline">/review-auto</code>, relatório CRAP, <code class="inline">git log</code></td>
+                            <td>Mantém a fonte de verdade única; o handoff não duplica conteúdo</td>
                         </tr>
                         <tr>
                             <td>Anti-alucinação</td>
-                            <td>Não-tratada</td>
                             <td>Regra inegociável com tabela de âncora obrigatória e marcador <code class="inline">[NÃO VERIFICADO]</code></td>
+                            <td>Encerra o vetor de invenção quando a sessão já está degradada</td>
                         </tr>
                         <tr>
                             <td>Redação de segredos</td>
-                            <td>"Redact sensitive info"</td>
                             <td>Vinculada ao gate de credenciais do <code class="inline">speckit-baseline/REFERENCE-credentials.md</code></td>
+                            <td>Reuso da regra existente; sem duplicação de política</td>
                         </tr>
                         <tr>
                             <td>Protocolo do agente receptor</td>
-                            <td>Implícito</td>
                             <td>Quatro passos explícitos no fim do SKILL.md</td>
+                            <td>Padroniza a retomada e elimina ambiguidade sobre o primeiro turno</td>
                         </tr>
                     </tbody>
                 </table>
