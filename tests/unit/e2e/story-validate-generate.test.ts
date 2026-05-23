@@ -89,8 +89,8 @@ describe('story → validate → generate (E2E)', () => {
       expect(fs.hasFile('speckit-baseline/SKILL.md')).toBe(true);
       const baselineContent = fs.contentFor('speckit-baseline/SKILL.md')!;
       expect(baselineContent).toContain('IAM roles');
-      expect(baselineContent).toContain('traceId');
-      expect(baselineContent).toContain('401');
+      expect(fs.contentFor('speckit-baseline/REFERENCE-observability.md')).toContain('traceId');
+      expect(fs.contentFor('speckit-baseline/REFERENCE-security.md')).toContain('401');
 
       // Must NOT contain dedicated Kafka/AWS/Glue sections
       expect(stackContent).not.toContain('# Kafka — Boas Práticas');

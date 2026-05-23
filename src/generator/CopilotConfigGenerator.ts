@@ -3,6 +3,7 @@ import { Story } from '../story/Story';
 import { generateImplementadorAgent } from './agent/StoryImplementadorAgentGenerator';
 import { generateRevisorAgent } from './agent/StoryRevisorAgentGenerator';
 import { generateCiQualityGate, generateCiSecurityScan } from './ci/CiGenerator';
+import { generateCorpSkills } from './corp/CorpSkillsGenerator';
 import { generateBaselineSkill } from './skill/BaselineSkillGenerator';
 import { generateStackSkill } from './skill/StackSkillGenerator';
 import { generateStoryContextSkill } from './skill/StoryContextSkillGenerator';
@@ -53,7 +54,9 @@ export async function generateCopilotConfig(
   );
 
   // Skills — on-demand (loaded by description keyword match)
-  await tx.write(path.join(baselineSkillDir, 'SKILL.md'), generateBaselineSkill(story));
+  for (const file of generateBaselineSkill(story)) {
+    await tx.write(path.join(baselineSkillDir, file.filename), file.content);
+  }
   await tx.write(
     path.join(stackSkillDir, 'SKILL.md'),
     generateStackSkill(
@@ -83,6 +86,14 @@ export async function generateCopilotConfig(
   if (ciEnabled) {
     await tx.write(path.join(workflowsDir, 'quality-gate.yml'), generateCiQualityGate(story));
     await tx.write(path.join(workflowsDir, 'security-scan.yml'), generateCiSecurityScan());
+  }
+
+  // Corp-* skills (opt-in automático por detecção de stack; on-demand)
+  const corpSkills = generateCorpSkills(story);
+  for (const skill of corpSkills) {
+    const dir = path.join(skillsDir, skill.name);
+    await fs.ensureDir(dir);
+    await tx.write(path.join(dir, 'SKILL.md'), skill.content);
   }
 
   return tx.commit();

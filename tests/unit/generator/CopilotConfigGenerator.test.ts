@@ -29,11 +29,19 @@ describe('generateCopilotConfig — baseline output', () => {
     expect(content).toContain('Performance');
     expect(content).toContain('Architecture');
     expect(content).toContain('Context Management');
-    expect(content).toContain('Testing');
-    expect(content).toContain('Git Workflow');
+    // Domain content was split into REFERENCE-*.md (progressive disclosure).
+    expect(fs.hasFile('speckit-baseline/REFERENCE-testing.md')).toBe(true);
+    expect(fs.hasFile('speckit-baseline/REFERENCE-git.md')).toBe(true);
+    expect(fs.hasFile('speckit-baseline/REFERENCE-credentials.md')).toBe(true);
+    expect(fs.hasFile('speckit-baseline/REFERENCE-observability.md')).toBe(true);
+    expect(fs.hasFile('speckit-baseline/REFERENCE-security.md')).toBe(true);
+    expect(fs.contentFor('speckit-baseline/REFERENCE-testing.md')).toContain('Testing');
+    expect(fs.contentFor('speckit-baseline/REFERENCE-git.md')).toContain('Git');
     expect(content).toContain('Credenciais');
-    expect(content).toContain('Observabilidade');
-    expect(content).toContain('Segurança');
+    expect(fs.contentFor('speckit-baseline/REFERENCE-observability.md')).toContain(
+      'Observabilidade',
+    );
+    expect(fs.contentFor('speckit-baseline/REFERENCE-security.md')).toContain('Segurança');
   });
 
   it('always writes speckit context skill namespaced by story ID', async () => {
@@ -243,7 +251,7 @@ describe('generateCopilotConfig — new baseline generators', () => {
   it('baseline skill contains security-tests with 401 and mass assignment', async () => {
     const fs = new InMemoryFileSystem();
     await generateCopilotConfig(root, loadStory('story-complete.md'), fs);
-    const content = fs.contentFor('speckit-baseline/SKILL.md')!;
+    const content = fs.contentFor('speckit-baseline/REFERENCE-security.md')!;
     expect(content).toContain('401');
     expect(content).toContain('Mass Assignment');
   });
@@ -369,13 +377,13 @@ describe('generateCopilotConfig — parametrized generators', () => {
   it('baseline skill includes consumer_lag monitoring', async () => {
     const fs = new InMemoryFileSystem();
     await generateCopilotConfig(root, loadStory('story-complete.md'), fs);
-    expect(fs.contentFor('speckit-baseline/SKILL.md')).toContain('consumer_lag');
+    expect(fs.contentFor('speckit-baseline/REFERENCE-observability.md')).toContain('consumer_lag');
   });
 
   it('baseline skill includes acceptance criteria section from story', async () => {
     const fs = new InMemoryFileSystem();
     await generateCopilotConfig(root, loadStory('story-complete.md'), fs);
-    expect(fs.contentFor('speckit-baseline/SKILL.md')).toContain(
+    expect(fs.contentFor('speckit-baseline/REFERENCE-testing.md')).toContain(
       'Cenários mínimos obrigatórios derivados',
     );
   });
@@ -383,7 +391,7 @@ describe('generateCopilotConfig — parametrized generators', () => {
   it('baseline skill includes performance test section for story with latency NFR', async () => {
     const fs = new InMemoryFileSystem();
     await generateCopilotConfig(root, loadStory('story-complete.md'), fs);
-    const content = fs.contentFor('speckit-baseline/SKILL.md')!;
+    const content = fs.contentFor('speckit-baseline/REFERENCE-testing.md')!;
     expect(content).toContain('P99');
     expect(content).toContain('k6');
   });
