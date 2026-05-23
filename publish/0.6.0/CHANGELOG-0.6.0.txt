@@ -1,0 +1,97 @@
+SpecKit — Changelog 0.6.0
+=========================
+Data: 22/05/2026
+Branch base: main
+
+MINOR — Skills adotam padrão write-a-skill (Matt Pocock): "Use when", Quick start
+e split seletivo do speckit-baseline com gate imperativo de leitura
+----------------------------------------------------------------------------------
+Esta release alinha as skills geradas pelo plugin ao padrão "write-a-skill" usado
+pela comunidade (frontmatter com gatilho "Use when", Quick start objetivo,
+progressive disclosure via REFERENCE.md). O foco é reduzir o custo de contexto
+"always-on" injetado pelas skills no Copilot Chat sem perder conhecimento, e
+tornar o gatilho de ativação determinístico ao agente.
+
+Resumo da release
+-----------------
+A descrição (`description:`) de todas as skills geradas (`speckit-baseline`,
+`speckit-stack`, `speckit-context-*`, `speckit-fix-context-*`, `speckit-devtools`
+e `corp-*`) passou a usar a fórmula recomendada "Use when ..." / "Use quando ...",
+substituindo formas anteriores ("Activate when", "Ative ao", "Ativado por").
+
+A `speckit-baseline` ganhou seção `## Quick start` curta no topo e foi dividida
+em SKILL.md condensado (always-on) + seis arquivos REFERENCE-*.md ativados sob
+demanda. Regras críticas de credenciais e idempotência ficam condensadas no
+SKILL.md (~10 linhas cada) e a versão completa migrou para REFERENCE-credentials.md
+e REFERENCE-idempotency.md. Foi adicionada uma tabela imperativa "REGRA
+INEGOCIÁVEL — Pré-requisito de leitura" que vincula ação → REFERENCE obrigatório
+(ex.: `git commit` → REFERENCE-git.md; endpoint POST/PUT/PATCH →
+REFERENCE-idempotency.md). O contrato interno do gerador mudou de `string` para
+`BaselineFile[] = {filename, content}[]`, sem impacto para o consumidor final.
+
+A `speckit-stack` também passou a expor `## Quick start` (3 itens) no topo.
+
+Nenhum conhecimento foi removido: o conteúdo integral dos geradores
+(`TestingStandards`, `GitWorkflow`, `CredentialSecurity`, `Observability`,
+`SecurityTests`, `Idempotency`) continua sendo gerado em arquivos REFERENCE-*.md
+ao lado do SKILL.md, com link explícito e instrução de leitura no gate.
+
+Mudanças técnicas
+-----------------
+- `package.json`: bump de versão para `0.6.0`.
+- `src/generator/skill/BaselineSkillGenerator.ts`: assinatura retornando
+  `BaselineFile[]` (SKILL.md + 6 REFERENCE-*.md); constantes
+  `CONDENSED_CREDENTIALS`, `CONDENSED_IDEMPOTENCY`, `GATE_IMPERATIVE`; helper
+  `buildReference()` para envelopar os REFERENCEs com back-pointer ao gate.
+- `src/generator/CopilotConfigGenerator.ts`: itera sobre o array retornado por
+  `generateBaselineSkill()` e escreve cada arquivo dentro de
+  `.github/skills/speckit-baseline/`.
+- `src/generator/skill/StackSkillGenerator.ts`: description "Use when" e seção
+  `## Quick start` de 3 itens.
+- `src/generator/skill/StoryContextSkillGenerator.ts`,
+  `src/generator/skill/FixContextSkillGenerator.ts`,
+  `src/generator/skill/DevToolsSkillGenerator.ts`: description padronizada para
+  "Use when" / "Use quando".
+- `src/generator/corp/**/Corp*Generator.ts` (13 arquivos): descrição padronizada
+  para "Use quando".
+- `scripts/measure-skills.mjs` (novo): medição reutilizável de linhas, chars,
+  H1/H2 e presença de "Use when" para as skills geradas.
+
+Documentação
+------------
+- `publish/skill-metrics-before.json` (novo): snapshot pré-mudança das métricas
+  de skills geradas (482 linhas / 25.465 chars no SKILL.md monolítico).
+- `publish/skill-metrics-baseline.json` (novo): snapshot pós-mudança (SKILL.md
+  com 182 linhas / 9.605 chars + 6 REFERENCE-*.md com 381 linhas no total).
+- `~/.copilot/skills/write-a-skill/SKILL.md` (instalado em sessão anterior):
+  guardrail global que estabelece o padrão adotado.
+
+Testes adicionados
+------------------
+- `tests/unit/generator/skill/description-format.test.ts`:
+  + 6 testes garantindo "Use when" / "Use quando" em todas as skills geradas e
+    ausência das formas legadas.
+  + 3 testes garantindo presença e tamanho do `## Quick start` em
+    `speckit-baseline` e `speckit-stack`.
+  + 5 testes garantindo o split seletivo do `speckit-baseline`: SKILL.md +
+    seis REFERENCE-*.md, gate imperativo presente, credenciais e idempotência
+    condensadas always-on, frontmatter e back-pointer em cada REFERENCE,
+    SKILL.md ≤ 220 linhas / 15.000 chars (orçamento de tokens always-on).
+- `tests/unit/generator/CopilotConfigGenerator.test.ts` e
+  `tests/unit/e2e/story-validate-generate.test.ts`: asserções de conteúdo
+  específico de domínio (401, Mass Assignment, consumer_lag, P99, k6,
+  "Cenários mínimos obrigatórios derivados", traceId) realocadas para os
+  respectivos REFERENCE-*.md.
+
+Validação executada antes do release
+------------------------------------
+- `npx tsc -p tsconfig.json --noEmit`: 0 erros.
+- `npm run test:unit`: 95 test files / 1358 tests passando.
+- `node ./scripts/measure-skills.mjs`: SKILL.md = 182 linhas / 9.605 chars
+  (redução de 62% no token-cost always-on em relação ao 0.5.1: 25.465 chars →
+  9.605 chars). Todas as skills `corp-*`, `speckit-stack` e `speckit-context`
+  com `useWhen=true`.
+
+Artefato gerado
+---------------
+- publish/0.6.0/vscode-plugin-speckit-0.6.0.vsix

@@ -1,0 +1,58 @@
+SpecKit — Novidades para usuários — 0.6.0
+=========================================
+Data: 22/05/2026
+
+Resumo
+------
+As skills geradas pelo plugin (em `.github/skills/`) ficaram mais leves e mais
+fáceis para o Copilot seguir. A skill `speckit-baseline`, que antes era um
+único arquivo grande, foi reorganizada em um SKILL.md curto sempre ativo e
+seis arquivos de referência (`REFERENCE-*.md`) que o agente abre só quando
+precisa (testes, git, credenciais, observabilidade, segurança, idempotência).
+Nada foi removido — o conhecimento continua disponível, agora carregado sob
+demanda.
+
+Novas features
+--------------
+- `speckit-baseline` agora tem um `## Quick start` objetivo no topo: 5 regras
+  curtas que o agente lê antes de qualquer ação.
+- Tabela "REGRA INEGOCIÁVEL — Pré-requisito de leitura" no SKILL.md liga cada
+  tipo de ação (commit, endpoint POST, log estruturado, etc.) ao arquivo de
+  referência que o agente deve abrir antes de executar.
+- Todas as skills geradas (`speckit-baseline`, `speckit-stack`,
+  `speckit-context-*`, `speckit-fix-context-*`, `corp-*`) passaram a usar a
+  fórmula recomendada "Use when ..." / "Use quando ..." na descrição, deixando
+  o gatilho de ativação mais claro para o Copilot.
+
+Melhorias de experiência
+------------------------
+- Menos texto carregado o tempo todo no Copilot Chat: o SKILL.md do
+  `speckit-baseline` caiu de ~25 KB para ~9,6 KB (-62%). Conteúdo específico
+  por domínio só é puxado quando a ação correspondente acontece.
+- Regras críticas de credenciais e idempotência continuam visíveis o tempo
+  todo, em forma resumida (10 linhas cada), com link direto para a versão
+  completa nos REFERENCEs.
+- `speckit-stack` também recebeu `## Quick start` no topo, ajudando o Copilot a
+  começar a tarefa com as três regras mais importantes da stack.
+
+Correções e segurança de release
+--------------------------------
+- Nenhuma correção crítica nesta versão. Mantidos hardening, redação de dados
+  sensíveis em artefatos e regras de empacotamento de VSIX da 0.5.1.
+
+Como usar rapidamente
+---------------------
+- Regere as skills do seu workspace executando o comando
+  `SpecKit: Generate Copilot Config` (ou abrindo uma story/fix com o comando
+  do plugin). A nova estrutura `.github/skills/speckit-baseline/SKILL.md` +
+  `REFERENCE-*.md` será criada automaticamente.
+- Para confirmar a estrutura nova, abra `.github/skills/speckit-baseline/` e
+  veja sete arquivos: `SKILL.md` + `REFERENCE-testing.md`, `REFERENCE-git.md`,
+  `REFERENCE-credentials.md`, `REFERENCE-observability.md`,
+  `REFERENCE-security.md`, `REFERENCE-idempotency.md`.
+- Nada muda na forma como você usa `@speckit` no chat — apenas o material
+  consultado pelo agente fica mais bem organizado.
+
+Artefato
+--------
+- publish/0.6.0/vscode-plugin-speckit-0.6.0.vsix

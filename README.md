@@ -1200,7 +1200,14 @@ O conjunto exato varia conforme a stack declarada. Abaixo a estrutura completa c
 +-- prompts/
 |   +-- run.prompt.md                  ← Sessão única (Gates 0–4)
 +-- skills/
-|   +-- speckit-baseline/SKILL.md      ← 10 seções NFR (keyword-activated)
+|   +-- speckit-baseline/                ← SKILL.md sempre ativo + 6 REFERENCE-*.md sob demanda
+|   |   +-- SKILL.md                     ← Quick start + integrity + perf + arch + context + gate de leitura
+|   |   +-- REFERENCE-testing.md         ← Padrões de teste + cenários derivados da story
+|   |   +-- REFERENCE-git.md             ← Git workflow / conventional commits
+|   |   +-- REFERENCE-credentials.md     ← Gestão completa de credenciais (IAM, Secrets, rotação)
+|   |   +-- REFERENCE-observability.md   ← Logs, métricas, traces (consumer_lag, traceId, SLO)
+|   |   +-- REFERENCE-security.md        ← Security tests (401, Mass Assignment, etc.)
+|   |   +-- REFERENCE-idempotency.md     ← Idempotência (Idempotency-Key, dedup, retries)
 |   +-- speckit-stack/SKILL.md         ← Linguagem + framework + infra + patterns
 |   +-- speckit-context-STORY-{id}/SKILL.md ← Contexto específico da story
 |   +-- speckit-devtools/SKILL.md      ← (opcional) DevTools: ESLint, Prettier, husky, lint-staged
@@ -1225,7 +1232,14 @@ O conjunto exato varia conforme a stack declarada. Abaixo a estrutura completa c
 +-- prompts/
 |   +-- fix-run.prompt.md              ← Sessão única (Gates 0–4)
 +-- skills/
-|   +-- speckit-baseline/SKILL.md      ← 10 seções NFR (keyword-activated)
+|   +-- speckit-baseline/                ← SKILL.md sempre ativo + 6 REFERENCE-*.md sob demanda
+|   |   +-- SKILL.md                     ← Quick start + integrity + perf + arch + context + gate de leitura
+|   |   +-- REFERENCE-testing.md         ← Padrões de teste + cenários derivados do fix
+|   |   +-- REFERENCE-git.md             ← Git workflow / conventional commits
+|   |   +-- REFERENCE-credentials.md     ← Gestão completa de credenciais
+|   |   +-- REFERENCE-observability.md   ← Logs, métricas, traces
+|   |   +-- REFERENCE-security.md        ← Security tests
+|   |   +-- REFERENCE-idempotency.md     ← Idempotência
 |   +-- speckit-stack/SKILL.md         ← Stack auto-detectada do workspace
 |   +-- speckit-context-FIX-{id}/SKILL.md ← Contexto específico do fix
 |   +-- speckit-devtools/SKILL.md      ← (opcional) DevTools: ESLint, Prettier, husky, lint-staged
@@ -1330,6 +1344,29 @@ O SpecKit distribui o contexto em **3 camadas on-demand** para minimizar o consu
 | **Stack**    | `.github/skills/speckit-stack/`        | Keywords: nome da linguagem ou framework                                       | Regras por linguagem + framework + infra + patterns. Composição condicional — inclui apenas seções relevantes à stack declarada                                                      |
 | **Context**  | `.github/skills/speckit-context-{ID}/` | Keywords: ID da story ou fix                                                   | Spec completa: requisito de negócio, critérios de aceite, NFRs, stack técnica, DoR/DoD                                                                                               |
 | **DevTools** | `.github/skills/speckit-devtools/`     | Keywords: devtools, lint, eslint, prettier, format, husky, pre-commit          | Instruções de instalação de ESLint, Prettier, husky e lint-staged adaptadas à stack. Gerado sob demanda via botão ou `--devtools`                                                    |
+| **Corp-\***  | `.github/skills/corp-*/`               | Keywords específicos por skill (spring, aws, mongo, kafka, rabbitmq, http, naming) | Skills corporativas multi-stack derivadas do repositório `data--copilot-guidelines`. Geração **opt-in automática** por detecção de stack (`framework`, `database`, `infrastructure`). Ver seção "Skills `corp-*`" abaixo. |
+
+### Skills `corp-*` — convenções corporativas multi-stack
+
+Além das skills `speckit-*`, o plugin gera automaticamente skills `corp-*` em `.github/skills/` quando a stack declarada na spec casa com a condição de cada uma. **Sem opt-in manual**: a detecção é por substring case-insensitive em `framework`, `database` e `infrastructure` da Story. Cada skill é um arquivo independente, **on-demand** (carregada pelo Copilot apenas quando keywords da `description` baterem com o prompt) — não inflam o contexto global.
+
+| Skill                       | Condição de geração                                      | applyTo            |
+| --------------------------- | -------------------------------------------------------- | ------------------ |
+| `corp-naming-conventions`   | sempre (multi-stack)                                     | —                  |
+| `corp-http-integration`     | sempre (multi-stack)                                     | —                  |
+| `corp-spring-scheduled`     | `framework=springboot`                                   | `**/*.java`        |
+| `corp-spring-config`        | `framework=springboot`                                   | `**/*.java`        |
+| `corp-spring-rest`          | `framework=springboot`                                   | `**/*.java`        |
+| `corp-aws-secrets`          | `infrastructure` contém aws/dynamodb/aurora/rds/s3/sqs/sns/lambda | —          |
+| `corp-aws-credentials`      | idem                                                     | —                  |
+| `corp-mongo`                | `database` contém mongo                                  | —                  |
+| `corp-data-access`          | `database` ≠ vazio/sentinela (NA, none, -)               | —                  |
+| `corp-rabbitmq-listener`    | `infrastructure` contém rabbit/amqp                      | —                  |
+| `corp-rabbitmq-config`      | idem                                                     | —                  |
+| `corp-kafka`                | `infrastructure` contém kafka                            | —                  |
+| `corp-kafka-spring`         | `infrastructure` contém kafka **e** `framework=springboot` | `**/*.java`      |
+
+Conteúdo derivado do documento `publish/analise-corp-guidelines/sumario-aproveitamento-corp.html`. Skills com `applyTo` ficam restritas a arquivos Java; as multi-stack são SDK/protocolo-agnósticas (válidas para qualquer linguagem que consome a tecnologia correspondente).
 
 ### Conteúdo do skill Stack — regras por linguagem, framework e lógica
 
