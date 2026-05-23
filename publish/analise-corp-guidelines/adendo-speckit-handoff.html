@@ -1,0 +1,952 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Adendo · skill speckit-handoff · Mecânica das Skills do plugin SpecKit</title>
+        <meta
+            name="description"
+            content="Adendo ao documento Mecânica das Skills: detalhamento da nova skill speckit-handoff, suas adaptações, não-negociáveis anti-alucinação e papel na compactação de sessão."
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                --bg-0: #0b1020;
+                --bg-1: #11172b;
+                --bg-2: #161e36;
+                --surface: #1c2541;
+                --surface-2: #243057;
+                --line: #2a3760;
+                --text: #e8ecf6;
+                --text-dim: #b0b9d4;
+                --text-muted: #7c87a9;
+                --accent: #7aa2ff;
+                --accent-2: #9d7aff;
+                --success: #38d39f;
+                --warn: #ffb454;
+                --danger: #ff6b8a;
+                --gate: #4cc9f0;
+                --gradient-hero: linear-gradient(135deg, #0b1020 0%, #1a1d4d 50%, #2a1d5d 100%);
+                --gradient-accent: linear-gradient(135deg, #7aa2ff 0%, #9d7aff 100%);
+                --gradient-success: linear-gradient(135deg, #38d39f 0%, #4cc9f0 100%);
+                --gradient-danger: linear-gradient(135deg, #ff6b8a 0%, #ffb454 100%);
+                --doc-max: 1480px;
+                --doc-pad-x: 80px;
+            }
+
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            html { scroll-behavior: smooth; }
+            body {
+                font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                background: var(--bg-0);
+                color: var(--text);
+                line-height: 1.65;
+                -webkit-font-smoothing: antialiased;
+                overflow-x: hidden;
+            }
+            code, pre, .mono { font-family: "JetBrains Mono", "Consolas", monospace; }
+
+            .progress-bar {
+                position: fixed;
+                top: 0; left: 0;
+                height: 3px; width: 0%;
+                background: var(--gradient-accent);
+                z-index: 1000;
+            }
+
+            .topnav {
+                position: fixed;
+                top: 14px; right: 18px;
+                z-index: 999;
+                background: rgba(17,23,43,0.85);
+                backdrop-filter: blur(12px);
+                border: 1px solid var(--line);
+                border-radius: 100px;
+                padding: 8px 14px;
+                display: flex; gap: 4px;
+                font-size: 12px; font-weight: 600;
+            }
+            .topnav a {
+                color: var(--text-dim);
+                text-decoration: none;
+                padding: 6px 12px;
+                border-radius: 100px;
+            }
+            .topnav a:hover { color: var(--text); background: rgba(122,162,255,0.12); }
+            @media (max-width: 1100px) { .topnav { display: none; } }
+
+            .hero {
+                background: var(--gradient-hero);
+                padding: 140px var(--doc-pad-x) 110px;
+                position: relative;
+                overflow: hidden;
+                border-bottom: 1px solid var(--line);
+            }
+            .hero::before {
+                content: ""; position: absolute;
+                top: -50%; left: -10%;
+                width: 60%; height: 200%;
+                background: radial-gradient(circle, rgba(157,122,255,0.18) 0%, transparent 70%);
+                pointer-events: none;
+            }
+            .hero::after {
+                content: ""; position: absolute;
+                bottom: -50%; right: -10%;
+                width: 60%; height: 200%;
+                background: radial-gradient(circle, rgba(122,162,255,0.15) 0%, transparent 70%);
+                pointer-events: none;
+            }
+            .hero-inner { max-width: var(--doc-max); margin: 0 auto; position: relative; z-index: 1; }
+            .eyebrow {
+                display: inline-flex; align-items: center; gap: 10px;
+                padding: 8px 18px;
+                background: rgba(56,211,159,0.12);
+                border: 1px solid rgba(56,211,159,0.35);
+                border-radius: 100px;
+                font-size: 13px; font-weight: 600;
+                color: var(--success);
+                letter-spacing: 0.08em; text-transform: uppercase;
+                margin-bottom: 28px;
+            }
+            .eyebrow .dot {
+                width: 8px; height: 8px;
+                background: var(--success);
+                border-radius: 50%;
+                box-shadow: 0 0 12px var(--success);
+            }
+            .hero h1 {
+                font-size: clamp(38px, 5.8vw, 68px);
+                font-weight: 800; line-height: 1.06;
+                letter-spacing: -0.02em;
+                background: linear-gradient(135deg, #ffffff 0%, #b0b9d4 100%);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 24px;
+            }
+            .hero h1 .highlight {
+                background: var(--gradient-success);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .hero-lead {
+                font-size: clamp(17px, 1.6vw, 21px);
+                color: var(--text-dim);
+                margin-bottom: 48px; font-weight: 400;
+                text-align: justify; hyphens: auto; max-width: 1100px;
+            }
+            .hero-meta {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 16px;
+            }
+            .meta-card {
+                background: rgba(28,37,65,0.6);
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: 18px 20px;
+                backdrop-filter: blur(8px);
+            }
+            .meta-card .label {
+                font-size: 11px; letter-spacing: 0.12em;
+                text-transform: uppercase; color: var(--text-muted);
+                font-weight: 600; margin-bottom: 8px;
+            }
+            .meta-card .value { font-size: 22px; font-weight: 700; color: var(--text); }
+            .meta-card .value small { font-size: 13px; color: var(--text-dim); font-weight: 500; margin-left: 4px; }
+
+            section { padding: 100px var(--doc-pad-x); position: relative; }
+            .section-inner { max-width: var(--doc-max); margin: 0 auto; }
+            section h1, section h2, section h3, section h4, section p, section li, section .section-lead {
+                text-align: justify;
+                text-justify: inter-word;
+                hyphens: auto;
+                -webkit-hyphens: auto;
+            }
+            section.alt { background: var(--bg-1); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+            .section-tag {
+                display: inline-block; font-size: 12px; font-weight: 700;
+                letter-spacing: 0.18em; text-transform: uppercase;
+                color: var(--accent); margin-bottom: 16px;
+                text-align: left;
+            }
+            .section-tag.success { color: var(--success); }
+            .section-tag.warn { color: var(--warn); }
+            .section-tag.danger { color: var(--danger); }
+            .section-tag.gate { color: var(--gate); }
+            h2 {
+                font-size: clamp(28px, 3.5vw, 44px); font-weight: 800;
+                line-height: 1.15; letter-spacing: -0.015em;
+                margin-bottom: 18px; color: var(--text);
+            }
+            h3 { font-size: 22px; font-weight: 700; margin: 28px 0 14px; color: var(--text); }
+            h4 { font-size: 17px; font-weight: 700; margin: 22px 0 10px; color: var(--accent); }
+            .section-lead { font-size: 18px; color: var(--text-dim); margin-bottom: 48px; max-width: 1100px; }
+            p { margin-bottom: 14px; color: var(--text-dim); }
+            ul, ol { margin: 12px 0 18px 22px; color: var(--text-dim); }
+            li { margin-bottom: 6px; }
+            strong { color: var(--text); font-weight: 600; }
+
+            .metrics {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 20px;
+                margin-bottom: 16px;
+            }
+            .metric {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 28px 26px;
+                position: relative; overflow: hidden;
+            }
+            .metric::before {
+                content: ""; position: absolute;
+                top: 0; left: 0; width: 4px; height: 100%;
+                background: var(--gradient-accent);
+            }
+            .metric.success::before { background: var(--gradient-success); }
+            .metric.warn::before { background: var(--gradient-danger); }
+            .metric .icon { font-size: 28px; margin-bottom: 14px; display: block; }
+            .metric .number {
+                font-size: 38px; font-weight: 800; line-height: 1;
+                background: var(--gradient-accent);
+                -webkit-background-clip: text; background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin-bottom: 8px;
+            }
+            .metric.success .number { background: var(--gradient-success); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+            .metric.warn .number { background: var(--gradient-danger); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+            .metric .label { font-size: 14px; color: var(--text-dim); font-weight: 500; }
+
+            .feature-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+                gap: 22px;
+                margin: 12px 0 8px;
+            }
+            .feature-card {
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 26px;
+                border-left: 5px solid var(--accent);
+            }
+            .feature-card.success { border-left-color: var(--success); }
+            .feature-card.warn { border-left-color: var(--warn); }
+            .feature-card.danger { border-left-color: var(--danger); }
+            .feature-card.gate { border-left-color: var(--gate); }
+            .feature-card h4 { color: var(--text); margin-top: 0; margin-bottom: 10px; font-size: 18px; }
+            .feature-card .tag {
+                display: inline-block; font-size: 10px;
+                letter-spacing: 0.14em; text-transform: uppercase;
+                color: var(--accent); font-weight: 700; margin-bottom: 10px;
+            }
+            .feature-card.success .tag { color: var(--success); }
+            .feature-card.warn .tag { color: var(--warn); }
+            .feature-card.danger .tag { color: var(--danger); }
+            .feature-card.gate .tag { color: var(--gate); }
+            .feature-card p { font-size: 14px; margin-bottom: 8px; }
+
+            code.inline {
+                background: rgba(122,162,255,0.12);
+                color: var(--accent);
+                padding: 2px 7px;
+                border-radius: 5px;
+                font-size: 0.92em;
+            }
+
+            pre.block {
+                background: #0a0f1f;
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                padding: 18px 20px;
+                overflow-x: auto;
+                margin: 14px 0 22px;
+                font-size: 13px;
+                line-height: 1.55;
+                color: var(--text-dim);
+            }
+            pre.block .k { color: var(--accent); }
+            pre.block .s { color: var(--success); }
+            pre.block .c { color: var(--text-muted); font-style: italic; }
+            pre.block .h { color: var(--gate); font-weight: 600; }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 16px 0 24px;
+                background: var(--surface);
+                border: 1px solid var(--line);
+                border-radius: 12px;
+                overflow: hidden;
+                font-size: 14px;
+            }
+            thead { background: var(--surface-2); }
+            th, td {
+                text-align: left;
+                padding: 12px 16px;
+                border-bottom: 1px solid var(--line);
+                color: var(--text-dim);
+                vertical-align: top;
+            }
+            th { color: var(--text); font-weight: 700; font-size: 13px; letter-spacing: 0.04em; }
+            tbody tr:last-child td { border-bottom: none; }
+            .skill-pill {
+                display: inline-block;
+                font-family: "JetBrains Mono", monospace;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 3px 10px;
+                border-radius: 6px;
+                background: rgba(56,211,159,0.12);
+                color: var(--success);
+                border: 1px solid rgba(56,211,159,0.25);
+            }
+            .skill-pill.gate {
+                background: rgba(76,201,240,0.12);
+                color: var(--gate);
+                border-color: rgba(76,201,240,0.25);
+            }
+            .skill-pill.warn {
+                background: rgba(255,180,84,0.12);
+                color: var(--warn);
+                border-color: rgba(255,180,84,0.25);
+            }
+
+            .callout {
+                background: rgba(122,162,255,0.08);
+                border-left: 4px solid var(--accent);
+                border-radius: 8px;
+                padding: 16px 20px;
+                margin: 18px 0 24px;
+                color: var(--text-dim);
+                font-size: 15px;
+            }
+            .callout.success { background: rgba(56,211,159,0.08); border-left-color: var(--success); }
+            .callout.warn { background: rgba(255,180,84,0.08); border-left-color: var(--warn); }
+            .callout.danger { background: rgba(255,107,138,0.08); border-left-color: var(--danger); }
+            .callout.gate { background: rgba(76,201,240,0.08); border-left-color: var(--gate); }
+            .callout strong { color: var(--text); }
+
+            .step-list {
+                counter-reset: step;
+                list-style: none;
+                margin-left: 0;
+                padding-left: 0;
+            }
+            .step-list > li {
+                counter-increment: step;
+                position: relative;
+                padding-left: 56px;
+                margin-bottom: 26px;
+                min-height: 36px;
+            }
+            .step-list > li::before {
+                content: counter(step);
+                position: absolute;
+                left: 0; top: 0;
+                width: 36px; height: 36px;
+                background: var(--gradient-accent);
+                color: #fff;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 800;
+                font-size: 15px;
+            }
+            .step-list h4 { margin: 0 0 6px; color: var(--text); }
+
+            footer {
+                background: var(--bg-1);
+                border-top: 1px solid var(--line);
+                padding: 60px var(--doc-pad-x) 40px;
+                text-align: center;
+                color: var(--text-muted);
+                font-size: 13px;
+            }
+            footer .footer-inner { max-width: var(--doc-max); margin: 0 auto; }
+            footer h3 { color: var(--text); margin-bottom: 12px; text-align: center; }
+
+            @media (max-width: 768px) {
+                :root { --doc-pad-x: 24px; }
+                section { padding: 60px var(--doc-pad-x); }
+                .hero { padding: 90px var(--doc-pad-x) 70px; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="progress-bar" id="progressBar"></div>
+
+        <nav class="topnav" aria-label="Sumário">
+            <a href="#contexto">Contexto</a>
+            <a href="#desenho">Desenho</a>
+            <a href="#anti-alucinacao">Anti-alucinação</a>
+            <a href="#fluxo">Fluxo na sessão</a>
+            <a href="#nao-negociaveis">Não-negociáveis</a>
+            <a href="#nao-faz">O que não faz</a>
+        </nav>
+
+        <header class="hero">
+            <div class="hero-inner">
+                <div class="eyebrow"><span class="dot"></span>Adendo · skill speckit-handoff · v0.6.x</div>
+                <h1>
+                    Compactação de sessão <span class="highlight">sem perda</span> de fidelidade<br />
+                    e com gate anti-alucinação
+                </h1>
+                <p class="hero-lead">
+                    Este adendo complementa o documento <code class="inline">mecanica-das-skills.html</code>
+                    descrevendo, com o mesmo nível de detalhe técnico, a nova skill
+                    <code class="inline">speckit-handoff</code>. A skill foi adicionada como mecanismo
+                    opcional, acionado por descrição, para transferir o estado de uma sessão SpecKit a um
+                    agente fresco — outro modelo, outra sessão, outro colaborador — sem reescrever
+                    contexto e sem assumir suposições não verificáveis. O tom segue intencionalmente
+                    descritivo: a intenção é dar visibilidade plena ao desenho, não persuadir.
+                </p>
+                <div class="hero-meta">
+                    <div class="meta-card">
+                        <div class="label">Tipo de skill</div>
+                        <div class="value">on-demand <small>matcher por descrição</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Custo always-on</div>
+                        <div class="value">0 KB <small>não consome tokens em idle</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Tamanho do SKILL.md</div>
+                        <div class="value">~6 KB <small>~120 linhas</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Inspiração</div>
+                        <div class="value">mattpocock/skills <small>productivity/handoff</small></div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Cobertura de testes</div>
+                        <div class="value">6 novos <small>1369 totais verdes</small></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============ CONTEXTO ============ -->
+        <section id="contexto">
+            <div class="section-inner">
+                <span class="section-tag">§ 1 · Contexto e motivação</span>
+                <h2>Por que o plugin passou a oferecer uma rotina formal de transferência</h2>
+                <p class="section-lead">
+                    Sessões longas em modo agente, com sucessivas iterações de
+                    <code class="inline">/specify</code> → <code class="inline">/plan</code> →
+                    <code class="inline">/tasks</code> → <code class="inline">/implement</code>, atingem
+                    naturalmente o limite da janela de contexto. Quando isso acontece, o host (Copilot CLI
+                    ou o cliente de Chat) compacta a conversa — e a fidelidade do estado cai. O risco
+                    operacional é conhecido: o agente seguinte tende a reconstruir o que faltou,
+                    inventando função, arquivo, endpoint ou decisão. A nova skill encerra esse vetor de
+                    falha com um artefato determinístico, escrito enquanto a sessão atual ainda tem o
+                    estado verificado em mãos.
+                </p>
+
+                <div class="feature-grid">
+                    <div class="feature-card gate">
+                        <div class="tag">Origem · external</div>
+                        <h4>Inspiração: mattpocock/skills</h4>
+                        <p>
+                            O ponto de partida foi a skill pública <code class="inline">productivity/handoff</code>
+                            de Matt Pocock. A ideia central — produzir um documento curto, referenciar
+                            artefatos em vez de duplicá-los e listar skills sugeridas ao próximo agente —
+                            é preservada. O que muda é o encaixe no domínio do plugin.
+                        </p>
+                    </div>
+                    <div class="feature-card success">
+                        <div class="tag">Adaptação · domínio SpecKit</div>
+                        <h4>Encaixe no fluxo do plugin</h4>
+                        <p>
+                            A versão do plugin grava o handoff em
+                            <code class="inline">.speckit/handoff/&lt;feature&gt;-&lt;YYYYMMDD-HHmm&gt;.md</code>
+                            dentro do workspace (não no diretório temporário do sistema). Pré-popula as
+                            <em>suggested skills</em> com as skills já ativas na sessão, referencia
+                            <code class="inline">spec.md</code>, <code class="inline">plan.md</code>,
+                            <code class="inline">tasks.md</code> e impõe uma regra inegociável de
+                            ancoragem em cada afirmação de estado.
+                        </p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">Característica · ativação</div>
+                        <h4>Acionada pelo matcher do Copilot</h4>
+                        <p>
+                            A skill é <em>description-triggered</em>. O <code class="inline">description:</code>
+                            no frontmatter cita explicitamente <em>"Use when … /handoff … compact … context
+                            limit … session break"</em>, o que permite ao matcher do Copilot carregar a
+                            skill no momento certo, sem custo de tokens enquanto ela não é necessária.
+                        </p>
+                    </div>
+                </div>
+
+                <h3>Lacuna que a skill fecha</h3>
+                <p>
+                    O plugin já possuía mecanismos para preservar conhecimento entre fases (a Story
+                    Context, a Stack Skill, o Baseline com seu gate imperativo). O que faltava era um
+                    procedimento <em>operacional</em> para o momento em que a sessão termina ou troca de
+                    interlocutor. Sem isso, qualquer compactação automática feita pelo host se torna a
+                    fonte primária de fidelidade — e ela é, por desenho, lossy. A
+                    <code class="inline">speckit-handoff</code> introduz uma fonte alternativa,
+                    verificável, sob controle explícito do usuário.
+                </p>
+            </div>
+        </section>
+
+        <!-- ============ DESENHO ============ -->
+        <section id="desenho">
+            <div class="section-inner">
+                <span class="section-tag success">§ 2 · Desenho técnico</span>
+                <h2>Estrutura do gerador e do artefato gerado</h2>
+                <p class="section-lead">
+                    A skill foi entregue como adição pura. Nenhum gerador, validator, participant,
+                    comando ou hook pré-existente foi modificado em comportamento. Os pontos de
+                    integração com o plugin são exatamente dois: o gerador novo e a chamada de escrita
+                    no orquestrador de configuração do Copilot.
+                </p>
+
+                <h3>Integração no plugin</h3>
+                <pre><span class="k">src/generator/</span>
+├── <span class="k">skill/</span>
+│   ├── HandoffSkillGenerator.ts        <span class="c"># novo · gera SKILL.md (~6 KB, ~120 linhas)</span>
+│   ├── BaselineSkillGenerator.ts       <span class="c"># inalterado</span>
+│   ├── StackSkillGenerator.ts          <span class="c"># inalterado</span>
+│   ├── StoryContextSkillGenerator.ts   <span class="c"># inalterado</span>
+│   ├── FixContextSkillGenerator.ts     <span class="c"># inalterado</span>
+│   └── DevToolsSkillGenerator.ts       <span class="c"># inalterado</span>
+└── CopilotConfigGenerator.ts           <span class="c"># +1 import, +1 ensureDir, +1 tx.write</span>
+
+<span class="k">workspace gerado/</span>
+└── .github/skills/
+    ├── speckit-baseline/                <span class="c"># sempre escrita (camada 1)</span>
+    ├── speckit-stack/                   <span class="c"># sempre escrita (camada 2)</span>
+    ├── speckit-context-STORY-{id}/      <span class="c"># sempre escrita (camada 3)</span>
+    ├── speckit-handoff/SKILL.md         <span class="c"># NOVO · on-demand</span>
+    ├── speckit-devtools/                <span class="c"># opcional</span>
+    └── corp-*/                          <span class="c"># 0–13, on-demand</span></pre>
+
+                <h3>Anatomia do SKILL.md</h3>
+                <table>
+                    <thead>
+                        <tr><th>Bloco</th><th>Propósito</th><th>Tamanho</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="inline">description:</code> no frontmatter</td>
+                            <td>Aciona a skill via matcher do Copilot — cobre <em>/handoff</em>, compactação iminente, troca de agente/sessão e necessidade de retomada por outro modelo.</td>
+                            <td>1 linha</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">## Quick start</code></td>
+                            <td>Três passos diretos: caminho de saída, template a usar, regra de redação. Resolve 80% das execuções sem leitura do restante.</td>
+                            <td>~5 linhas</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">## When this skill applies</code></td>
+                            <td>Lista exaustiva dos gatilhos legítimos. Evita ativação espúria.</td>
+                            <td>~6 linhas</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline"># REGRA INEGOCIÁVEL — Anti-alucinação no handoff</code></td>
+                            <td>Tabela de afirmação → âncora obrigatória. Marcador <code class="inline">[NÃO VERIFICADO]</code> para itens sem prova.</td>
+                            <td>~18 linhas</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">## Document structure</code></td>
+                            <td>Template literal do documento a ser produzido — re-entry checklist, suggested skills, verified state, open work, decisions, open questions, risks, do-not.</td>
+                            <td>~45 linhas</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">## Redaction rules</code></td>
+                            <td>Reusa as regras de credenciais e PII do <code class="inline">speckit-baseline</code> em vez de duplicar.</td>
+                            <td>~10 linhas</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">## What this skill does not do</code></td>
+                            <td>Limites explícitos: não modifica artefatos SpecKit, não roda comandos, não substitui o estado do host.</td>
+                            <td>~6 linhas</td>
+                        </tr>
+                        <tr>
+                            <td><code class="inline">## Re-entry hint for the receiving agent</code></td>
+                            <td>Protocolo de quatro passos que o próximo agente deve executar ao abrir o handoff.</td>
+                            <td>~6 linhas</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Diferenças deliberadas em relação à skill original</h3>
+                <table>
+                    <thead>
+                        <tr><th>Aspecto</th><th>Versão original (Matt)</th><th>Versão do plugin</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Local de saída</td>
+                            <td><code class="inline">tmp/</code> do sistema operacional</td>
+                            <td><code class="inline">.speckit/handoff/&lt;feature&gt;-&lt;timestamp&gt;.md</code> no workspace</td>
+                        </tr>
+                        <tr>
+                            <td>Suggested skills</td>
+                            <td>Sugestão livre</td>
+                            <td>Pré-populada com as skills do plugin já ativas e os REFERENCE-*.md correspondentes</td>
+                        </tr>
+                        <tr>
+                            <td>Referências a artefatos</td>
+                            <td>Princípio geral ("não duplicar")</td>
+                            <td>Lista explícita: <code class="inline">spec.md</code>, <code class="inline">plan.md</code>, <code class="inline">tasks.md</code>, <code class="inline">/review-auto</code>, relatório CRAP, <code class="inline">git log</code></td>
+                        </tr>
+                        <tr>
+                            <td>Anti-alucinação</td>
+                            <td>Não-tratada</td>
+                            <td>Regra inegociável com tabela de âncora obrigatória e marcador <code class="inline">[NÃO VERIFICADO]</code></td>
+                        </tr>
+                        <tr>
+                            <td>Redação de segredos</td>
+                            <td>"Redact sensitive info"</td>
+                            <td>Vinculada ao gate de credenciais do <code class="inline">speckit-baseline/REFERENCE-credentials.md</code></td>
+                        </tr>
+                        <tr>
+                            <td>Protocolo do agente receptor</td>
+                            <td>Implícito</td>
+                            <td>Quatro passos explícitos no fim do SKILL.md</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ============ ANTI-ALUCINAÇÃO ============ -->
+        <section id="anti-alucinacao">
+            <div class="section-inner">
+                <span class="section-tag danger">§ 3 · Regra inegociável de anti-alucinação</span>
+                <h2>Por que toda afirmação de estado precisa de âncora verificável</h2>
+                <p class="section-lead">
+                    A fragilidade clássica de qualquer documento de transferência é que ele costuma
+                    descrever o estado em linguagem narrativa — exatamente o formato que facilita
+                    invenção quando o autor já está com o contexto degradado. A skill resolve isso
+                    impondo, no próprio SKILL.md, uma tabela que obriga cada afirmação a apontar para
+                    algo verificável pelo próximo agente em segundos.
+                </p>
+
+                <h3>Tabela de ancoragem obrigatória</h3>
+                <table>
+                    <thead>
+                        <tr><th>Tipo de afirmação</th><th>Âncora exigida</th><th>Como o próximo agente confere</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>"Função X foi modificada"</td>
+                            <td><code class="inline">src/&lt;path&gt;.ts:LINHA</code> ou commit SHA</td>
+                            <td>Abre o arquivo na linha citada; <code class="inline">git show &lt;SHA&gt;</code></td>
+                        </tr>
+                        <tr>
+                            <td>"Decisão Y foi tomada"</td>
+                            <td>ADR, <code class="inline">plan.md#sec</code>, ou turno do chat citado</td>
+                            <td>Lê o documento referenciado</td>
+                        </tr>
+                        <tr>
+                            <td>"Teste Z passa"</td>
+                            <td>Path do teste + comando executado</td>
+                            <td>Repete o comando; exit 0 confirma</td>
+                        </tr>
+                        <tr>
+                            <td>"Endpoint /api/… existe"</td>
+                            <td>Path do controller + linha</td>
+                            <td>Inspeção direta do arquivo</td>
+                        </tr>
+                        <tr>
+                            <td>"Tarefa pendente"</td>
+                            <td><code class="inline">tasks.md#T-NN</code></td>
+                            <td>Abre o tasks.md no item</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Marcador para itens sem âncora</h3>
+                <p>
+                    Quando uma informação é relevante mas o autor não consegue ancorá-la (por exemplo,
+                    "acho que tem um problema em <code class="inline">PaymentService.refund</code>"), o
+                    SKILL.md exige o prefixo <code class="inline">[NÃO VERIFICADO]</code>. Esse marcador
+                    é simultaneamente uma forma de honestidade intelectual e um sinal para o próximo
+                    agente confirmar antes de agir. Diferente de omitir, ele preserva a pista; diferente
+                    de afirmar, ele não vira fato no próximo turno.
+                </p>
+
+                <h3>Vetor de falha que isso elimina</h3>
+                <p>
+                    A combinação <em>compactação lossy + narrativa sem âncora</em> é o caminho mais
+                    curto para o agente receptor inventar estado. Com a regra de ancoragem, o documento
+                    fica mais curto, mais frio em tom, e — paradoxalmente — mais útil: o que sobra é
+                    aquilo que sobrevive a uma inspeção rápida de cinco minutos no repositório.
+                </p>
+            </div>
+        </section>
+
+        <!-- ============ FLUXO ============ -->
+        <section id="fluxo">
+            <div class="section-inner">
+                <span class="section-tag gate">§ 4 · Fluxo prático numa sessão</span>
+                <h2>Como a skill é acionada e o que produz</h2>
+                <p class="section-lead">
+                    O caminho típico envolve quatro momentos. Em nenhum deles a skill interrompe
+                    fluxos existentes do plugin — ela é uma ferramenta lateral, invocada quando o
+                    operador percebe a hora de cristalizar o estado.
+                </p>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="tag">Momento 1</div>
+                        <h4>Sessão em andamento, sinal de compactação</h4>
+                        <p>
+                            O usuário percebe (ou o host avisa) que a janela está se aproximando do
+                            limite, ou pretende encerrar o dia. Invoca <code class="inline">/handoff
+                            implementação do payment refund</code> ou simplesmente pede "gera um handoff
+                            antes de pararmos".
+                        </p>
+                    </div>
+                    <div class="feature-card success">
+                        <div class="tag">Momento 2</div>
+                        <h4>Matcher carrega a skill</h4>
+                        <p>
+                            O Copilot detecta a intenção pelo <code class="inline">description:</code>,
+                            carrega <code class="inline">speckit-handoff/SKILL.md</code> e segue o
+                            Quick start. As demais skills do plugin permanecem como estavam — baseline,
+                            stack e story context continuam ativas; corp-* permanecem on-demand.
+                        </p>
+                    </div>
+                    <div class="feature-card gate">
+                        <div class="tag">Momento 3</div>
+                        <h4>Documento gerado com âncoras</h4>
+                        <p>
+                            O agente coleta evidência verificável: <code class="inline">git log -1
+                            --oneline</code>, <code class="inline">git status --short</code>, leituras
+                            de <code class="inline">tasks.md</code>, e produz o handoff em
+                            <code class="inline">.speckit/handoff/STORY-PAG-001-20260522-2215.md</code>.
+                            Cada bullet do <em>verified state</em> aponta para um arquivo + linha ou um
+                            SHA. As lacunas ficam marcadas <code class="inline">[NÃO VERIFICADO]</code>.
+                        </p>
+                    </div>
+                    <div class="feature-card warn">
+                        <div class="tag">Momento 4</div>
+                        <h4>Retomada pelo próximo agente</h4>
+                        <p>
+                            Em uma nova sessão (ou outro modelo), o operador abre o handoff. O receptor
+                            segue o re-entry checklist do topo: lê o <code class="inline">speckit-baseline</code>,
+                            os REFERENCE-*.md listados, roda <code class="inline">git status</code>, abre
+                            o tasks.md. Só então retoma o trabalho, com âncoras em mãos.
+                        </p>
+                    </div>
+                </div>
+
+                <h3>Exemplo de saída (extrato real do template)</h3>
+                <pre><span class="c"># Handoff — STORY/FIX STORY-PAG-001</span>
+
+<span class="k">**Generated**</span>: 2026-05-22 22:15 (local)
+<span class="k">**Last commit on branch**</span>: c80a55a "feat(skills): adicionar speckit-handoff"
+<span class="k">**Branch**</span>: main
+<span class="k">**Workspace dirty?**</span>: yes (M src/payment/RefundService.ts)
+
+<span class="c">## Next session focus</span>
+Concluir RefundService.refund() e cobertura de retry assíncrono.
+
+<span class="c">## Re-entry checklist (do this FIRST)</span>
+- [ ] Read .github/skills/speckit-baseline/SKILL.md
+- [ ] Read REFERENCE-idempotency.md e REFERENCE-observability.md
+- [ ] Run git status e git log -5 --oneline
+- [ ] Open specs/STORY-PAG-001/{spec,plan,tasks}.md
+- [ ] Read this handoff in full before touching code
+
+<span class="c">## Suggested skills (load these before acting)</span>
+- speckit-baseline (sempre; REFERENCE-idempotency.md aplica)
+- speckit-stack-java (carregada por language match)
+- speckit-context-STORY-STORY-PAG-001
+- corp-springboot, corp-resiliencia (já ativas nesta stack)
+
+<span class="c">## Verified state</span>
+- Implementado: RefundService.refund() — src/payment/RefundService.ts:142 (commit a91ef7c)
+- Teste adicionado: tests/unit/payment/RefundService.test.ts — npm test -- RefundService (exit 0)
+- Idempotency-Key validado: src/payment/RefundController.ts:58 (commit a91ef7c)
+
+<span class="c">## Open work (with anchors)</span>
+- [ ] T-07 — retry com backoff exponencial — tasks.md#T-07 (pending)
+- [ ] T-08 — observabilidade do retry — tasks.md#T-08 (blocked: definir métrica de tentativa)
+
+<span class="c">## Known risks / unverified claims</span>
+- [NÃO VERIFICADO] Possível race em concorrência no Redis lock — checar antes de mexer</pre>
+            </div>
+        </section>
+
+        <!-- ============ NÃO-NEGOCIÁVEIS ============ -->
+        <section id="nao-negociaveis">
+            <div class="section-inner">
+                <span class="section-tag warn">§ 5 · Não-negociáveis específicos</span>
+                <h2>Garantias que o gerador trava em código</h2>
+                <p class="section-lead">
+                    Como qualquer skill do plugin, as garantias da <code class="inline">speckit-handoff</code>
+                    são travadas por testes automatizados. Isso evita regressão silenciosa caso alguém
+                    edite o gerador no futuro.
+                </p>
+
+                <table>
+                    <thead>
+                        <tr><th>Não-negociável</th><th>Travado por</th><th>Onde</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code class="inline">description:</code> usa "Use when…"</td>
+                            <td>Vitest — regex no frontmatter</td>
+                            <td><code class="inline">tests/unit/generator/skill/description-format.test.ts</code></td>
+                        </tr>
+                        <tr>
+                            <td>Seção <code class="inline">## Quick start</code> presente</td>
+                            <td>Vitest — regex em <code class="inline"># SpecKit Handoff[\s\S]*?## Quick start</code></td>
+                            <td>idem</td>
+                        </tr>
+                        <tr>
+                            <td>Bloco <code class="inline">REGRA INEGOCIÁVEL — Anti-alucinação</code> presente</td>
+                            <td>Vitest — assert de string</td>
+                            <td>idem</td>
+                        </tr>
+                        <tr>
+                            <td>Output direcionado a <code class="inline">.speckit/handoff/</code></td>
+                            <td>Vitest — string match, e <em>nega</em> "save to OS temp"</td>
+                            <td>idem</td>
+                        </tr>
+                        <tr>
+                            <td>Reuso das regras de credenciais do baseline</td>
+                            <td>Vitest — referência a <code class="inline">REFERENCE-credentials.md</code> ou <code class="inline">speckit-baseline</code></td>
+                            <td>idem</td>
+                        </tr>
+                        <tr>
+                            <td>Seção <code class="inline">## Suggested skills</code> presente</td>
+                            <td>Vitest — regex direto</td>
+                            <td>idem</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Custo always-on</h3>
+                <p>
+                    A skill ocupa <strong>zero</strong> espaço de contexto quando não está sendo usada.
+                    Diferente do baseline (que tem corpo always-on de ~9,6 KB), o
+                    <code class="inline">speckit-handoff/SKILL.md</code> só entra no contexto quando o
+                    matcher do Copilot reconhece o gatilho via <code class="inline">description:</code>.
+                    Esse desenho preserva a obsessão do plugin com a janela de contexto descrita no
+                    documento principal.
+                </p>
+            </div>
+        </section>
+
+        <!-- ============ O QUE NÃO FAZ ============ -->
+        <section id="nao-faz">
+            <div class="section-inner">
+                <span class="section-tag">§ 6 · Limites claros</span>
+                <h2>O que a skill deliberadamente não faz</h2>
+                <p class="section-lead">
+                    Tão importante quanto descrever o que a skill faz é deixar nítido o que ela não toca.
+                    Isso protege os fluxos existentes do plugin e evita sobreposição com mecanismos do
+                    host (Copilot CLI, VS Code).
+                </p>
+
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="tag">Não modifica</div>
+                        <h4>Artefatos SpecKit</h4>
+                        <p>
+                            <code class="inline">spec.md</code>, <code class="inline">plan.md</code> e
+                            <code class="inline">tasks.md</code> permanecem como fonte de verdade. O
+                            handoff os <em>referencia</em>; não copia, não reescreve.
+                        </p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">Não dispara</div>
+                        <h4>Comandos do participant</h4>
+                        <p>
+                            Nada de invocar <code class="inline">/specify</code>, <code class="inline">/plan</code>,
+                            <code class="inline">/tasks</code>, <code class="inline">/implement</code> ou
+                            <code class="inline">/review-auto</code> automaticamente. A skill é
+                            documental, não executiva.
+                        </p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">Não substitui</div>
+                        <h4>Estado de sessão do host</h4>
+                        <p>
+                            Os checkpoints do Copilot CLI em
+                            <code class="inline">~/.copilot/session-state/</code> continuam sendo o
+                            mecanismo do host. O handoff opera em outra camada — o agente do projeto,
+                            dentro do workspace — e os dois coexistem sem conflito.
+                        </p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="tag">Não força</div>
+                        <h4>Adoção automática</h4>
+                        <p>
+                            Não há gatilho automático ao fim de cada sessão. A skill é invocada pelo
+                            usuário ou pelo agente quando há valor objetivo — caso contrário seria
+                            ruído. Esse foi um trade-off deliberado.
+                        </p>
+                    </div>
+                    <div class="feature-card warn">
+                        <div class="tag">Não comita</div>
+                        <h4>O próprio handoff</h4>
+                        <p>
+                            O documento gerado é tratado como artefato de trabalho. O usuário decide se
+                            quer adicionar <code class="inline">.speckit/handoff/</code> ao
+                            <code class="inline">.gitignore</code>, versionar ou apenas usar local.
+                        </p>
+                    </div>
+                    <div class="feature-card success">
+                        <div class="tag">Compatibilidade</div>
+                        <h4>Coexistência com tudo o que existia</h4>
+                        <p>
+                            Baseline (e seus seis REFERENCE-*.md), stack, story/fix context, devtools,
+                            corp-*, agentes <code class="inline">speckit-implementador</code> e
+                            <code class="inline">speckit-revisor</code> — todos continuam operando
+                            exatamente como antes. A suite de 1369 testes verdes confirma a ausência de
+                            regressão.
+                        </p>
+                    </div>
+                </div>
+
+                <h3>Cross-reference</h3>
+                <p>
+                    Para o panorama completo do mecanismo de skills do plugin, ver
+                    <code class="inline">publish/analise-corp-guidelines/mecanica-das-skills.html</code>.
+                    Para a entrega desta skill em particular, ver o commit
+                    <code class="inline">c80a55a</code> no histórico de
+                    <code class="inline">main</code> e os testes em
+                    <code class="inline">tests/unit/generator/skill/description-format.test.ts</code>.
+                </p>
+            </div>
+        </section>
+
+        <footer>
+            <div class="footer-inner">
+                <h3>Adendo · speckit-handoff · plugin SpecKit</h3>
+                <p>
+                    Documento técnico complementar a <code class="inline">mecanica-das-skills.html</code>.
+                    Plataforma: <code class="inline">My-SpecKit-VSCode-Plugin</code> ·
+                    Commit de origem: <code class="inline">c80a55a feat(skills): adicionar speckit-handoff</code> ·
+                    Referência cruzada: <code class="inline">publish/0.6.0/CHANGELOG-0.6.0.txt</code>.
+                </p>
+            </div>
+        </footer>
+
+        <script>
+            const progressBar = document.getElementById("progressBar");
+            window.addEventListener("scroll", () => {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                const scrolled = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+                progressBar.style.width = scrolled + "%";
+            });
+        </script>
+    </body>
+</html>
