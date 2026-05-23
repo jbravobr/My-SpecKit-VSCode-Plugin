@@ -5,6 +5,7 @@ import { generateStackSkill } from '../../../../src/generator/skill/StackSkillGe
 import { generateStoryContextSkill } from '../../../../src/generator/skill/StoryContextSkillGenerator';
 import { generateFixContextSkill } from '../../../../src/generator/skill/FixContextSkillGenerator';
 import { generateDevToolsSkill } from '../../../../src/generator/skill/DevToolsSkillGenerator';
+import { generateHandoffSkill } from '../../../../src/generator/skill/HandoffSkillGenerator';
 import { generateCorpSkills } from '../../../../src/generator/corp/CorpSkillsGenerator';
 
 function getBaselineSkillMd(story?: Parameters<typeof generateBaselineSkill>[0]): string {
@@ -101,6 +102,13 @@ describe('skill description format — Use when / Use quando standard', () => {
     expect(desc).not.toMatch(/Activate when|Ative ao|Ative em|Ativado por/i);
   });
 
+  it('speckit-handoff description includes "Use when"', () => {
+    const desc = extractDescription(generateHandoffSkill());
+    expect(desc).toBeTruthy();
+    expect(desc).toMatch(/Use when/i);
+    expect(desc).not.toMatch(/Activate when|Ative ao|Ative em|Ativado por/i);
+  });
+
   it('devtools skill description includes "Use quando"', () => {
     const output = generateDevToolsSkill({
       language: 'typescript',
@@ -158,6 +166,11 @@ describe('skill quick start sections', () => {
     expect(content).toMatch(/^---[\s\S]+?---\s*\n+# SpecKit Stack[\s\S]*?## Quick start/m);
   });
 
+  it('speckit-handoff has ## Quick start at the top', () => {
+    const content = generateHandoffSkill();
+    expect(content).toMatch(/^---[\s\S]+?---\s*\n+# SpecKit Handoff[\s\S]*?## Quick start/m);
+  });
+
   it('speckit-baseline Quick start is concise (≤ 15 lines)', () => {
     const content = getBaselineSkillMd();
     const m = content.match(/## Quick start\n([\s\S]*?)(?=\n##|\n---)/);
@@ -213,5 +226,30 @@ describe('speckit-baseline split (progressive disclosure)', () => {
     const content = getBaselineSkillMd();
     expect(content.split('\n').length).toBeLessThanOrEqual(220);
     expect(content.length).toBeLessThan(15000);
+  });
+});
+
+describe('speckit-handoff non-negotiables', () => {
+  it('contains the anti-hallucination mandatory rule block', () => {
+    const content = generateHandoffSkill();
+    expect(content).toContain('REGRA INEGOCIÁVEL — Anti-alucinação no handoff');
+    expect(content).toContain('[NÃO VERIFICADO]');
+  });
+
+  it('points handoff output to .speckit/handoff (not OS temp)', () => {
+    const content = generateHandoffSkill();
+    expect(content).toContain('.speckit/handoff/');
+    expect(content).not.toMatch(/\bOS temp\b.*save/i);
+  });
+
+  it('embeds redaction rules referencing baseline credentials', () => {
+    const content = generateHandoffSkill();
+    expect(content).toMatch(/Redaction rules/);
+    expect(content).toMatch(/REFERENCE-credentials\.md|speckit-baseline/);
+  });
+
+  it('lists a Suggested skills section for the next agent', () => {
+    const content = generateHandoffSkill();
+    expect(content).toMatch(/## Suggested skills/);
   });
 });

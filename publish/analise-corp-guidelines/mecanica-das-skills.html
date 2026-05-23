@@ -463,6 +463,7 @@
 │   │   └── REFERENCE-idempotency.md   <span class="c"># on-demand · gate liga "POST/PUT/PATCH"</span>
 │   ├── speckit-stack/SKILL.md         <span class="c"># linguagem + framework + infra + patterns</span>
 │   ├── speckit-context-STORY-{id}/    <span class="c"># contexto específico da story ativa</span>
+│   ├── speckit-handoff/SKILL.md       <span class="c"># on-demand · transferência de sessão</span>
 │   ├── speckit-devtools/SKILL.md      <span class="c"># opcional · ESLint, Prettier, husky</span>
 │   └── corp-*/SKILL.md                <span class="c"># 0–13 skills corp-* (on-demand)</span>
 └── <span class="k">agents/</span>
@@ -588,6 +589,12 @@
                             <td>Sempre (Fix)</td>
                             <td>Sintomas · hipótese · impacto · prevenção de regressão</td>
                             <td>~80 linhas</td>
+                        </tr>
+                        <tr>
+                            <td><span class="skill-pill">speckit-handoff</span></td>
+                            <td>On-demand (matcher por descrição)</td>
+                            <td>Transferência de sessão para um agente novo: estado verificado, decisões, trabalho em aberto e regra anti-alucinação que exige âncora (path:linha, SHA, <code class="inline">tasks.md#T-NN</code>) em cada afirmação. Doc gerado em <code class="inline">.speckit/handoff/</code> do workspace.</td>
+                            <td>~120 linhas</td>
                         </tr>
                         <tr>
                             <td><span class="skill-pill warn">speckit-devtools</span></td>

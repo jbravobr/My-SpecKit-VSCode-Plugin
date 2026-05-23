@@ -5,6 +5,7 @@ import { generateRevisorAgent } from './agent/StoryRevisorAgentGenerator';
 import { generateCiQualityGate, generateCiSecurityScan } from './ci/CiGenerator';
 import { generateCorpSkills } from './corp/CorpSkillsGenerator';
 import { generateBaselineSkill } from './skill/BaselineSkillGenerator';
+import { generateHandoffSkill } from './skill/HandoffSkillGenerator';
 import { generateStackSkill } from './skill/StackSkillGenerator';
 import { generateStoryContextSkill } from './skill/StoryContextSkillGenerator';
 import { generateIndex } from './story/IndexGenerator';
@@ -26,6 +27,7 @@ export async function generateCopilotConfig(
 
   const baselineSkillDir = path.join(skillsDir, 'speckit-baseline');
   const stackSkillDir = path.join(skillsDir, 'speckit-stack');
+  const handoffSkillDir = path.join(skillsDir, 'speckit-handoff');
   const contextSkillName = `speckit-context-STORY-${story.metadata.id}`;
   const contextSkillDir = path.join(skillsDir, contextSkillName);
 
@@ -38,6 +40,7 @@ export async function generateCopilotConfig(
     fs.ensureDir(promptsDir),
     fs.ensureDir(baselineSkillDir),
     fs.ensureDir(stackSkillDir),
+    fs.ensureDir(handoffSkillDir),
     fs.ensureDir(contextSkillDir),
   ];
   if (ciEnabled) {
@@ -71,6 +74,7 @@ export async function generateCopilotConfig(
     ),
   );
   await tx.write(path.join(contextSkillDir, 'SKILL.md'), generateStoryContextSkill(story));
+  await tx.write(path.join(handoffSkillDir, 'SKILL.md'), generateHandoffSkill(story));
 
   // Agents — on-select (loaded when user selects from dropdown)
   await tx.write(
