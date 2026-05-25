@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['tests/unit/**/*.test.ts'],
+    include: ['tests/unit/**/*.test.ts', 'tests/integration/graph-pipeline.test.ts'],
     environment: 'node',
     alias: { vscode: resolve(__dirname, 'tests/__mocks__/vscode.ts') },
     coverage: {

@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import { PLUGIN_VERSION_GRAPH, SCHEMA_VERSION } from './constants';
 import { GraphStore } from './GraphStore';
 import { ImportExtractor } from './extractors/ExtractorTypes';
+import { PerfBudget } from './PerfBudget';
 import { Graph, GraphEdge, GraphNode } from './types';
 
 const execFileAsync = promisify(execFile);
@@ -45,12 +46,20 @@ export class IncrementalUpdater {
 
   /** Força refresh imediato dos arquivos pendentes. */
   async flush(workspaceRoot: string): Promise<UpdateMetrics> {
-    this.cancel();
+    const budgetMs = vscode.workspace
+      .getConfiguration('speckit.graph')
+      .get<number>('updater.flush.budgetMs', 2000);
 
-    const touchedPaths = [...this.touchedPaths];
-    this.touchedPaths.clear();
+    const { result } = await PerfBudget.measure('graph.updater.flush', budgetMs, async () => {
+      this.cancel();
 
-    return this.flushPaths(workspaceRoot, touchedPaths);
+      const touchedPaths = [...this.touchedPaths];
+      this.touchedPaths.clear();
+
+      return this.flushPaths(workspaceRoot, touchedPaths);
+    });
+
+    return result;
   }
 
   /** Refresh a partir de diff git (prevSha → headSha). */

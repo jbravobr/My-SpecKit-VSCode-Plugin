@@ -1,5 +1,7 @@
+import * as vscode from 'vscode';
 import type { Graph, GraphEdge, GraphNode } from './types';
 import { GraphQuery, type Subgraph } from './GraphQuery';
+import { PerfBudget } from './PerfBudget';
 
 export interface EmbedOptions {
   topN?: number;
@@ -20,6 +22,18 @@ function normalizePath(value: string): string {
 
 function shortSha(value: string | undefined): string {
   return value === undefined || value.length === 0 ? 'uncommitted' : value.slice(0, 7);
+}
+
+function generateBudgetMs(): number {
+  try {
+    return (
+      vscode.workspace
+        .getConfiguration('speckit.graph')
+        .get<number>('embedder.generate.budgetMs', 50) ?? 50
+    );
+  } catch {
+    return 50;
+  }
 }
 
 export function parseEmbedAttributes(values: unknown[] | undefined): EmbedAttribute[] {
@@ -55,6 +69,13 @@ export class SubgraphEmbedder {
 
   /** Gera o bloco markdown completo para inserção no copilot-instructions.md. */
   generate(opts?: EmbedOptions): string {
+    const { result } = PerfBudget.measureSync('graph.embedder.generate', generateBudgetMs(), () =>
+      this.generateInternal(opts),
+    );
+    return result;
+  }
+
+  private generateInternal(opts?: EmbedOptions): string {
     if (this.graph.nodes.length === 0) {
       return '## GRAPH CONTEXT\n\n> Grafo vazio (workspace greenfield ou build pendente).\n';
     }

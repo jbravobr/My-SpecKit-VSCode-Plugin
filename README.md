@@ -2716,6 +2716,53 @@ Não. O `/commit` apenas executa stage + commit local (prefixo `speckit:`). O pu
 
 ---
 
+## Navegação por grafo (v0.7.0)
+
+A partir da v0.7.0, todo fluxo do plugin que envolve construir ou alterar código em um repositório carregado passa a exigir consulta a um **grafo de dependências do workspace** antes da entrega.
+
+Combinação de:
+
+- **arXiv [2602.20048v1](https://arxiv.org/html/2602.20048v1)** ("Navigation Paradox"): posicionamento do mandato como ÚLTIMO bloco do contexto (checklist-at-END) reduz contradições.
+- **[safishamsi/graphify](https://github.com/safishamsi/graphify)**: schema versionado com `confidence` (`EXTRACTED|INFERRED|AMBIGUOUS`) e tipos de aresta (`IMPORTS|INHERITS|INSTANTIATES`).
+
+### Como funciona
+
+1. **`/init`** dispara `IncrementalUpdater.buildFull()` que extrai imports de TypeScript/JavaScript (AST via `lib typescript`) e Python/Java/C# (regex AST-aware, marcado como parcial).
+2. O grafo é persistido em **`.speckit/graph.json`** (versionado, `schemaVersion 1.0.0`).
+3. **`SubgraphEmbedder`** gera um bloco `## GRAPH CONTEXT` no `copilot-instructions.md` — auto-lido pelo Copilot Chat sem premium request.
+4. **`GraphFreshnessGate`** (sync ≤300ms) verifica antes de cada comando se o grafo está fresh contra `HEAD`. Se stale, dispara refresh assíncrono e injeta `GRAPH_STALE_WARNING`.
+5. **PostSave + HEAD watchers** coalescem mudanças (debounce 500ms) e mantêm o grafo atualizado entre commits; `BatchContext` coalesce rajadas de extração com paralelismo limitado para uso em fluxos de watcher.
+6. **`PerfBudget`** monitora budgets de `graph.gate.ensure`, `graph.updater.flush` e `graph.embedder.generate`, emitindo warning quando excedidos.
+7. **`/validate`** e **`/review-auto`** emitem o **Veto Protocol**: a entrega é rejeitada se o agente não declarar `CONSULTEI` (com lista de entidades navegadas) ou `VETO_GRAPH_NOT_AVAILABLE`.
+
+### Comandos novos
+
+| Comando                           | Função                                                                                   |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| `speckit.graph.rebuild`           | Reconstrói o grafo do zero                                                               |
+| `speckit.graph.show`              | Abre `.speckit/graph.json` no editor                                                     |
+| `speckit.graph.inspect`           | QuickPick → markdown com vizinhos do arquivo selecionado                                 |
+| `speckit.graph.installGuardrails` | Instala SKILL/REFERENCE em `~/.copilot/skills/`, `~/.claude/skills/`, `~/.cursor/rules/` |
+
+### Configurações
+
+| Setting                                    | Default  | Descrição                                                          |
+| ------------------------------------------ | -------- | ------------------------------------------------------------------ |
+| `speckit.graph.enabled`                    | `true`   | Habilita/desabilita o mandato em todo o fluxo                      |
+| `speckit.graph.gate.budgetMs`              | `300`    | Orçamento do sync path do gate antes de fallback async             |
+| `speckit.graph.updater.flush.budgetMs`     | `2000`   | Orçamento do flush incremental completo                            |
+| `speckit.graph.embedder.generate.budgetMs` | `50`     | Orçamento para gerar o bloco markdown `GRAPH CONTEXT`              |
+| `speckit.graph.batch.windowMs`             | `100`    | Janela para coalescer rajadas de extração                          |
+| `speckit.graph.batch.concurrency`          | `4`      | Paralelismo máximo de extração por lote                            |
+| `speckit.graph.embed.topN`                 | `20`     | Quantidade de nós listados no bloco `GRAPH CONTEXT`                |
+| `speckit.graph.embed.attributes`           | `[]`     | Opt-in: `confidence`, `riskScore`, `edgeKind`, `diffSinceLastGate` |
+| `speckit.graph.languages`                  | `"auto"` | Filtro de linguagens                                               |
+| `speckit.graph.ignore`                     | `[]`     | Globs adicionais ignorados pelo watcher                            |
+
+Workspaces greenfield (sem código suportado) entram automaticamente em modo no-op. Consulte o [CHANGELOG](./CHANGELOG.md) para detalhes completos.
+
+---
+
 ## Limitações conhecidas
 
 | Limitação                                                                | Status             | Workaround                             |

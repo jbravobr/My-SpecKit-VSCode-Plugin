@@ -194,6 +194,34 @@
           "maximum": 5000,
           "description": "Synchronous freshness gate budget (ms). Above this, the gate falls back to async + GRAPH_STALE_WARNING."
         },
+        "speckit.graph.updater.flush.budgetMs": {
+          "type": "number",
+          "default": 2000,
+          "minimum": 100,
+          "maximum": 30000,
+          "description": "Performance budget (ms) for a complete incremental graph flush."
+        },
+        "speckit.graph.embedder.generate.budgetMs": {
+          "type": "number",
+          "default": 50,
+          "minimum": 1,
+          "maximum": 5000,
+          "description": "Performance budget (ms) for generating the markdown graph context embed."
+        },
+        "speckit.graph.batch.windowMs": {
+          "type": "number",
+          "default": 100,
+          "minimum": 1,
+          "maximum": 5000,
+          "description": "Short coalescing window (ms) for graph extraction batches."
+        },
+        "speckit.graph.batch.concurrency": {
+          "type": "number",
+          "default": 4,
+          "minimum": 1,
+          "maximum": 32,
+          "description": "Maximum parallel graph extraction tasks per batch."
+        },
         "speckit.graph.languages": {
           "type": "array",
           "default": [

@@ -1,4 +1,6 @@
 export { SCHEMA_VERSION, PLUGIN_VERSION_GRAPH } from './constants';
+export { BatchContext } from './BatchContext';
+export type { BatchContextOptions } from './BatchContext';
 export { FileSystemWatcherBridge } from './FileSystemWatcherBridge';
 export type { ExtractedFile, ImportExtractor } from './extractors';
 export {
@@ -40,6 +42,8 @@ export type {
 export { GraphStore } from './GraphStore';
 export { HeadFileWatcher } from './HeadFileWatcher';
 export { IncrementalUpdater } from './IncrementalUpdater';
+export { PerfBudget } from './PerfBudget';
+export type { BudgetCheck } from './PerfBudget';
 export { PostSaveCoordinator } from './PostSaveCoordinator';
 export { parseEmbedAttributes, SubgraphEmbedder } from './SubgraphEmbedder';
 export type { EmbedAttribute, EmbedOptions } from './SubgraphEmbedder';

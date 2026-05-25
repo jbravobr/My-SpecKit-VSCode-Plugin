@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import * as vscode from 'vscode';
 import { GraphStore } from './GraphStore';
+import { PerfBudget } from './PerfBudget';
 
 export type GateStatus = 'fresh' | 'stale-async' | 'no-op';
 
@@ -21,10 +22,6 @@ export type GraphFreshnessResult = GateResult;
 
 const SUPPORTED_CODE_GLOB = '**/*.{ts,tsx,js,jsx,mts,cts,mjs,cjs,java,py,cs}';
 const EXCLUDE_GLOB = '**/{node_modules,dist,out,coverage}/**';
-
-function elapsedSince(startMs: number): number {
-  return Math.max(0, Date.now() - startMs);
-}
 
 function shortSha(sha: string | undefined): string {
   if (sha === undefined || sha.length === 0) {
@@ -123,8 +120,25 @@ export class GraphFreshnessGate {
       return { status: 'no-op', durationMs: 0 };
     }
 
-    const startMs = Date.now();
     const budgetMs = opts?.budgetMs ?? config.get<number>('gate.budgetMs', 300);
+    const { result, check } = await PerfBudget.measure('graph.gate.ensure', budgetMs, () =>
+      this.ensureEnabled(workspaceRoot),
+    );
+
+    if (check.exceeded && opts?.commandName !== undefined) {
+      console.warn(
+        `Graph freshness gate exceeded budget for ${opts.commandName}: ${check.measuredMs}ms > ${budgetMs}ms`,
+      );
+    }
+
+    if (result.status === 'no-op') {
+      return result;
+    }
+
+    return { ...result, durationMs: check.measuredMs };
+  }
+
+  private async ensureEnabled(workspaceRoot: string): Promise<GateResult> {
     const graphExists = await this.store.exists(workspaceRoot);
     if (!graphExists && !(await this.hasSupportedCode())) {
       return { status: 'no-op', durationMs: 0 };
@@ -134,51 +148,32 @@ export class GraphFreshnessGate {
 
     if (meta === null) {
       this.onStaleAsync?.('missing');
-      return this.withBudgetWarning(
-        {
-          status: 'stale-async',
-          warning: createMissingGraphWarning(),
-          durationMs: elapsedSince(startMs),
-        },
-        budgetMs,
-        opts?.commandName,
-      );
+      return {
+        status: 'stale-async',
+        warning: createMissingGraphWarning(),
+        durationMs: 0,
+      };
     }
 
     const currentHead = await readGitHead(workspaceRoot);
     const result: GateResult =
       currentHead !== null && meta.headSha === currentHead
-        ? { status: 'fresh', durationMs: elapsedSince(startMs) }
+        ? { status: 'fresh', durationMs: 0 }
         : {
             status: 'stale-async',
             warning: createHeadDriftWarning(meta.headSha, currentHead),
-            durationMs: elapsedSince(startMs),
+            durationMs: 0,
           };
 
     if (result.status === 'stale-async') {
       this.onStaleAsync?.('headDrift');
     }
 
-    return this.withBudgetWarning(result, budgetMs, opts?.commandName);
+    return result;
   }
 
   private async hasSupportedCode(): Promise<boolean> {
     const files = await vscode.workspace.findFiles(SUPPORTED_CODE_GLOB, EXCLUDE_GLOB, 1);
     return files.length > 0;
-  }
-
-  private withBudgetWarning(
-    result: GateResult,
-    budgetMs: number,
-    commandName?: string,
-  ): GateResult {
-    if (result.durationMs > budgetMs) {
-      const commandSuffix = commandName === undefined ? '' : ` for ${commandName}`;
-      console.warn(
-        `Graph freshness gate exceeded budget${commandSuffix}: ${result.durationMs}ms > ${budgetMs}ms`,
-      );
-    }
-
-    return result;
   }
 }
