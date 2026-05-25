@@ -124,7 +124,11 @@ describe('skill description format — Use when / Use quando standard', () => {
         allPresent: false,
       },
     });
-    expect(output).toMatch(/Use quando/i);
+    const desc = extractDescription(output);
+    expect(output).toMatch(/^---\nname: speckit-devtools\n/m);
+    expect(desc).toBeTruthy();
+    expect(desc).toMatch(/Use quando/i);
+    expect(output).not.toMatch(/^globs:/m);
     expect(output).not.toMatch(/Ativado por keywords/i);
   });
 
@@ -213,12 +217,13 @@ describe('speckit-baseline split (progressive disclosure)', () => {
     expect(content).toContain('Idempotency-Key');
   });
 
-  it('every REFERENCE file has frontmatter and a back-pointer to the gate', () => {
+  it('every REFERENCE file has a back-pointer to the gate and no skill frontmatter', () => {
     const files = generateBaselineSkill();
     for (const ref of REQUIRED_REFERENCES) {
       const file = files.find((f) => f.filename === ref);
       expect(file, `${ref} should be produced`).toBeTruthy();
-      expect(file!.content).toMatch(/^---\n[\s\S]+?\n---/);
+      expect(file!.content).not.toMatch(/(^|\n)---\r?\n(?:name|description|applyTo|globs):/);
+      expect(file!.content).not.toMatch(/^(name|description|applyTo|globs):/m);
       expect(file!.content).toContain('REFERÊNCIA do speckit-baseline');
     }
   });

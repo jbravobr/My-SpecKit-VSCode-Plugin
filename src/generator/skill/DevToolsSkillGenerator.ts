@@ -13,10 +13,10 @@ export function generateDevToolsSkill(input: DevToolsSkillInput): string {
   const sections: string[] = [];
 
   sections.push(`---
+name: speckit-devtools
 description: >-
   Instruções para configurar ferramentas de qualidade de código no projeto.
   Use quando configurar lint, format, husky, pre-commit hooks ou quando o usuário mencionar devtools, eslint, prettier ou ferramentas de qualidade de código.
-globs: '**'
 ---
 
 # DevTools — Configuração de qualidade de código

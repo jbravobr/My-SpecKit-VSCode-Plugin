@@ -100,11 +100,7 @@ ${coreSections.join('\n---\n\n')}
 }
 
 function buildReference(domain: string, body: string): string {
-  return `---
-applyTo: "**"
----
-
-> **REFERÊNCIA do speckit-baseline.** Leia este arquivo antes de executar a ação correspondente
+  return `> **REFERÊNCIA do speckit-baseline.** Leia este arquivo antes de executar a ação correspondente
 > na tabela de gate do \`SKILL.md\` (domínio: \`${domain}\`).
 
 ${body}`;

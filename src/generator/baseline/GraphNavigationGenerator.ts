@@ -22,9 +22,9 @@ export function generateGraphMandateCondensed(): string {
 > Detalhes em \`speckit-baseline/SKILL.md\` (seção "Navegação Estrutural por Grafo")
 > e \`REFERENCE-graph.md\`. Base: arXiv 2602.20048v1 (+23 p.p. ACS em G3).
 
-- **Antes** de propor edit em código: consultar \`speckit.graph.query\` (1-hop).
+- **Antes** de propor edit em código: consultar grafo 1-hop; preferir \`speckit.graph.query\` quando disponível, senão usar \`.speckit/graph.json\` ou \`speckit.graph.inspect\`.
 - **Refactor** de símbolo público/classe-base: listar importers + herdeiros + instanciadores; gravar evidência em \`.speckit/evidence/graph-inspection.json\`.
-- **Após** \`apply_patch/edit/create\`: invocar \`speckit.graph.refreshChanged\`.
+- **Após** \`apply_patch/edit/create\`: declarar grafo possivelmente stale; usar \`speckit.graph.refreshChanged\` quando disponível ou \`speckit.graph.rebuild\` antes do gate final.
 - **Busca semântica ∅** mas grafo trouxe vizinhos: aplicar Veto Protocol (listar blind-spots).
 - **Sem consulta?** Declarar e justificar — silêncio = violação.`;
 }
@@ -48,12 +48,12 @@ applyTo: "**"
 
 | Ação que vou executar | Obrigação |
 |---|---|
-| Propor edit em arquivo de código (\`*.{ts,tsx,js,jsx,java,py,cs,mts,cts,mjs,cjs}\`) | Consultar 1-hop via grafo (\`.speckit/graph.json\`). Listar nós inspecionados no output. |
+| Propor edit em arquivo de código (\`*.{ts,tsx,js,jsx,java,py,cs,mts,cts,mjs,cjs}\`) | Consultar 1-hop via grafo (\`.speckit/graph.json\`) ou \`SpecKit: Inspect Graph Neighbors\`. Listar nós inspecionados no output. |
 | Refatorar símbolo público, classe-base, config compartilhada, contrato HTTP/JWT/DB | Consultar grafo + listar **importers, herdeiros e instanciadores** ANTES do diff. Gravar evidência estruturada em \`.speckit/evidence/graph-inspection.json\` (rejeitado em \`/review-auto\` se ausente). |
 | Usar apenas grep/semantic search sem consultar o grafo | **Declarar** essa limitação no início da resposta e **justificar**. Resposta sem declaração nem consulta = violação. |
-| Após cada \`apply_patch/edit/create\` em arquivo de código | Declarar "grafo possivelmente stale" e invocar task \`SpecKit: Refresh Changed Graph Nodes\` (comando \`speckit.graph.refreshChanged\`). |
-| Ao iniciar sessão de implementação | Executar \`speckit.graph.ensureFresh\` como primeira ação. |
-| Ao terminar feature (gate 3/4) | Reexecutar \`speckit.graph.rebuild\` e anexar diff de arestas ao output. |
+| Após cada \`apply_patch/edit/create\` em arquivo de código | Declarar "grafo possivelmente stale". Se o comando \`speckit.graph.refreshChanged\` estiver disponível no workspace, executá-lo; caso contrário, usar \`speckit.graph.rebuild\` antes do gate final. |
+| Ao iniciar sessão de implementação | Verificar se \`.speckit/graph.json\` existe e está compatível com o HEAD; se houver comando \`speckit.graph.ensureFresh\`, executá-lo. |
+| Ao terminar feature (gate 3/4) | Reexecutar \`speckit.graph.rebuild\` quando o plugin estiver disponível e registrar o resultado do grafo no output. |
 | Se a busca semântica retornou ∅ mas o grafo trouxe vizinhos | Acionar **Veto Protocol** explícito: marcar como blind-spot estrutural, revisar antes de propor edit. |
 
 ## Cláusula anti-padrão
@@ -74,7 +74,7 @@ Nesses casos, o gate é no-op e o validador estrutural não exige evidência.
 
 1. Pergunta do usuário toca código.
 2. Você usou busca semântica/grep e obteve ∅ ou poucos resultados.
-3. Você **deve** consultar \`speckit.graph.query\` antes de responder.
+3. Você **deve** consultar o grafo antes de responder: preferir \`speckit.graph.query\` quando disponível; caso contrário, usar \`.speckit/graph.json\` ou \`speckit.graph.inspect\`.
 4. Se o grafo trouxer vizinhos: tratar como **blind-spot estrutural**, listar no output, revisar antes de propor edit.
 5. Se ambos retornarem ∅: declarar "nenhuma navegação estrutural encontrou vizinhos para X" — não inventar.
 
@@ -164,17 +164,28 @@ Java, Python e C# usam regex AST-aware. Casos quebrados:
 Quando \`partialLanguages\` lista a linguagem do arquivo, **declare a limitação**
 no output ao consultar o grafo.
 
-## Comandos disponíveis (VS Code + Copilot Chat)
+## Comandos disponíveis
+
+### Registrados pela implementação instalada
 
 | Comando | Quando usar |
 |---|---|
-| \`speckit.graph.ensureFresh\` | Início de cada sessão de implementação |
-| \`speckit.graph.refreshChanged\` | Após apply_patch/edit/create em código |
-| \`speckit.graph.query\` | Consulta vizinhos de um arquivo/símbolo (1-hop) |
 | \`speckit.graph.rebuild\` | Fim de feature (gate 3/4) ou após operações git destrutivas |
+| \`speckit.graph.show\` | Abrir \`.speckit/graph.json\` no editor para auditoria direta |
+| \`speckit.graph.inspect\` | Escolher um arquivo indexado e abrir Markdown com até 20 vizinhos |
+| \`speckit.graph.installGuardrails\` | Instalar/atualizar esta skill e a referência em espaços de usuário |
 
-Tasks equivalentes ficam em \`.vscode/tasks.json\` gerado pelo \`/init\` (acessíveis
-ao Copilot CLI e agentes externos).
+### Mandato exposto no contrato, mas dependente de disponibilidade no workspace
+
+| Comando | Como tratar na skill |
+|---|---|
+| \`speckit.graph.ensureFresh\` | Executar no início da implementação somente se registrado no VS Code ativo; se não estiver disponível, verificar \`.speckit/graph.json\` e HEAD manualmente ou usar \`rebuild\`. |
+| \`speckit.graph.refreshChanged\` | Executar após edits em código somente se registrado; se não estiver disponível, declarar grafo possivelmente stale e usar \`rebuild\` antes de concluir. |
+| \`speckit.graph.query\` | Preferir para consulta 1-hop quando registrado; se não estiver disponível, usar \`speckit.graph.inspect\` ou leitura direta de \`.speckit/graph.json\`. |
+
+O \`/init\` pode gerar tasks em \`.vscode/tasks.json\` para comandos operacionais do
+grafo, como rebuild/show. Não presuma que todo comando listado acima possui task
+equivalente: verifique \`.vscode/tasks.json\` antes de invocar por task.
 
 ## Exemplos
 
@@ -240,4 +251,21 @@ pelo Copilot em todo turn). Mesma garantia técnica forte, sem premium request.
 - arXiv **2602.20048v1** — "Navigation Paradox / CodeCompass" (base teórica).
 - **safishamsi/graphify** — modelo mental de confidence tags + extração local
   via tree-sitter.`;
+}
+
+export function generateGraphNavigationSkill(): string {
+  return `---
+name: speckit-graph
+description: Navegação estrutural por grafo para reduzir blind-spots arquiteturais antes de editar, refatorar ou revisar código. Use quando trabalhar em repositórios com o plugin SpecKit, quando o usuário mencionar grafo, graph-navigation, harness, refatoração, dependências invisíveis, imports, herdeiros, instanciadores ou quando qualquer mudança de código exigir evidência de impacto estrutural.
+---
+
+${stripGeneratedFrontmatter(generateGraphNavigation())}`;
+}
+
+export function generateGraphReferenceForSkill(): string {
+  return stripGeneratedFrontmatter(generateGraphReference());
+}
+
+function stripGeneratedFrontmatter(content: string): string {
+  return content.replace(/^---[\s\S]*?---\s*/, '');
 }

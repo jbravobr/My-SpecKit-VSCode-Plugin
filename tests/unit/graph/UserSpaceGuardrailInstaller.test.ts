@@ -96,9 +96,27 @@ describe('UserSpaceGuardrailInstaller', () => {
     await expect(fs.readFile(copilotSkillPath, 'utf8')).resolves.toContain(
       '# Navegação Estrutural por Grafo',
     );
-    await expect(fs.readFile(copilotSkillPath, 'utf8')).resolves.not.toMatch(/^---/);
+    await expect(fs.readFile(copilotSkillPath, 'utf8')).resolves.toMatch(
+      /^---\nname: speckit-graph\n/,
+    );
+    await expect(fs.readFile(copilotSkillPath, 'utf8')).resolves.toMatch(
+      /description: Navegação estrutural por grafo/,
+    );
     await expect(fs.readFile(copilotReferencePath, 'utf8')).resolves.toContain(
       'REFERÊNCIA do speckit-baseline',
+    );
+    await expect(fs.readFile(copilotReferencePath, 'utf8')).resolves.not.toMatch(/^---/);
+    await expect(fs.readFile(copilotReferencePath, 'utf8')).resolves.toContain(
+      'dependente de disponibilidade no workspace',
+    );
+    await expect(fs.readFile(copilotReferencePath, 'utf8')).resolves.toContain(
+      'usar `speckit.graph.inspect` ou leitura direta de `.speckit/graph.json`',
+    );
+    await expect(fs.readFile(copilotReferencePath, 'utf8')).resolves.toContain(
+      'usar `rebuild` antes de concluir',
+    );
+    await expect(fs.readFile(copilotReferencePath, 'utf8')).resolves.toMatch(
+      /Não presuma que todo comando listado acima possui task\s+equivalente/,
     );
     await expect(exists(cursorSkillPath)).resolves.toBe(true);
     await expect(exists(cursorReferencePath)).resolves.toBe(true);

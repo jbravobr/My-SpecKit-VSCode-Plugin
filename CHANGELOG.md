@@ -82,6 +82,8 @@ Default minimal: ~440 tokens. Opção 3 completa: ~570-730 tokens (ainda <1% da 
 ### Mudado
 
 - `BaselineSkillGenerator`: nova linha no gate-imperative ("Implementar/alterar/refatorar código em repositório carregado → REFERENCE-graph.md") e novo REFERENCE-graph.md emitido. SKILL.md mantém budget ≤ 220 linhas.
+- Skills geradas pelo mandato de grafo agora preservam o conhecimento do Veto Protocol sem gerar metadados inválidos: `speckit-graph/SKILL.md` instalado em user-space passa a ter frontmatter `name/description`, referências auxiliares deixam de carregar `applyTo`, `speckit-devtools` ganha `name`, e comandos de grafo não registrados passam a exigir fallback verificável em vez de obrigação impossível.
+- Fluxos com confirmação por intent agora exibem linguagem acessível de **código de confirmação** em `/review-auto`, `/status --fix`, `/agent`, `/batch`, Core Server, helps e agentes gerados; o `Intent-ID` continua presente para auditoria, mas o usuário vê claramente o que muda, o que não muda sem confirmação, validade e comando/botão de ação.
 - `IndexGenerator` (`copilot-instructions.md`) e `CopilotConfigGenerator`: aceitam `graphBlock` opcional como último bloco (checklist-at-END).
 - `.gitignore` (gerado pelo `/init`) inclui `.speckit/graph.json`.
 

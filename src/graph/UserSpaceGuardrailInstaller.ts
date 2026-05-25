@@ -5,9 +5,10 @@ import * as path from 'path';
 
 import {
   generateGraphNavigation,
+  generateGraphNavigationSkill,
   generateGraphReference,
+  generateGraphReferenceForSkill,
 } from '../generator/baseline/GraphNavigationGenerator';
-import { stripFrontmatter } from '../generator/skill/stripFrontmatter';
 
 export type InstallAction = 'create' | 'update' | 'skip';
 
@@ -109,23 +110,31 @@ export class UserSpaceGuardrailInstaller {
 
   private buildInstallFiles(): InstallFile[] {
     const locations = this.buildLocations();
-    const skillContent = stripFrontmatter(generateGraphNavigation());
-    const referenceContent = generateGraphReference();
 
-    return locations.flatMap((location) => [
-      {
-        path: path.join(location.targetDir, location.skillFileName),
-        parentDir: location.parentDir,
-        targetDir: location.targetDir,
-        content: skillContent,
-      },
-      {
-        path: path.join(location.targetDir, 'REFERENCE-graph.md'),
-        parentDir: location.parentDir,
-        targetDir: location.targetDir,
-        content: referenceContent,
-      },
-    ]);
+    return locations.flatMap((location) => {
+      const isCursorRule = location.skillFileName !== 'SKILL.md';
+      const skillContent = isCursorRule
+        ? generateGraphNavigation()
+        : generateGraphNavigationSkill();
+      const referenceContent = isCursorRule
+        ? generateGraphReference()
+        : generateGraphReferenceForSkill();
+
+      return [
+        {
+          path: path.join(location.targetDir, location.skillFileName),
+          parentDir: location.parentDir,
+          targetDir: location.targetDir,
+          content: skillContent,
+        },
+        {
+          path: path.join(location.targetDir, 'REFERENCE-graph.md'),
+          parentDir: location.parentDir,
+          targetDir: location.targetDir,
+          content: referenceContent,
+        },
+      ];
+    });
   }
 
   private buildLocations(): InstallLocation[] {
