@@ -10,6 +10,17 @@ export {
 } from './extractors';
 export { GraphBuilder } from './GraphBuilder';
 export { GraphFreshnessGate } from './GraphFreshnessGate';
+export {
+  readCurrentHeadSha,
+  readEvidence,
+  validateRefactorEvidence,
+  writeEvidence,
+} from './GraphInspectionEvidence';
+export type {
+  GraphInspectionEvidence,
+  RefactorEvidenceValidationOptions,
+  RefactorEvidenceValidationResult,
+} from './GraphInspectionEvidence';
 export type {
   GateOptions,
   GateResult,
@@ -30,12 +41,13 @@ export { GraphStore } from './GraphStore';
 export { HeadFileWatcher } from './HeadFileWatcher';
 export { IncrementalUpdater } from './IncrementalUpdater';
 export { PostSaveCoordinator } from './PostSaveCoordinator';
-export { SubgraphEmbedder } from './SubgraphEmbedder';
-export type { SubgraphEmbedInput, SubgraphEmbedOptions } from './SubgraphEmbedder';
+export { parseEmbedAttributes, SubgraphEmbedder } from './SubgraphEmbedder';
+export type { EmbedAttribute, EmbedOptions } from './SubgraphEmbedder';
 export { UserSpaceGuardrailInstaller } from './UserSpaceGuardrailInstaller';
 export type {
   InstallTarget as UserSpaceGuardrailTarget,
   UserSpaceGuardrailDryRunResult,
+  UserSpaceGuardrailStatus,
 } from './UserSpaceGuardrailInstaller';
 export type {
   EdgeConfidence,

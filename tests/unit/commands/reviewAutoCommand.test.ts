@@ -154,6 +154,7 @@ describe('handleReviewAutoCommand', () => {
     expect(output).toContain(
       'Veredito orquestrado:** REVISÃO GATE 3 EXECUTADA (sem bloqueios automáticos)',
     );
+    expect(output).toContain('Veto Protocol — GRAPH_NAVIGATION');
     expect(stream.button).toHaveBeenCalledWith({
       title: '▶ Iniciar Gate 3 (revisão formal)',
       command: 'speckit.runChatQuickAction',

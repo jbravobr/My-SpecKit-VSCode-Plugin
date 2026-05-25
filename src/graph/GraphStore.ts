@@ -162,6 +162,14 @@ export class GraphStore {
       return { ok: false, reason: 'schema mismatch: edges must be an array' };
     }
 
+    if (!graph.nodes.every((node) => this.isGraphNode(node))) {
+      return { ok: false, reason: 'schema mismatch: nodes contain invalid entries' };
+    }
+
+    if (!graph.edges.every((edge) => this.isGraphEdge(edge))) {
+      return { ok: false, reason: 'schema mismatch: edges contain invalid entries' };
+    }
+
     return {
       ok: true,
       graph: {
@@ -179,10 +187,35 @@ export class GraphStore {
     return path.join(workspaceRoot, this.relativeFilePath);
   }
 
+  private isGraphNode(node: unknown): node is Graph['nodes'][number] {
+    return (
+      isRecord(node) &&
+      typeof node.id === 'string' &&
+      typeof node.language === 'string' &&
+      Array.isArray(node.symbols) &&
+      node.symbols.every((symbol) => typeof symbol === 'string')
+    );
+  }
+
+  private isGraphEdge(edge: unknown): edge is Graph['edges'][number] {
+    return (
+      isRecord(edge) &&
+      typeof edge.from === 'string' &&
+      typeof edge.to === 'string' &&
+      (edge.kind === 'IMPORTS' || edge.kind === 'INHERITS' || edge.kind === 'INSTANTIATES') &&
+      (edge.confidence === 'EXTRACTED' ||
+        edge.confidence === 'INFERRED' ||
+        edge.confidence === 'AMBIGUOUS') &&
+      typeof edge.sourceExtractor === 'string' &&
+      (edge.edgeKind === undefined || typeof edge.edgeKind === 'string')
+    );
+  }
+
   private isGraphMeta(meta: unknown): meta is GraphMeta {
     return (
       isRecord(meta) &&
-      typeof meta.headSha === 'string' &&
+      (meta.headSha === undefined || typeof meta.headSha === 'string') &&
+      (meta.lastGateSha === undefined || typeof meta.lastGateSha === 'string') &&
       typeof meta.builtAt === 'string' &&
       isStringRecord(meta.perFileHash) &&
       isNumberRecord(meta.perFileMtime) &&

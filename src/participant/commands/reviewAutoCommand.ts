@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { generateVetoSection } from '../../generator/baseline/GraphVetoGenerator';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
@@ -1986,4 +1987,6 @@ export async function handleReviewAutoCommand(
       '@speckit /review-auto --mutation',
     );
   }
+
+  stream.markdown(generateVetoSection());
 }

@@ -1,5 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { applyEdits, modify, parse, type ParseError } from 'jsonc-parser';
 import { findSpecFiles } from '../../generator/utils/findSpecFiles';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
@@ -10,8 +11,10 @@ import { JavaImportExtractor } from '../../graph/extractors/JavaImportExtractor'
 import { JavaScriptImportExtractor } from '../../graph/extractors/JavaScriptImportExtractor';
 import { PythonImportExtractor } from '../../graph/extractors/PythonImportExtractor';
 import { TypeScriptImportExtractor } from '../../graph/extractors/TypeScriptImportExtractor';
+import { GraphQuery } from '../../graph/GraphQuery';
 import { GraphStore } from '../../graph/GraphStore';
 import { IncrementalUpdater } from '../../graph/IncrementalUpdater';
+import { parseEmbedAttributes, SubgraphEmbedder } from '../../graph/SubgraphEmbedder';
 import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { createCorrelationId } from '../../workflow/ObservabilityContext';
@@ -52,6 +55,7 @@ export async function handleInitCommand(
   const dirStatus = specDirExisted ? 'já existia' : 'criado';
 
   await ensureGraphIgnored(workspaceRoot, fs);
+  await ensureGraphTasks(workspaceRoot, fs);
 
   // Step 2: Find story files recursively
   const found = await findSpecFiles(workspaceRoot, fs);
@@ -77,7 +81,7 @@ export async function handleInitCommand(
       { title: '📝 Criar Nova Story', query: '@speckit /new' },
       { title: '📊 Ver Status das Specs', query: '@speckit /status' },
     ]);
-    triggerGraphBuild(stream, workspaceRoot);
+    await triggerGraphBuild(stream, workspaceRoot, fs);
     await emitCommandTelemetry({
       ...telemetryBase,
       command: '/init',
@@ -137,7 +141,7 @@ export async function handleInitCommand(
     { title: '📦 Ver Status Completo (--all)', query: '@speckit /status --all' },
     { title: '✅ Validar Spec Ativa', query: '@speckit /validate' },
   ]);
-  triggerGraphBuild(stream, workspaceRoot);
+  await triggerGraphBuild(stream, workspaceRoot, fs);
 
   await emitCommandTelemetry({
     ...telemetryBase,
@@ -150,6 +154,112 @@ export async function handleInitCommand(
       conflicts: String(conflicts.length),
     },
   });
+}
+
+interface VsCodeTaskDefinition {
+  label?: unknown;
+  type?: unknown;
+  command?: unknown;
+  problemMatcher?: unknown;
+  [key: string]: unknown;
+}
+
+interface VsCodeTasksFile {
+  version?: unknown;
+  tasks?: unknown;
+  [key: string]: unknown;
+}
+
+const SPECKIT_GRAPH_TASKS: VsCodeTaskDefinition[] = [
+  {
+    label: 'SpecKit: Rebuild Graph',
+    type: 'shell',
+    command: 'code --command speckit.graph.rebuild',
+    problemMatcher: [],
+  },
+  {
+    label: 'SpecKit: Show Graph',
+    type: 'shell',
+    command: 'code --command speckit.graph.show',
+    problemMatcher: [],
+  },
+];
+
+async function ensureGraphTasks(workspaceRoot: string, fs: IFileSystem): Promise<void> {
+  const vscodeDir = path.join(workspaceRoot, '.vscode');
+  const tasksPath = path.join(vscodeDir, 'tasks.json');
+  const existingContent = (await fs.fileExists(tasksPath)) ? await fs.readFile(tasksPath) : '';
+  const parsed = parseTasksJson(existingContent);
+  const tasks = Array.isArray(parsed.tasks) ? [...parsed.tasks] : [];
+  const existingLabels = new Set(
+    tasks
+      .map((task) => (isRecord(task) && typeof task.label === 'string' ? task.label : undefined))
+      .filter((label): label is string => label !== undefined),
+  );
+  const missingTasks = SPECKIT_GRAPH_TASKS.filter(
+    (task) => typeof task.label === 'string' && !existingLabels.has(task.label),
+  );
+
+  if (missingTasks.length === 0) {
+    return;
+  }
+
+  await fs.ensureDir(vscodeDir);
+
+  if (existingContent.trim().length === 0 || parsed.__invalid === true) {
+    await fs.writeFile(
+      tasksPath,
+      `${JSON.stringify({ version: '2.0.0', tasks: [...tasks, ...missingTasks] }, null, 2)}\n`,
+    );
+    return;
+  }
+
+  await fs.writeFile(tasksPath, upsertTasksJsonc(existingContent, parsed, missingTasks));
+}
+
+function parseTasksJson(content: string): VsCodeTasksFile & { __invalid?: boolean } {
+  if (content.trim().length === 0) {
+    return { version: '2.0.0', tasks: [] };
+  }
+
+  const errors: ParseError[] = [];
+  const parsed: unknown = parse(content, errors, {
+    allowTrailingComma: true,
+    disallowComments: false,
+  });
+  if (errors.length === 0 && isRecord(parsed)) {
+    return parsed;
+  }
+
+  return { version: '2.0.0', tasks: [], __invalid: true };
+}
+
+function upsertTasksJsonc(
+  content: string,
+  parsed: VsCodeTasksFile,
+  missingTasks: VsCodeTaskDefinition[],
+): string {
+  let updated = content;
+  const formattingOptions = { insertSpaces: true, tabSize: 2, eol: '\n' };
+
+  if (parsed.version === undefined) {
+    updated = applyEdits(updated, modify(updated, ['version'], '2.0.0', { formattingOptions }));
+  }
+
+  if (!Array.isArray(parsed.tasks)) {
+    updated = applyEdits(updated, modify(updated, ['tasks'], missingTasks, { formattingOptions }));
+    return updated.endsWith('\n') ? updated : `${updated}\n`;
+  }
+
+  for (const task of missingTasks) {
+    updated = applyEdits(updated, modify(updated, ['tasks', -1], task, { formattingOptions }));
+  }
+
+  return updated.endsWith('\n') ? updated : `${updated}\n`;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 async function ensureGraphIgnored(workspaceRoot: string, fs: IFileSystem): Promise<void> {
@@ -169,12 +279,18 @@ async function ensureGraphIgnored(workspaceRoot: string, fs: IFileSystem): Promi
   await fs.writeFile(gitignorePath, `${existing}${separator}${graphIgnoreEntry}\n`);
 }
 
-function triggerGraphBuild(stream: vscode.ChatResponseStream, workspaceRoot: string): void {
-  if (!vscode.workspace.getConfiguration('speckit.graph').get<boolean>('enabled', true)) {
+async function triggerGraphBuild(
+  stream: vscode.ChatResponseStream,
+  workspaceRoot: string,
+  fs: IFileSystem,
+): Promise<void> {
+  const config = vscode.workspace.getConfiguration('speckit.graph');
+  if (!config.get<boolean>('enabled', true)) {
     return;
   }
 
-  const updater = new IncrementalUpdater(new GraphStore(), [
+  const store = new GraphStore();
+  const updater = new IncrementalUpdater(store, [
     new TypeScriptImportExtractor(),
     new JavaScriptImportExtractor(),
     new JavaImportExtractor(),
@@ -182,14 +298,43 @@ function triggerGraphBuild(stream: vscode.ChatResponseStream, workspaceRoot: str
     new CSharpImportExtractor(),
   ]);
 
-  void updater.buildFull(workspaceRoot).then(
-    (graph) =>
-      stream.markdown(
-        `\n✅ Grafo construído: ${graph.nodes.length} nós, ${graph.edges.length} arestas.`,
-      ),
-    (error: unknown) =>
-      stream.markdown(
-        `\n⚠️ Falha ao construir grafo: ${error instanceof Error ? error.message : String(error)}`,
-      ),
-  );
+  try {
+    const graph = await updater.buildFull(workspaceRoot);
+    stream.markdown(
+      `\n✅ Grafo construído: ${graph.nodes.length} nós, ${graph.edges.length} arestas.`,
+    );
+
+    if (config.get<string>('embed.mode', 'subgraph') === 'off') {
+      return;
+    }
+
+    const graphBlock = new SubgraphEmbedder(graph, new GraphQuery(graph)).generate({
+      topN: config.get<number>('embed.topN', 20),
+      attributes: parseEmbedAttributes(config.get<unknown[]>('embed.attributes', [])),
+    });
+    const updated = await upsertGraphBlockInInstructions(workspaceRoot, fs, graphBlock);
+    if (updated) {
+      stream.markdown('\n✅ GRAPH CONTEXT atualizado em `copilot-instructions.md`.');
+    }
+  } catch (error: unknown) {
+    stream.markdown(
+      `\n⚠️ Falha ao construir grafo: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+async function upsertGraphBlockInInstructions(
+  workspaceRoot: string,
+  fs: IFileSystem,
+  graphBlock: string,
+): Promise<boolean> {
+  const instructionsPath = path.join(workspaceRoot, '.github', 'copilot-instructions.md');
+  if (!(await fs.fileExists(instructionsPath))) {
+    return false;
+  }
+
+  const current = await fs.readFile(instructionsPath);
+  const withoutPreviousGraph = current.replace(/\n*## GRAPH CONTEXT[\s\S]*$/u, '').trimEnd();
+  await fs.writeFile(instructionsPath, `${withoutPreviousGraph}\n\n${graphBlock.trim()}\n`);
+  return true;
 }

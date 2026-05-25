@@ -24,6 +24,9 @@ import { handleTraceCommand } from './commands/traceCommand';
 import { handleValidateCommand } from './commands/validateCommand';
 import { handleVerifyCommand } from './commands/verifyCommand';
 import { emitQuickActions } from './commands/CommandHelpers';
+import type { GraphRuntime } from '../graph/GraphRuntime';
+
+type ParticipantGraphRuntime = { gate: Pick<GraphRuntime['gate'], 'ensure'> };
 
 const LLM_HISTORY_COMMANDS = new Set<string>([
   'new',
@@ -52,11 +55,34 @@ function appendFlags(prompt: string | undefined, flags: string[]): string {
   return baseTokens.join(' ');
 }
 
+async function runGraphParticipantGate(
+  graphRuntime: ParticipantGraphRuntime | undefined,
+  workspaceRoot: string | undefined,
+  commandName: string,
+  stream: vscode.ChatResponseStream,
+): Promise<void> {
+  if (!graphRuntime || !workspaceRoot || !commandName) {
+    return;
+  }
+
+  try {
+    const gateResult = await graphRuntime.gate.ensure(workspaceRoot, { commandName });
+    if (gateResult.status === 'stale-async' && gateResult.warning) {
+      stream.markdown(`${gateResult.warning}
+
+`);
+    }
+  } catch (error: unknown) {
+    console.warn('Unable to evaluate SpecKit graph freshness gate:', error);
+  }
+}
+
 export async function handleSpeckitRequest(
   request: vscode.ChatRequest,
   _chatContext: vscode.ChatContext,
   stream: vscode.ChatResponseStream,
   token: vscode.CancellationToken,
+  graphRuntime?: ParticipantGraphRuntime,
 ): Promise<void> {
   const command = request.command ?? '';
   const workspaceRoot = vscodeWorkspace.getWorkspaceRoot();
@@ -65,6 +91,8 @@ export async function handleSpeckitRequest(
   if (audit && command) {
     await audit.log('command', `/${command}`);
   }
+
+  await runGraphParticipantGate(graphRuntime, workspaceRoot, command, stream);
 
   try {
     switch (command) {
@@ -217,8 +245,15 @@ export async function handleSpeckitRequest(
   }
 }
 
-export function registerSpeckitParticipant(context: vscode.ExtensionContext): void {
-  const participant = vscode.chat.createChatParticipant('speckit.assistant', handleSpeckitRequest);
+export function registerSpeckitParticipant(
+  context: vscode.ExtensionContext,
+  graphRuntime?: ParticipantGraphRuntime,
+): void {
+  const participant = vscode.chat.createChatParticipant(
+    'speckit.assistant',
+    (request, chatContext, stream, token) =>
+      handleSpeckitRequest(request, chatContext, stream, token, graphRuntime),
+  );
   participant.iconPath = new vscode.ThemeIcon('book');
   context.subscriptions.push(participant);
 }

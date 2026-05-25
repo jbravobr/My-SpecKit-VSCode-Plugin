@@ -165,6 +165,18 @@
       {
         "command": "speckit.graph.rebuild",
         "title": "SpecKit: Rebuild Graph"
+      },
+      {
+        "command": "speckit.graph.show",
+        "title": "SpecKit: Show Graph"
+      },
+      {
+        "command": "speckit.graph.inspect",
+        "title": "SpecKit: Inspect Graph Neighbors"
+      },
+      {
+        "command": "speckit.graph.installGuardrails",
+        "title": "SpecKit: Install Graph Guardrails"
       }
     ],
     "configuration": {
@@ -184,20 +196,38 @@
         },
         "speckit.graph.languages": {
           "type": "array",
-          "default": ["auto"],
-          "items": { "type": "string", "enum": ["auto", "typescript", "javascript", "java", "python", "csharp"] },
+          "default": [
+            "auto"
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "typescript",
+              "javascript",
+              "java",
+              "python",
+              "csharp"
+            ]
+          },
           "description": "Languages to extract. 'auto' detects from story.stack + workspace scan."
         },
         "speckit.graph.ignore": {
           "type": "array",
           "default": [],
-          "items": { "type": "string" },
+          "items": {
+            "type": "string"
+          },
           "description": "Additional glob patterns to ignore (added to default node_modules, dist, out, coverage)."
         },
         "speckit.graph.embed.mode": {
           "type": "string",
           "default": "subgraph",
-          "enum": ["subgraph", "summary", "off"],
+          "enum": [
+            "subgraph",
+            "summary",
+            "off"
+          ],
           "description": "How to embed the graph in copilot-instructions.md. 'subgraph': table with neighbors. 'summary': counts only. 'off': no embed."
         },
         "speckit.graph.embed.topN": {
@@ -210,7 +240,15 @@
         "speckit.graph.embed.attributes": {
           "type": "array",
           "default": [],
-          "items": { "type": "string", "enum": ["confidence", "riskScore", "edgeKind", "diffSinceLastGate"] },
+          "items": {
+            "type": "string",
+            "enum": [
+              "confidence",
+              "riskScore",
+              "edgeKind",
+              "diffSinceLastGate"
+            ]
+          },
           "description": "Opt-in extra attributes for the embedded subgraph (Option 3). Adds +130 to +290 tokens depending on graph size."
         },
         "speckit.graph.userSpace.install": {
@@ -261,13 +299,14 @@
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.93.0",
     "@vitest/coverage-v8": "^2.0.0",
-    "@vscode/vsce": "^3.6.2",
     "@vscode/test-electron": "^2.4.0",
+    "@vscode/vsce": "^3.6.2",
     "esbuild": "^0.21.0",
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.8",
     "glob": "^10.0.0",
     "husky": "^9.1.7",
+    "jsonc-parser": "^3.3.1",
     "lint-staged": "^16.4.0",
     "mocha": "^10.0.0",
     "prettier": "^3.8.2",

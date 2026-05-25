@@ -94,6 +94,18 @@ describe('handleValidateCommand', () => {
     expect(fs.writtenPaths().length).toBeGreaterThan(0);
   });
 
+  it('appends graph veto protocol for valid story validation output', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    fs.readFile = async () => completeStoryMd;
+    const workspace = new WorkspaceStub();
+
+    await handleValidateCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
+
+    expect(stream.getAllMarkdown()).toContain('Veto Protocol — GRAPH_NAVIGATION');
+    expect(stream.getAllMarkdown()).toContain('VETO_GRAPH_NOT_AVAILABLE');
+  });
+
   it('shows DoR success and speckit-implementador instruction for valid story', async () => {
     const stream = createMockStream();
     const fs = new InMemoryFileSystem();

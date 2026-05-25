@@ -49,6 +49,61 @@ describe('handleInitCommand', () => {
     expect(output).toContain('Nenhum arquivo');
   });
 
+  it('creates VS Code graph tasks when tasks.json is absent', async () => {
+    const fs = new InMemoryFileSystem();
+    const workspace = new WorkspaceStub();
+    const stream = createMockStream();
+
+    await handleInitCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
+
+    const tasksJson = fs.contentFor('.vscode/tasks.json');
+    expect(tasksJson).toBeDefined();
+    const parsed = JSON.parse(tasksJson ?? '') as {
+      tasks: Array<{ label: string; command: string }>;
+    };
+    expect(parsed.tasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: 'SpecKit: Rebuild Graph',
+          command: 'code --command speckit.graph.rebuild',
+        }),
+        expect.objectContaining({
+          label: 'SpecKit: Show Graph',
+          command: 'code --command speckit.graph.show',
+        }),
+      ]),
+    );
+  });
+
+  it('merges VS Code graph tasks without duplicating existing labels', async () => {
+    const fs = seedFs({
+      'C:/workspace/.vscode/tasks.json': `{
+        // existing JSONC comment
+        "version": "2.0.0",
+        "tasks": [
+          { "label": "Existing Task", "type": "shell", "command": "echo ok" },
+          { "label": "SpecKit: Rebuild Graph", "type": "shell", "command": "code --command speckit.graph.rebuild" },
+        ],
+      }`,
+    });
+    const workspace = new WorkspaceStub();
+    const stream = createMockStream();
+
+    await handleInitCommand(createMockRequest(''), stream, createMockToken(), fs, workspace);
+
+    const updatedTasksJson = fs.contentFor('.vscode/tasks.json') ?? '';
+    expect(updatedTasksJson).toContain('// existing JSONC comment');
+    const parsed = JSON.parse(
+      updatedTasksJson.replace(/^\s*\/\/.*$/gm, '').replace(/,\s*([}\]])/g, '$1'),
+    ) as {
+      tasks: Array<{ label: string }>;
+    };
+    const labels = parsed.tasks.map((task) => task.label);
+    expect(labels.filter((label) => label === 'SpecKit: Rebuild Graph')).toHaveLength(1);
+    expect(labels).toContain('SpecKit: Show Graph');
+    expect(labels).toContain('Existing Task');
+  });
+
   it('reports .speckit/ as already existing when present', async () => {
     // InMemoryFileSystem.fileExists checks exact path key; seed the dir path itself
     const fs = new InMemoryFileSystem();

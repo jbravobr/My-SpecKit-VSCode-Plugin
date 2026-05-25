@@ -18,7 +18,8 @@ export interface GraphEdge {
 }
 
 export interface GraphMeta {
-  headSha: string;
+  headSha?: string;
+  lastGateSha?: string;
   builtAt: string;
   perFileHash: Record<string, string>;
   perFileMtime: Record<string, number>;

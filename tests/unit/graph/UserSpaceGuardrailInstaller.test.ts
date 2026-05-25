@@ -47,7 +47,7 @@ describe('UserSpaceGuardrailInstaller', () => {
       process.env.USERPROFILE = originalUserProfile;
     }
 
-    await fs.rm(homeDir, { recursive: true, force: true });
+    await fs.rm(homeDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 });
   });
 
   it('dryRun reports creates only under existing parent directories', async () => {
@@ -111,6 +111,20 @@ describe('UserSpaceGuardrailInstaller', () => {
     expect(
       secondDryRun.targets.filter((target) => target.reason === 'identical content'),
     ).toHaveLength(4);
+  });
+
+  it('reports Copilot skill installation status', async () => {
+    const skillDir = path.join(homeDir, '.copilot', 'skills', 'speckit-graph');
+    await fs.mkdir(skillDir, { recursive: true });
+    const skillPath = path.join(skillDir, 'SKILL.md');
+    await fs.writeFile(skillPath, 'version: 1.2.3\n# skill', 'utf8');
+
+    const status = await UserSpaceGuardrailInstaller.status(homeDir);
+
+    expect(status.installed).toBe(true);
+    expect(status.path).toBe(skillPath);
+    expect(status.version).toBe('1.2.3');
+    expect(status.mtime).toBeInstanceOf(Date);
   });
 
   it('detects hash-diff updates without writing during dryRun', async () => {

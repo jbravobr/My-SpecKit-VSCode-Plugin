@@ -21,6 +21,13 @@ export interface UserSpaceGuardrailDryRunResult {
   targets: InstallTarget[];
 }
 
+export interface UserSpaceGuardrailStatus {
+  installed: boolean;
+  path: string;
+  version?: string;
+  mtime?: Date;
+}
+
 interface InstallFile {
   path: string;
   parentDir: string;
@@ -41,6 +48,29 @@ interface InstallLocation {
 export class UserSpaceGuardrailInstaller {
   constructor(private readonly homeDir: string = os.homedir()) {}
 
+  static async status(homeDir: string = os.homedir()): Promise<UserSpaceGuardrailStatus> {
+    const skillPath = path.join(homeDir, '.copilot', 'skills', 'speckit-graph', 'SKILL.md');
+    try {
+      const stats = await fs.stat(skillPath);
+      const content = await fs.readFile(skillPath, 'utf8');
+      return {
+        installed: stats.isFile(),
+        path: skillPath,
+        version: extractVersion(content),
+        mtime: stats.mtime,
+      };
+    } catch (error) {
+      if (isNodeError(error) && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
+        return { installed: false, path: skillPath };
+      }
+      throw error;
+    }
+  }
+
+  async status(): Promise<UserSpaceGuardrailStatus> {
+    return UserSpaceGuardrailInstaller.status(this.homeDir);
+  }
+
   async dryRun(): Promise<UserSpaceGuardrailDryRunResult> {
     const targets: InstallTarget[] = [];
     for (const file of this.buildInstallFiles()) {
@@ -49,9 +79,16 @@ export class UserSpaceGuardrailInstaller {
     return { targets };
   }
 
-  async install(opts: { confirm: boolean }): Promise<{ written: InstallTarget[] }> {
+  async install(opts: {
+    dryRun?: boolean;
+    confirm: boolean;
+  }): Promise<{ written: InstallTarget[] }> {
     if (opts.confirm !== true) {
       throw new Error('install requires confirm:true');
+    }
+
+    if (opts.dryRun === true) {
+      return { written: [] };
     }
 
     const filesByPath = new Map(this.buildInstallFiles().map((file) => [file.path, file]));
@@ -146,6 +183,11 @@ async function directoryExists(dirPath: string): Promise<boolean> {
 
 function hash(content: Buffer): string {
   return createHash('sha256').update(content).digest('hex');
+}
+
+function extractVersion(content: string): string | undefined {
+  const match = content.match(/^version:\s*([^\r\n]+)/im);
+  return match?.[1]?.trim();
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {

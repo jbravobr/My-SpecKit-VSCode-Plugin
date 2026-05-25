@@ -1,7 +1,11 @@
 import { Story } from '../../story/Story';
 
-export function generateIndex(story: Story, contextSkillName = 'speckit-story-context'): string {
-  return `# SpecKit — Copilot Instructions
+export function generateIndex(
+  story: Story,
+  contextSkillName = 'speckit-story-context',
+  graphBlock?: string,
+): string {
+  const base = `# SpecKit — Copilot Instructions
 
 Story: **${story.metadata.title || story.metadata.id}**
 Stack: ${story.technicalSpec.language} / ${story.technicalSpec.framework} / ${story.technicalSpec.architecture}
@@ -25,4 +29,8 @@ A spec da story ativa está em \`.speckit/STORY-${story.metadata.id}.md\`.
 - Cobertura de testes ≥ 80% obrigatória
 - Commits seguem Conventional Commits
 `;
+
+  return graphBlock === undefined || graphBlock.trim().length === 0
+    ? base
+    : `${base.trimEnd()}\n\n${graphBlock.trim()}\n`;
 }

@@ -147,6 +147,17 @@ describe('extension quick action commands', () => {
     expect(vscodeMock.showWarningMessage).not.toHaveBeenCalled();
   });
 
+  it('registers graph navigation commands', () => {
+    const context = { subscriptions: [] } as never;
+
+    activate(context);
+
+    expect(vscodeMock.registeredCommands.has('speckit.graph.rebuild')).toBe(true);
+    expect(vscodeMock.registeredCommands.has('speckit.graph.show')).toBe(true);
+    expect(vscodeMock.registeredCommands.has('speckit.graph.inspect')).toBe(true);
+    expect(vscodeMock.registeredCommands.has('speckit.graph.installGuardrails')).toBe(true);
+  });
+
   it('rejects invalid quick action queries', async () => {
     const context = { subscriptions: [] } as never;
 

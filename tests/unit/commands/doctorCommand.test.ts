@@ -65,6 +65,49 @@ describe('handleDoctorCommand', () => {
     expect(md).toContain('0 encontrado(s)');
   });
 
+  it('reports graph diagnostics with build counts', async () => {
+    const fs = new InMemoryFileSystem();
+    await fs.writeFile(
+      'C:/workspace/.speckit/graph.json',
+      JSON.stringify({
+        schemaVersion: '1.0.0',
+        pluginVersion: '0.7.0',
+        extractorVersions: {},
+        meta: {
+          headSha: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          builtAt: '2026-01-01T00:00:00.000Z',
+          perFileHash: {},
+          perFileMtime: {},
+          partialLanguages: [],
+        },
+        nodes: [
+          { id: 'src/a.ts', language: 'typescript', symbols: [] },
+          { id: 'src/b.ts', language: 'typescript', symbols: [] },
+        ],
+        edges: [
+          {
+            from: 'src/a.ts',
+            to: 'src/b.ts',
+            kind: 'IMPORTS',
+            confidence: 'EXTRACTED',
+            sourceExtractor: 'test',
+          },
+        ],
+      }),
+    );
+    const ws = new WorkspaceStub();
+    const stream = createMockStream();
+
+    await handleDoctorCommand(createMockRequest(''), stream, token, fs, ws);
+
+    const md = stream.getAllMarkdown();
+    expect(md).toContain('## Diagnóstico do grafo');
+    expect(md).toContain('| Graph build | ✅ | 2 nós, 1 arestas |');
+    expect(md).toContain('| Graph fresh | ⚠️ | meta=aaaaaaa, HEAD=desconhecido |');
+    expect(md).toContain('| Graphify externo | ➖ | não detectado — usando store interno |');
+    expect(md).toContain('| Guardrails user-space |');
+  });
+
   it('reports detected tech stack', async () => {
     const fs = new InMemoryFileSystem();
     await fs.writeFile('C:/workspace/.speckit/dummy', '');

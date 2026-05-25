@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { parseFix } from '../../fix/FixParser';
 import { validateFix } from '../../fix/FixValidator';
+import { generateVetoSection } from '../../generator/baseline/GraphVetoGenerator';
 import { generateCopilotConfig } from '../../generator/CopilotConfigGenerator';
 import { generateFixGapFillingPrompt } from '../../generator/fix/FixPromptsGenerator';
 import { generateFixCopilotConfig } from '../../generator/FixCopilotConfigGenerator';
@@ -10,6 +11,7 @@ import { backupCopilotInstructions } from '../../generator/utils/BackupManager';
 import { assessDevTools, DevToolsAssessment } from '../../generator/utils/DevToolsAssessor';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
+import { validateRefactorEvidence } from '../../graph/GraphInspectionEvidence';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { extractSpecType } from '../../parser/BaseParser';
@@ -108,6 +110,10 @@ export async function handleValidateCommand(
       token,
     );
   }
+
+  if (!token.isCancellationRequested) {
+    stream.markdown(generateVetoSection());
+  }
 }
 
 async function validateStory_(
@@ -179,6 +185,17 @@ async function validateStory_(
       fs,
     );
     return;
+  }
+
+  if (story.metadata.type === 'refactoring') {
+    const graphEvidence = await validateRefactorEvidence(workspaceRoot, { compareHead: true });
+    if (!graphEvidence.ok) {
+      stream.markdown(
+        `❌ **Refactor bloqueado — evidência de inspeção do grafo inválida (${graphEvidence.reason})**\n\n` +
+          'Crie `.speckit/evidence/graph-inspection.json` com `consultedEntities` OU `veto: "VETO_GRAPH_NOT_AVAILABLE"` antes de aprovar a entrega.\n',
+      );
+      return;
+    }
   }
 
   stream.markdown(`✅ **DoR atingido** — história válida.\n\n**Status do DoR:**\n${dorLines}\n\n`);

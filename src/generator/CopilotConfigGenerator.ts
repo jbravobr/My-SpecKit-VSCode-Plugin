@@ -1,4 +1,8 @@
 import * as path from 'path';
+import * as vscode from 'vscode';
+import { GraphQuery } from '../graph/GraphQuery';
+import { GraphStore } from '../graph/GraphStore';
+import { parseEmbedAttributes, SubgraphEmbedder } from '../graph/SubgraphEmbedder';
 import { Story } from '../story/Story';
 import { generateImplementadorAgent } from './agent/StoryImplementadorAgentGenerator';
 import { generateRevisorAgent } from './agent/StoryRevisorAgentGenerator';
@@ -49,11 +53,12 @@ export async function generateCopilotConfig(
   await Promise.all(dirPromises);
 
   const tx = new WriteTransaction(fs, workspaceRoot);
+  const graphBlock = await buildGraphBlock(workspaceRoot);
 
   // Minimal copilot-instructions.md (always-on, ~400 tokens)
   await tx.write(
     path.join(githubDir, 'copilot-instructions.md'),
-    generateIndex(story, contextSkillName),
+    generateIndex(story, contextSkillName, graphBlock),
   );
 
   // Skills — on-demand (loaded by description keyword match)
@@ -101,4 +106,26 @@ export async function generateCopilotConfig(
   }
 
   return tx.commit();
+}
+
+async function buildGraphBlock(workspaceRoot: string): Promise<string | undefined> {
+  const config = vscode.workspace.getConfiguration('speckit.graph');
+  if (!config.get<boolean>('enabled', true)) {
+    return undefined;
+  }
+  if (config.get<string>('embed.mode', 'subgraph') === 'off') {
+    return undefined;
+  }
+
+  const graph = await new GraphStore().load(workspaceRoot);
+  if (graph === null) {
+    return undefined;
+  }
+
+  const topN = config.get<number>('embed.topN', 20);
+  const attributes = parseEmbedAttributes(config.get<unknown[]>('embed.attributes', []));
+  return new SubgraphEmbedder(graph, new GraphQuery(graph)).generate({
+    topN,
+    attributes,
+  });
 }

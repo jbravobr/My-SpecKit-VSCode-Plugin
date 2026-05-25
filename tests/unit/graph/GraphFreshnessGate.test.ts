@@ -1,12 +1,18 @@
+import { randomUUID } from 'node:crypto';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import * as vscode from 'vscode';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GraphFreshnessGate } from '../../../src/graph/GraphFreshnessGate';
 import { GraphStore } from '../../../src/graph/GraphStore';
 import type { GraphMeta } from '../../../src/graph/types';
 
-const workspaceRoot = path.join(process.cwd(), '.speckit-test-artifacts', 'graph-freshness-gate');
+const workspaceRootBase = path.join(
+  process.cwd(),
+  '.speckit-test-artifacts',
+  'graph-freshness-gate',
+);
+let workspaceRoot = path.join(workspaceRootBase, randomUUID());
 const currentHeadSha = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 const staleGraphSha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
@@ -100,8 +106,12 @@ async function writePackedHead(sha: string): Promise<void> {
   );
 }
 
+beforeEach(() => {
+  workspaceRoot = path.join(workspaceRootBase, randomUUID());
+});
+
 afterEach(async () => {
-  await rm(workspaceRoot, { recursive: true, force: true });
+  await rm(workspaceRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 });
   vi.restoreAllMocks();
 });
 
@@ -203,7 +213,7 @@ describe('GraphFreshnessGate', () => {
       new GraphFreshnessGate(new FakeGraphStore(detachedState)).ensure(workspaceRoot),
     ).resolves.toMatchObject({ status: 'fresh' });
 
-    await rm(workspaceRoot, { recursive: true, force: true });
+    await rm(workspaceRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 });
     const packedState: FakeStoreState = {
       exists: true,
       meta: createMeta(currentHeadSha),

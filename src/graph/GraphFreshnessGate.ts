@@ -26,7 +26,10 @@ function elapsedSince(startMs: number): number {
   return Math.max(0, Date.now() - startMs);
 }
 
-function shortSha(sha: string): string {
+function shortSha(sha: string | undefined): string {
+  if (sha === undefined || sha.length === 0) {
+    return 'uncommitted';
+  }
   return sha.length > 12 ? sha.slice(0, 12) : sha;
 }
 
@@ -94,7 +97,7 @@ async function readGitHead(workspaceRoot: string): Promise<string | null> {
   );
 }
 
-function createHeadDriftWarning(oldSha: string, newSha: string | null): string {
+function createHeadDriftWarning(oldSha: string | undefined, newSha: string | null): string {
   const headDescription = newSha === null ? 'desconhecido' : shortSha(newSha);
   return `> ⚠️ **GRAPH_STALE_WARNING**: o grafo (.speckit/graph.json) está em SHA ${shortSha(
     oldSha,

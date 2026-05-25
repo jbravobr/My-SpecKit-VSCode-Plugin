@@ -320,8 +320,10 @@ Detecta automaticamente o tipo da spec ativa em `.speckit/` (Story ou Fix) e val
 2. **Story válida:** gera 9 arquivos em `.github/` (skills + agents + prompt + workflows CI)
 3. **Fix válido:** detecta stack automaticamente, gera 7 arquivos em `.github/` (sem workflows CI)
 4. **Avalia DevTools do projeto** — verifica se ESLint, Prettier, husky e lint-staged estão configurados (ver abaixo)
-5. Instrui a abrir modo **Agente** com o agent **implementador** (dropdown) para Gates 0–2
-6. Registra log em `.speckit/logs/session-<data>.md`
+5. Para specs `type: refactoring`, exige `.speckit/evidence/graph-inspection.json` com `consultedEntities` ou `veto: "VETO_GRAPH_NOT_AVAILABLE"` antes de aprovar a entrega
+6. Instrui a abrir modo **Agente** com o agent **implementador** (dropdown) para Gates 0–2
+7. Registra log em `.speckit/logs/session-<data>.md`
+8. Ao final do output, emite a seção obrigatória **Veto Protocol — GRAPH_NAVIGATION**
 
 **Oferta de DevTools (automática):**
 
@@ -730,6 +732,7 @@ Orquestra a revisão automática da Story ativa e as transições de gate com pr
 3. Aplica bloqueios automáticos mínimos (ex.: cobertura ausente/abaixo de 80%, CRAP por função acima do limite)
 4. Emite veredito orquestrado e força continuidade do checklist completo de revisão no mesmo fluxo
 5. Expõe toda transição de gate/status com bloco Markdown `Antes` → `Depois`
+6. Ao final do output, emite a seção obrigatória **Veto Protocol — GRAPH_NAVIGATION** para bloquear entregas sem consulta ao grafo ou veto explícito
 
 **Uso:**
 
@@ -876,6 +879,15 @@ Diagnóstico de saúde do workspace — verifica se os diretórios, specs e conf
 | ✅     | Tech Stack — typescript / react (high)        |
 
 Resultado: 6/6 verificações OK
+
+## Diagnóstico do grafo
+
+| Check | Status | Detalhe |
+|---|---|---|
+| Graph build | ✅ | 1234 nós, 5678 arestas |
+| Graph fresh | ⚠️ | meta=abc1234, HEAD=def5678 |
+| Graphify externo | ➖ | não detectado — usando store interno |
+| Guardrails user-space | ✅ | ~/.copilot/skills/speckit-graph/SKILL.md instalado |
 ```
 
 **Exemplo com problemas:**
@@ -896,6 +908,21 @@ Resultado: 1/6 verificações OK
 ```
 
 > Execute `/doctor` antes de começar a trabalhar para garantir que o workspace está preparado. Ideal como primeiro passo após clonar um repositório.
+
+---
+
+### Comandos `speckit.graph.*`
+
+A extensão registra comandos de navegação do grafo no Command Palette e em tasks geradas pelo `/init`:
+
+| Comando                           | Efeito                                                                                       |
+| --------------------------------- | -------------------------------------------------------------------------------------------- |
+| `speckit.graph.rebuild`           | Reconstrói `.speckit/graph.json` com progresso e informa quantidade de nós/arestas.          |
+| `speckit.graph.show`              | Abre `.speckit/graph.json`; se ausente, orienta executar `speckit.graph.rebuild` ou `/init`. |
+| `speckit.graph.inspect`           | Permite escolher um arquivo indexado e abre Markdown com até 20 vizinhos do grafo.           |
+| `speckit.graph.installGuardrails` | Instala guardrails user-space do grafo via instalador dedicado.                              |
+
+Além disso, os comandos de chat `@speckit /...` executam um gate informativo de frescor do grafo antes da lógica do comando. Quando o grafo está stale e a atualização roda em background, o chat recebe um warning; falhas do gate são registradas no console e não bloqueiam o comando.
 
 ---
 
@@ -996,13 +1023,13 @@ Importante: no modo unificado, a transição também tenta fechar automaticament
 
 Cada agente unificado contém 4 protocolos embutidos:
 
-| Protocolo   | Quando ativa                           | O que faz                                                                                                                                                                   |
-| ----------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dependência | Gate 0 (pré-condição)                  | Verifica apenas o metadata canônico `depends-on`; bloqueia se pendentes                                                                                                     |
-| Transição   | Gate 2 → Gate 3                        | Tenta commit automático do Gate 2, exige consentimento batch único, aciona `/review-auto --auto`, persiste metadata (`gate: 3`, `status: review`) e emite handoff explícito |
+| Protocolo   | Quando ativa                           | O que faz                                                                                                                                                                                         |
+| ----------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dependência | Gate 0 (pré-condição)                  | Verifica apenas o metadata canônico `depends-on`; bloqueia se pendentes                                                                                                                           |
+| Transição   | Gate 2 → Gate 3                        | Tenta commit automático do Gate 2, exige consentimento batch único, aciona `/review-auto --auto`, persiste metadata (`gate: 3`, `status: review`) e emite handoff explícito                       |
 | Desfecho    | Gate 3 → Gate 2 ou Gate 4              | Comandos explícitos no unificado: `/review-auto --changes-requested --auto` (retrabalho) ou `/review-auto --approved --auto` (Gate 4 com `status: ready-to-commit`) com transição visível no chat |
-| Retorno     | Revisor emite "ALTERAÇÕES SOLICITADAS" | Documenta fixes, retorna ao implementador, aplica correções, re-executa revisão                                                                                             |
-| Inviolável  | Sempre ativo no modo revisor           | Revisor **nunca** implementa — apenas documenta bloqueios e devolve ao implementador                                                                                        |
+| Retorno     | Revisor emite "ALTERAÇÕES SOLICITADAS" | Documenta fixes, retorna ao implementador, aplica correções, re-executa revisão                                                                                                                   |
+| Inviolável  | Sempre ativo no modo revisor           | Revisor **nunca** implementa — apenas documenta bloqueios e devolve ao implementador                                                                                                              |
 
 > Stories independentes podem ser executadas em paralelo (abas de chat separadas). Stories bloqueadas aguardam conclusão das dependências.
 
@@ -1021,9 +1048,10 @@ Inicializa o workspace e consolida specs dispersas em `.speckit/`.
 **O que faz:**
 
 1. **Garante `.speckit/` existe** — cria o diretório se ausente
-2. **Busca specs dispersas** — encontra recursivamente arquivos `STORY-*.md` e `US-*.md` fora de `.speckit/`
-3. **Consolida** — move cada arquivo encontrado para `.speckit/`, preservando o conteúdo
-4. **Detecta conflitos** — se já existe um arquivo com mesmo nome em `.speckit/`, não sobrescreve
+2. **Gera tasks do grafo** — cria/mescla `.vscode/tasks.json` com `SpecKit: Rebuild Graph` e `SpecKit: Show Graph` sem duplicar labels existentes
+3. **Busca specs dispersas** — encontra recursivamente arquivos `STORY-*.md` e `US-*.md` fora de `.speckit/`
+4. **Consolida** — move cada arquivo encontrado para `.speckit/`, preservando o conteúdo
+5. **Detecta conflitos** — se já existe um arquivo com mesmo nome em `.speckit/`, não sobrescreve
 
 **Diretórios ignorados:** `node_modules`, `.git`, `dist`, `out`, `.venv`, `__pycache__`, `.next`, `.nuxt`, `coverage`, `build`
 
@@ -1338,33 +1366,33 @@ O SpecKit distribui o contexto em **3 camadas on-demand** para minimizar o consu
 
 ### Skills — ativação por keyword
 
-| Skill        | Pasta                                  | Ativação                                                                       | Conteúdo                                                                                                                                                                             |
-| ------------ | -------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Baseline** | `.github/skills/speckit-baseline/`     | Keywords: agent, integrity, performance, testing, git, security, observability | 10 seções NFR: integridade do agente, performance, arquitetura, context management, testing standards, git workflow, credential security, observability, security tests, idempotency |
-| **Stack**    | `.github/skills/speckit-stack/`        | Keywords: nome da linguagem ou framework                                       | Regras por linguagem + framework + infra + patterns. Composição condicional — inclui apenas seções relevantes à stack declarada                                                      |
-| **Context**  | `.github/skills/speckit-context-{ID}/` | Keywords: ID da story ou fix                                                   | Spec completa: requisito de negócio, critérios de aceite, NFRs, stack técnica, DoR/DoD                                                                                               |
-| **DevTools** | `.github/skills/speckit-devtools/`     | Keywords: devtools, lint, eslint, prettier, format, husky, pre-commit          | Instruções de instalação de ESLint, Prettier, husky e lint-staged adaptadas à stack. Gerado sob demanda via botão ou `--devtools`                                                    |
+| Skill        | Pasta                                  | Ativação                                                                           | Conteúdo                                                                                                                                                                                                                  |
+| ------------ | -------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Baseline** | `.github/skills/speckit-baseline/`     | Keywords: agent, integrity, performance, testing, git, security, observability     | 10 seções NFR: integridade do agente, performance, arquitetura, context management, testing standards, git workflow, credential security, observability, security tests, idempotency                                      |
+| **Stack**    | `.github/skills/speckit-stack/`        | Keywords: nome da linguagem ou framework                                           | Regras por linguagem + framework + infra + patterns. Composição condicional — inclui apenas seções relevantes à stack declarada                                                                                           |
+| **Context**  | `.github/skills/speckit-context-{ID}/` | Keywords: ID da story ou fix                                                       | Spec completa: requisito de negócio, critérios de aceite, NFRs, stack técnica, DoR/DoD                                                                                                                                    |
+| **DevTools** | `.github/skills/speckit-devtools/`     | Keywords: devtools, lint, eslint, prettier, format, husky, pre-commit              | Instruções de instalação de ESLint, Prettier, husky e lint-staged adaptadas à stack. Gerado sob demanda via botão ou `--devtools`                                                                                         |
 | **Corp-\***  | `.github/skills/corp-*/`               | Keywords específicos por skill (spring, aws, mongo, kafka, rabbitmq, http, naming) | Skills corporativas multi-stack derivadas do repositório `data--copilot-guidelines`. Geração **opt-in automática** por detecção de stack (`framework`, `database`, `infrastructure`). Ver seção "Skills `corp-*`" abaixo. |
 
 ### Skills `corp-*` — convenções corporativas multi-stack
 
 Além das skills `speckit-*`, o plugin gera automaticamente skills `corp-*` em `.github/skills/` quando a stack declarada na spec casa com a condição de cada uma. **Sem opt-in manual**: a detecção é por substring case-insensitive em `framework`, `database` e `infrastructure` da Story. Cada skill é um arquivo independente, **on-demand** (carregada pelo Copilot apenas quando keywords da `description` baterem com o prompt) — não inflam o contexto global.
 
-| Skill                       | Condição de geração                                      | applyTo            |
-| --------------------------- | -------------------------------------------------------- | ------------------ |
-| `corp-naming-conventions`   | sempre (multi-stack)                                     | —                  |
-| `corp-http-integration`     | sempre (multi-stack)                                     | —                  |
-| `corp-spring-scheduled`     | `framework=springboot`                                   | `**/*.java`        |
-| `corp-spring-config`        | `framework=springboot`                                   | `**/*.java`        |
-| `corp-spring-rest`          | `framework=springboot`                                   | `**/*.java`        |
-| `corp-aws-secrets`          | `infrastructure` contém aws/dynamodb/aurora/rds/s3/sqs/sns/lambda | —          |
-| `corp-aws-credentials`      | idem                                                     | —                  |
-| `corp-mongo`                | `database` contém mongo                                  | —                  |
-| `corp-data-access`          | `database` ≠ vazio/sentinela (NA, none, -)               | —                  |
-| `corp-rabbitmq-listener`    | `infrastructure` contém rabbit/amqp                      | —                  |
-| `corp-rabbitmq-config`      | idem                                                     | —                  |
-| `corp-kafka`                | `infrastructure` contém kafka                            | —                  |
-| `corp-kafka-spring`         | `infrastructure` contém kafka **e** `framework=springboot` | `**/*.java`      |
+| Skill                     | Condição de geração                                               | applyTo     |
+| ------------------------- | ----------------------------------------------------------------- | ----------- |
+| `corp-naming-conventions` | sempre (multi-stack)                                              | —           |
+| `corp-http-integration`   | sempre (multi-stack)                                              | —           |
+| `corp-spring-scheduled`   | `framework=springboot`                                            | `**/*.java` |
+| `corp-spring-config`      | `framework=springboot`                                            | `**/*.java` |
+| `corp-spring-rest`        | `framework=springboot`                                            | `**/*.java` |
+| `corp-aws-secrets`        | `infrastructure` contém aws/dynamodb/aurora/rds/s3/sqs/sns/lambda | —           |
+| `corp-aws-credentials`    | idem                                                              | —           |
+| `corp-mongo`              | `database` contém mongo                                           | —           |
+| `corp-data-access`        | `database` ≠ vazio/sentinela (NA, none, -)                        | —           |
+| `corp-rabbitmq-listener`  | `infrastructure` contém rabbit/amqp                               | —           |
+| `corp-rabbitmq-config`    | idem                                                              | —           |
+| `corp-kafka`              | `infrastructure` contém kafka                                     | —           |
+| `corp-kafka-spring`       | `infrastructure` contém kafka **e** `framework=springboot`        | `**/*.java` |
 
 Conteúdo derivado do documento `publish/analise-corp-guidelines/sumario-aproveitamento-corp.html`. Skills com `applyTo` ficam restritas a arquivos Java; as multi-stack são SDK/protocolo-agnósticas (válidas para qualquer linguagem que consome a tecnologia correspondente).
 

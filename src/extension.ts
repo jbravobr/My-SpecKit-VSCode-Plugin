@@ -1,3 +1,4 @@
+import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { generateDevToolsSkill } from './generator/skill/DevToolsSkillGenerator';
 import { DevToolsAssessment } from './generator/utils/DevToolsAssessor';
@@ -10,7 +11,12 @@ import { SpeckitDiagnostics } from './ui/SpeckitDiagnostics';
 import { createSpecFileWatcher } from './workflow/SpecFileWatcher';
 import { gitOps } from './workflow/GitOperations';
 import { checkPostSavePendingCommit } from './workflow/PostSaveCommitNotifier';
-import { HeadFileWatcher, PostSaveCoordinator } from './graph';
+import {
+  GraphQuery,
+  HeadFileWatcher,
+  PostSaveCoordinator,
+  UserSpaceGuardrailInstaller,
+} from './graph';
 import { createGraphRuntime } from './graph/GraphRuntime';
 import { runIncrementalCrapForSavedFile } from './workflow/PostSaveIncrementalRunner';
 
@@ -125,14 +131,55 @@ async function runChatQuickAction(query: string): Promise<void> {
   await openCopilotChatWithQuery(parsed.canonicalQuery);
 }
 
+function getWorkspaceRootForGraphCommand(): string | undefined {
+  const workspaceRoot = vscodeWorkspace.getWorkspaceRoot();
+  if (!workspaceRoot) {
+    vscode.window.showInformationMessage('SpecKit: nenhum workspace aberto.');
+    return undefined;
+  }
+  return workspaceRoot;
+}
+
+function graphUnavailableMessage(): string {
+  return 'Grafo ainda não construído. Execute speckit.graph.rebuild ou /init.';
+}
+
+function normalizeGraphNodePath(filePath: string): string {
+  return filePath.replace(/\\/g, '/');
+}
+
+function renderGraphInspectionMarkdown(
+  nodeId: string,
+  result: ReturnType<GraphQuery['neighbors']>,
+): string {
+  const nodeLines = result.nodes.map((node) => `- \`${node.id}\` (${node.language})`).join('\n');
+  const edgeLines = result.edges
+    .map((edge) => `- \`${edge.from}\` --${edge.kind}--> \`${edge.to}\``)
+    .join('\n');
+
+  return [
+    `# SpecKit Graph Inspect: ${nodeId}`,
+    '',
+    `## Nós (${result.nodes.length})`,
+    nodeLines || '_Nenhum nó vizinho encontrado._',
+    '',
+    `## Arestas (${result.edges.length})`,
+    edgeLines || '_Nenhuma aresta vizinha encontrada._',
+    '',
+  ].join('\n');
+}
+
 export function activate(context: vscode.ExtensionContext): void {
-  registerSpeckitParticipant(context);
+  const workspaceRoot = vscodeWorkspace.getWorkspaceRoot();
+  const graphRuntime = createGraphRuntime(workspaceRoot);
+  context.subscriptions.push(graphRuntime);
+
+  registerSpeckitParticipant(context, graphRuntime);
   createSpecFileWatcher(context);
 
   // ---------------------------------------------------------------------------
   // SpecKit Diagnostics + Status Bar (best-effort UI surfaces)
   // ---------------------------------------------------------------------------
-  const workspaceRoot = vscodeWorkspace.getWorkspaceRoot();
   let diagnostics: SpeckitDiagnostics | undefined;
   if (workspaceRoot) {
     diagnostics = new SpeckitDiagnostics(vscodeFileSystem, workspaceRoot);
@@ -165,6 +212,87 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('speckit.runChatQuickAction', async (query: string) => {
       await runChatQuickAction(query);
     }),
+    vscode.commands.registerCommand('speckit.graph.rebuild', async () => {
+      const currentWorkspaceRoot = getWorkspaceRootForGraphCommand();
+      if (!currentWorkspaceRoot) return;
+
+      const startedAt = Date.now();
+      const graph = await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Reconstruindo grafo SpecKit...',
+        },
+        async () => graphRuntime.updater.buildFull(currentWorkspaceRoot),
+      );
+      const durationMs = Date.now() - startedAt;
+      vscode.window.showInformationMessage(
+        `Grafo reconstruído: ${graph.nodes.length} nós, ${graph.edges.length} arestas (${durationMs}ms)`,
+      );
+    }),
+    vscode.commands.registerCommand('speckit.graph.show', async () => {
+      const currentWorkspaceRoot = getWorkspaceRootForGraphCommand();
+      if (!currentWorkspaceRoot) return;
+
+      if (!(await graphRuntime.store.exists(currentWorkspaceRoot))) {
+        vscode.window.showInformationMessage(graphUnavailableMessage());
+        return;
+      }
+
+      const graphUri = vscode.Uri.file(path.join(currentWorkspaceRoot, '.speckit', 'graph.json'));
+      const document = await vscode.workspace.openTextDocument(graphUri);
+      await vscode.window.showTextDocument(document);
+    }),
+    vscode.commands.registerCommand('speckit.graph.inspect', async () => {
+      const currentWorkspaceRoot = getWorkspaceRootForGraphCommand();
+      if (!currentWorkspaceRoot) return;
+
+      const graph = await graphRuntime.store.load(currentWorkspaceRoot);
+      if (!graph) {
+        vscode.window.showInformationMessage(graphUnavailableMessage());
+        return;
+      }
+
+      const graphNodeIds = new Set(graph.nodes.map((node) => normalizeGraphNodePath(node.id)));
+      const files = await vscode.workspace.findFiles(
+        '**/*',
+        '{**/node_modules/**,**/.git/**,**/.speckit/**,**/dist/**,**/out/**}',
+        5000,
+      );
+      const items = files
+        .map((uri) => ({
+          label: normalizeGraphNodePath(path.relative(currentWorkspaceRoot, uri.fsPath)),
+          description: uri.fsPath,
+        }))
+        .filter((item) => graphNodeIds.has(item.label))
+        .sort((left, right) => left.label.localeCompare(right.label));
+      const selected = await vscode.window.showQuickPick(items, {
+        placeHolder: 'Selecione um arquivo para inspecionar no grafo SpecKit',
+      });
+      if (!selected) return;
+
+      const nodeId = normalizeGraphNodePath(selected.label);
+      const node = graph.nodes.find((candidate) => normalizeGraphNodePath(candidate.id) === nodeId);
+      if (!node) {
+        vscode.window.showInformationMessage(`Arquivo não encontrado no grafo: ${selected.label}`);
+        return;
+      }
+
+      const result = new GraphQuery(graph).neighbors([node.id], { topN: 20 });
+      const document = await vscode.workspace.openTextDocument({
+        content: renderGraphInspectionMarkdown(node.id, result),
+        language: 'markdown',
+      });
+      await vscode.window.showTextDocument(document);
+    }),
+    vscode.commands.registerCommand('speckit.graph.installGuardrails', async () => {
+      const result = await new UserSpaceGuardrailInstaller().install({
+        dryRun: false,
+        confirm: true,
+      });
+      vscode.window.showInformationMessage(
+        `SpecKit graph guardrails instalados: ${result.written.length} arquivo(s) gravado(s).`,
+      );
+    }),
     vscode.commands.registerCommand(
       'speckit.addDevToolsSkill',
       async (
@@ -191,9 +319,6 @@ export function activate(context: vscode.ExtensionContext): void {
       },
     ),
   );
-
-  const graphRuntime = createGraphRuntime(workspaceRoot);
-  context.subscriptions.push(graphRuntime);
 
   if (workspaceRoot) {
     const headFileWatcher = new HeadFileWatcher(workspaceRoot, (prevSha, newSha) => {
