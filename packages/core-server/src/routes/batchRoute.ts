@@ -26,6 +26,10 @@ import {
 } from '../../../../src/workflow/TransitionGovernance';
 import { gitOps } from '../../../../src/workflow/GitOperations';
 import type { Story } from '../../../../src/story/Story';
+import {
+  formatExplicitConfirmationNotice,
+  formatInvalidConfirmationNotice,
+} from './confirmationMarkdown';
 
 const router = Router();
 
@@ -49,7 +53,9 @@ export interface BatchControlInput {
   confirmIntentId?: string;
 }
 
-export function validateBatchControl(input: BatchControlInput): { ok: true } | { ok: false; markdown: string } {
+export function validateBatchControl(
+  input: BatchControlInput,
+): { ok: true } | { ok: false; markdown: string } {
   const generate = !!input.generate;
   const unified = !!input.unified;
   const storyId = input.storyId?.trim();
@@ -139,12 +145,14 @@ async function resolveBatchBranchContext(
         sessionBranch: persistedGovernance.sessionBranch,
         sessionBranchSource: persistedGovernance.sessionBranchSource,
       },
-      markdownNote: `♻️ Reutilizando governança de branch da sessão: ${generateBatchBranchModeMessage({
-        strategy: persistedGovernance.strategy,
-        citedMentions,
-        sessionBranch: persistedGovernance.sessionBranch,
-        sessionBranchSource: persistedGovernance.sessionBranchSource,
-      })}`,
+      markdownNote: `♻️ Reutilizando governança de branch da sessão: ${generateBatchBranchModeMessage(
+        {
+          strategy: persistedGovernance.strategy,
+          citedMentions,
+          sessionBranch: persistedGovernance.sessionBranch,
+          sessionBranchSource: persistedGovernance.sessionBranchSource,
+        },
+      )}`,
     };
   }
 
@@ -197,9 +205,11 @@ async function resolveBatchBranchContext(
     if (!intent || intent.payload.action !== 'create-session-branch') {
       return {
         ok: false,
-        markdown:
-          `❌ Intent-ID inválido ou expirado: \`${confirmIntentId}\`. ` +
-          'Gere nova proposta com `/batch --generate --unified --branch-strategy session`.',
+        markdown: formatInvalidConfirmationNotice(
+          confirmIntentId,
+          '/batch --generate --unified --branch-strategy session',
+          'criação de branch da sessão',
+        ),
       };
     }
 
@@ -306,9 +316,15 @@ async function resolveBatchBranchContext(
         `### 🌿 Criação de branch da sessão (confirmação obrigatória)\n\n` +
         `A estratégia \`session\` foi escolhida, mas nenhuma branch ativa pôde ser resolvida no Git (${message}).\n\n` +
         `Sugestão de branch para este lote: \`${suggestedBranch}\`\n\n` +
-        `Intent-ID: \`${intent.id}\`\n` +
-        'Confirme explicitamente para criar e fixar essa branch na sessão:\n' +
-        `- \`/batch --generate --unified --branch-strategy session --confirm ${intent.id}\`\n`,
+        formatExplicitConfirmationNotice({
+          intentId: intent.id,
+          confirmCommand: `/batch --generate --unified --branch-strategy session --confirm ${intent.id}`,
+          confirmEffect: `a branch \`${suggestedBranch}\` será criada e fixada como branch da sessão para este lote.`,
+          noConfirmationEffect:
+            'nenhuma branch será criada e a geração unificada continuará bloqueada.',
+          ttlMinutes: 240,
+        }) +
+        '\n',
     };
   }
 }
@@ -458,8 +474,11 @@ router.post('/batch', async (req: Request, res: Response) => {
         )
         .join('\n');
 
-    const generated: Array<{ id: string; files: string[]; mode: 'legacy' | 'unified' | 'fix-unified' }> =
-      [];
+    const generated: Array<{
+      id: string;
+      files: string[];
+      mode: 'legacy' | 'unified' | 'fix-unified';
+    }> = [];
     const failed: Array<{ id: string; error: string }> = [];
     let backupPath: string | undefined;
 
@@ -535,7 +554,10 @@ router.post('/batch', async (req: Request, res: Response) => {
         if (validStories.length > 0) {
           const indexPath = path.join(githubDir, 'copilot-instructions.md');
           await nodeFileSystem.ensureDir(githubDir);
-          await nodeFileSystem.writeFile(indexPath, generateBatchIndex(validStories, branchContext));
+          await nodeFileSystem.writeFile(
+            indexPath,
+            generateBatchIndex(validStories, branchContext),
+          );
           generated.push({
             id: 'GLOBAL-BATCH',
             files: ['.github/copilot-instructions.md'],

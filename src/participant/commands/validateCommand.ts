@@ -262,14 +262,14 @@ async function validateStory_(
       '3. O agente conduz: alinhamento → implementação → testes\n' +
       '4. Ao fechar o Gate 2, o agente deve tentar commit local automático (fallback para ação manual só em erro)\n' +
       '5. Ao fechar o Gate 2, execute `@speckit /review-auto` para **propor** a transição para `gate: 3` + `status: review`\n' +
-      '6. Confirme explicitamente com `@speckit /review-auto --confirm <intent-id>` antes de qualquer persistência\n' +
+      '6. Confirme explicitamente com `@speckit /review-auto --confirm <codigo>` usando o código exibido na proposta; nada é persistido sem esta confirmação\n' +
       '7. O agente deve emitir handoff explícito no chat: IMPLEMENTADOR → REVISOR\n\n' +
       '**Sessão B — Revisão independente (portões 3–4):**\n' +
       '8. Ao concluir a Sessão A, abra um novo **Copilot Chat**\n' +
       '9. No dropdown de agentes, selecione **speckit-revisor**\n' +
       '10. Execute `@speckit /review-auto` para orquestrar a revisão Gate 3\n' +
-      '11. Se veredito for ALTERAÇÕES SOLICITADAS, execute `@speckit /review-auto --changes-requested` e confirme com `--confirm <intent-id>`\n' +
-      '12. Se veredito for APROVADO, execute `@speckit /review-auto --approved` e confirme com `--confirm <intent-id>`\n\n' +
+      '11. Se veredito for ALTERAÇÕES SOLICITADAS, execute `@speckit /review-auto --changes-requested` e confirme com `@speckit /review-auto --changes-requested --confirm <codigo>` mostrado na proposta\n' +
+      '12. Se veredito for APROVADO, execute `@speckit /review-auto --approved` e confirme com `@speckit /review-auto --approved --confirm <codigo>` mostrado na proposta\n\n' +
       'Agentes em `.github/agents/`. Skills em `.github/skills/`.\n',
   );
 
@@ -277,7 +277,7 @@ async function validateStory_(
     '### Comandos disponíveis agora (contextuais)\n' +
       '- `@speckit /status` (acompanhar gate/status da story)\n' +
       '- `@speckit /review-auto` (quando Gate 2 fechar, propor Gate 3)\n' +
-      '- `@speckit /review-auto --confirm <intent-id>` (confirmar transição proposta)\n' +
+      '- `@speckit /review-auto --confirm <codigo>` (confirmar a transição proposta com o código exibido no chat)\n' +
       '- `@speckit /review-auto --changes-requested` (Gate 3 → Gate 2)\n' +
       '- `@speckit /review-auto --approved` (Gate 3 → Gate 4)\n\n' +
       '> Para decisões de revisão/plano, continue digitando no chat do agente com o contexto da story.\n',

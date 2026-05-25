@@ -16,6 +16,10 @@ import {
   getBatchSessionConsent,
   setBatchSessionConsent,
 } from '../../../../src/workflow/TransitionGovernance';
+import {
+  formatExplicitConfirmationNotice,
+  formatInvalidConfirmationNotice,
+} from './confirmationMarkdown';
 
 const router = Router();
 
@@ -116,7 +120,8 @@ export function parseReviewAutoControl(input: ReviewAutoControlInput): ReviewAut
       action: 'orchestrate',
       auto: !!(input.auto ?? promptFlags.auto),
       batchConsent: !!(input.batchConsent ?? promptFlags.batchConsent),
-      error: 'Use `--confirm <intent-id>` para confirmar uma transição pendente.',
+      error:
+        'Use `--confirm <codigo>` com o código de confirmação mostrado na proposta. Nada será alterado sem esse código.',
     };
   }
 
@@ -134,16 +139,12 @@ export function parseReviewAutoControl(input: ReviewAutoControlInput): ReviewAut
     };
   }
 
-  const approved = !!(
-    input.approved ?? (promptFlags.approved || normalizedAction === 'approved')
-  );
+  const approved = !!(input.approved ?? (promptFlags.approved || normalizedAction === 'approved'));
   const changesRequested = !!(
     input.changesRequested ??
     (promptFlags.changesRequested || normalizedAction === 'changes-requested')
   );
-  const mutation = !!(
-    input.mutation ?? (promptFlags.mutation || normalizedAction === 'mutation')
-  );
+  const mutation = !!(input.mutation ?? (promptFlags.mutation || normalizedAction === 'mutation'));
   const auto = !!(input.auto ?? promptFlags.auto);
   const batchConsent = !!(input.batchConsent ?? promptFlags.batchConsent);
 
@@ -324,10 +325,15 @@ function buildTransitionProposalMarkdown(
     '| --- | --- | --- |\n' +
     `| Gate | \`${fromGate}\` | \`${toGate}\` |\n` +
     `| Status | \`${fromStatus}\` | \`${toStatus}\` |\n\n` +
-    `Intent-ID: \`${intentId}\`\n\n` +
-    'Para confirmar explicitamente:\n' +
-    `- \`${commandLabel} --confirm ${intentId}\`\n\n` +
-    'Sem confirmação, nenhuma alteração será persistida.\n'
+    formatExplicitConfirmationNotice({
+      intentId,
+      confirmCommand: `${commandLabel} --confirm ${intentId}`,
+      confirmEffect:
+        'o gate/status da story será persistido exatamente como proposto na tabela acima.',
+      noConfirmationEffect: 'nenhuma alteração será persistida.',
+      ttlMinutes: 30,
+    }) +
+    '\n'
   );
 }
 
@@ -335,9 +341,15 @@ function buildBatchConsentProposalMarkdown(intentId: string): string {
   return (
     '## ⚠️ Consentimento único obrigatório — sessão batch unificada\n\n' +
     'Este consentimento autoriza handoffs automáticos somente nesta sessão.\n\n' +
-    `Intent-ID: \`${intentId}\`\n\n` +
-    'Para confirmar explicitamente:\n' +
-    `- \`/review-auto --batch-consent --confirm ${intentId}\`\n`
+    formatExplicitConfirmationNotice({
+      intentId,
+      confirmCommand: `/review-auto --batch-consent --confirm ${intentId}`,
+      confirmEffect:
+        'o handoff automático ficará autorizado apenas para a sessão batch unificada atual.',
+      noConfirmationEffect: 'qualquer transição com `--auto` continuará bloqueada.',
+      ttlMinutes: 30,
+    }) +
+    '\n'
   );
 }
 
@@ -441,9 +453,11 @@ router.post('/review-auto', async (req: Request, res: Response) => {
       if (!consumed) {
         res.status(400).json({
           error: 'invalid or expired batch-consent intent',
-          markdown:
-            `❌ Intent-ID inválido ou expirado: \`${control.confirmIntentId}\`. ` +
-            'Gere um novo consentimento com `/review-auto --batch-consent`.',
+          markdown: formatInvalidConfirmationNotice(
+            control.confirmIntentId,
+            '/review-auto --batch-consent',
+            'consentimento batch',
+          ),
         });
         return;
       }
@@ -481,8 +495,7 @@ router.post('/review-auto', async (req: Request, res: Response) => {
     if (story.metadata.status === 'done' || story.metadata.status === 'cancelled') {
       res.status(409).json({
         error: 'story is in terminal status',
-        markdown:
-          `❌ Story \`${story.metadata.id}\` já está em status terminal (\`${story.metadata.status}\`).`,
+        markdown: `❌ Story \`${story.metadata.id}\` já está em status terminal (\`${story.metadata.status}\`).`,
       });
       return;
     }
@@ -614,9 +627,11 @@ router.post('/review-auto', async (req: Request, res: Response) => {
       if (!intent) {
         res.status(400).json({
           error: 'invalid or expired gate-transition intent',
-          markdown:
-            `❌ Intent-ID inválido ou expirado: \`${control.confirmIntentId}\`. ` +
-            `Gere nova proposta com \`${proposal.commandLabel}\`.`,
+          markdown: formatInvalidConfirmationNotice(
+            control.confirmIntentId,
+            proposal.commandLabel,
+            'transição de gate/status',
+          ),
         });
         return;
       }

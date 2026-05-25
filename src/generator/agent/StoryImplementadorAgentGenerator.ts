@@ -176,8 +176,8 @@ Não selecione outro agente neste ponto.
     - Se falhar por erro operacional, acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com argumento \`@speckit /commit\` (sem mensagem)
     - Só peça ação manual ao usuário se as duas tentativas falharem
   2. Acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com argumento \`@speckit /review-auto\` para **propor** a transição \`gate: 3\` e \`status: review\`.
-  3. Acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com argumento \`@speckit /review-auto --confirm <intent-id>\` para confirmar a transição.
-  4. Emita no chat o handoff explícito:
+  3. **Não confirme pelo usuário.** Apresente no chat o código de confirmação exibido pela proposta e peça ao usuário para clicar no botão do chat ou executar \`@speckit /review-auto --confirm <codigo>\`.
+  4. Só depois da confirmação explícita do usuário, emita no chat o handoff:
     - "✅ Gates 0-2 concluídos"
     - "🔁 Handoff: IMPLEMENTADOR → REVISOR"
     - "🚪 Gate atualizado: 2 → 3"

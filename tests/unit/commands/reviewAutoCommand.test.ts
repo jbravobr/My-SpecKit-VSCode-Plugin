@@ -119,6 +119,8 @@ describe('handleReviewAutoCommand', () => {
     const proposalOutput = stream.getAllMarkdown();
     const intentId = extractIntentId(proposalOutput);
     expect(proposalOutput).toContain('Confirmação obrigatória de transição');
+    expect(proposalOutput).toContain('Código de confirmação desta proposta');
+    expect(proposalOutput).toContain('Sem confirmar');
     expect(intentId).toBeTruthy();
     expect(stream.button).toHaveBeenCalledWith({
       title: '✅ Confirmar Transição Proposta',
@@ -231,7 +233,7 @@ describe('handleReviewAutoCommand', () => {
     expect(stream.button).toHaveBeenCalledWith({
       title: '✅ Confirmar Transição Proposta',
       command: 'speckit.runChatQuickAction',
-      arguments: [`@speckit /review-auto --confirm ${intentId}`],
+      arguments: [`@speckit /review-auto --approved --confirm ${intentId}`],
     });
 
     const contentAfterProposal = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
@@ -298,7 +300,7 @@ describe('handleReviewAutoCommand', () => {
     expect(stream.button).toHaveBeenCalledWith({
       title: '✅ Confirmar Transição Proposta',
       command: 'speckit.runChatQuickAction',
-      arguments: [`@speckit /review-auto --confirm ${intentId}`],
+      arguments: [`@speckit /review-auto --changes-requested --confirm ${intentId}`],
     });
 
     const contentAfterProposal = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
@@ -332,6 +334,41 @@ describe('handleReviewAutoCommand', () => {
     expect(
       trace.entries.some((entry) => entry.data.command === '/review-auto --changes-requested'),
     ).toBe(true);
+  });
+
+  it('explains missing confirmation code before transition confirmation', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub();
+
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyWithMeta(2, 'in-progress'));
+
+    await handleReviewAutoCommand(createMockRequest('--confirm'), stream, token, ws, fs, fakeGit());
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('--confirm <codigo>');
+    expect(output).toContain('Nada será alterado');
+  });
+
+  it('explains invalid confirmation code before transition confirmation', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub();
+
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyWithMeta(2, 'in-progress'));
+
+    await handleReviewAutoCommand(
+      createMockRequest('--confirm invalid-confirmation'),
+      stream,
+      token,
+      ws,
+      fs,
+      fakeGit(),
+    );
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Código de confirmação inválido ou expirado');
+    expect(output).toContain('Nada foi alterado');
   });
 
   it('rejects conflicting review-auto flags', async () => {
@@ -555,6 +592,8 @@ describe('handleReviewAutoCommand', () => {
     const intentId = extractIntentId(output);
 
     expect(output).toContain('Consentimento único obrigatório');
+    expect(output).toContain('Código de confirmação desta proposta');
+    expect(output).toContain('qualquer transição com `--auto` continuará bloqueada');
     expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(intentId).toBeTruthy();
     expect(stream.button).toHaveBeenCalledWith({
@@ -562,6 +601,26 @@ describe('handleReviewAutoCommand', () => {
       command: 'speckit.runChatQuickAction',
       arguments: [`@speckit /review-auto --batch-consent --confirm ${intentId}`],
     });
+  });
+
+  it('explains invalid batch consent confirmation code', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub();
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyWithMeta(2, 'in-progress'));
+
+    await handleReviewAutoCommand(
+      createMockRequest('--batch-consent --confirm invalid-confirmation'),
+      stream,
+      token,
+      ws,
+      fs,
+      fakeGit(),
+    );
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Código de confirmação inválido ou expirado');
+    expect(output).toContain('Nada foi alterado');
   });
 
   it('enforces CRAP gate and offers mutation path when CRAP > 30 is detected', async () => {

@@ -23,7 +23,12 @@ import {
   isValidAgentMode,
   setActiveAgentMode,
 } from '../AgentMode';
-import { emitContextualCommands, emitQuickActions } from './CommandHelpers';
+import {
+  emitContextualCommands,
+  emitQuickActions,
+  formatExplicitConfirmationNotice,
+  formatInvalidConfirmationNotice,
+} from './CommandHelpers';
 
 function readFlagValue(tokens: string[], flag: string): string | undefined {
   const normalized = flag.toLowerCase();
@@ -74,14 +79,16 @@ export async function handleAgentCommand(
   }
 
   if (tokens.includes('--confirm') && !confirmIntentId) {
-    stream.markdown('❌ Use `--confirm <intent-id>` para confirmar uma troca de modo pendente.\n');
+    stream.markdown(
+      '❌ Use `--confirm <codigo>` com o código de confirmação mostrado na proposta de troca de modo. Nada será alterado sem esse código.\n',
+    );
     emitQuickActions(stream, [{ title: '📘 Abrir Ajuda', query: '@speckit /help' }]);
     return;
   }
 
   if (!modeToken && !confirmIntentId) {
     stream.markdown(
-      '❌ Informe um modo alvo ou confirme um intent pendente com `--confirm <intent-id>`.\n',
+      '❌ Informe um modo alvo ou confirme uma proposta pendente com `--confirm <codigo>` usando o código mostrado no chat.\n',
     );
     emitQuickActions(stream, [{ title: '📘 Ver Modos Disponíveis', query: '@speckit /agent' }]);
     return;
@@ -120,7 +127,7 @@ export async function handleAgentCommand(
       });
 
       stream.markdown(
-        `❌ Intent-ID inválido ou expirado: \`${confirmIntentId}\`. Gere nova proposta com \`@speckit /agent <modo>\`.\n`,
+        formatInvalidConfirmationNotice(confirmIntentId, '@speckit /agent <modo>', 'troca de modo'),
       );
       emitQuickActions(stream, [
         { title: '🔁 Gerar Nova Proposta', query: '@speckit /agent debugger' },
@@ -172,7 +179,7 @@ export async function handleAgentCommand(
     stream.markdown(
       `## ✅ Troca de modo confirmada\n\n` +
         `- Antes: \`${intent.payload.fromMode ?? 'default'}\`\n` +
-        `- Depois: \`${mode}\`\n` +
+        `- Depois: \`${mode}\`\n\n` +
         `- Intent-ID: \`${intent.id}\`\n\n` +
         `---\n\n${prompt}\n`,
     );
@@ -260,10 +267,14 @@ export async function handleAgentCommand(
       `## ⚠️ Confirmação obrigatória de troca de modo\n\n` +
         `- Antes: \`${currentMode}\`\n` +
         `- Depois: \`${mode}\`\n` +
-        `- Intent-ID: \`${intent.id}\`\n\n` +
-        'Para confirmar explicitamente:\n' +
-        `- \`@speckit /agent --confirm ${intent.id}\`\n\n` +
-        'Sem confirmação, a troca de modo não será aplicada.\n',
+        formatExplicitConfirmationNotice({
+          intentId: intent.id,
+          confirmCommand: `@speckit /agent --confirm ${intent.id}`,
+          confirmEffect: `o modo ativo mudará de \`${currentMode}\` para \`${mode}\`.`,
+          noConfirmationEffect: 'a troca de modo não será aplicada.',
+          ttlMinutes: 30,
+        }) +
+        '\n',
     );
     emitQuickActions(stream, [
       { title: '✅ Confirmar Troca de Modo', query: `@speckit /agent --confirm ${intent.id}` },

@@ -22,7 +22,11 @@ import {
   getBatchSessionConsent,
   setBatchSessionConsent,
 } from '../../workflow/TransitionGovernance';
-import { requireWorkspace } from './CommandHelpers';
+import {
+  formatExplicitConfirmationNotice,
+  formatInvalidConfirmationNotice,
+  requireWorkspace,
+} from './CommandHelpers';
 
 interface CoverageInfo {
   percent?: number;
@@ -608,7 +612,8 @@ function parseReviewAutoControl(prompt: string | undefined): ReviewAutoControl {
       action: 'orchestrate',
       auto,
       batchConsent,
-      error: 'Use `--confirm <intent-id>` para confirmar uma transição pendente.',
+      error:
+        'Use `--confirm <codigo>` com o código de confirmação mostrado na proposta. Nada será alterado sem esse código.',
     };
   }
 
@@ -814,20 +819,32 @@ function formatTransitionProposalMarkdown(
     `| Gate | \`${fromGate}\` | \`${toGate}\` |\n` +
     `| Status | \`${fromStatus}\` | \`${toStatus}\` |\n\n` +
     `**Motivo:** ${reason}\n\n` +
-    `Intent-ID: \`${intentId}\`\n\n` +
-    `Para confirmar explicitamente, execute:\n` +
-    `- \`${confirmCommand}\`\n\n` +
-    `Sem esta confirmação, nenhuma alteração de gate/status será persistida.\n`
+    formatExplicitConfirmationNotice({
+      intentId,
+      confirmCommand,
+      confirmEffect:
+        'o gate/status da story será persistido exatamente como proposto na tabela acima.',
+      noConfirmationEffect: 'nenhuma alteração de gate/status será persistida.',
+      ttlMinutes: 30,
+    }) +
+    '\n'
   );
 }
 
 function formatBatchConsentProposalMarkdown(intentId: string): string {
+  const confirmCommand = `@speckit /review-auto --batch-consent --confirm ${intentId}`;
   return (
     '## ⚠️ Consentimento único obrigatório — sessão batch unificada\n\n' +
     'Este consentimento autoriza handoffs automáticos **somente** nesta sessão do batch.\n\n' +
-    `Intent-ID: \`${intentId}\`\n\n` +
-    'Para confirmar explicitamente, execute:\n' +
-    `- \`@speckit /review-auto --batch-consent --confirm ${intentId}\`\n\n` +
+    formatExplicitConfirmationNotice({
+      intentId,
+      confirmCommand,
+      confirmEffect:
+        'o handoff automático ficará autorizado apenas para a sessão batch unificada atual.',
+      noConfirmationEffect: 'qualquer transição com `--auto` continuará bloqueada.',
+      ttlMinutes: 30,
+    }) +
+    '\n' +
     'Sem este consentimento, qualquer transição com `--auto` será bloqueada.\n'
   );
 }
@@ -970,7 +987,7 @@ export async function handleReviewAutoCommand(
         '- `@speckit /review-auto --approved` (Gate 3 → Gate 4 com status ready-to-commit)\n' +
         '- `@speckit /review-auto --mutation` (trilha opcional de mutation testing quando CRAP > 30)\n' +
         '- `@speckit /review-auto --batch-consent` (propõe consentimento único da sessão batch)\n' +
-        '- `@speckit /review-auto --confirm <intent-id>` (confirma transição pendente)\n',
+        '- `@speckit /review-auto --confirm <codigo>` (confirma usando o código mostrado na proposta)\n',
     );
     emitContextualCommands(stream, [
       { command: '@speckit /review-auto', description: 'orquestrar handoff para Gate 3' },
@@ -979,8 +996,8 @@ export async function handleReviewAutoCommand(
         description: 'iniciar consentimento batch',
       },
       {
-        command: '@speckit /review-auto --confirm <intent-id>',
-        description: 'confirmar transição/consentimento pendente',
+        command: '@speckit /review-auto --confirm <codigo>',
+        description: 'confirmar transição/consentimento pendente com o código da proposta',
       },
     ]);
     return;
@@ -1071,7 +1088,11 @@ export async function handleReviewAutoCommand(
       });
 
       stream.markdown(
-        `❌ Intent-ID inválido ou expirado: \`${control.confirmIntentId}\`. Gere um novo consentimento com \`@speckit /review-auto --batch-consent\`.\n`,
+        formatInvalidConfirmationNotice(
+          control.confirmIntentId,
+          '@speckit /review-auto --batch-consent',
+          'consentimento batch',
+        ),
       );
       emitContextualCommands(stream, [
         {
@@ -1192,8 +1213,8 @@ export async function handleReviewAutoCommand(
           description: 'iniciar consentimento obrigatório da sessão',
         },
         {
-          command: '@speckit /review-auto --batch-consent --confirm <intent-id>',
-          description: 'confirmar consentimento pendente',
+          command: '@speckit /review-auto --batch-consent --confirm <codigo>',
+          description: 'confirmar consentimento pendente com o código mostrado no chat',
         },
       ]);
       emitChatQuickActionButton(
@@ -1208,7 +1229,7 @@ export async function handleReviewAutoCommand(
   async function proposeOrApplyTransition(
     proposal: TransitionProposal,
   ): Promise<{ summary?: StoryTransitionSummary; applied: boolean }> {
-    const confirmCommand = `@speckit /review-auto --confirm`;
+    const confirmCommand = `@speckit ${proposal.commandLabel} --confirm`;
 
     if (!control.auto && !control.confirmIntentId) {
       const intent = await createTransitionIntent(workspaceRootPath, fs, {
@@ -1297,7 +1318,11 @@ export async function handleReviewAutoCommand(
         });
 
         stream.markdown(
-          `❌ Intent-ID inválido ou expirado: \`${control.confirmIntentId}\`. Gere nova proposta de transição e confirme novamente.\n`,
+          formatInvalidConfirmationNotice(
+            control.confirmIntentId,
+            `@speckit ${proposal.commandLabel}`,
+            'transição de gate/status',
+          ),
         );
         emitContextualCommands(stream, [
           {

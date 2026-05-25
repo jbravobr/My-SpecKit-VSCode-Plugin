@@ -230,7 +230,7 @@ router.post('/validate', async (req: Request, res: Response) => {
           '### Comandos contextuais\n' +
           '- `/status`\n' +
           '- `/review-auto`\n' +
-          '- `/review-auto --confirm <intent-id>`',
+          '- `/review-auto --confirm <codigo>` para handoff Gate 2→3; use `/review-auto --approved --confirm <codigo>` ou `/review-auto --changes-requested --confirm <codigo>` para vereditos de revisão.',
       });
     }
   } catch (err: unknown) {

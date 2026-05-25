@@ -17,7 +17,11 @@ import {
   consumeTransitionIntent,
   createTransitionIntent,
 } from '../../workflow/TransitionGovernance';
-import { requireWorkspace } from './CommandHelpers';
+import {
+  formatExplicitConfirmationNotice,
+  formatInvalidConfirmationNotice,
+  requireWorkspace,
+} from './CommandHelpers';
 
 const GATE_LABELS: Record<Gate, string> = {
   0: 'Alinhamento',
@@ -120,13 +124,15 @@ export async function handleStatusCommand(
       ...telemetryBase,
       command: '/status --fix',
       outcome: '❌ parâmetro inválido para confirmação de retrofit',
-      detail: 'Use --confirm <intent-id>.',
+      detail: 'Use --confirm <codigo>.',
     });
 
-    stream.markdown('❌ Use `--confirm <intent-id>` para confirmar o retrofit pendente.\n');
+    stream.markdown(
+      '❌ Use `--confirm <codigo>` com o código de confirmação mostrado na proposta de retrofit. Nada será alterado sem esse código.\n',
+    );
     stream.markdown(
       '### Comandos disponíveis agora (contextuais)\n' +
-        '- `@speckit /status --fix` (gerar proposta de retrofit com novo intent-id)\n' +
+        '- `@speckit /status --fix` (gerar proposta de retrofit com novo código de confirmação)\n' +
         '- `@speckit /status` (listar specs sem alteração)\n',
     );
     emitChatQuickActionButton(stream, '🔁 Gerar Proposta de Retrofit', '@speckit /status --fix');
@@ -143,7 +149,7 @@ export async function handleStatusCommand(
 
     stream.markdown(
       `❌ Parâmetro(s) inválido(s) em /status: ${invalidFlags.map((flag) => `\`${flag}\``).join(', ')}\n\n` +
-        '**Uso:** `@speckit /status [--all|--closed] [--fix] [--confirm <intent-id>]`\n' +
+        '**Uso:** `@speckit /status [--all|--closed] [--fix] [--confirm <codigo>]`\n' +
         'Dica: use `--all` para incluir specs `done` e `cancelled`. ' +
         'Use `--fix` para propor retrofit e `--confirm` para aplicar o write.',
     );
@@ -195,10 +201,14 @@ export async function handleStatusCommand(
       stream.markdown(
         `## ⚠️ Confirmação obrigatória para retrofit de gate\n\n` +
           `${formatRetrofitReport(retrofitChanges)}\n\n` +
-          `Intent-ID: \`${intent.id}\`\n\n` +
-          'Para aplicar as alterações com concordância explícita, execute:\n' +
-          `- \`@speckit /status --fix --confirm ${intent.id}\`\n\n` +
-          'Sem confirmação, nenhuma spec será alterada.\n',
+          formatExplicitConfirmationNotice({
+            intentId: intent.id,
+            confirmCommand: `@speckit /status --fix --confirm ${intent.id}`,
+            confirmEffect: 'as specs listadas acima terão o gate corrigido para Gate 4.',
+            noConfirmationEffect: 'nenhuma spec será alterada.',
+            ttlMinutes: 30,
+          }) +
+          '\n',
       );
       stream.markdown(
         '### Comandos disponíveis agora (contextuais)\n' +
@@ -231,7 +241,11 @@ export async function handleStatusCommand(
         });
 
         stream.markdown(
-          `❌ Intent-ID inválido ou expirado: \`${confirmIntentId}\`. Gere nova proposta com \`@speckit /status --fix\`.\n`,
+          formatInvalidConfirmationNotice(
+            confirmIntentId,
+            '@speckit /status --fix',
+            'retrofit de gate',
+          ),
         );
         stream.markdown(
           '### Comandos disponíveis agora (contextuais)\n' +
@@ -300,7 +314,7 @@ export async function handleStatusCommand(
       '- `@speckit /status` (atualizar lista de abertas)\n' +
       '- `@speckit /status --all` (incluir done/cancelled)\n' +
       '- `@speckit /status --fix` (propor retrofit de gate para specs done)\n\n' +
-      '> Para confirmação de retrofit, use o comando com `--confirm <intent-id>` que o próprio @speckit informar.\n',
+      '> Para confirmação de retrofit, use o botão do chat ou o comando com `--confirm <codigo>` que o próprio @speckit informar.\n',
   );
   emitChatQuickActionButton(stream, '📊 Atualizar Status', '@speckit /status');
   emitChatQuickActionButton(stream, '📦 Ver Status Completo (--all)', '@speckit /status --all');

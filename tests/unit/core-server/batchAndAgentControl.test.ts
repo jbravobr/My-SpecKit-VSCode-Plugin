@@ -77,7 +77,8 @@ describe('core-server control parity guards', () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.markdown).toContain('--confirm <intent-id>');
+      expect(result.markdown).toContain('--confirm <codigo>');
+      expect(result.markdown).toContain('Nada será alterado');
     }
   });
 

@@ -26,6 +26,8 @@ async function proposeAndConfirmMode(
   const proposalOutput = stream.getAllMarkdown();
   const intentId = extractIntentId(proposalOutput);
   expect(intentId).toBeTruthy();
+  expect(proposalOutput).toContain('Código de confirmação desta proposta');
+  expect(proposalOutput).toContain('Sem confirmar');
 
   await handleAgentCommand(createMockRequest(`--confirm ${intentId}`), stream, token, ws, fs);
 }
@@ -109,6 +111,35 @@ describe('handleAgentCommand', () => {
     expect(output).toContain('inválido');
     expect(output).toContain('debugger');
     expect(output).toContain('refactor');
+  });
+
+  it('should explain missing confirmation code for mode switch', async () => {
+    const stream = createMockStream();
+    const ws = new WorkspaceStub();
+
+    await handleAgentCommand(createMockRequest('--confirm'), stream, token, ws);
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('--confirm <codigo>');
+    expect(output).toContain('Nada será alterado');
+  });
+
+  it('should explain invalid confirmation code for mode switch', async () => {
+    const stream = createMockStream();
+    const ws = new WorkspaceStub();
+    const fs = new InMemoryFileSystem();
+
+    await handleAgentCommand(
+      createMockRequest('--confirm invalid-confirmation'),
+      stream,
+      token,
+      ws,
+      fs,
+    );
+
+    const output = stream.getAllMarkdown();
+    expect(output).toContain('Código de confirmação inválido ou expirado');
+    expect(output).toContain('Nada foi alterado');
   });
 
   it('should use java test command when stack is java', async () => {

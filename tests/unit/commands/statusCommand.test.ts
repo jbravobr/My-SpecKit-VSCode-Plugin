@@ -77,7 +77,7 @@ describe('handleStatusCommand', () => {
     });
   });
 
-  it('shows guidance when --confirm is missing intent-id', async () => {
+  it('shows guidance when --confirm is missing confirmation code', async () => {
     const stream = createMockStream();
     const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
     const fs = seedFs(completeStoryMd);
@@ -91,7 +91,8 @@ describe('handleStatusCommand', () => {
     );
 
     const output = stream.getAllMarkdown();
-    expect(output).toContain('Use `--confirm <intent-id>`');
+    expect(output).toContain('Use `--confirm <codigo>`');
+    expect(output).toContain('Nada será alterado');
     expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '🔁 Gerar Proposta de Retrofit',
@@ -435,6 +436,8 @@ describe('handleStatusCommand', () => {
     const proposalOutput = stream.getAllMarkdown();
     const intentId = extractIntentId(proposalOutput);
     expect(proposalOutput).toContain('Confirmação obrigatória para retrofit de gate');
+    expect(proposalOutput).toContain('Código de confirmação desta proposta');
+    expect(proposalOutput).toContain('nenhuma spec será alterada');
     expect(intentId).toBeTruthy();
     expect(stream.button).toHaveBeenCalledWith({
       title: '✅ Confirmar Retrofit Proposto',
@@ -478,7 +481,8 @@ describe('handleStatusCommand', () => {
     );
 
     const output = stream.getAllMarkdown();
-    expect(output).toContain('Intent-ID inválido ou expirado');
+    expect(output).toContain('Código de confirmação inválido ou expirado');
+    expect(output).toContain('Nada foi alterado');
     expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '🔁 Gerar Nova Proposta de Retrofit',

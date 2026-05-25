@@ -35,7 +35,11 @@ import {
   setBranchSessionGovernance,
 } from '../../workflow/TransitionGovernance';
 import { gitOps, IGitOps } from '../../workflow/GitOperations';
-import { requireWorkspace } from './CommandHelpers';
+import {
+  formatExplicitConfirmationNotice,
+  formatInvalidConfirmationNotice,
+  requireWorkspace,
+} from './CommandHelpers';
 
 const GATE_LABELS: Record<Gate, string> = {
   0: 'Alinhamento',
@@ -336,7 +340,12 @@ async function resolveBatchBranchRuntimeContext(
     );
     if (!intent || intent.payload.action !== 'create-session-branch') {
       stream.markdown(
-        `\n❌ Intent-ID inválido ou expirado: \`${control.confirmIntentId}\`. Gere uma nova sugestão com \`${appendBatchBranchFlags(commandLabel, 'session')}\`.\n`,
+        '\n' +
+          formatInvalidConfirmationNotice(
+            control.confirmIntentId,
+            appendBatchBranchFlags(commandLabel, 'session'),
+            'criação de branch da sessão',
+          ),
       );
       emitChatQuickActionButton(
         stream,
@@ -470,9 +479,15 @@ async function resolveBatchBranchRuntimeContext(
       `\n### 🌿 Criação de branch da sessão (confirmação obrigatória)\n\n` +
         `A estratégia \`session\` foi escolhida, mas nenhuma branch ativa pôde ser resolvida no Git (${message}).\n\n` +
         `Sugestão de branch para este lote: \`${suggestedBranch}\`\n\n` +
-        `Intent-ID: \`${intent.id}\`\n` +
-        `Confirme explicitamente para criar e fixar essa branch na sessão:\n` +
-        `- \`${appendBatchBranchFlags(commandLabel, 'session', intent.id)}\`\n`,
+        formatExplicitConfirmationNotice({
+          intentId: intent.id,
+          confirmCommand: appendBatchBranchFlags(commandLabel, 'session', intent.id),
+          confirmEffect: `a branch \`${suggestedBranch}\` será criada e fixada como branch da sessão para este lote.`,
+          noConfirmationEffect:
+            'nenhuma branch será criada e a geração unificada continuará bloqueada.',
+          ttlMinutes: 240,
+        }) +
+        '\n',
     );
     emitChatQuickActionButton(
       stream,
@@ -500,7 +515,7 @@ export async function handleBatchCommand(
   if (control.invalidFlags.length > 0) {
     stream.markdown(
       `❌ Parâmetro(s) inválido(s) em /batch: ${control.invalidFlags.map((flag) => `\`${flag}\``).join(', ')}\n\n` +
-        '**Uso:** `@speckit /batch [--generate|--gen] [--unified] [--story <id>] [--branch-strategy <session|cited>] [--confirm <intent-id>]`\n' +
+        '**Uso:** `@speckit /batch [--generate|--gen] [--unified] [--story <id>] [--branch-strategy <session|cited>] [--confirm <codigo>]`\n' +
         'Dica: para modo unificado, use `@speckit /batch --generate --unified`.',
     );
     return;
@@ -508,7 +523,7 @@ export async function handleBatchCommand(
 
   if (control.flags.includes('--confirm') && !control.confirmIntentId) {
     stream.markdown(
-      '❌ Use `--confirm <intent-id>` para confirmar uma criação pendente de branch da sessão.\n',
+      '❌ Use `--confirm <codigo>` com o código de confirmação mostrado na proposta de branch da sessão. Nada será criado sem esse código.\n',
     );
     return;
   }
@@ -548,7 +563,7 @@ export async function handleBatchCommand(
 
   if (control.confirmIntentId && control.branchStrategy !== 'session') {
     stream.markdown(
-      '❌ `--confirm <intent-id>` exige `--branch-strategy session`, pois essa confirmação só é usada para criar a branch da sessão.\n',
+      '❌ `--confirm <codigo>` exige `--branch-strategy session`, pois essa confirmação só é usada para criar a branch da sessão proposta no chat.\n',
     );
     return;
   }

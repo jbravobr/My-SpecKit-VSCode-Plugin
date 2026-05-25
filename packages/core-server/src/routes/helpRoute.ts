@@ -62,7 +62,7 @@ Exibe resumo de stories e fixes no workspace.
 - \`/status --all\`
 - \`/status --closed\`
 - \`/status --fix\`
-- \`/status --fix --confirm <intent-id>\`
+- \`/status --fix --confirm <codigo>\` (usa o código mostrado na proposta)
 
 ### Aliases
 
@@ -78,8 +78,8 @@ Mostra ou alterna o modo de agente com confirmação explícita.
 ### Uso
 
 - \`/agent\` (listar modos + modo ativo)
-- \`/agent <modo>\` (propor troca e receber intent-id)
-- \`/agent --confirm <intent-id>\` (confirmar troca proposta)
+- \`/agent <modo>\` (propor troca e receber código de confirmação)
+- \`/agent --confirm <codigo>\` (confirmar troca proposta; nada muda sem o código)
 
 ### Modos
 
@@ -102,7 +102,7 @@ Processa múltiplas specs em lote.
 - \`/batch --generate --unified\` (gerar agentes unificados + index)
 - \`/batch --generate --unified --story <id>\` (filtrar uma story)
 - \`/batch --generate --unified --branch-strategy session|cited\`
-- \`/batch --generate --unified --branch-strategy session --confirm <intent-id>\`
+- \`/batch --generate --unified --branch-strategy session --confirm <codigo>\`
 
 ### Aliases
 
@@ -118,11 +118,13 @@ Orquestra transições de revisão com confirmação explícita.
 ### Uso
 
 - \`/review-auto\` (propor Gate 2 -> Gate 3 / status review)
-- \`/review-auto --confirm <intent-id>\` (confirmar proposta pendente)
+- \`/review-auto --confirm <codigo>\` (confirmar proposta pendente)
 - \`/review-auto --approved\` (propor Gate 3 -> Gate 4 / ready-to-commit)
+- \`/review-auto --approved --confirm <codigo>\` (confirmar aprovação proposta)
 - \`/review-auto --changes-requested\` (propor retorno para Gate 2 / in-progress)
+- \`/review-auto --changes-requested --confirm <codigo>\` (confirmar retrabalho proposto)
 - \`/review-auto --batch-consent\` (propor consentimento da sessão para \`--auto\`)
-- \`/review-auto --batch-consent --confirm <intent-id>\` (confirmar consentimento)
+- \`/review-auto --batch-consent --confirm <codigo>\` (confirmar consentimento)
 - \`/review-auto --approved --auto\` (aplicar sem proposta quando consentimento batch existir)
 - \`/review-auto --changes-requested --auto\` (idem para retorno de retrabalho)
 `;

@@ -450,6 +450,8 @@ describe('handleBatchCommand', () => {
       const intentId = extractIntentId(output);
       expect(output).toContain('Criação de branch da sessão (confirmação obrigatória)');
       expect(output).toContain('Sugestão de branch para este lote');
+      expect(output).toContain('Código de confirmação desta proposta');
+      expect(output).toContain('nenhuma branch será criada');
       expect(intentId).toBeTruthy();
       expect(fs.hasFile('speckit-story-001.agent.md')).toBe(false);
       expect(stream.button).toHaveBeenCalledWith({
@@ -459,6 +461,37 @@ describe('handleBatchCommand', () => {
           `@speckit /batch --generate --unified --branch-strategy session --confirm ${intentId}`,
         ],
       });
+    });
+
+    it('explains invalid session branch confirmation code', async () => {
+      const storyWithDevelop = completeStoryMd.replace(
+        '### Problema\r\n\r\n',
+        '### Problema\r\n\r\nA story cita a branch develop como contexto.\r\n\r\n',
+      );
+      const fs = seedFs([{ fileName: 'STORY-001.md', content: storyWithDevelop }]);
+      const workspace = new WorkspaceStub({ storyFiles: ['STORY-001.md'], fixFiles: [] });
+      const stream = createMockStream();
+
+      await handleBatchCommand(
+        createMockRequest(
+          '--generate --unified --branch-strategy session --confirm invalid-confirmation',
+        ),
+        stream,
+        createMockToken(),
+        fs,
+        workspace,
+        fakeGit({
+          currentBranch: async () => {
+            throw new Error(
+              'Não foi possível resolver a branch atual do Git (HEAD indefinido, detached ou repositório sem branch ativa).',
+            );
+          },
+        }),
+      );
+
+      const output = stream.getAllMarkdown();
+      expect(output).toContain('Código de confirmação inválido ou expirado');
+      expect(output).toContain('Nada foi alterado');
     });
 
     it('creates the suggested branch after explicit confirmation', async () => {

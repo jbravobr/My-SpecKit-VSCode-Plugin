@@ -6,9 +6,16 @@ import {
   getAgentModePrompt,
   isValidAgentMode,
 } from '../../../../src/participant/AgentMode';
-import { createTransitionIntent, consumeTransitionIntent } from '../../../../src/workflow/TransitionGovernance';
+import {
+  createTransitionIntent,
+  consumeTransitionIntent,
+} from '../../../../src/workflow/TransitionGovernance';
 import { nodeFileSystem } from '../fs/NodeFileSystem';
 import { createNodeWorkspace } from '../workspace/NodeWorkspace';
+import {
+  formatExplicitConfirmationNotice,
+  formatInvalidConfirmationNotice,
+} from './confirmationMarkdown';
 
 const router = Router();
 const workspaceModes = new Map<string, AgentModeName>();
@@ -45,7 +52,8 @@ export function validateAgentControl(input: AgentControlInput): AgentControlVali
   if (typeof input.confirmIntentId === 'string' && !confirmRaw) {
     return {
       ok: false,
-      markdown: '❌ Use `--confirm <intent-id>` para confirmar uma troca de modo pendente.',
+      markdown:
+        '❌ Use `--confirm <codigo>` com o código de confirmação mostrado na proposta de troca de modo. Nada será alterado sem esse código.',
     };
   }
 
@@ -111,7 +119,7 @@ router.post('/agent', async (req: Request, res: Response) => {
       '| Modo | Descrição |\n|---|---|\n' +
       modes.map((item) => `| \`${item.mode}\` | ${item.label} |`).join('\n') +
       `\n\nModo ativo atual: \`${activeMode}\`` +
-      '\n\nUse `/agent <modo>` para solicitar a troca e `/agent --confirm <intent-id>` para confirmar.';
+      '\n\nUse `/agent <modo>` para solicitar a troca; depois confirme com `/agent --confirm <codigo>` usando o código mostrado na proposta.';
     res.json({ activeMode, modes, markdown });
     return;
   }
@@ -136,9 +144,11 @@ router.post('/agent', async (req: Request, res: Response) => {
     if (!intent) {
       res.status(400).json({
         error: 'invalid or expired mode-switch intent',
-        markdown:
-          `❌ Intent-ID inválido ou expirado: \`${control.confirmIntentId}\`. ` +
-          'Gere nova proposta com `/agent <modo>`.',
+        markdown: formatInvalidConfirmationNotice(
+          control.confirmIntentId,
+          '/agent <modo>',
+          'troca de modo',
+        ),
       });
       return;
     }
@@ -164,13 +174,13 @@ router.post('/agent', async (req: Request, res: Response) => {
 
     const fromMode = activeMode;
     setWorkspaceMode(workspaceRoot, targetMode);
-    let stackLabel = '';
+    let stackLabel: string | undefined;
     try {
       const workspace = createNodeWorkspace(workspaceRoot);
       const stack = await workspace.detectTechStack();
       stackLabel = `${stack.language}${stack.framework ? ` / ${stack.framework}` : ''}`;
     } catch {
-      stackLabel = '';
+      // Stack detection is optional for confirmation output.
     }
 
     const prompt = getAgentModePrompt(targetMode);
@@ -195,7 +205,8 @@ router.post('/agent', async (req: Request, res: Response) => {
   if (!control.requestedMode) {
     res.status(400).json({
       error: 'mode is required',
-      markdown: '❌ Informe um modo alvo ou use `/agent --confirm <intent-id>` para confirmar.',
+      markdown:
+        '❌ Informe um modo alvo ou use `/agent --confirm <codigo>` com o código mostrado no chat para confirmar.',
     });
     return;
   }
@@ -222,11 +233,14 @@ router.post('/agent', async (req: Request, res: Response) => {
   const markdown =
     `## ⚠️ Confirmação obrigatória de troca de modo\n\n` +
     `- Antes: \`${activeMode}\`\n` +
-    `- Depois: \`${control.requestedMode}\`\n` +
-    `- Intent-ID: \`${intent.id}\`\n\n` +
-    'Para confirmar explicitamente:\n' +
-    `- \`/agent --confirm ${intent.id}\`\n\n` +
-    'Sem confirmação, a troca de modo não será aplicada.';
+    `- Depois: \`${control.requestedMode}\`\n\n` +
+    formatExplicitConfirmationNotice({
+      intentId: intent.id,
+      confirmCommand: `/agent --confirm ${intent.id}`,
+      confirmEffect: `o modo ativo mudará de \`${activeMode}\` para \`${control.requestedMode}\`.`,
+      noConfirmationEffect: 'a troca de modo não será aplicada.',
+      ttlMinutes: 30,
+    });
 
   res.json({
     fromMode: activeMode,

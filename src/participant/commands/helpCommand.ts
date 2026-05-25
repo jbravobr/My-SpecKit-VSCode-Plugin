@@ -23,13 +23,13 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       '@speckit /status --all',
       '@speckit /status --closed',
       '@speckit /status --fix',
-      '@speckit /status --fix --confirm <intent-id>',
+      '@speckit /status --fix --confirm <codigo>',
     ],
     options: [
       '--all (inclui done e cancelled)',
       '--closed (alias de --all)',
       '--fix (propõe retrofit de gate: 4 em specs com status: done e gate desatualizado; implica --all)',
-      '--confirm <intent-id> (confirma explicitamente o retrofit proposto por --fix)',
+      '--confirm <codigo> (confirma explicitamente o retrofit usando o código mostrado na proposta; nada é aplicado sem confirmação)',
     ],
     aliases: ['/status-all', '/status-fix'],
   },
@@ -43,14 +43,14 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       '@speckit /batch --generate --unified',
       '@speckit /batch --generate --unified --story <id>',
       '@speckit /batch --generate --unified --branch-strategy <session|cited>',
-      '@speckit /batch --generate --unified --branch-strategy session --confirm <intent-id>',
+      '@speckit /batch --generate --unified --branch-strategy session --confirm <codigo>',
     ],
     options: [
       '--generate (ou --gen)',
       '--unified (junto com --generate) — gera agente implementador/revisor por story',
       '--story <id> (filtra uma story específica, requer --generate --unified)',
       '--branch-strategy <session|cited> (resolve a governança de branch quando a story cita branch)',
-      '--confirm <intent-id> (confirma a criação pendente da branch da sessão sugerida no modo unificado)',
+      '--confirm <codigo> (confirma a criação pendente da branch sugerida usando o código mostrado na proposta)',
     ],
     aliases: ['/batch-generate', '/batch-unified'],
   },
@@ -83,16 +83,18 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'Orquestra revisão e transições de gate da story com evidência explícita no chat (2→3, 3→2, 3→4).',
     usage: [
       '@speckit /review-auto',
-      '@speckit /review-auto --confirm <intent-id>',
+      '@speckit /review-auto --confirm <codigo>',
       '@speckit /review-auto --changes-requested',
+      '@speckit /review-auto --changes-requested --confirm <codigo>',
       '@speckit /review-auto --approved',
+      '@speckit /review-auto --approved --confirm <codigo>',
       '@speckit /review-auto --mutation',
       '@speckit /review-auto --batch-consent',
-      '@speckit /review-auto --batch-consent --confirm <intent-id>',
+      '@speckit /review-auto --batch-consent --confirm <codigo>',
       '@speckit /review-auto --auto',
     ],
     options: [
-      '--confirm <intent-id> para confirmar transição proposta (obrigatório fora de --auto)',
+      '--confirm <codigo> para confirmar a proposta mostrada no chat (mantenha a mesma intenção do comando proposto, como --approved ou --changes-requested; nada muda sem confirmação)',
       '--changes-requested (alias: --changes, --rework) para retornar Gate 3 → Gate 2',
       '--approved (alias: --approve) para avançar Gate 3 → Gate 4/status ready-to-commit',
       '--mutation (alias: --mut) para detalhar trilha opcional de mutation quando CRAP > 30',
@@ -203,8 +205,8 @@ const TOPIC_CONTEXTUAL_ACTIONS: Record<string, ContextualHelpAction[]> = {
       description: 'iniciar consentimento batch para fluxos --auto',
     },
     {
-      command: '@speckit /review-auto --confirm <intent-id>',
-      description: 'confirmar transição proposta por intent',
+      command: '@speckit /review-auto --confirm <codigo>',
+      description: 'confirmar transição proposta com o código exibido no chat',
     },
     {
       command: '@speckit /review-auto --mutation',
@@ -237,11 +239,11 @@ function renderGeneralHelp(): string {
     '- 📦 **Backlog completo (múltiplas specs já escritas):** `/batch --generate --unified` → agentes para todas em lote\n' +
     '- 🔧 **Refactoring, debug ou análise:** abra um agente diretamente no Copilot Chat — sem necessidade de spec\n\n' +
     '**Comandos com parâmetros mais usados:**\n' +
-    '- `/status [--all|--closed] [--fix] [--confirm <intent-id>]`\n' +
-    '- `/batch [--generate|--gen] [--unified] [--story <id>] [--branch-strategy <session|cited>] [--confirm <intent-id>]`\n' +
+    '- `/status [--all|--closed] [--fix] [--confirm <codigo>]`\n' +
+    '- `/batch [--generate|--gen] [--unified] [--story <id>] [--branch-strategy <session|cited>] [--confirm <codigo>]`\n' +
     '- `/gate [check gate <de> <para>|check status <de> <para>]`\n' +
     '- `/validate [--devtools]`\n' +
-    '- `/review-auto [--approved|--changes-requested|--mutation] [--confirm <intent-id>]`\n' +
+    '- `/review-auto [--approved|--changes-requested|--mutation] [--confirm <codigo>]`\n' +
     '- `/verify [--gate <0..4>]` → validação determinística (alimenta o Revisor)\n' +
     '- `/metrics` → resumo das métricas locais (`.speckit/metrics/events.jsonl`)\n' +
     '- `/score` → score de completude da spec ativa (0..100)\n' +

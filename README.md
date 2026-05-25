@@ -727,7 +727,7 @@ Orquestra a revisão automática da Story ativa e as transições de gate com pr
 
 **O que faz:**
 
-1. Propõe transições de gate/status e exige confirmação explícita antes da persistência (`--confirm <intent-id>`)
+1. Propõe transições de gate/status e exige confirmação explícita antes da persistência (`--confirm <codigo>`)
 2. Coleta evidências automáticas (arquivos alterados e cobertura `lcov` quando disponível)
 3. Aplica bloqueios automáticos mínimos (ex.: cobertura ausente/abaixo de 80%, CRAP por função acima do limite)
 4. Emite veredito orquestrado e força continuidade do checklist completo de revisão no mesmo fluxo
@@ -738,16 +738,18 @@ Orquestra a revisão automática da Story ativa e as transições de gate com pr
 
 ```
 @speckit /review-auto
-@speckit /review-auto --confirm <intent-id>
+@speckit /review-auto --confirm <codigo>
 @speckit /review-auto --changes-requested
+@speckit /review-auto --changes-requested --confirm <codigo>
 @speckit /review-auto --approved
+@speckit /review-auto --approved --confirm <codigo>
 @speckit /review-auto --batch-consent
-@speckit /review-auto --batch-consent --confirm <intent-id>
+@speckit /review-auto --batch-consent --confirm <codigo>
 @speckit /review-auto --auto
 @speckit /review-auto --mutation
 ```
 
-> Fora do modo `--auto`, toda transição proposta por `/review-auto` exige confirmação explícita com `--confirm <intent-id>`.
+> Fora do modo `--auto`, toda transição proposta por `/review-auto` mostra um **código de confirmação** no chat e exige confirmação explícita com `--confirm <codigo>`. Para aprovação/retrabalho, mantenha a intenção no comando (`--approved --confirm <codigo>` ou `--changes-requested --confirm <codigo>`). Nada é persistido sem essa ação do usuário.
 > No modo unificado, confirme um consentimento único de sessão com `/review-auto --batch-consent` antes de usar `/review-auto --auto`.
 > Se o veredito for **ALTERAÇÕES SOLICITADAS** no unificado, execute `/review-auto --changes-requested --auto`.
 > Se o veredito for **APROVADO** no unificado, execute `/review-auto --approved --auto` (Gate 4 fica em `status: ready-to-commit` até o commit final com `/commit`).
@@ -938,7 +940,7 @@ Processa **todas** as specs em `.speckit/` em lote — validação paralela + ge
 @speckit /batch --generate --unified   → Gera agentes unificados (implementador + revisor por story)
 @speckit /batch --generate --unified --story <id> → Gera agente unificado apenas da story informada
 @speckit /batch --generate --unified --branch-strategy <session|cited> → Resolve a governança de branch quando a story cita branch
-@speckit /batch --generate --unified --branch-strategy session --confirm <intent-id> → Confirma a criação da branch sugerida para a sessão
+@speckit /batch --generate --unified --branch-strategy session --confirm <codigo> → Confirma a criação da branch sugerida para a sessão
 @speckit /batch-generate               → Atalho para /batch --generate
 @speckit /batch-unified                → Atalho para /batch --generate --unified
 ```
@@ -981,7 +983,7 @@ Gera um **agente unificado por story** — cada agente contém o protocolo compl
 9. **Governança explícita de branch citada** — se alguma story citar `develop`, `main` ou outra branch, o comando pausa a geração e pede ao usuário escolher entre:
    - `--branch-strategy session` → usar sempre a branch carregada na sessão do VS Code como fonte canônica
    - `--branch-strategy cited` → respeitar as branch(es) citada(s) na spec
-10. **Criação controlada da branch da sessão** — quando o usuário escolhe `session` e o Git não tem branch ativa resolvível, o SpecKit sugere uma branch `feature/batch-<yyyymmdd>-<slug>` e exige confirmação explícita via `--confirm <intent-id>` antes de criar e fixar essa branch para o restante da sessão atual
+10. **Criação controlada da branch da sessão** — quando o usuário escolhe `session` e o Git não tem branch ativa resolvível, o SpecKit sugere uma branch `feature/batch-<yyyymmdd>-<slug>`, mostra um código de confirmação no chat e exige `--confirm <codigo>` antes de criar e fixar essa branch para o restante da sessão atual
 
 > Referências narrativas a outras stories ou fixes dentro do corpo da história não entram na análise de dependências. Para bloquear uma story, declare explicitamente o ID no campo `depends-on` do metadata.
 

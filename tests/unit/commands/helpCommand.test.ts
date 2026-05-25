@@ -32,6 +32,11 @@ describe('handleHelpCommand', () => {
     expect(output).toContain('--changes-requested');
     expect(output).toContain('--approved');
     expect(output).toContain('--mutation');
+    expect(output).toContain('@speckit /review-auto --confirm <codigo>');
+    expect(output).toContain('@speckit /review-auto --approved --confirm <codigo>');
+    expect(output).toContain('@speckit /review-auto --changes-requested --confirm <codigo>');
+    expect(output).toContain('@speckit /review-auto --batch-consent --confirm <codigo>');
+    expect(output).toContain('nada muda sem confirmação');
     expect(output).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '▶ Iniciar Revisão Automática',
@@ -59,7 +64,7 @@ describe('handleHelpCommand', () => {
     const output = stream.getAllMarkdown();
     expect(output).toContain('/batch');
     expect(output).toContain('--branch-strategy <session|cited>');
-    expect(output).toContain('--confirm <intent-id>');
+    expect(output).toContain('--confirm <codigo>');
   });
 
   it('maps topic aliases to command help', async () => {

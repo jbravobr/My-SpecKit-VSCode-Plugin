@@ -77,11 +77,11 @@ export function generateRevisorContent(story: Story, options: RevisorContentOpti
 
   const approvedCommand = isBatchUnified
     ? '`@speckit /review-auto --approved --auto`'
-    : '`@speckit /review-auto --approved` seguido de `@speckit /review-auto --confirm <intent-id>`';
+    : '`@speckit /review-auto --approved` para gerar a proposta; depois apresente o código ao usuário e aguarde ele confirmar com `@speckit /review-auto --approved --confirm <codigo>`';
 
   const changesRequestedCommand = isBatchUnified
     ? '`@speckit /review-auto --changes-requested --auto`'
-    : '`@speckit /review-auto --changes-requested` seguido de `@speckit /review-auto --confirm <intent-id>`';
+    : '`@speckit /review-auto --changes-requested` para gerar a proposta; depois apresente o código ao usuário e aguarde ele confirmar com `@speckit /review-auto --changes-requested --confirm <codigo>`';
 
   return `# SpecKit Revisor — Story ${storyId} (Gates 3–4)
 
@@ -207,11 +207,11 @@ ${dodList || '- [ ] (não especificado)'}
 3. **Melhorias**: recomendados mas não bloqueantes
 4. **Sugestões fora de escopo**: registre, não implemente
 
-**Se veredito for APROVADO:** acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com ${approvedCommand} para persistir Gate 3 → Gate 4/status ready-to-commit antes do commit final.
+**Se veredito for APROVADO:** ${isBatchUnified ? `acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com ${approvedCommand} para persistir Gate 3 → Gate 4/status ready-to-commit antes do commit final.` : `acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com \`@speckit /review-auto --approved\` para gerar a proposta. Não confirme pelo usuário; apresente o código de confirmação e aguarde o usuário clicar no botão ou executar \`@speckit /review-auto --approved --confirm <codigo>\`.`}
 
 **Se veredito for ALTERAÇÕES SOLICITADAS:**
 
-1. Acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com ${changesRequestedCommand} para persistir Gate 3 → Gate 2/status in-progress.
+1. ${isBatchUnified ? `Acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com ${changesRequestedCommand} para persistir Gate 3 → Gate 2/status in-progress.` : `Acione \`speckit.runChatQuickAction\` via \`vscode/runCommand\` com \`@speckit /review-auto --changes-requested\` para gerar a proposta. Não confirme pelo usuário; apresente o código de confirmação e aguarde o usuário clicar no botão ou executar \`@speckit /review-auto --changes-requested --confirm <codigo>\`.`}
 2. Registre a transição no chat usando o bloco Markdown obrigatório.
 3. Converta os bloqueantes em tarefas atômicas:
 
@@ -290,7 +290,7 @@ git commit -m "fix(${storyId}): ajustes pós-revisão"
 Execute via \`vscode/runCommand\` chamando \`speckit.runChatQuickAction\`:
 ${approvedCommand}
 
-O comando persiste o metadata com \`gate: 4\` e \`status: ready-to-commit\` e emite a transição no chat. Após o commit final (\`@speckit /commit\`), o status deve evoluir para \`done\`.
+${isBatchUnified ? 'O comando persiste o metadata com `gate: 4` e `status: ready-to-commit` e emite a transição no chat.' : 'Este comando gera a proposta de encerramento; a persistência só acontece depois que o usuário confirmar com o código exibido no chat.'} Após o commit final (\`@speckit /commit\`), o status deve evoluir para \`done\`.
 
 ---
 

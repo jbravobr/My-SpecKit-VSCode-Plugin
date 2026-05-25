@@ -128,6 +128,9 @@ describe('handleValidateCommand', () => {
 
     expect(stream.getAllMarkdown()).toContain('speckit-revisor');
     expect(stream.getAllMarkdown()).toContain('Sessão B');
+    expect(stream.getAllMarkdown()).toContain('@speckit /review-auto --confirm <codigo>');
+    expect(stream.getAllMarkdown()).toContain('código exibido na proposta');
+    expect(stream.getAllMarkdown()).toContain('nada é persistido sem esta confirmação');
     expect(stream.getAllMarkdown()).toContain('Comandos disponíveis agora (contextuais)');
     expect(stream.button).toHaveBeenCalledWith({
       title: '📊 Ver Status das Specs',
