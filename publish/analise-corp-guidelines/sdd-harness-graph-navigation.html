@@ -1,0 +1,1121 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>SDD e Harness · Graph Navigation Mandate</title>
+        <meta
+            name="description"
+            content="Documento técnico sobre o processo de Specification-Driven Development, harness operacional e graph-navigation-mandate no plugin SpecKit."
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+        <style>
+            :root {
+                --bg-0: #0b1020;
+                --bg-1: #11172b;
+                --bg-2: #161e36;
+                --surface: #1c2541;
+                --surface-2: #243057;
+                --line: #2a3760;
+                --text: #e8ecf6;
+                --text-dim: #b0b9d4;
+                --text-muted: #7c87a9;
+                --accent: #7aa2ff;
+                --accent-2: #9d7aff;
+                --success: #38d39f;
+                --warn: #ffb454;
+                --danger: #ff6b8a;
+                --gate: #4cc9f0;
+                --shadow: 0 18px 52px rgba(0, 0, 0, 0.42);
+                --doc-max: 1440px;
+                --doc-pad-x: 72px;
+            }
+
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            html { scroll-behavior: smooth; }
+            body {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+                background: var(--bg-0);
+                color: var(--text);
+                line-height: 1.72;
+                font-size: 16px;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+            }
+            code, pre, .mono { font-family: 'JetBrains Mono', Consolas, monospace; }
+            a { color: var(--accent); text-decoration: none; }
+            a:hover { text-decoration: underline; }
+
+            .topnav {
+                position: fixed;
+                z-index: 100;
+                top: 14px;
+                right: 18px;
+                display: flex;
+                gap: 4px;
+                padding: 8px 12px;
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                background: rgba(17, 23, 43, 0.92);
+                backdrop-filter: blur(12px);
+                font-size: 12px;
+                font-weight: 700;
+            }
+            .topnav a { color: var(--text-dim); padding: 6px 10px; border-radius: 999px; transition: background .2s; }
+            .topnav a:hover { background: rgba(122, 162, 255, 0.12); color: var(--text); text-decoration: none; }
+
+            .hero {
+                position: relative;
+                overflow: hidden;
+                padding: 136px var(--doc-pad-x) 104px;
+                border-bottom: 1px solid var(--line);
+                background:
+                    radial-gradient(circle at 14% 18%, rgba(122, 162, 255, 0.2), transparent 34%),
+                    radial-gradient(circle at 86% 28%, rgba(157, 122, 255, 0.18), transparent 36%),
+                    linear-gradient(135deg, #0b1020 0%, #171b49 52%, #2a1d5d 100%);
+            }
+            .hero-inner, .section-inner, .footer-inner {
+                max-width: var(--doc-max);
+                margin: 0 auto;
+            }
+            .eyebrow {
+                display: inline-flex;
+                gap: 10px;
+                align-items: center;
+                margin-bottom: 24px;
+                padding: 8px 18px;
+                border: 1px solid rgba(122, 162, 255, 0.34);
+                border-radius: 999px;
+                background: rgba(122, 162, 255, 0.12);
+                color: var(--accent);
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--success);
+                box-shadow: 0 0 16px var(--success);
+            }
+            h1 {
+                max-width: 1180px;
+                margin-bottom: 24px;
+                font-size: clamp(40px, 5.8vw, 72px);
+                line-height: 1.06;
+                letter-spacing: -0.035em;
+                font-weight: 900;
+            }
+            h1 span {
+                background: linear-gradient(135deg, var(--accent), var(--accent-2));
+                -webkit-background-clip: text;
+                background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .hero-lead {
+                max-width: 1120px;
+                color: var(--text-dim);
+                font-size: clamp(17px, 1.5vw, 20px);
+                text-align: justify;
+                line-height: 1.75;
+            }
+            .hero-meta {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+                gap: 16px;
+                margin-top: 40px;
+            }
+            .meta-card, .card, .metric, .diagram, .callout, table {
+                box-shadow: var(--shadow);
+            }
+            .meta-card {
+                padding: 18px 20px;
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                background: rgba(28, 37, 65, 0.68);
+            }
+            .meta-card .label {
+                margin-bottom: 8px;
+                color: var(--text-muted);
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .meta-card .value { color: var(--text); font-size: 20px; font-weight: 800; }
+
+            section { padding: 92px var(--doc-pad-x); }
+            section.alt {
+                border-top: 1px solid var(--line);
+                border-bottom: 1px solid var(--line);
+                background: var(--bg-1);
+            }
+            .section-tag {
+                display: inline-block;
+                margin-bottom: 14px;
+                color: var(--accent);
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: 0.18em;
+                text-transform: uppercase;
+            }
+            h2 {
+                max-width: 1120px;
+                margin-bottom: 18px;
+                color: var(--text);
+                font-size: clamp(28px, 3.2vw, 44px);
+                line-height: 1.16;
+                letter-spacing: -0.02em;
+                font-weight: 800;
+            }
+            h3 { margin: 28px 0 12px; color: var(--text); font-size: 22px; font-weight: 700; }
+            h4 { margin: 18px 0 10px; color: var(--accent); font-size: 17px; font-weight: 700; }
+            p, li, td { color: var(--text-dim); }
+            p { margin-bottom: 16px; text-align: justify; line-height: 1.78; }
+            ul, ol { margin: 12px 0 18px 22px; }
+            li { margin-bottom: 8px; line-height: 1.7; }
+            strong { color: var(--text); }
+            .section-lead {
+                max-width: 1120px;
+                margin-bottom: 38px;
+                color: var(--text-dim);
+                font-size: 18px;
+                text-align: justify;
+                line-height: 1.78;
+            }
+
+            .metrics, .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 20px;
+                margin: 20px 0;
+            }
+            .metric, .card {
+                position: relative;
+                overflow: hidden;
+                padding: 28px;
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                background: var(--surface);
+            }
+            .metric::before, .card::before {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 4px;
+                height: 100%;
+                content: "";
+                background: linear-gradient(180deg, var(--accent), var(--accent-2));
+            }
+            .card.success::before { background: linear-gradient(180deg, var(--success), var(--gate)); }
+            .card.warn::before { background: linear-gradient(180deg, var(--warn), var(--danger)); }
+            .card.gate::before { background: linear-gradient(180deg, var(--gate), var(--accent)); }
+            .metric .number {
+                margin-bottom: 8px;
+                color: var(--accent);
+                font-size: 34px;
+                font-weight: 900;
+            }
+            .metric .label, .card .tag {
+                color: var(--text-muted);
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .card h3, .card h4 { margin-top: 10px; }
+
+            .callout {
+                margin: 22px 0;
+                padding: 20px 24px;
+                border-left: 4px solid var(--accent);
+                border-radius: 12px;
+                background: rgba(122, 162, 255, 0.08);
+            }
+            .callout.warn { border-left-color: var(--warn); background: rgba(255, 180, 84, 0.08); }
+            .callout.success { border-left-color: var(--success); background: rgba(56, 211, 159, 0.08); }
+
+            .diagram {
+                margin: 26px 0 34px;
+                padding: 28px;
+                border: 1px solid var(--line);
+                border-radius: 20px;
+                background:
+                    linear-gradient(180deg, rgba(36, 48, 87, 0.78), rgba(28, 37, 65, 0.72)),
+                    var(--surface);
+                overflow-x: auto;
+            }
+            .diagram svg {
+                display: block;
+                min-width: 900px;
+                width: 100%;
+                height: auto;
+            }
+            .svg-title { fill: #e8ecf6; font: 800 17px 'Inter', Arial, sans-serif; }
+            .svg-label { fill: #e8ecf6; font: 700 13px 'Inter', Arial, sans-serif; }
+            .svg-small { fill: #b0b9d4; font: 12px 'Inter', Arial, sans-serif; }
+            .svg-muted { fill: #7c87a9; font: 11px 'Inter', Arial, sans-serif; }
+            .box { fill: #1c2541; stroke: #2a3760; stroke-width: 1.4; rx: 14; }
+            .box-accent { fill: rgba(122, 162, 255, 0.12); stroke: #7aa2ff; }
+            .box-success { fill: rgba(56, 211, 159, 0.12); stroke: #38d39f; }
+            .box-warn { fill: rgba(255, 180, 84, 0.12); stroke: #ffb454; }
+            .box-danger { fill: rgba(255, 107, 138, 0.12); stroke: #ff6b8a; }
+            .lane { fill: rgba(11, 16, 32, 0.32); stroke: #2a3760; stroke-dasharray: 6 6; }
+            .arrow { stroke: #7aa2ff; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+            .arrow-success { stroke: #38d39f; marker-end: url(#arrow-s); }
+            .arrow-warn { stroke: #ffb454; marker-end: url(#arrow-w); }
+            .arrow-danger { stroke: #ff6b8a; marker-end: url(#arrow-d); }
+
+            /* Animações */
+            @keyframes fadeInUp {
+                from { opacity: 0; transform: translateY(18px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes pulseGlow {
+                0%, 100% { opacity: 0.7; }
+                50% { opacity: 1; }
+            }
+            @keyframes drawLine {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            .diagram svg .box,
+            .diagram svg .box-accent,
+            .diagram svg .box-success,
+            .diagram svg .box-warn,
+            .diagram svg .box-danger {
+                animation: fadeIn 0.6s ease both;
+            }
+            .diagram svg path.arrow,
+            .diagram svg path[class*="arrow"] {
+                animation: drawLine 0.8s ease both;
+                animation-delay: 0.4s;
+            }
+            .diagram svg text {
+                animation: fadeIn 0.8s ease both;
+            }
+            .metric, .card {
+                animation: fadeInUp 0.5s ease both;
+            }
+            .metric:nth-child(1) { animation-delay: 0.1s; }
+            .metric:nth-child(2) { animation-delay: 0.2s; }
+            .metric:nth-child(3) { animation-delay: 0.3s; }
+            .card:nth-child(1) { animation-delay: 0.1s; }
+            .card:nth-child(2) { animation-delay: 0.2s; }
+            .card:nth-child(3) { animation-delay: 0.3s; }
+            .card:nth-child(4) { animation-delay: 0.4s; }
+            .dot {
+                animation: pulseGlow 2s ease-in-out infinite;
+            }
+            .step-num {
+                fill: #7aa2ff;
+                font: 800 11px 'Inter', Arial, sans-serif;
+            }
+            .step-num-circle {
+                fill: rgba(122, 162, 255, 0.18);
+                stroke: #7aa2ff;
+                stroke-width: 1.2;
+            }
+
+            table {
+                width: 100%;
+                margin: 18px 0 28px;
+                border: 1px solid var(--line);
+                border-collapse: collapse;
+                border-radius: 14px;
+                overflow: hidden;
+                background: var(--surface);
+                font-size: 14px;
+            }
+            thead { background: var(--surface-2); }
+            th, td {
+                padding: 14px 16px;
+                border-bottom: 1px solid var(--line);
+                text-align: left;
+                vertical-align: top;
+                line-height: 1.6;
+            }
+            th {
+                color: var(--text);
+                font-size: 12px;
+                font-weight: 900;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+            tbody tr:last-child td { border-bottom: none; }
+            .code-block {
+                margin: 18px 0 26px;
+                padding: 20px 22px;
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                background: #080d1d;
+                color: #d4dbef;
+                overflow-x: auto;
+                font-size: 13px;
+                line-height: 1.6;
+            }
+            .pill {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 999px;
+                background: rgba(122, 162, 255, 0.13);
+                color: var(--accent);
+                font-size: 12px;
+                font-weight: 800;
+            }
+            footer {
+                padding: 56px var(--doc-pad-x);
+                border-top: 1px solid var(--line);
+                background: var(--bg-1);
+                color: var(--text-muted);
+                text-align: center;
+                font-size: 13px;
+                line-height: 1.7;
+            }
+
+            @media (max-width: 920px) {
+                :root { --doc-pad-x: 24px; }
+                .topnav { display: none; }
+                section { padding-top: 68px; padding-bottom: 68px; }
+            }
+        </style>
+    </head>
+    <body>
+        <nav class="topnav" aria-label="Navegação principal">
+            <a href="#tese">Tese</a>
+            <a href="#sdd">SDD</a>
+            <a href="#harness">Harness</a>
+            <a href="#diagramas">Diagramas</a>
+            <a href="#validacao">Validação</a>
+        </nav>
+
+        <header class="hero">
+            <div class="hero-inner">
+                <div class="eyebrow"><span class="dot"></span> Graph Navigation Mandate · SpecKit Plugin</div>
+                <h1>SDD como contrato operacional e <span>harness</span> como prova executável</h1>
+                <p class="hero-lead">
+                    Este documento descreve como a branch <strong>feat/graph-navigation-mandate</strong>
+                    transforma o Specification-Driven Development numa disciplina verificável dentro do
+                    plugin SpecKit. A mudança central é sair de instruções textuais isoladas para um ciclo
+                    onde especificação, grafo de dependências, gates, evidências e testes formam um harness
+                    que reduz respostas especulativas e aumenta a rastreabilidade entre intenção, código
+                    alterado e contexto consultado.
+                </p>
+                <div class="hero-meta">
+                    <div class="meta-card">
+                        <div class="label">Escopo</div>
+                        <div class="value">SDD + Harness</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Artefato</div>
+                        <div class="value">Documento técnico HTML</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Módulo</div>
+                        <div class="value">src/graph</div>
+                    </div>
+                    <div class="meta-card">
+                        <div class="label">Público</div>
+                        <div class="value">Engenharia, arquitetura, agentes</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section id="tese">
+                <div class="section-inner">
+                    <span class="section-tag">Tese técnica</span>
+                    <h2>A especificação precisa virar fonte de controle — não apenas narrativa</h2>
+                    <p class="section-lead">
+                        Quando trabalhamos com desenvolvimento assistido por agentes, a especificação deixa
+                        de ser apenas uma etapa inicial de alinhamento. Ela passa a governar a execução:
+                        define o que deve ser construído, quais evidências são obrigatórias, quais
+                        dependências precisam ser consultadas e quando uma entrega deve ser bloqueada por
+                        falta de contexto. O graph-navigation-mandate adiciona a camada que faltava — um
+                        mapa persistente do código e um gate que exige navegação por esse mapa antes de
+                        qualquer mudança estrutural.
+                    </p>
+
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="number">1</div>
+                            <div class="label">Fonte de verdade: especificação</div>
+                            <p>A decisão técnica parte da intenção documentada e dos critérios de aceite, não da primeira solução plausível que aparecer.</p>
+                        </div>
+                        <div class="metric">
+                            <div class="number">2</div>
+                            <div class="label">Mapa de dependências: grafo</div>
+                            <p>Arquivos, imports e relações entre entidades viram contexto navegável e persistido em <span class="pill">.speckit/graph.json</span>.</p>
+                        </div>
+                        <div class="metric">
+                            <div class="number">3</div>
+                            <div class="label">Prova de consulta: evidência</div>
+                            <p>Refatorações e mudanças de risco precisam registrar quais entidades foram consultadas — ou declarar veto explícito.</p>
+                        </div>
+                    </div>
+
+                    <div class="callout success">
+                        <strong>Ponto importante:</strong> o harness não substitui o julgamento de engenharia.
+                        Ele cria trilhos verificáveis para que o agente demonstre que consultou o espaço de
+                        impacto antes de propor ou executar alterações.
+                    </div>
+                </div>
+            </section>
+
+            <section id="sdd" class="alt">
+                <div class="section-inner">
+                    <span class="section-tag">Specification-Driven Development</span>
+                    <h2>O processo de SDD no plugin: da intenção ao gate de entrega</h2>
+                    <p class="section-lead">
+                        Tratamos o SDD como uma disciplina de transformação progressiva. O requisito bruto
+                        vira especificação; a especificação vira plano; o plano vira implementação
+                        incremental; a implementação gera evidências; e as evidências alimentam a decisão de
+                        aceite. Cada transição carrega uma pergunta de controle: "o que prova que esta etapa
+                        representa a especificação e não uma inferência sem base?".
+                    </p>
+
+                    <div class="diagram" id="diagramas">
+                        <svg viewBox="0 0 1100 480" role="img" aria-label="Diagrama do ciclo SDD">
+                            <defs>
+                                <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#7aa2ff"></path>
+                                </marker>
+                                <marker id="arrow-s" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#38d39f"></path>
+                                </marker>
+                                <marker id="arrow-w" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#ffb454"></path>
+                                </marker>
+                                <marker id="arrow-d" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#ff6b8a"></path>
+                                </marker>
+                            </defs>
+                            <text x="24" y="32" class="svg-title">Ciclo SDD orientado por evidência</text>
+
+                            <!-- Linha superior: 4 etapas -->
+                            <rect x="40" y="70" width="200" height="80" class="box box-accent"></rect>
+                            <text x="66" y="102" class="svg-label">1. Requisito</text>
+                            <text x="66" y="124" class="svg-small">Intenção, restrições,</text>
+                            <text x="66" y="140" class="svg-small">critérios de aceite</text>
+
+                            <rect x="290" y="70" width="200" height="80" class="box"></rect>
+                            <text x="316" y="102" class="svg-label">2. Especificação</text>
+                            <text x="316" y="124" class="svg-small">Contrato técnico e</text>
+                            <text x="316" y="140" class="svg-small">escopo verificável</text>
+
+                            <rect x="540" y="70" width="200" height="80" class="box box-warn"></rect>
+                            <text x="566" y="102" class="svg-label">3. Planejamento</text>
+                            <text x="566" y="124" class="svg-small">Riscos, fases,</text>
+                            <text x="566" y="140" class="svg-small">validações</text>
+
+                            <rect x="790" y="70" width="200" height="80" class="box box-success"></rect>
+                            <text x="816" y="102" class="svg-label">4. Implementação</text>
+                            <text x="816" y="124" class="svg-small">Mudança pequena,</text>
+                            <text x="816" y="140" class="svg-small">testável e rastreada</text>
+
+                            <!-- Linha inferior: 3 etapas -->
+                            <rect x="790" y="240" width="200" height="80" class="box box-accent"></rect>
+                            <text x="816" y="272" class="svg-label">5. Evidência</text>
+                            <text x="816" y="294" class="svg-small">Grafo consultado, testes,</text>
+                            <text x="816" y="310" class="svg-small">lint, type-check</text>
+
+                            <rect x="540" y="240" width="200" height="80" class="box box-danger"></rect>
+                            <text x="566" y="272" class="svg-label">6. Gate</text>
+                            <text x="566" y="294" class="svg-small">Aceitar, bloquear,</text>
+                            <text x="566" y="310" class="svg-small">ou exigir nova spec</text>
+
+                            <rect x="290" y="240" width="200" height="80" class="box box-success"></rect>
+                            <text x="316" y="272" class="svg-label">7. Entrega</text>
+                            <text x="316" y="294" class="svg-small">Comportamento, docs,</text>
+                            <text x="316" y="310" class="svg-small">rollback e riscos</text>
+
+                            <!-- Setas horizontais superiores -->
+                            <path d="M240 110 H290" class="arrow"></path>
+                            <path d="M490 110 H540" class="arrow"></path>
+                            <path d="M740 110 H790" class="arrow"></path>
+
+                            <!-- Seta descendo: 4 → 5 -->
+                            <path d="M890 150 V240" class="arrow arrow-success"></path>
+
+                            <!-- Setas horizontais inferiores (direita para esquerda) -->
+                            <path d="M790 280 H740" class="arrow"></path>
+                            <path d="M540 280 H490" class="arrow arrow-success"></path>
+
+                            <!-- Seta de retorno: Gate → Spec (por baixo) -->
+                            <path d="M640 320 L640 370 L390 370 L390 320" class="arrow arrow-warn"></path>
+                            <text x="440" y="390" class="svg-small">lacuna ou risco retorna para especificação</text>
+
+                            <!-- Invariante -->
+                            <rect x="40" y="420" width="950" height="44" class="lane"></rect>
+                            <text x="66" y="448" class="svg-label">Invariante: nenhuma etapa declara conclusão sem critério de aceite e evidência correspondente.</text>
+                        </svg>
+                    </div>
+
+                    <h3>Disciplinas envolvidas no SDD</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Disciplina</th>
+                                <th>Responsabilidade no fluxo</th>
+                                <th>Como o graph-navigation-mandate reforça</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Produto e requisito</strong></td>
+                                <td>Definir objetivo, comportamento esperado, limites e não-objetivos.</td>
+                                <td>Transforma histórias e entidades citadas em pontos de partida para subgrafos e vizinhanças relevantes.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Arquitetura</strong></td>
+                                <td>Delimitar fronteiras, acoplamentos, contratos e riscos de evolução.</td>
+                                <td>Explicita imports, fan-in, fan-out, confiança da relação e impacto de diff desde o último gate.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Implementação</strong></td>
+                                <td>Aplicar mudanças pequenas, coerentes e reversíveis.</td>
+                                <td>Usa freshness gate e incremental updater para manter o mapa de código atual antes do agente atuar.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Qualidade</strong></td>
+                                <td>Validar comportamento concreto e evitar falso positivo de compilação.</td>
+                                <td>Vincula evidência de consulta a testes, type-check e lint do escopo alterado.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Operação</strong></td>
+                                <td>Entender falhas, degradação, latência e sinais de diagnóstico.</td>
+                                <td>Aplica budgets no gate, embedder e updater para impedir que o harness degrade a experiência do usuário.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="harness">
+                <div class="section-inner">
+                    <span class="section-tag">Harness</span>
+                    <h2>O harness é a máquina de prova ao redor do agente</h2>
+                    <p class="section-lead">
+                        Harness, neste contexto, é o conjunto de mecanismos que envolve o agente para
+                        transformar uma ação textual numa ação tecnicamente demonstrável. Ele inclui
+                        extração de grafo, persistência, atualização incremental, gate de frescor, consulta
+                        de subgrafo, embed de contexto, evidência de inspeção e instalação opcional de
+                        guardrails nos espaços de usuário.
+                    </p>
+
+                    <div class="diagram">
+                        <svg viewBox="0 0 1180 580" role="img" aria-label="Arquitetura do harness de grafo">
+                            <defs>
+                                <marker id="arrow2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#7aa2ff"></path>
+                                </marker>
+                                <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#7aa2ff"></path>
+                                </marker>
+                                <marker id="arrow-s" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#38d39f"></path>
+                                </marker>
+                                <marker id="arrow-w" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#ffb454"></path>
+                                </marker>
+                                <marker id="arrow-d" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#ff6b8a"></path>
+                                </marker>
+                                <filter id="harness-shadow" x="-4%" y="-4%" width="108%" height="108%">
+                                    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.25)" />
+                                </filter>
+                            </defs>
+                            <text x="24" y="32" class="svg-title">Harness operacional do graph-navigation-mandate</text>
+
+                            <!-- Coluna esquerda: Espaço do usuário -->
+                            <rect x="30" y="60" width="250" height="460" class="lane"></rect>
+                            <text x="56" y="88" class="svg-label">Espaço do usuário</text>
+
+                            <rect x="52" y="110" width="210" height="70" class="box box-accent" filter="url(#harness-shadow)"></rect>
+                            <text x="72" y="138" class="svg-label">VS Code workspace</text>
+                            <text x="72" y="158" class="svg-small">Arquivos TS/JS/Python/Java/C#</text>
+
+                            <rect x="52" y="220" width="210" height="70" class="box" filter="url(#harness-shadow)"></rect>
+                            <text x="72" y="248" class="svg-label">Save / HEAD drift</text>
+                            <text x="72" y="268" class="svg-small">Eventos e mudanças Git</text>
+
+                            <rect x="52" y="330" width="210" height="70" class="box box-warn" filter="url(#harness-shadow)"></rect>
+                            <text x="72" y="358" class="svg-label">Comando do agente</text>
+                            <text x="72" y="378" class="svg-small">Refatorar, criar, alterar</text>
+
+                            <!-- Coluna central: Harness do plugin -->
+                            <rect x="320" y="60" width="520" height="460" class="lane"></rect>
+                            <text x="346" y="88" class="svg-label">Harness do plugin</text>
+
+                            <rect x="346" y="110" width="220" height="70" class="box box-success" filter="url(#harness-shadow)"></rect>
+                            <text x="366" y="138" class="svg-label">Extractors</text>
+                            <text x="366" y="158" class="svg-small">Imports e símbolos por linguagem</text>
+
+                            <rect x="600" y="110" width="210" height="70" class="box" filter="url(#harness-shadow)"></rect>
+                            <text x="620" y="138" class="svg-label">GraphBuilder</text>
+                            <text x="620" y="158" class="svg-small">Nós, edges, confiança</text>
+
+                            <rect x="346" y="250" width="220" height="70" class="box box-accent" filter="url(#harness-shadow)"></rect>
+                            <text x="366" y="278" class="svg-label">GraphStore</text>
+                            <text x="366" y="298" class="svg-small">.speckit/graph.json</text>
+
+                            <rect x="600" y="250" width="210" height="70" class="box box-warn" filter="url(#harness-shadow)"></rect>
+                            <text x="620" y="278" class="svg-label">FreshnessGate</text>
+                            <text x="620" y="298" class="svg-small">fresh, stale-async, no-op</text>
+
+                            <rect x="346" y="390" width="220" height="70" class="box" filter="url(#harness-shadow)"></rect>
+                            <text x="366" y="418" class="svg-label">GraphQuery</text>
+                            <text x="366" y="438" class="svg-small">Vizinhos e subgrafo</text>
+
+                            <rect x="600" y="390" width="210" height="70" class="box box-success" filter="url(#harness-shadow)"></rect>
+                            <text x="620" y="418" class="svg-label">SubgraphEmbedder</text>
+                            <text x="620" y="438" class="svg-small">Contexto MD p/ artefatos</text>
+
+                            <!-- Coluna direita: Espaço de controle -->
+                            <rect x="880" y="60" width="260" height="460" class="lane"></rect>
+                            <text x="906" y="88" class="svg-label">Espaço de controle</text>
+
+                            <rect x="906" y="110" width="210" height="70" class="box box-danger" filter="url(#harness-shadow)"></rect>
+                            <text x="926" y="138" class="svg-label">Evidence file</text>
+                            <text x="926" y="158" class="svg-small">graph-inspection.json</text>
+
+                            <rect x="906" y="250" width="210" height="70" class="box box-accent" filter="url(#harness-shadow)"></rect>
+                            <text x="926" y="278" class="svg-label">User guardrails</text>
+                            <text x="926" y="298" class="svg-small">Copilot, Claude, Cursor</text>
+
+                            <rect x="906" y="390" width="210" height="70" class="box box-success" filter="url(#harness-shadow)"></rect>
+                            <text x="926" y="418" class="svg-label">Entrega validada</text>
+                            <text x="926" y="438" class="svg-small">Aceite com rastreabilidade</text>
+
+                            <!-- Seta 1: Workspace → Extractors -->
+                            <path d="M262 145 H346" class="arrow"></path>
+                            <circle cx="290" cy="135" r="10" class="step-num-circle"></circle>
+                            <text x="290" y="139" class="step-num" text-anchor="middle">1</text>
+
+                            <!-- Seta 2: Extractors → GraphBuilder -->
+                            <path d="M566 145 H600" class="arrow"></path>
+                            <circle cx="583" cy="135" r="10" class="step-num-circle"></circle>
+                            <text x="583" y="139" class="step-num" text-anchor="middle">2</text>
+
+                            <!-- Seta 3: GraphBuilder → GraphStore (desce) -->
+                            <path d="M705 180 V250" class="arrow"></path>
+                            <circle cx="715" cy="215" r="10" class="step-num-circle"></circle>
+                            <text x="715" y="219" class="step-num" text-anchor="middle">3</text>
+
+                            <!-- Seta 4: FreshnessGate → GraphStore (verificação) -->
+                            <path d="M600 285 H566" class="arrow arrow-warn"></path>
+                            <circle cx="583" cy="275" r="10" class="step-num-circle"></circle>
+                            <text x="583" y="279" class="step-num" text-anchor="middle">4</text>
+
+                            <!-- Seta 5: GraphStore → GraphQuery (desce) -->
+                            <path d="M456 320 V390" class="arrow"></path>
+                            <circle cx="466" cy="355" r="10" class="step-num-circle"></circle>
+                            <text x="466" y="359" class="step-num" text-anchor="middle">5</text>
+
+                            <!-- Seta 6: GraphQuery → SubgraphEmbedder -->
+                            <path d="M566 425 H600" class="arrow"></path>
+                            <circle cx="583" cy="415" r="10" class="step-num-circle"></circle>
+                            <text x="583" y="419" class="step-num" text-anchor="middle">6</text>
+
+                            <!-- Seta 7: Harness → Evidence file -->
+                            <path d="M810 145 H906" class="arrow"></path>
+                            <circle cx="858" cy="135" r="10" class="step-num-circle"></circle>
+                            <text x="858" y="139" class="step-num" text-anchor="middle">7</text>
+
+                            <!-- Seta 8: Harness → Guardrails -->
+                            <path d="M810 285 H906" class="arrow arrow-warn"></path>
+                            <circle cx="858" cy="275" r="10" class="step-num-circle"></circle>
+                            <text x="858" y="279" class="step-num" text-anchor="middle">8</text>
+
+                            <!-- Seta 9: Harness → Entrega -->
+                            <path d="M810 425 H906" class="arrow arrow-success"></path>
+                            <circle cx="858" cy="415" r="10" class="step-num-circle"></circle>
+                            <text x="858" y="419" class="step-num" text-anchor="middle">9</text>
+
+                            <!-- Seta A: Save/drift → FreshnessGate (curva por baixo, sem cruzar objetos) -->
+                            <path d="M262 270 L290 270 L290 490 L705 490 L705 320" class="arrow arrow-warn"></path>
+                            <circle cx="290" cy="490" r="10" class="step-num-circle"></circle>
+                            <text x="290" y="494" class="step-num" text-anchor="middle">A</text>
+                            <text x="420" y="508" class="svg-muted">save/drift dispara verificação de frescor</text>
+
+                            <!-- Seta B: Comando do agente → Entrega (por baixo, sem cruzar) -->
+                            <path d="M262 380 L290 380 L290 540 L1011 540 L1011 460" class="arrow arrow-success"></path>
+                            <circle cx="290" cy="540" r="10" class="step-num-circle"></circle>
+                            <text x="290" y="544" class="step-num" text-anchor="middle">B</text>
+                            <text x="580" y="558" class="svg-muted">comando percorre harness até entrega validada</text>
+                        </svg>
+                    </div>
+
+                    <div class="grid">
+                        <div class="card">
+                            <span class="tag">Extração</span>
+                            <h3>Extractors por linguagem</h3>
+                            <p>
+                                TypeScript, JavaScript, Python, Java e C# são tratados por extratores que
+                                convertem código em relações. A confiança da aresta distingue o que foi
+                                extraído diretamente, inferido ou classificado como ambíguo.
+                            </p>
+                        </div>
+                        <div class="card success">
+                            <span class="tag">Atualização</span>
+                            <h3>IncrementalUpdater</h3>
+                            <p>
+                                Arquivos tocados são coalescidos por debounce e reprocessados sob budget.
+                                Isso evita rebuild integral a cada save e mantém a experiência responsiva.
+                            </p>
+                        </div>
+                        <div class="card gate">
+                            <span class="tag">Gate</span>
+                            <h3>GraphFreshnessGate</h3>
+                            <p>
+                                Antes de comandos sensíveis, o gate compara o HEAD atual com o SHA
+                                persistido no grafo. Se houver drift, dispara refresh em background e
+                                retorna aviso explícito.
+                            </p>
+                        </div>
+                        <div class="card warn">
+                            <span class="tag">Evidência</span>
+                            <h3>GraphInspectionEvidence</h3>
+                            <p>
+                                A evidência registra entidades consultadas e permite veto controlado quando
+                                o grafo não está disponível. Isso impede conclusões silenciosas sem contexto
+                                estrutural.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="alt">
+                <div class="section-inner">
+                    <span class="section-tag">Espaços e disciplinas</span>
+                    <h2>O SDD opera em quatro espaços simultâneos</h2>
+                    <p class="section-lead">
+                        Um erro comum é tratar o SDD como checklist linear. No plugin, ele funciona na
+                        interseção de espaços: o espaço da especificação, o espaço do código, o espaço do
+                        agente e o espaço da evidência. O harness existe justamente para impedir que esses
+                        espaços se desconectem.
+                    </p>
+
+                    <div class="diagram">
+                        <svg viewBox="0 0 1100 560" role="img" aria-label="Espaços ao redor do SDD">
+                            <defs>
+                                <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#7aa2ff"></path>
+                                </marker>
+                                <marker id="arrow-s" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#38d39f"></path>
+                                </marker>
+                                <marker id="arrow-w" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#ffb454"></path>
+                                </marker>
+                                <marker id="arrow-d" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#ff6b8a"></path>
+                                </marker>
+                                <filter id="glow-center" x="-50%" y="-50%" width="200%" height="200%">
+                                    <feGaussianBlur stdDeviation="6" result="blur" />
+                                    <feMerge>
+                                        <feMergeNode in="blur" />
+                                        <feMergeNode in="SourceGraphic" />
+                                    </feMerge>
+                                </filter>
+                                <radialGradient id="circle-fill" cx="50%" cy="50%" r="50%">
+                                    <stop offset="0%" stop-color="rgba(122,162,255,0.22)" />
+                                    <stop offset="100%" stop-color="rgba(122,162,255,0.06)" />
+                                </radialGradient>
+                            </defs>
+                            <text x="24" y="32" class="svg-title">Espaços e disciplinas ao redor do SDD</text>
+
+                            <!-- Centro: SDD com glow -->
+                            <circle cx="550" cy="280" r="82" fill="url(#circle-fill)" stroke="#7aa2ff" stroke-width="2" filter="url(#glow-center)"></circle>
+                            <text x="550" y="268" class="svg-label" text-anchor="middle">SDD</text>
+                            <text x="550" y="290" class="svg-small" text-anchor="middle">Contrato verificável</text>
+                            <text x="550" y="308" class="svg-small" text-anchor="middle">de mudança</text>
+
+                            <!-- Quadrante superior esquerdo -->
+                            <rect x="60" y="60" width="300" height="140" class="box box-accent"></rect>
+                            <text x="86" y="96" class="svg-label">Espaço da especificação</text>
+                            <text x="86" y="120" class="svg-small">Problema, critério de aceite,</text>
+                            <text x="86" y="138" class="svg-small">não-objetivos, restrições e riscos.</text>
+                            <text x="86" y="172" class="svg-muted">Disciplina: produto + arquitetura</text>
+
+                            <!-- Quadrante superior direito -->
+                            <rect x="740" y="60" width="300" height="140" class="box box-success"></rect>
+                            <text x="766" y="96" class="svg-label">Espaço do código</text>
+                            <text x="766" y="120" class="svg-small">Arquivos, imports, símbolos, edges,</text>
+                            <text x="766" y="138" class="svg-small">fan-in, fan-out e acoplamentos.</text>
+                            <text x="766" y="172" class="svg-muted">Disciplina: engenharia + design</text>
+
+                            <!-- Quadrante inferior esquerdo -->
+                            <rect x="60" y="380" width="300" height="140" class="box box-warn"></rect>
+                            <text x="86" y="416" class="svg-label">Espaço do agente</text>
+                            <text x="86" y="440" class="svg-small">Planejamento, execução, perguntas,</text>
+                            <text x="86" y="458" class="svg-small">veto, consulta de subgrafo.</text>
+                            <text x="86" y="492" class="svg-muted">Disciplina: agentic engineering</text>
+
+                            <!-- Quadrante inferior direito -->
+                            <rect x="740" y="380" width="300" height="140" class="box box-danger"></rect>
+                            <text x="766" y="416" class="svg-label">Espaço da evidência</text>
+                            <text x="766" y="440" class="svg-small">Testes, logs, lint, type-check e</text>
+                            <text x="766" y="458" class="svg-small">validação de comportamento.</text>
+                            <text x="766" y="492" class="svg-muted">Disciplina: qualidade + operação</text>
+
+                            <!-- Setas dos quadrantes para o centro (curvas suaves) -->
+                            <path d="M360 145 C420 180 450 220 478 245" class="arrow"></path>
+                            <path d="M740 145 C680 180 650 220 622 245" class="arrow arrow-success"></path>
+                            <path d="M360 435 C420 400 450 340 478 315" class="arrow arrow-warn"></path>
+                            <path d="M740 435 C680 400 650 340 622 315" class="arrow arrow-danger"></path>
+
+                            <!-- Rótulos nas laterais -->
+                            <text x="380" y="52" class="svg-muted">spec aponta o que consultar</text>
+                            <text x="650" y="52" class="svg-muted">código prova impacto real</text>
+                            <text x="380" y="548" class="svg-muted">agente deve declarar caminho</text>
+                            <text x="650" y="548" class="svg-muted">evidência decide aceite</text>
+                        </svg>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <div class="section-inner">
+                    <span class="section-tag">Contrato de dados</span>
+                    <h2>O grafo é um contrato intermediário entre código e decisão</h2>
+                    <p>
+                        O contrato persistido modela nós, arestas e metadados. Cada nó representa uma
+                        unidade de código com linguagem e símbolos associados. Cada aresta representa uma
+                        relação (importação, herança ou instanciação), acompanhada de confiança e extrator
+                        de origem. Os metadados registram SHA do HEAD, hashes por arquivo, mtime por arquivo
+                        e linguagens com suporte parcial.
+                    </p>
+                    <pre class="code-block"><code>{
+  "schemaVersion": "...",
+  "pluginVersion": "...",
+  "meta": {
+    "headSha": "...",
+    "builtAt": "...",
+    "perFileHash": {},
+    "partialLanguages": ["java", "python", "csharp"]
+  },
+  "nodes": [{ "id": "src/module/File.ts", "language": "typescript", "symbols": ["Name"] }],
+  "edges": [{
+    "from": "src/module/File.ts",
+    "to": "src/shared/Dependency.ts",
+    "kind": "IMPORTS",
+    "confidence": "EXTRACTED",
+    "sourceExtractor": "TypeScriptImportExtractor"
+  }]
+}</code></pre>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Elemento</th>
+                                <th>Decisão de desenho</th>
+                                <th>Impacto no SDD</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>schemaVersion</strong></td>
+                                <td>Versiona a forma do grafo para permitir evolução controlada.</td>
+                                <td>Evita que uma spec seja avaliada sobre contrato estrutural desconhecido.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>headSha</strong></td>
+                                <td>Amarra o grafo ao estado Git observado no momento da construção.</td>
+                                <td>Permite detectar grafo obsoleto antes de uma decisão de agente.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>confidence</strong></td>
+                                <td>Separa relações extraídas diretamente de relações inferidas ou ambíguas.</td>
+                                <td>Impede que o agente trate inferência como fato sem qualificar o risco.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>partialLanguages</strong></td>
+                                <td>Declara suporte parcial por linguagem quando o extrator não captura toda a semântica.</td>
+                                <td>Força transparência sobre lacunas de cobertura do harness.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="alt">
+                <div class="section-inner">
+                    <span class="section-tag">Fluxo de falha</span>
+                    <h2>O comportamento degradado faz parte do contrato</h2>
+                    <p class="section-lead">
+                        Um harness confiável não é aquele que sempre responde "ok" — é aquele que sabe
+                        declarar quando não possui evidência suficiente. Por isso o gate diferencia ausência
+                        de código suportado, grafo ausente, grafo stale e grafo fresco. Essa classificação
+                        define se o agente pode seguir, deve avisar, deve aguardar ou deve vetar a
+                        conclusão.
+                    </p>
+
+                    <div class="diagram">
+                        <svg viewBox="0 0 1160 440" role="img" aria-label="Fluxo de falha e veto">
+                            <defs>
+                                <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#7aa2ff"></path>
+                                </marker>
+                                <marker id="arrow-s" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#38d39f"></path>
+                                </marker>
+                                <marker id="arrow-w" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#ffb454"></path>
+                                </marker>
+                                <marker id="arrow-d" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+                                    <path d="M0,0 L0,6 L8,3 z" fill="#ff6b8a"></path>
+                                </marker>
+                                <filter id="box-shadow" x="-4%" y="-4%" width="108%" height="108%">
+                                    <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.3)" />
+                                </filter>
+                            </defs>
+                            <text x="24" y="32" class="svg-title">Decisão quando o contexto estrutural não é suficiente</text>
+
+                            <!-- Coluna 1: Comando -->
+                            <rect x="40" y="90" width="210" height="76" class="box box-accent" filter="url(#box-shadow)"></rect>
+                            <text x="68" y="120" class="svg-label">Comando sensível</text>
+                            <text x="68" y="142" class="svg-small">refatorar / criar / alterar</text>
+
+                            <!-- Coluna 2: Gate -->
+                            <rect x="310" y="90" width="200" height="76" class="box" filter="url(#box-shadow)"></rect>
+                            <text x="338" y="120" class="svg-label">FreshnessGate</text>
+                            <text x="338" y="142" class="svg-small">HEAD vs graph meta</text>
+
+                            <!-- Coluna 3: Estados (empilhados verticalmente, mais largos) -->
+                            <rect x="580" y="55" width="220" height="66" class="box box-success" filter="url(#box-shadow)"></rect>
+                            <text x="608" y="83" class="svg-label">fresh</text>
+                            <text x="608" y="101" class="svg-small">consulta subgrafo</text>
+
+                            <rect x="580" y="151" width="220" height="66" class="box box-warn" filter="url(#box-shadow)"></rect>
+                            <text x="608" y="179" class="svg-label">stale-async</text>
+                            <text x="608" y="197" class="svg-small">aviso + refresh background</text>
+
+                            <rect x="580" y="247" width="220" height="66" class="box" filter="url(#box-shadow)"></rect>
+                            <text x="608" y="275" class="svg-label">no-op</text>
+                            <text x="608" y="293" class="svg-small">sem código suportado</text>
+
+                            <!-- Coluna 4: Resultados (empilhados, mais largos) -->
+                            <rect x="870" y="55" width="250" height="66" class="box box-success" filter="url(#box-shadow)"></rect>
+                            <text x="898" y="83" class="svg-label">Evidência consultada</text>
+                            <text x="898" y="101" class="svg-small">entidades registradas</text>
+
+                            <rect x="870" y="151" width="250" height="66" class="box box-warn" filter="url(#box-shadow)"></rect>
+                            <text x="898" y="179" class="svg-label">Aviso obrigatório</text>
+                            <text x="898" y="197" class="svg-small">risco declarado ao usuário</text>
+
+                            <rect x="870" y="247" width="250" height="66" class="box box-danger" filter="url(#box-shadow)"></rect>
+                            <text x="898" y="275" class="svg-label">VETO_NOT_AVAILABLE</text>
+                            <text x="898" y="293" class="svg-small">não fingir certeza estrutural</text>
+
+                            <!-- Setas: Comando → Gate -->
+                            <path d="M250 128 H310" class="arrow"></path>
+
+                            <!-- Gate → 3 estados (saem escalonadas sem cruzar) -->
+                            <path d="M510 105 L580 88" class="arrow arrow-success"></path>
+                            <path d="M510 128 L580 184" class="arrow arrow-warn"></path>
+                            <path d="M510 150 L580 280" class="arrow"></path>
+
+                            <!-- Estados → Resultados (horizontais limpos) -->
+                            <path d="M800 88 H870" class="arrow arrow-success"></path>
+                            <path d="M800 184 H870" class="arrow arrow-warn"></path>
+                            <path d="M800 280 H870" class="arrow arrow-danger"></path>
+
+                            <!-- Nota inferior -->
+                            <rect x="40" y="360" width="1080" height="48" class="lane"></rect>
+                            <text x="68" y="390" class="svg-small">Regra: o agente nunca prossegue com certeza estrutural quando o gate retorna no-op ou stale sem refresh.</text>
+                        </svg>
+                    </div>
+                </div>
+            </section>
+
+            <section id="validacao">
+                <div class="section-inner">
+                    <span class="section-tag">Validação e operação</span>
+                    <h2>Como validar que o processo está funcionando</h2>
+                    <p class="section-lead">
+                        Validar o SDD não é apenas compilar o plugin. O critério é demonstrar que uma
+                        mudança de código percorre o ciclo esperado: save ou drift de HEAD atualiza o grafo,
+                        comando sensível consulta o gate, subgrafo relevante é embutido no contexto,
+                        evidência é registrada e a entrega final referencia comportamento testado.
+                    </p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Camada</th>
+                                <th>Validação funcional</th>
+                                <th>Sinal operacional esperado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Extractor</strong></td>
+                                <td>Arquivo de linguagem suportada gera nós e arestas esperadas.</td>
+                                <td>Sem queda para relação ambígua quando o import é resolvível.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Updater</strong></td>
+                                <td>Múltiplos saves próximos são coalescidos e persistem novo grafo.</td>
+                                <td>Duração dentro do budget configurado para flush.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Gate</strong></td>
+                                <td>HEAD igual retorna fresh; HEAD diferente retorna stale-async com warning.</td>
+                                <td>Warning explícito sem bloquear a UI desnecessariamente.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Embedder</strong></td>
+                                <td>Subgrafo inclui vizinhos, fan-in/fan-out e atributos solicitados.</td>
+                                <td>Tempo de geração dentro do budget e sem atributos inválidos silenciosos.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Evidence</strong></td>
+                                <td>Refatoração válida exige entidades consultadas ou veto declarado.</td>
+                                <td>Arquivo de evidência legível e comparável ao HEAD quando aplicável.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h3>Rollback e mitigação</h3>
+                    <p>
+                        Como a funcionalidade é configurável por <span class="pill">speckit.graph.enabled</span>,
+                        o rollback operacional primário é desabilitar o grafo sem remover o restante do
+                        plugin. Caso uma versão de schema cause incompatibilidade, basta remover o arquivo
+                        persistido em <span class="pill">.speckit/graph.json</span> para forçar reconstrução.
+                        O risco residual mais relevante é a cobertura parcial de linguagem — por isso o
+                        contrato explicita <span class="pill">partialLanguages</span> e a evidência permite
+                        veto em vez de conclusão falsa.
+                    </p>
+
+                    <div class="callout warn">
+                        <strong>Risco residual:</strong> o grafo captura relações estruturais detectáveis
+                        pelos extratores atuais. Ele não substitui leitura semântica completa, testes de
+                        comportamento ou revisão humana em mudanças de alto impacto.
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <div class="footer-inner">
+                Documento técnico para a branch feat/graph-navigation-mandate. Referências principais:
+                <span class="pill">src/graph</span>,
+                <span class="pill">GraphFreshnessGate</span>,
+                <span class="pill">IncrementalUpdater</span>,
+                <span class="pill">SubgraphEmbedder</span> e
+                <span class="pill">GraphInspectionEvidence</span>.
+            </div>
+        </footer>
+    </body>
+</html>
