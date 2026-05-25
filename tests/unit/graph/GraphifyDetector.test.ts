@@ -1,17 +1,24 @@
+import { randomUUID } from 'node:crypto';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { GraphifyDetector } from '../../../src/graph/GraphifyDetector';
 
-const workspaceRoot = path.join(process.cwd(), '.speckit-test-artifacts', 'graphify-detector');
+const workspaceRootBase = path.join(process.cwd(), '.speckit-test-artifacts', 'graphify-detector');
+let workspaceRoot: string;
 
 async function createFile(filePath: string): Promise<void> {
   await mkdir(path.dirname(filePath), { recursive: true });
   await writeFile(filePath, '# graphify\n', 'utf8');
 }
 
-afterEach(async () => {
+beforeEach(async () => {
+  workspaceRoot = path.join(workspaceRootBase, randomUUID());
   await rm(workspaceRoot, { recursive: true, force: true });
+});
+
+afterEach(async () => {
+  await rm(workspaceRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 });
 });
 
 describe('GraphifyDetector', () => {

@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const vscodeMock = vi.hoisted(() => {
   const registeredCommands = new Map<string, (...args: unknown[]) => unknown>();
+  const getConfiguration = vi.fn(() => ({
+    get: <T>(_: string, defaultValue?: T): T | undefined => defaultValue,
+  }));
 
   const registerCommand = vi.fn((command: string, handler: (...args: unknown[]) => unknown) => {
     registeredCommands.set(command, handler);
@@ -16,6 +19,13 @@ const vscodeMock = vi.hoisted(() => {
     showInformationMessage: vi.fn(),
     showWarningMessage: vi.fn(async () => 'Executar'),
     onDidSaveTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
+    createFileSystemWatcher: vi.fn(() => ({
+      onDidCreate: vi.fn(() => ({ dispose: vi.fn() })),
+      onDidChange: vi.fn(() => ({ dispose: vi.fn() })),
+      dispose: vi.fn(),
+    })),
+    relativePattern: vi.fn((base: string, pattern: string) => ({ base, pattern })),
+    getConfiguration,
   };
 });
 
@@ -25,7 +35,10 @@ vi.mock('vscode', () => ({
     executeCommand: vscodeMock.executeCommand,
   },
   workspace: {
+    workspaceFolders: undefined,
     onDidSaveTextDocument: vscodeMock.onDidSaveTextDocument,
+    createFileSystemWatcher: vscodeMock.createFileSystemWatcher,
+    getConfiguration: vscodeMock.getConfiguration,
   },
   window: {
     showErrorMessage: vscodeMock.showErrorMessage,
@@ -71,6 +84,7 @@ vi.mock('vscode', () => ({
   MarkdownString: class {
     constructor(public value: string) {}
   },
+  RelativePattern: vscodeMock.relativePattern,
 }));
 
 vi.mock('../../src/ui/SpeckitStatusBar', () => ({
@@ -111,6 +125,8 @@ describe('extension quick action commands', () => {
     vscodeMock.showInformationMessage.mockClear();
     vscodeMock.showWarningMessage.mockClear();
     vscodeMock.onDidSaveTextDocument.mockClear();
+    vscodeMock.createFileSystemWatcher.mockClear();
+    vscodeMock.getConfiguration.mockClear();
   });
 
   it('registers and executes the dedicated quick action command', async () => {

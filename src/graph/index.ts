@@ -1,7 +1,13 @@
 export { SCHEMA_VERSION, PLUGIN_VERSION_GRAPH } from './constants';
 export { FileSystemWatcherBridge } from './FileSystemWatcherBridge';
 export type { ExtractedFile, ImportExtractor } from './extractors';
-export { JavaScriptImportExtractor, TypeScriptImportExtractor } from './extractors';
+export {
+  CSharpImportExtractor,
+  JavaImportExtractor,
+  JavaScriptImportExtractor,
+  PythonImportExtractor,
+  TypeScriptImportExtractor,
+} from './extractors';
 export { GraphBuilder } from './GraphBuilder';
 export { GraphFreshnessGate } from './GraphFreshnessGate';
 export type {
@@ -41,3 +47,5 @@ export type {
   GraphNode,
   SubgraphAttribute,
 } from './types';
+export { createGraphRuntime } from './GraphRuntime';
+export type { GraphRuntime } from './GraphRuntime';

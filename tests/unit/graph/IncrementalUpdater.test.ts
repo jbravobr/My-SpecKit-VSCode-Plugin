@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rm, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import * as vscode from 'vscode';
@@ -11,7 +12,12 @@ import { TypeScriptImportExtractor } from '../../../src/graph/extractors/TypeScr
 import { GraphStore } from '../../../src/graph/GraphStore';
 import { IncrementalUpdater, UpdateMetrics } from '../../../src/graph/IncrementalUpdater';
 
-const workspaceRoot = path.join(process.cwd(), '.speckit-test-artifacts', 'incremental-updater');
+const workspaceRootBase = path.join(
+  process.cwd(),
+  '.speckit-test-artifacts',
+  'incremental-updater',
+);
+let workspaceRoot: string;
 
 class StubExtractor implements ImportExtractor {
   readonly language = 'typescript';
@@ -76,6 +82,7 @@ async function writeWorkspaceFile(relativePath: string, content: string): Promis
 }
 
 beforeEach(async () => {
+  workspaceRoot = path.join(workspaceRootBase, randomUUID());
   await rm(workspaceRoot, { recursive: true, force: true });
   await mkdir(workspaceRoot, { recursive: true });
   setWorkspaceFolder(workspaceRoot);
@@ -84,7 +91,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await rm(workspaceRoot, { recursive: true, force: true });
+  await rm(workspaceRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 });
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -204,22 +211,34 @@ describe('IncrementalUpdater', () => {
   });
 
   it('debounce coalesce múltiplos touch', async () => {
+    vi.useFakeTimers();
     const metrics: UpdateMetrics[] = [];
+    let resolveMetric: (metric: UpdateMetrics) => void = () => undefined;
+    const metricPromise = new Promise<UpdateMetrics>((resolve) => {
+      resolveMetric = resolve;
+    });
     const firstFile = await writeWorkspaceFile('src/a.ts', 'export class A {}');
     const secondFile = await writeWorkspaceFile('src/b.ts', 'export class B {}');
-    const updater = new IncrementalUpdater(new GraphStore(), [new StubExtractor()], 30, (metric) =>
-      metrics.push(metric),
+    const updater = new IncrementalUpdater(
+      new GraphStore(),
+      [new StubExtractor()],
+      30,
+      (metric) => {
+        metrics.push(metric);
+        resolveMetric(metric);
+      },
     );
 
     updater.touch(fileUri(firstFile));
-    await new Promise((resolve) => setTimeout(resolve, 15));
+    await vi.advanceTimersByTimeAsync(15);
     updater.touch(fileUri(secondFile));
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await vi.advanceTimersByTimeAsync(20);
     expect(metrics).toEqual([]);
-    await new Promise((resolve) => setTimeout(resolve, 25));
+    await vi.advanceTimersByTimeAsync(25);
+    const metric = await metricPromise;
 
     expect(metrics).toHaveLength(1);
-    expect(metrics[0]?.touchedFiles).toBe(2);
+    expect(metric.touchedFiles).toBe(2);
   });
 
   it('cancel limpa timer', async () => {

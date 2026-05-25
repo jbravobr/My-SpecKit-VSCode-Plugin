@@ -10,6 +10,8 @@ import { SpeckitDiagnostics } from './ui/SpeckitDiagnostics';
 import { createSpecFileWatcher } from './workflow/SpecFileWatcher';
 import { gitOps } from './workflow/GitOperations';
 import { checkPostSavePendingCommit } from './workflow/PostSaveCommitNotifier';
+import { HeadFileWatcher, PostSaveCoordinator } from './graph';
+import { createGraphRuntime } from './graph/GraphRuntime';
 import { runIncrementalCrapForSavedFile } from './workflow/PostSaveIncrementalRunner';
 
 const POST_SAVE_DEBOUNCE_MS = 2000;
@@ -73,8 +75,15 @@ function isHighRiskQuickAction(input: ParsedQuickAction): boolean {
     return /--(?:auto|approved|changes-requested|batch-consent|confirm)\b/.test(argsLower);
   }
 
-  if (input.command === 'batch' || input.command === 'batch-generate' || input.command === 'batch-unified') {
-    return /--(?:generate|gen|unified|branch-strategy|confirm)\b/.test(argsLower) || input.command !== 'batch';
+  if (
+    input.command === 'batch' ||
+    input.command === 'batch-generate' ||
+    input.command === 'batch-unified'
+  ) {
+    return (
+      /--(?:generate|gen|unified|branch-strategy|confirm)\b/.test(argsLower) ||
+      input.command !== 'batch'
+    );
   }
 
   if (input.command === 'context') {
@@ -141,51 +150,6 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   // ---------------------------------------------------------------------------
-  // Post-save commit nudge — fires after the user clicks Keep on Copilot Edits
-  // ---------------------------------------------------------------------------
-  let postSaveTimer: ReturnType<typeof setTimeout> | undefined;
-
-  context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument((doc) => {
-      // Incremental CRAP recalc for code saves (best-effort, never blocks).
-      void (async () => {
-        try {
-          await runIncrementalCrapForSavedFile({
-            fs: vscodeFileSystem,
-            workspace: vscodeWorkspace,
-            savedFilePath: doc.uri.fsPath,
-          });
-        } catch {
-          // swallow — informational only
-        }
-        void diagnostics?.refresh();
-        void statusBar.refresh();
-      })();
-
-      if (postSaveTimer) clearTimeout(postSaveTimer);
-      postSaveTimer = setTimeout(() => {
-        void checkPostSavePendingCommit({
-          workspace: vscodeWorkspace,
-          fs: vscodeFileSystem,
-          git: gitOps,
-          notify: async (specId) => {
-            const action = await vscode.window.showInformationMessage(
-              `SpecKit: STORY-${specId} em Gate 4 (ready-to-commit) — há mudanças pendentes após Keep.`,
-              'Commitar agora',
-              'Mais tarde',
-            );
-            if (action === 'Commitar agora') {
-              await openCopilotChatWithQuery('@speckit /commit');
-              return true;
-            }
-            return false;
-          },
-        });
-      }, POST_SAVE_DEBOUNCE_MS);
-    }),
-  );
-
-  // ---------------------------------------------------------------------------
   // Commands
   // ---------------------------------------------------------------------------
   context.subscriptions.push(
@@ -227,6 +191,85 @@ export function activate(context: vscode.ExtensionContext): void {
       },
     ),
   );
+
+  const graphRuntime = createGraphRuntime(workspaceRoot);
+  context.subscriptions.push(graphRuntime);
+
+  if (workspaceRoot) {
+    const headFileWatcher = new HeadFileWatcher(workspaceRoot, (prevSha, newSha) => {
+      void (async () => {
+        try {
+          if (prevSha === null) {
+            await graphRuntime.updater.buildFull(workspaceRoot);
+            return;
+          }
+
+          await graphRuntime.updater.refreshFromGitDiff(workspaceRoot, prevSha, newSha);
+        } catch (error) {
+          console.warn('Unable to refresh graph after Git HEAD change:', error);
+        }
+      })();
+    });
+    headFileWatcher.start();
+    context.subscriptions.push(headFileWatcher);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Coordinator: 1 listener → 2 destinos (grafo 500ms, CRAP 2000ms)
+  // ---------------------------------------------------------------------------
+  let postSaveTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const crapRunner = {
+    run: (uri: vscode.Uri): void => {
+      if (postSaveTimer) clearTimeout(postSaveTimer);
+      postSaveTimer = setTimeout(() => {
+        void (async () => {
+          try {
+            await runIncrementalCrapForSavedFile({
+              fs: vscodeFileSystem,
+              workspace: vscodeWorkspace,
+              savedFilePath: uri.fsPath,
+            });
+          } catch {
+            // swallow — informational only
+          }
+          void diagnostics?.refresh();
+          void statusBar.refresh();
+
+          await checkPostSavePendingCommit({
+            workspace: vscodeWorkspace,
+            fs: vscodeFileSystem,
+            git: gitOps,
+            notify: async (specId) => {
+              const action = await vscode.window.showInformationMessage(
+                `SpecKit: STORY-${specId} em Gate 4 (ready-to-commit) — há mudanças pendentes após Keep.`,
+                'Commitar agora',
+                'Mais tarde',
+              );
+              if (action === 'Commitar agora') {
+                await openCopilotChatWithQuery('@speckit /commit');
+                return true;
+              }
+              return false;
+            },
+          });
+        })();
+      }, POST_SAVE_DEBOUNCE_MS);
+    },
+  };
+
+  const postSaveCoordinator = new PostSaveCoordinator(
+    graphRuntime.updater,
+    crapRunner,
+    workspaceRoot ?? '',
+    { crapDebounceMs: POST_SAVE_DEBOUNCE_MS },
+  );
+  postSaveCoordinator.start();
+  context.subscriptions.push(postSaveCoordinator, {
+    dispose: () => {
+      if (postSaveTimer) clearTimeout(postSaveTimer);
+    },
+  });
 }
 
 export function deactivate(): void {}

@@ -5,6 +5,13 @@ export const Uri = {
 };
 
 export const workspace = {
+  onDidSaveTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
+  createFileSystemWatcher: vi.fn(() => ({
+    onDidCreate: vi.fn(() => ({ dispose: vi.fn() })),
+    onDidChange: vi.fn(() => ({ dispose: vi.fn() })),
+    onDidDelete: vi.fn(() => ({ dispose: vi.fn() })),
+    dispose: vi.fn(),
+  })),
   fs: {
     createDirectory: vi.fn().mockResolvedValue(undefined),
     writeFile: vi.fn().mockResolvedValue(undefined),
@@ -34,6 +41,13 @@ export const FileType = {
   File: 1,
   Directory: 2,
 };
+
+export class RelativePattern {
+  constructor(
+    public readonly base: string,
+    public readonly pattern: string,
+  ) {}
+}
 
 export class ThemeIcon {
   constructor(public id: string) {}
