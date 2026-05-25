@@ -2,9 +2,16 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { findSpecFiles } from '../../generator/utils/findSpecFiles';
 import { IFileSystem } from '../../generator/utils/IFileSystem';
-import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
+import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
+import { CSharpImportExtractor } from '../../graph/extractors/CSharpImportExtractor';
+import { JavaImportExtractor } from '../../graph/extractors/JavaImportExtractor';
+import { JavaScriptImportExtractor } from '../../graph/extractors/JavaScriptImportExtractor';
+import { PythonImportExtractor } from '../../graph/extractors/PythonImportExtractor';
+import { TypeScriptImportExtractor } from '../../graph/extractors/TypeScriptImportExtractor';
+import { GraphStore } from '../../graph/GraphStore';
+import { IncrementalUpdater } from '../../graph/IncrementalUpdater';
 import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { createCorrelationId } from '../../workflow/ObservabilityContext';
@@ -44,6 +51,8 @@ export async function handleInitCommand(
   }
   const dirStatus = specDirExisted ? 'já existia' : 'criado';
 
+  await ensureGraphIgnored(workspaceRoot, fs);
+
   // Step 2: Find story files recursively
   const found = await findSpecFiles(workspaceRoot, fs);
 
@@ -68,6 +77,7 @@ export async function handleInitCommand(
       { title: '📝 Criar Nova Story', query: '@speckit /new' },
       { title: '📊 Ver Status das Specs', query: '@speckit /status' },
     ]);
+    triggerGraphBuild(stream, workspaceRoot);
     await emitCommandTelemetry({
       ...telemetryBase,
       command: '/init',
@@ -127,6 +137,7 @@ export async function handleInitCommand(
     { title: '📦 Ver Status Completo (--all)', query: '@speckit /status --all' },
     { title: '✅ Validar Spec Ativa', query: '@speckit /validate' },
   ]);
+  triggerGraphBuild(stream, workspaceRoot);
 
   await emitCommandTelemetry({
     ...telemetryBase,
@@ -139,4 +150,46 @@ export async function handleInitCommand(
       conflicts: String(conflicts.length),
     },
   });
+}
+
+async function ensureGraphIgnored(workspaceRoot: string, fs: IFileSystem): Promise<void> {
+  const gitignorePath = path.join(workspaceRoot, '.gitignore');
+  const graphIgnoreEntry = '.speckit/graph.json';
+  const existing = (await fs.fileExists(gitignorePath)) ? await fs.readFile(gitignorePath) : '';
+  const hasEntry = existing
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .includes(graphIgnoreEntry);
+
+  if (hasEntry) {
+    return;
+  }
+
+  const separator = existing.length === 0 || existing.endsWith('\n') ? '' : '\n';
+  await fs.writeFile(gitignorePath, `${existing}${separator}${graphIgnoreEntry}\n`);
+}
+
+function triggerGraphBuild(stream: vscode.ChatResponseStream, workspaceRoot: string): void {
+  if (!vscode.workspace.getConfiguration('speckit.graph').get<boolean>('enabled', true)) {
+    return;
+  }
+
+  const updater = new IncrementalUpdater(new GraphStore(), [
+    new TypeScriptImportExtractor(),
+    new JavaScriptImportExtractor(),
+    new JavaImportExtractor(),
+    new PythonImportExtractor(),
+    new CSharpImportExtractor(),
+  ]);
+
+  void updater.buildFull(workspaceRoot).then(
+    (graph) =>
+      stream.markdown(
+        `\n✅ Grafo construído: ${graph.nodes.length} nós, ${graph.edges.length} arestas.`,
+      ),
+    (error: unknown) =>
+      stream.markdown(
+        `\n⚠️ Falha ao construir grafo: ${error instanceof Error ? error.message : String(error)}`,
+      ),
+  );
 }

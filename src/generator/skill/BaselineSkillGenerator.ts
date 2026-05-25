@@ -4,6 +4,7 @@ import { generateArchitecture } from '../baseline/ArchitectureGenerator';
 import { generateContextManagement } from '../baseline/ContextManagementGenerator';
 import { generateCredentialSecurity } from '../baseline/CredentialSecurityGenerator';
 import { generateGitWorkflow } from '../baseline/GitWorkflowGenerator';
+import { generateGraphNavigation } from '../baseline/GraphNavigationGenerator';
 import { generateIdempotency } from '../baseline/IdempotencyGenerator';
 import { generateObservability } from '../baseline/ObservabilityGenerator';
 import { generatePerformance } from '../baseline/PerformanceGenerator';
@@ -54,6 +55,7 @@ Se não leu, **pare**. Violação = entrega rejeitada no portão de qualidade.
 | Adicionar rota com autenticação ou validação de input | REFERENCE-security.md |
 | Criar, alterar ou rever teste | REFERENCE-testing.md |
 | Adicionar log estruturado, métrica, trace ou health check | REFERENCE-observability.md |
+| Implementar/alterar/refatorar código em repositório carregado | REFERENCE-graph.md |
 
 Ao iniciar uma das ações acima, **declare**: "Vou fazer X. Lendo REFERENCE-Y.md." Sem declaração,
 a ação não está autorizada.`;
@@ -136,6 +138,10 @@ export function generateBaselineSkill(story?: Story): BaselineFile[] {
     {
       filename: 'REFERENCE-idempotency.md',
       content: buildReference('idempotency', stripFrontmatter(generateIdempotency())),
+    },
+    {
+      filename: 'REFERENCE-graph.md',
+      content: buildReference('graph', stripFrontmatter(generateGraphNavigation())),
     },
   ];
 }

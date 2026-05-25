@@ -1,4 +1,5 @@
 import { Story } from '../../story/Story';
+import { generateGraphMandateCondensed } from '../baseline/GraphNavigationGenerator';
 import {
   detectStoryBranchMentions,
   generateRuntimeBranchGovernanceSection,
@@ -426,5 +427,9 @@ Só avance para a próxima tarefa após 0 falhas e commit concluído.
 ---
 
 ${sessionClosureSection}
+
+---
+
+${generateGraphMandateCondensed()}
 `;
 }

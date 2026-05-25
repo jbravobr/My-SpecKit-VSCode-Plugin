@@ -1,4 +1,5 @@
 import { Fix, TechStackDetection } from '../../fix/Fix';
+import { generateGraphMandateCondensed } from '../baseline/GraphNavigationGenerator';
 import { generateContainerRuntimePreflightSection } from '../utils/ContainerRuntimePreflight';
 import { generateGitRepositoryPreflightSection } from '../utils/GitRepositoryPreflight';
 import { AGENT_TOOLS_YAML } from './agentTools';
@@ -148,5 +149,9 @@ Gates 0–2 completos. **Encerre esta sessão.**
 Para iniciar a revisão independente, o usuário deve selecionar o agente **speckit-fix-revisor** no dropdown de agentes do Copilot Chat.
 
 Não faça mais alterações de código nesta sessão.
+
+---
+
+${generateGraphMandateCondensed()}
 `;
 }

@@ -1,4 +1,5 @@
 import { Story } from '../../story/Story';
+import { generateGraphMandateCondensed } from '../baseline/GraphNavigationGenerator';
 import { AGENT_TOOLS_YAML } from './agentTools';
 import {
   detectStoryBranchMentions,
@@ -297,5 +298,9 @@ O comando persiste o metadata com \`gate: 4\` e \`status: ready-to-commit\` e em
 
 > **Story ${storyId} CONCLUÍDA.** Testes: 100% passando. Cobertura: X%.
 ${completionBranchLine}
+
+---
+
+${generateGraphMandateCondensed()}
 `;
 }

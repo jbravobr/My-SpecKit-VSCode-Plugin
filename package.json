@@ -6,7 +6,7 @@
   ],
   "displayName": "SpecKit — Spec Driven Development",
   "description": "Defina sua história e configure o Copilot para desenvolvimento orientado a spec",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "icon": "assets/speckit_icon.png",
   "publisher": "local",
   "engines": {
@@ -149,8 +149,77 @@
       {
         "command": "speckit.status",
         "title": "SpecKit: Status"
+      },
+      {
+        "command": "speckit.graph.ensureFresh",
+        "title": "SpecKit: Ensure Graph Fresh"
+      },
+      {
+        "command": "speckit.graph.refreshChanged",
+        "title": "SpecKit: Refresh Changed Graph Nodes"
+      },
+      {
+        "command": "speckit.graph.query",
+        "title": "SpecKit: Query Graph Neighbors"
+      },
+      {
+        "command": "speckit.graph.rebuild",
+        "title": "SpecKit: Rebuild Graph"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "SpecKit",
+      "properties": {
+        "speckit.graph.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable structural code graph (navigation paradox mitigation, arXiv 2602.20048v1). Disable to skip graph build, gate and embed."
+        },
+        "speckit.graph.gate.budgetMs": {
+          "type": "number",
+          "default": 300,
+          "minimum": 50,
+          "maximum": 5000,
+          "description": "Synchronous freshness gate budget (ms). Above this, the gate falls back to async + GRAPH_STALE_WARNING."
+        },
+        "speckit.graph.languages": {
+          "type": "array",
+          "default": ["auto"],
+          "items": { "type": "string", "enum": ["auto", "typescript", "javascript", "java", "python", "csharp"] },
+          "description": "Languages to extract. 'auto' detects from story.stack + workspace scan."
+        },
+        "speckit.graph.ignore": {
+          "type": "array",
+          "default": [],
+          "items": { "type": "string" },
+          "description": "Additional glob patterns to ignore (added to default node_modules, dist, out, coverage)."
+        },
+        "speckit.graph.embed.mode": {
+          "type": "string",
+          "default": "subgraph",
+          "enum": ["subgraph", "summary", "off"],
+          "description": "How to embed the graph in copilot-instructions.md. 'subgraph': table with neighbors. 'summary': counts only. 'off': no embed."
+        },
+        "speckit.graph.embed.topN": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum number of nodes to embed in the GRAPH CONTEXT block."
+        },
+        "speckit.graph.embed.attributes": {
+          "type": "array",
+          "default": [],
+          "items": { "type": "string", "enum": ["confidence", "riskScore", "edgeKind", "diffSinceLastGate"] },
+          "description": "Opt-in extra attributes for the embedded subgraph (Option 3). Adds +130 to +290 tokens depending on graph size."
+        },
+        "speckit.graph.userSpace.install": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow /init --user --confirm to install user-space guardrails in ~/.copilot/, ~/.claude/, ~/.cursor/ (only where directories already exist)."
+        }
+      }
+    }
   },
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
@@ -172,6 +241,7 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:unit:coverage": "vitest run --coverage",
+    "test:typecheck": "tsc --noEmit",
     "build:integration": "tsc -p tsconfig.integration.json",
     "test:integration": "npm run build:integration && node ./out/integration/tests/integration/runTests.js",
     "test:behavioral": "vitest run --config vitest.behavioral.config.ts",

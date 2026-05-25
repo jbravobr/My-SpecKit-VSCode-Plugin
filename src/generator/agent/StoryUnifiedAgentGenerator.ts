@@ -1,4 +1,5 @@
 import { Story } from '../../story/Story';
+import { generateGraphMandateCondensed } from '../baseline/GraphNavigationGenerator';
 import { AGENT_TOOLS_YAML } from './agentTools';
 import { generateImplementadorContentForUnified } from './StoryImplementadorAgentGenerator';
 import { generateRevisorContent } from './StoryRevisorAgentGenerator';
@@ -231,5 +232,9 @@ Quando o MODO REVISOR emitir veredito **ALTERAÇÕES SOLICITADAS**:
    - Informe: "✅ Correções aplicadas. Retornando ao MODO REVISOR para revalidação."
 7. Retorne ao **MODO REVISOR** — re-execute o Gate 3 **desde o início** (releia story + diff fresco).
 
-> Este ciclo se repete até o veredito ser **APROVADO**.`;
+> Este ciclo se repete até o veredito ser **APROVADO**.
+
+---
+
+${generateGraphMandateCondensed()}`;
 }

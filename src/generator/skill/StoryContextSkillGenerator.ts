@@ -1,4 +1,5 @@
 import { Story } from '../../story/Story';
+import { generateGraphMandateCondensed } from '../baseline/GraphNavigationGenerator';
 import { generateArchPattern } from '../story/ArchPatternGenerator';
 import { generateBusinessContext } from '../story/BusinessContextGenerator';
 import { generateDod } from '../story/DodGenerator';
@@ -25,5 +26,9 @@ description: "SpecKit story ${storyId} context — business requirement, functio
 ---
 
 ${sections.join('\n---\n\n')}
+
+---
+
+${generateGraphMandateCondensed()}
 `;
 }

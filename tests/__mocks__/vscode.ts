@@ -15,6 +15,15 @@ export const workspace = {
   },
   workspaceFolders: undefined as { uri: { fsPath: string } }[] | undefined,
   openTextDocument: vi.fn().mockResolvedValue({}),
+  getConfiguration: vi.fn().mockReturnValue({
+    get: <T>(key: string, defaultValue?: T): T | undefined => {
+      if (key === 'enabled') {
+        return false as T;
+      }
+      return defaultValue;
+    },
+  }),
+  findFiles: vi.fn().mockResolvedValue([]),
 };
 
 export const window = {

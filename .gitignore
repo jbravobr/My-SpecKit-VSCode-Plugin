@@ -24,6 +24,7 @@ tests/integration/workspace/.speckit/
 .speckit/traceability/
 .speckit/governance/
 .speckit/metrics/
+.speckit/graph.json
 build.log
 lint.log
 tsc-check.log

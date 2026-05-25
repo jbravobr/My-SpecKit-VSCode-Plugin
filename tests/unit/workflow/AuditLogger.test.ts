@@ -69,6 +69,13 @@ describe('AuditLogger', () => {
         'tool_call',
         'permission',
         'gate_transition',
+        'graph.build',
+        'graph.refresh.incremental',
+        'graph.stale.detected',
+        'graph.gate.injected',
+        'graph.veto.triggered',
+        'graph.batch.refresh',
+        'graph.perf.violation',
       ] as const;
 
       for (const event of events) {
@@ -116,6 +123,21 @@ describe('AuditLogger', () => {
       expect(lines).toHaveLength(1);
       expect(lines[0]).toContain('first line injected line');
       expect(lines[0]).toContain('note="header forged"');
+    });
+
+    it('logGraphEvent serializes graph payload context', async () => {
+      await logger.logGraphEvent('graph.build', {
+        workspaceFolder: '/workspace',
+        nodesCount: 3,
+        edgesCount: 2,
+        durationMs: 50,
+        partialLanguages: ['java', 'python'],
+      });
+
+      const content = fs.contentFor('audit.log')!;
+      expect(content).toContain('graph.build: graph.build');
+      expect(content).toContain('workspaceFolder="/workspace"');
+      expect(content).toContain('partialLanguages="java,python"');
     });
   });
 

@@ -67,6 +67,31 @@ describe('MetricsRecorder', () => {
     expect(events[0].validatorsRun).toEqual(['x', 'y']);
   });
 
+  it('recordGraphEvent emits typed graph payloads', async () => {
+    const { fs } = inMemoryFs();
+    const rec = new MetricsRecorder(fs, '/ws');
+
+    await rec.recordGraphEvent('graph.build', {
+      workspaceFolder: '/ws',
+      nodesCount: 2,
+      edgesCount: 1,
+      durationMs: 25,
+      partialLanguages: ['python'],
+    });
+
+    const events = await rec.readAll();
+    expect(events).toHaveLength(1);
+    expect(events[0].type).toBe('graph.build');
+    expect(events[0].durationMs).toBe(25);
+    expect(events[0].payload).toEqual({
+      workspaceFolder: '/ws',
+      nodesCount: 2,
+      edgesCount: 1,
+      durationMs: 25,
+      partialLanguages: ['python'],
+    });
+  });
+
   it('readAll returns [] when file missing', async () => {
     const { fs } = inMemoryFs();
     const rec = new MetricsRecorder(fs, '/ws');

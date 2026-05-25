@@ -1,4 +1,5 @@
 import { Story } from '../../story/Story';
+import { generateGraphMandateCondensed } from '../baseline/GraphNavigationGenerator';
 import { generateIdempotency } from '../baseline/IdempotencyGenerator';
 import { generateAngular } from '../framework/AngularGenerator';
 import { generateDotNet } from '../framework/DotNetGenerator';
@@ -128,6 +129,9 @@ Antes de tocar em qualquer código desta stack:
 
 ${sections.join('\n---\n\n')}
 ${mockSection}
+---
+
+${generateGraphMandateCondensed()}
 `;
 }
 

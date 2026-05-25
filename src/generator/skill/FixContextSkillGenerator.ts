@@ -1,4 +1,5 @@
 import { Fix, TechStackDetection } from '../../fix/Fix';
+import { generateGraphMandateCondensed } from '../baseline/GraphNavigationGenerator';
 import { generateFixContext } from '../fix/FixContextGenerator';
 import { generateFixDof } from '../fix/FixDofGenerator';
 import { generateImpact } from '../fix/ImpactGenerator';
@@ -23,5 +24,9 @@ description: "SpecKit fix ${fixId} context — bug description, root cause analy
 ---
 
 ${sections.join('\n---\n\n')}
+
+---
+
+${generateGraphMandateCondensed()}
 `;
 }

@@ -1,4 +1,5 @@
 import { Fix, TechStackDetection } from '../../fix/Fix';
+import { generateGraphMandateCondensed } from '../baseline/GraphNavigationGenerator';
 import { AGENT_TOOLS_YAML } from './agentTools';
 
 const TEST_COMMANDS: Record<string, string> = {
@@ -160,5 +161,9 @@ git commit -m "chore(${fixId}): encerra fix no speckit"
 
 > **Fix ${fixId} CONCLUÍDO.** Bug não reproduz. Testes: 100% passando. Cobertura: X%.
 > Commit local na branch \`fix/${fixId}-<slug>\`.
+
+---
+
+${generateGraphMandateCondensed()}
 `;
 }

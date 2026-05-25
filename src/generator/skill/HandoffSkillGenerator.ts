@@ -1,4 +1,5 @@
 import { Story } from '../../story/Story';
+import { generateGraphMandateCondensed } from '../baseline/GraphNavigationGenerator';
 
 export function generateHandoffSkill(story?: Story): string {
   const storyId = story?.metadata?.id ?? '<feature-id>';
@@ -130,5 +131,9 @@ When you (the next agent) open a handoff file, your first response should be:
 2. Re-state the next-session focus in one sentence.
 3. List the first 1–3 concrete actions you will take, each anchored to a file/task.
 4. Ask the user only the open questions that block step 3.
+
+---
+
+${generateGraphMandateCondensed()}
 `;
 }

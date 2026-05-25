@@ -188,6 +188,7 @@ describe('speckit-baseline split (progressive disclosure)', () => {
     'REFERENCE-observability.md',
     'REFERENCE-security.md',
     'REFERENCE-idempotency.md',
+    'REFERENCE-graph.md',
   ];
 
   it('returns SKILL.md plus all REFERENCE-*.md files', () => {

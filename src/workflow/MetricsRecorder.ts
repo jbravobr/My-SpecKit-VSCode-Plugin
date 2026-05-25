@@ -3,12 +3,39 @@ import type { IFileSystem } from '../generator/utils/IFileSystem';
 import type { Gate } from '../story/Story';
 import type { EvidenceReport } from './GateEvidenceCollector';
 
+export interface GraphMetricPayloadByType {
+  'graph.build': {
+    workspaceFolder: string;
+    nodesCount: number;
+    edgesCount: number;
+    durationMs: number;
+    partialLanguages: string[];
+  };
+  'graph.refresh.incremental': { touchedFiles: number; durationMs: number };
+  'graph.stale.detected': {
+    reason: 'headDrift' | 'perFileHash' | 'perFileMtime' | 'missing';
+    commandName?: string;
+  };
+  'graph.gate.injected': { commandName: string; mode: 'sync' | 'stale-async' | 'no-op' };
+  'graph.veto.triggered': { commandName: string; semanticHits: number; graphHits: number };
+  'graph.batch.refresh': { batchSize: number; coalesced: number; durationMs: number };
+  'graph.perf.violation': {
+    component: 'gate' | 'ensureFresh' | 'build';
+    budgetMs: number;
+    actualMs: number;
+  };
+}
+
+export type GraphMetricEventType = keyof GraphMetricPayloadByType;
+export type GraphMetricPayload = GraphMetricPayloadByType[GraphMetricEventType];
+
 export type MetricEventType =
   | 'gate-verification'
   | 'gate-transition'
   | 'incremental-crap'
   | 'spec-heuristic'
-  | 'verify-command';
+  | 'verify-command'
+  | GraphMetricEventType;
 
 export interface MetricEvent {
   type: MetricEventType;
@@ -20,6 +47,7 @@ export interface MetricEvent {
   findingsTotal?: number;
   findingsBlocking?: number;
   passed?: boolean;
+  payload?: GraphMetricPayload;
   extra?: Record<string, unknown>;
 }
 
@@ -75,6 +103,18 @@ export class MetricsRecorder {
       findingsTotal: report.findings.length,
       findingsBlocking: blocking,
       passed: report.passed,
+    });
+  }
+
+  async recordGraphEvent<T extends GraphMetricEventType>(
+    type: T,
+    payload: GraphMetricPayloadByType[T],
+  ): Promise<void> {
+    await this.record({
+      type,
+      ts: new Date().toISOString(),
+      durationMs: 'durationMs' in payload ? payload.durationMs : undefined,
+      payload,
     });
   }
 

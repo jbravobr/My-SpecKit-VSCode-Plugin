@@ -1,4 +1,5 @@
 import { Framework, Language } from '../../story/Story';
+import { generateGraphMandateCondensed } from '../baseline/GraphNavigationGenerator';
 import { DevToolsAssessment } from '../utils/DevToolsAssessor';
 
 export interface DevToolsSkillInput {
@@ -53,6 +54,10 @@ ${assessment.conflicts.map((c) => `- ${c}`).join('\n')}
 ## Status
 
 Todas as ferramentas de qualidade já estão configuradas. Nenhuma ação necessária.`);
+    sections.push(`
+---
+
+${generateGraphMandateCondensed()}`);
     return sections.join('\n');
   }
 
@@ -89,6 +94,11 @@ Após configurar, execute:
 3. Faça um commit de teste — o hook pre-commit deve executar lint-staged
 
 > Não prossiga para o Gate 1 sem validar os 3 pontos acima.`);
+
+  sections.push(`
+---
+
+${generateGraphMandateCondensed()}`);
 
   return sections.join('\n');
 }
