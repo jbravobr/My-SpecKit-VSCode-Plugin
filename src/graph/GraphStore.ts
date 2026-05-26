@@ -1,5 +1,6 @@
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import type { IFileSystem } from '../generator/utils/IFileSystem';
 import { PLUGIN_VERSION_GRAPH, SCHEMA_VERSION } from './constants';
 import type { Graph, GraphMeta } from './types';
 
@@ -52,12 +53,19 @@ function normalizeGraph(graph: Graph): Graph {
 
 /** Persists and loads the versioned graph document from disk. */
 export class GraphStore {
-  constructor(private readonly relativeFilePath: string = '.speckit/graph.json') {}
+  constructor(
+    private readonly relativeFilePath: string = '.speckit/graph.json',
+    private readonly fs?: Pick<IFileSystem, 'ensureDir' | 'writeFile' | 'readFile' | 'fileExists'>,
+  ) {}
 
   /** Loads and validates the graph JSON for a workspace, returning null when absent or invalid. */
   async load(workspaceRoot: string): Promise<Graph | null> {
+    if (!(await this.exists(workspaceRoot))) {
+      return null;
+    }
+
     try {
-      const contents = await readFile(this.getFilePath(workspaceRoot), 'utf8');
+      const contents = await this.readGraphFile(this.getFilePath(workspaceRoot));
       const parsed: unknown = JSON.parse(contents) as unknown;
       const validation = this.validate(parsed);
 
@@ -80,8 +88,7 @@ export class GraphStore {
   /** Saves a graph JSON file, creating the target directory and normalizing graph paths to slash separators. */
   async save(workspaceRoot: string, graph: Graph): Promise<void> {
     const filePath = this.getFilePath(workspaceRoot);
-    await mkdir(path.dirname(filePath), { recursive: true });
-    await writeFile(filePath, `${JSON.stringify(normalizeGraph(graph), null, 2)}\n`, 'utf8');
+    await this.writeGraphFile(filePath, `${JSON.stringify(normalizeGraph(graph), null, 2)}\n`);
   }
 
   /** Loads only the graph metadata for a workspace, returning null when no valid graph exists. */
@@ -93,6 +100,10 @@ export class GraphStore {
   /** Checks whether the graph JSON file exists for a workspace. */
   async exists(workspaceRoot: string): Promise<boolean> {
     try {
+      if (this.fs !== undefined) {
+        return await this.fs.fileExists(this.getFilePath(workspaceRoot));
+      }
+
       await access(this.getFilePath(workspaceRoot));
       return true;
     } catch (error: unknown) {
@@ -185,6 +196,25 @@ export class GraphStore {
 
   private getFilePath(workspaceRoot: string): string {
     return path.join(workspaceRoot, this.relativeFilePath);
+  }
+
+  private async readGraphFile(filePath: string): Promise<string> {
+    if (this.fs !== undefined) {
+      return this.fs.readFile(filePath);
+    }
+
+    return readFile(filePath, 'utf8');
+  }
+
+  private async writeGraphFile(filePath: string, content: string): Promise<void> {
+    if (this.fs !== undefined) {
+      await this.fs.ensureDir(path.dirname(filePath));
+      await this.fs.writeFile(filePath, content);
+      return;
+    }
+
+    await mkdir(path.dirname(filePath), { recursive: true });
+    await writeFile(filePath, content, 'utf8');
   }
 
   private isGraphNode(node: unknown): node is Graph['nodes'][number] {

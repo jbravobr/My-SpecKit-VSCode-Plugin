@@ -8,14 +8,19 @@ import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { extractSpecType } from '../../parser/BaseParser';
 import { Gate, SpecStatus } from '../../story/Story';
 import { parseStory } from '../../story/StoryParser';
+import type { Finding } from '../../validator/auto/types';
 import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
+import { detectAlternativeDiscarded } from '../../workflow/DecisionDetector';
+import { recordDecision } from '../../workflow/DecisionRecorder';
 import { validateGateTransition, validateStatusTransition } from '../../workflow/GateEnforcer';
 import { gitOps, IGitOps } from '../../workflow/GitOperations';
 import { runGateVerificationHook } from '../../workflow/GateVerificationHook';
 import { upsertMetadataFields } from '../../workflow/MetadataPatcher';
 import { createCorrelationId } from '../../workflow/ObservabilityContext';
+import { formatFindingLine } from '../../workflow/RevisorFeedbackBridge';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
+import { runPreGateDryCheck } from '../../validator/auto/PreGateDryRunner';
 import {
   consumeTransitionIntent,
   createTransitionIntent,
@@ -95,6 +100,7 @@ interface ReviewAutoControl {
   action: ReviewAutoAction;
   auto: boolean;
   batchConsent: boolean;
+  skipDryRun?: boolean;
   confirmIntentId?: string;
   error?: string;
 }
@@ -605,6 +611,7 @@ function parseReviewAutoControl(prompt: string | undefined): ReviewAutoControl {
   const mutation = tokens.includes('--mutation') || tokens.includes('--mut');
   const auto = tokens.includes('--auto');
   const batchConsent = tokens.includes('--batch-consent');
+  const skipDryRun = tokens.includes('--skip-dry-run');
   const confirmIntentId = readFlagValue(tokens, '--confirm');
 
   if (tokens.includes('--confirm') && !confirmIntentId) {
@@ -612,6 +619,7 @@ function parseReviewAutoControl(prompt: string | undefined): ReviewAutoControl {
       action: 'orchestrate',
       auto,
       batchConsent,
+      skipDryRun,
       error:
         'Use `--confirm <codigo>` com o código de confirmação mostrado na proposta. Nada será alterado sem esse código.',
     };
@@ -622,6 +630,7 @@ function parseReviewAutoControl(prompt: string | undefined): ReviewAutoControl {
       action: 'orchestrate',
       auto,
       batchConsent,
+      skipDryRun,
       error:
         'Flags conflitantes: use apenas uma entre `--approved` e `--changes-requested` no comando `/review-auto`.',
     };
@@ -632,6 +641,7 @@ function parseReviewAutoControl(prompt: string | undefined): ReviewAutoControl {
       action: 'orchestrate',
       auto,
       batchConsent,
+      skipDryRun,
       error:
         'Use `--batch-consent` isoladamente para consentimento de sessão batch ou execute transição separadamente.',
     };
@@ -642,6 +652,7 @@ function parseReviewAutoControl(prompt: string | undefined): ReviewAutoControl {
       action: 'orchestrate',
       auto,
       batchConsent,
+      skipDryRun,
       error: 'Flags incompatíveis: `--auto` não pode ser combinado com `--batch-consent`.',
     };
   }
@@ -651,6 +662,7 @@ function parseReviewAutoControl(prompt: string | undefined): ReviewAutoControl {
       action: 'orchestrate',
       auto,
       batchConsent,
+      skipDryRun,
       error:
         'Use `--mutation` isoladamente para análise opcional de mutation testing após avaliação de CRAP.',
     };
@@ -661,16 +673,45 @@ function parseReviewAutoControl(prompt: string | undefined): ReviewAutoControl {
       action: 'orchestrate',
       auto,
       batchConsent,
+      skipDryRun,
       error: 'Flags incompatíveis: `--mutation` não pode ser combinado com `--auto`.',
     };
   }
 
-  if (approved) return { action: 'approved', auto, batchConsent, confirmIntentId };
+  if (approved) return { action: 'approved', auto, batchConsent, skipDryRun, confirmIntentId };
   if (changesRequested) {
-    return { action: 'changes-requested', auto, batchConsent, confirmIntentId };
+    return { action: 'changes-requested', auto, batchConsent, skipDryRun, confirmIntentId };
   }
-  if (mutation) return { action: 'mutation', auto, batchConsent, confirmIntentId };
-  return { action: 'orchestrate', auto, batchConsent, confirmIntentId };
+  if (mutation) return { action: 'mutation', auto, batchConsent, skipDryRun, confirmIntentId };
+  return { action: 'orchestrate', auto, batchConsent, skipDryRun, confirmIntentId };
+}
+
+function appendReviewOutcomeDecision(
+  workspaceRoot: string,
+  fs: IFileSystem,
+  specId: string,
+  rejectedAlternative: string,
+): Promise<void> {
+  const findings: Finding[] = [
+    {
+      validator: 'review-auto',
+      severity: 'info',
+      message: rejectedAlternative,
+      suggestedFix: rejectedAlternative,
+      metadata: { specId },
+    },
+  ];
+  const decision = detectAlternativeDiscarded(findings, [0]);
+  if (!decision) {
+    return Promise.resolve();
+  }
+
+  return recordDecision({ workspaceRoot, fs, decision })
+    .then(() => undefined)
+    .catch(() => {
+      // Decision capture is informational and must never block the review flow.
+      return undefined;
+    });
 }
 
 function applyStoryTransition(
@@ -987,6 +1028,7 @@ export async function handleReviewAutoCommand(
         '- `@speckit /review-auto --approved` (Gate 3 → Gate 4 com status ready-to-commit)\n' +
         '- `@speckit /review-auto --mutation` (trilha opcional de mutation testing quando CRAP > 30)\n' +
         '- `@speckit /review-auto --batch-consent` (propõe consentimento único da sessão batch)\n' +
+        '- `@speckit /review-auto --skip-dry-run` (ignora o pre-gate dry-run desta execução)\n' +
         '- `@speckit /review-auto --confirm <codigo>` (confirma usando o código mostrado na proposta)\n',
     );
     emitContextualCommands(stream, [
@@ -996,11 +1038,63 @@ export async function handleReviewAutoCommand(
         description: 'iniciar consentimento batch',
       },
       {
+        command: '@speckit /review-auto --skip-dry-run',
+        description: 'executar o comando sem o hook dry-run nesta chamada',
+      },
+      {
         command: '@speckit /review-auto --confirm <codigo>',
         description: 'confirmar transição/consentimento pendente com o código da proposta',
       },
     ]);
     return;
+  }
+
+  if (!control.skipDryRun) {
+    const dryRun = await runPreGateDryCheck({
+      workspaceRoot: workspaceRootPath,
+      specPath: activeStoryPath,
+      fs,
+    });
+
+    if (!dryRun.passed) {
+      const evidenceDisplay = dryRun.evidencePath
+        ? path.relative(workspaceRootPath, dryRun.evidencePath).replace(/\\/g, '/')
+        : '.speckit/evidence/pre-gate-dry-run.md';
+      const findingsMarkdown = dryRun.findings.map((finding) => `- ${formatFindingLine(finding)}`).join('\n');
+
+      await recordReviewAutoEvent({
+        command: '/review-auto',
+        outcome: '⛔ bloqueado pelo pre-gate dry-run',
+        detail: `${dryRun.findings.length} finding(s), blockers=${dryRun.blockerCount}`,
+        gate: story.metadata.gate,
+        commandExecutionId,
+        specId: story.metadata.id,
+        specTitle: story.metadata.title,
+        workspaceRoot: workspaceRootPath,
+        fs,
+        audit,
+        tracer,
+      });
+
+      stream.markdown(
+        `🛑 **Pre-gate dry-run bloqueou o \`/review-auto\`.**\n\n` +
+          `Corrija os achados abaixo antes de seguir. Evidência: \`${evidenceDisplay}\`\n\n` +
+          `## Findings\n\n` +
+          `${findingsMarkdown || '- (nenhum finding detalhado)'}\n`,
+      );
+      emitContextualCommands(stream, [
+        { command: '@speckit /verify --gate 3', description: 'reexecutar validações determinísticas do gate' },
+        { command: '@speckit /status', description: 'revisar a story ativa e o estado atual' },
+        {
+          command: '@speckit /review-auto --skip-dry-run',
+          description: 'opt-out pontual do hook dry-run para esta execução',
+        },
+      ]);
+      emitChatQuickActionButton(stream, '🧪 Rodar Verify (Gate 3)', '@speckit /verify --gate 3');
+      emitChatQuickActionButton(stream, '📊 Ver Status das Specs', '@speckit /status');
+      emitChatQuickActionButton(stream, '⏭ Ignorar Dry-Run nesta Execução', '@speckit /review-auto --skip-dry-run');
+      return;
+    }
   }
 
   let cachedEvidence: ReviewEvidence | undefined;
@@ -1513,9 +1607,14 @@ export async function handleReviewAutoCommand(
         audit,
         tracer,
       });
+      void appendReviewOutcomeDecision(
+        workspaceRootPath,
+        fs,
+        story.metadata.id,
+        'Return to Gate 2 and request rework instead of accepting the review outcome',
+      );
 
-      stream.markdown(
-        `## ✅ Gate 4 Orquestrado — STORY-${story.metadata.id}\n\n` +
+      stream.markdown(        `## ✅ Gate 4 Orquestrado — STORY-${story.metadata.id}\n\n` +
           `${formatTransitionMarkdown(summary)}\n\n` +
           '### O que aconteceu\n' +
           '- ✅ Metadata da story atualizado para **Gate 4 / ready-to-commit**\n' +

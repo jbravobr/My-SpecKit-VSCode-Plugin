@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workflow Sprint SSD — Spec Driven Development com SpecKit</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a2e;--accent:#4361ee;--border:#e0e0e0;--code-bg:#f5f5f5;--table-stripe:#f9f9fb;--bq-border:#4361ee}
+@media(prefers-color-scheme:dark){:root{--bg:#1a1a2e;--fg:#e0e0e0;--accent:#7c93f5;--border:#333;--code-bg:#16213e;--table-stripe:#16213e;--bq-border:#7c93f5}}
+*{box-sizing:border-box}
+body{font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,sans-serif;line-height:1.7;color:var(--fg);background:var(--bg);max-width:920px;margin:0 auto;padding:2rem 1.5rem}
+h1{font-size:2rem;border-bottom:3px solid var(--accent);padding-bottom:.5rem;margin-top:2rem}
+h2{font-size:1.5rem;border-bottom:1px solid var(--border);padding-bottom:.3rem;margin-top:2.5rem;color:var(--accent)}
+h3{font-size:1.2rem;margin-top:1.8rem}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+code{background:var(--code-bg);padding:.15em .4em;border-radius:4px;font-size:.9em;font-family:"Cascadia Code","Fira Code","JetBrains Mono",monospace}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:1rem 1.2rem;overflow-x:auto;line-height:1.5}
+pre code{background:none;padding:0;font-size:.85em}
+blockquote{border-left:4px solid var(--bq-border);margin:1rem 0;padding:.5rem 1rem;background:var(--code-bg);border-radius:0 8px 8px 0}
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9em}
+th{background:var(--accent);color:#fff;padding:.6rem .8rem;text-align:left}
+td{padding:.5rem .8rem;border-bottom:1px solid var(--border)}
+tr:nth-child(even){background:var(--table-stripe)}
+hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+ul,ol{padding-left:1.5rem}
+li{margin-bottom:.3rem}
+input[type=checkbox]{margin-right:.4rem}
+strong{font-weight:600}
+</style>
+</head>
+<body>
+<h1>Workflow Sprint SSD — Spec Driven Development com SpecKit</h1>
+<blockquote>
+<p>Documento de processo para times de até 10 devs (backend + frontend) que utilizam feature branches e querem maximizar paralelismo e qualidade na sprint usando o plugin SpecKit.</p>
+</blockquote>
+<hr>
+<h2>Sumário</h2>
+<ol>
+<li><a href="#vis%C3%A3o-geral-do-modelo">Visão Geral do Modelo</a></li>
+<li><a href="#cerim%C3%B4nia-de-refinamento-ssd">Cerimônia de Refinamento SSD</a></li>
+<li><a href="#workflow-da-sprint--passo-a-passo">Workflow da Sprint — Passo a Passo</a></li>
+<li><a href="#modelo-de-paralelismo">Modelo de Paralelismo</a></li>
+<li><a href="#detec%C3%A7%C3%A3o-e-corre%C3%A7%C3%A3o-de-m%C3%A1-quebra">Detecção e Correção de Má Quebra</a></li>
+<li><a href="#diagrama-de-fluxo">Diagrama de Fluxo</a></li>
+<li><a href="#faq-e-troubleshooting">FAQ e Troubleshooting</a></li>
+</ol>
+<hr>
+<h2>Visão Geral do Modelo</h2>
+<p>O <strong>SSD (Spec Driven Development)</strong> com SpecKit transforma o refinamento de sprint num processo estruturado onde:</p>
+<ol>
+<li>Cada estória do Kanban é <strong>decomposta em specs atômicas</strong> (1 spec = 1 feature branch = 1 dev)</li>
+<li>Dependências entre specs são <strong>declaradas explicitamente</strong> via <code>depends-on</code> no metadata</li>
+<li>O plugin gera <strong>agentes Copilot individualizados</strong> para cada spec, permitindo N devs trabalharem em paralelo com contexto completo</li>
+<li>A análise de dependências do <code>/batch --unified</code> mostra <strong>quem pode começar agora</strong> e <strong>quem está bloqueado</strong></li>
+</ol>
+<h3>Benefícios para o time</h3>
+<table>
+<thead>
+<tr>
+<th>Problema Atual</th>
+<th>Solução SSD</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Estória grande demais para 1 sprint</td>
+<td>Decomposição via <code>/draft</code> → specs atômicas com DoR verificável</td>
+</tr>
+<tr>
+<td>Deps ocultas descobertas no meio da sprint</td>
+<td><code>depends-on</code> declarado no refinamento, bloqueio visível no <code>/batch</code></td>
+</tr>
+<tr>
+<td>Dev ocioso esperando PR de outro</td>
+<td>Stories independentes identificadas; dev pega próxima livre</td>
+</tr>
+<tr>
+<td>Backend bloqueia frontend (ou vice-versa)</td>
+<td>Deps cross-squad explícitas; contrato definido na spec antes de codificar</td>
+</tr>
+<tr>
+<td>Contexto perdido entre devs</td>
+<td>Cada spec carrega requisito, NFRs, stack, arquitetura — o agente “sabe tudo”</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Cerimônia de Refinamento SSD</h2>
+<h3>Quando: antes ou no início da sprint</h3>
+<h3>Quem: todo o time (backend + frontend + PO/Tech Lead)</h3>
+<h3>Duração sugerida: 1h-1h30 (para 5-10 estórias)</h3>
+<h3>Fluxo da Cerimônia</h3>
+<pre><code>  ┌─────────────────────────────────────────────────────────────┐
+  │  1. PO apresenta estória do Kanban (texto informal)         │
+  │                         │                                   │
+  │                         ▼                                   │
+  │  2. Tech Lead roda:  @speckit /draft &lt;descrição&gt;            │
+  │     (compartilha tela ou projeta)                           │
+  │                         │                                   │
+  │                         ▼                                   │
+  │  3. Time responde entrevista (6 fases) coletivamente        │
+  │     - Backend foca em NFRs, arquitetura, banco              │
+  │     - Frontend foca em UX, critérios de aceite visuais      │
+  │     - PO valida valor de negócio e escopo                   │
+  │                         │                                   │
+  │                         ▼                                   │
+  │  4. Spec STORY-XXX.md gerada → time avalia:                 │
+  │     - É atômica? (1 dev consegue entregar em ≤3 dias?)      │
+  │     - Tem dependência de outra spec?                        │
+  │     - Precisa split backend/frontend?                       │
+  │                         │                                   │
+  │                         ▼                                   │
+  │  5. Se não atômica → SPLIT:                                 │
+  │     @speckit /draft &lt;parte-backend&gt;                         │
+  │     @speckit /draft &lt;parte-frontend&gt;                        │
+  │     Declarar depends-on entre as partes                     │
+  │                         │                                   │
+  │                         ▼                                   │
+  │  6. @speckit /validate em cada spec                         │
+  │     → DoR atingido? Se não, gap-fill coletivo              │
+  │                         │                                   │
+  │                         ▼                                   │
+  │  7. @speckit /batch --unified                               │
+  │     → Mapa de dependências + stories independentes          │
+  │     → Distribuição de trabalho                              │
+  └─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3>Regras da Cerimônia</h3>
+<ol>
+<li><strong>Uma spec por vez</strong> — não avance para a próxima estória sem validar a anterior</li>
+<li><strong>Atomicidade obrigatória</strong> — se leva mais de 3 dias ou exige 2+ devs, precisa split</li>
+<li><strong>Deps explícitas no ato</strong> — se durante a entrevista alguém disser “isso depende de X”, declara imediatamente no <code>depends-on</code></li>
+<li><strong>Contrato antes de código</strong> — specs de backend que expõem API para frontend devem declarar o contrato (endpoint, payload) nos critérios de aceite antes da sprint começar</li>
+<li><strong>PO valida escopo</strong> — “fora de escopo” preenchido garante que ninguém expande a spec durante a implementação</li>
+</ol>
+<h3>Exemplo: Decomposição de Estória Grande</h3>
+<p><strong>Estória original no Kanban:</strong></p>
+<blockquote>
+<p>“Como gerente, quero ver um dashboard de comissões em tempo real”</p>
+</blockquote>
+<p><strong>Decomposição no refinamento:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Spec</th>
+<th>Tipo</th>
+<th>Squad</th>
+<th>depends-on</th>
+<th>Dev</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>STORY-001</code></td>
+<td>Cálculo de comissão (evento Kafka)</td>
+<td>Backend</td>
+<td>—</td>
+<td>Dev A</td>
+</tr>
+<tr>
+<td><code>STORY-002</code></td>
+<td>API REST de consulta de comissões</td>
+<td>Backend</td>
+<td><code>STORY-001</code></td>
+<td>Dev B</td>
+</tr>
+<tr>
+<td><code>STORY-003</code></td>
+<td>Componente Dashboard (frontend)</td>
+<td>Frontend</td>
+<td><code>STORY-002</code></td>
+<td>Dev C</td>
+</tr>
+<tr>
+<td><code>STORY-004</code></td>
+<td>Integração real-time (WebSocket)</td>
+<td>Backend</td>
+<td><code>STORY-001</code></td>
+<td>Dev D</td>
+</tr>
+<tr>
+<td><code>STORY-005</code></td>
+<td>Widget de notificação (frontend)</td>
+<td>Frontend</td>
+<td><code>STORY-004</code></td>
+<td>Dev E</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Resultado do <code>/batch --unified</code>:</strong></p>
+<pre><code>### ✅ Stories independentes (prontas para execução)
+- STORY-001
+
+### ⚠️ Dependências pendentes
+- STORY-002 bloqueada por: STORY-001
+- STORY-003 bloqueada por: STORY-002
+- STORY-004 bloqueada por: STORY-001
+- STORY-005 bloqueada por: STORY-004
+</code></pre>
+<p><strong>Implicação prática:</strong> No dia 1, apenas Dev A pode começar em STORY-001. Para evitar ociosidade, o time deve ter <strong>mais specs independentes</strong> na sprint (vindas de outras estórias do Kanban) ou reorganizar a decomposição para maximizar independência.</p>
+<hr>
+<h2>Workflow da Sprint — Passo a Passo</h2>
+<h3>Fase 1: Início da Sprint (Dia 1)</h3>
+<pre><code class="language-bash"># Tech Lead/Scrum Master executa no workspace do projeto:
+@speckit /batch --unified
+</code></pre>
+<p>O output mostra:</p>
+<ul>
+<li>✅ Stories <strong>independentes</strong> → podem começar imediatamente</li>
+<li>⚠️ Stories <strong>bloqueadas</strong> → aguardam dependências</li>
+<li>Cada dev abre o agente da sua story no dropdown do Copilot Chat</li>
+</ul>
+<h3>Fase 2: Dev Pega Story</h3>
+<pre><code>1. Dev cria feature branch:
+   git checkout -b feature/STORY-001-calculo-comissao
+
+2. Abre o Copilot Chat e seleciona o agente:
+   speckit-story-001 (dropdown)
+
+3. O agente já conhece:
+   - Requisito de negócio
+   - Critérios de aceite
+   - NFRs (P99, segurança)
+   - Stack técnica
+   - Arquitetura
+   - Dependências
+
+4. Dev implementa guiado pelos Gates:
+   Gate 0 (Alinhamento) → Gate 1 (Implementação) → Gate 2 (Testes)
+</code></pre>
+<h3>Fase 3: Revisão e Entrega</h3>
+<pre><code>1. Ao concluir Gate 2, o agente unificado faz handoff:
+   IMPLEMENTADOR → REVISOR (Gate 3)
+
+2. Revisor executa checklist de qualidade automaticamente
+
+3. Se aprovado → Gate 4 (Entrega)
+   Se alterações solicitadas → volta Gate 2
+
+4. Dev faz PR da feature branch → main/develop
+
+5. Quando STORY-001 muda para status &quot;done&quot;:
+   → /batch --unified recalcula dependências
+   → STORY-002 e STORY-004 ficam independentes
+   → Devs B e D podem começar
+</code></pre>
+<h3>Fase 4: Cascata de Desbloqueio</h3>
+<p>À medida que specs são concluídas:</p>
+<pre><code>Dia 1:  ████░░░░░░  STORY-001 (Dev A)
+Dia 2:  ████████░░  STORY-001 concluída → desbloqueia 002 + 004
+Dia 3:  ░░████░░░░  STORY-002 (Dev B) + STORY-004 (Dev D) em paralelo
+Dia 4:  ░░████████  002 concluída → desbloqueia 003
+Dia 5:  ░░░░░░████  STORY-003 (Dev C) + STORY-005 (Dev E)
+</code></pre>
+<h3>Protocolo Diário (Daily Standup com SpecKit)</h3>
+<pre><code class="language-bash"># Qualquer dev pode verificar estado atual:
+@speckit /status
+
+# Output mostra gate atual de cada story + bloqueios
+</code></pre>
+<p>Perguntas que a daily responde com SpecKit:</p>
+<ul>
+<li>“Quem está bloqueado?” → <code>/batch</code> mostra deps pendentes</li>
+<li>“Que posso pegar?” → stories independentes sem dono</li>
+<li>“Qual o progresso?” → <code>/status</code> mostra gate de cada spec</li>
+</ul>
+<hr>
+<h2>Modelo de Paralelismo</h2>
+<h3>Baseline: 1 Dev = 1 Feature Branch = 1 Story</h3>
+<pre><code>Dev A:  git checkout -b feature/STORY-001  →  agente speckit-story-001
+Dev B:  git checkout -b feature/STORY-002  →  agente speckit-story-002
+Dev C:  git checkout -b feature/STORY-003  →  agente speckit-story-003
+...
+</code></pre>
+<p>Cada dev trabalha isolado na sua branch com o agente específico da sua story. O agente tem todo o contexto necessário — não precisa consultar outro dev para entender o requisito.</p>
+<h3>Avançado: Git Worktree (para devs que pegam múltiplas stories)</h3>
+<blockquote>
+<p><strong>O que é:</strong> <code>git worktree</code> permite ter múltiplos checkouts do mesmo repositório em diretórios separados, sem clonar novamente. Cada worktree tem sua própria branch e working directory.</p>
+</blockquote>
+<p><strong>Cenário:</strong> Dev A terminou STORY-001 e quer começar STORY-004 sem abandonar o PR aberto da 001:</p>
+<pre><code class="language-bash"># No diretório raiz do projeto:
+git worktree add ../projeto-story-004 -b feature/STORY-004
+
+# Agora o dev tem dois diretórios:
+# ./projeto/              → branch feature/STORY-001 (PR aberto, pode fazer fixes)
+# ./projeto-story-004/   → branch feature/STORY-004 (novo trabalho)
+</code></pre>
+<p><strong>Vantagens do worktree:</strong></p>
+<ul>
+<li>Sem <code>git stash</code> / <code>git checkout</code> → zero risco de perder trabalho</li>
+<li>Pode rodar testes na story-001 enquanto implementa story-004</li>
+<li>Cada VS Code window abre um worktree → agente Copilot específico por janela</li>
+</ul>
+<p><strong>Quando usar:</strong></p>
+<ul>
+<li>Dev sênior que pega 2+ stories na sprint</li>
+<li>Story concluída aguardando review (dev não fica ocioso)</li>
+<li>Hotfix urgente sem perder contexto do trabalho atual</li>
+</ul>
+<p><strong>Quando NÃO usar:</strong></p>
+<ul>
+<li>Repos muito grandes (cada worktree ocupa espaço)</li>
+<li>Dev júnior que se confundiria com múltiplos diretórios</li>
+<li>Se o time prefere 1 story por vez por disciplina</li>
+</ul>
+<h3>Governança de Branch com SpecKit</h3>
+<p>O <code>/batch --unified</code> suporta <code>--branch-strategy</code> para resolver conflitos:</p>
+<pre><code class="language-bash"># Usa branch da sessão atual do VS Code:
+@speckit /batch --generate --unified --branch-strategy session
+
+# Respeita branches citadas nas specs:
+@speckit /batch --generate --unified --branch-strategy cited
+</code></pre>
+<hr>
+<h2>Detecção e Correção de Má Quebra</h2>
+<h3>Problema 1: Estória Grande Demais</h3>
+<p><strong>Sintomas:</strong></p>
+<ul>
+<li>Spec com mais de 5 critérios de aceite</li>
+<li>Estimativa &gt; 3 dias para 1 dev</li>
+<li>Envolve backend + frontend + infra na mesma spec</li>
+<li>DoR não é atingido facilmente (muitas lacunas no <code>/validate</code>)</li>
+</ul>
+<p><strong>Técnica de Detecção no Refinamento:</strong></p>
+<p>Após rodar <code>/draft</code> e gerar a spec, aplique o <strong>teste dos 3 dias</strong>:</p>
+<blockquote>
+<p>“Um dev sozinho, com o agente Copilot, consegue entregar isso em ≤ 3 dias com testes?”</p>
+</blockquote>
+<p>Se a resposta for “não” → <strong>SPLIT obrigatório</strong>.</p>
+<p><strong>Padrões de Split:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Sinal</th>
+<th>Split Recomendado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backend + Frontend na mesma spec</td>
+<td>Split por squad: <code>STORY-X-api</code> + <code>STORY-X-ui</code></td>
+</tr>
+<tr>
+<td>CRUD + Regra de Negócio complexa</td>
+<td>Split: <code>STORY-X-domain</code> (regra) + <code>STORY-X-infra</code> (persistência/API)</td>
+</tr>
+<tr>
+<td>Múltiplos consumers/producers</td>
+<td>1 spec por consumer/producer</td>
+</tr>
+<tr>
+<td>Dashboard com N widgets</td>
+<td>1 spec por widget (se independentes)</td>
+</tr>
+<tr>
+<td>Migração + feature nova</td>
+<td><code>STORY-X-migration</code> + <code>STORY-X-feature</code> (com depends-on)</td>
+</tr>
+</tbody>
+</table>
+<h3>Problema 2: Dependências Ocultas</h3>
+<p><strong>Sintomas:</strong></p>
+<ul>
+<li>Dev descobre no meio da sprint que precisa de algo que outro dev está fazendo</li>
+<li>PR fica bloqueado esperando merge de outro PR</li>
+<li>“Eu achei que isso já existia” → não existia</li>
+</ul>
+<p><strong>Técnica de Detecção no Refinamento:</strong></p>
+<p>Para cada spec gerada, pergunte explicitamente:</p>
+<ol>
+<li>
+<p><strong>“Essa spec consome alguma API/contrato/evento que não existe ainda?”</strong></p>
+<ul>
+<li>Se sim → qual spec vai criar? → declarar <code>depends-on</code></li>
+</ul>
+</li>
+<li>
+<p><strong>“Essa spec cria algo que outra spec vai consumir?”</strong></p>
+<ul>
+<li>Se sim → a outra spec deve declarar <code>depends-on: &lt;esta&gt;</code></li>
+</ul>
+</li>
+<li>
+<p><strong>“Essa spec modifica algo que outra spec também modifica?”</strong></p>
+<ul>
+<li>Se sim → não pode ser paralela — serializar via <code>depends-on</code></li>
+</ul>
+</li>
+</ol>
+<p><strong>Checklist de Deps Cross-Squad:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Frontend precisa de…</th>
+<th>Backend deve ter spec para…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Endpoint GET /comissoes</td>
+<td>API REST de consulta (spec dedicada)</td>
+</tr>
+<tr>
+<td>WebSocket /ws/notifications</td>
+<td>Serviço de push (spec dedicada)</td>
+</tr>
+<tr>
+<td>Contrato de response</td>
+<td>Schema definido nos critérios de aceite da spec backend</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Regra de ouro:</strong> Se o frontend precisa de um endpoint, o endpoint deve existir como spec separada (ou já estar em produção). Nunca assuma que “o backend faz junto”.</p>
+<h3>Técnica: Matriz de Dependências Visual</h3>
+<p>Após gerar todas as specs da sprint, construa a matriz:</p>
+<pre><code>         001  002  003  004  005
+STORY-001  —    ←    .    ←    .
+STORY-002  →    —    ←    .    .
+STORY-003  .    →    —    .    .
+STORY-004  →    .    .    —    ←
+STORY-005  .    .    .    →    —
+
+→ = &quot;eu dependo de&quot;
+← = &quot;dependem de mim&quot;
+.  = independente
+</code></pre>
+<p>O <code>/batch --unified</code> já gera essa análise automaticamente. Se o grafo resultante for <strong>linear</strong> (001→002→003→004→005), o time tem um problema: <strong>serialização total</strong> = 1 dev por vez. Reorganize para maximizar specs independentes.</p>
+<h3>Meta: Índice de Paralelismo</h3>
+<pre><code>Índice = (stories independentes no dia 1) / (total de devs)
+
+Ideal:  ≥ 0.7 (70% dos devs podem começar no dia 1)
+Aceitável: ≥ 0.5
+Ruim: &lt; 0.3 (maioria bloqueada)
+</code></pre>
+<p>Se o índice é ruim → voltar ao refinamento e redecompor.</p>
+<hr>
+<h2>Diagrama de Fluxo</h2>
+<pre><code>╔══════════════════════════════════════════════════════════════════════╗
+║                    CICLO SPRINT SSD COM SPECKIT                      ║
+╠══════════════════════════════════════════════════════════════════════╣
+║                                                                      ║
+║  ┌──────────────────────────────────────────────────────────────┐   ║
+║  │              REFINAMENTO (pré-sprint ou dia 1)                │   ║
+║  │                                                              │   ║
+║  │  Kanban Stories ──→ /draft (coletivo) ──→ STORY-XXX.md       │   ║
+║  │       │                                        │             │   ║
+║  │       │            Teste 3 dias?               │             │   ║
+║  │       │          /        \                    │             │   ║
+║  │       │        Sim         Não → SPLIT         │             │   ║
+║  │       │         │              │               │             │   ║
+║  │       │         ▼              ▼               │             │   ║
+║  │       │    /validate    /draft (parte A/B)     │             │   ║
+║  │       │         │              │               │             │   ║
+║  │       │         ▼              ▼               │             │   ║
+║  │       │    depends-on ←── Deps explícitas      │             │   ║
+║  │       │         │                              │             │   ║
+║  │       │         ▼                              │             │   ║
+║  │       └── /batch --unified ────────────────────┘             │   ║
+║  │                    │                                         │   ║
+║  │         ┌──────────┴──────────┐                              │   ║
+║  │         │                     │                              │   ║
+║  │    Independentes         Bloqueadas                          │   ║
+║  │    (prontas)             (aguardam)                          │   ║
+║  └──────────────────────────────────────────────────────────────┘   ║
+║                    │                                                  ║
+║                    ▼                                                  ║
+║  ┌──────────────────────────────────────────────────────────────┐   ║
+║  │                    EXECUÇÃO (sprint)                           │   ║
+║  │                                                              │   ║
+║  │  Dev A ─→ feature/STORY-001 ─→ agente speckit-story-001     │   ║
+║  │  Dev B ─→ feature/STORY-006 ─→ agente speckit-story-006     │   ║
+║  │  Dev C ─→ feature/STORY-007 ─→ agente speckit-story-007     │   ║
+║  │  ...                                                         │   ║
+║  │                                                              │   ║
+║  │  Cada dev segue: Gate 0 → Gate 1 → Gate 2 → Gate 3 → Gate 4│   ║
+║  │                                                              │   ║
+║  │  Ao concluir (status: done):                                 │   ║
+║  │    → /batch --unified recalcula deps                         │   ║
+║  │    → Stories desbloqueadas ficam disponíveis                  │   ║
+║  │    → Dev ocioso pega próxima independente                    │   ║
+║  └──────────────────────────────────────────────────────────────┘   ║
+║                    │                                                  ║
+║                    ▼                                                  ║
+║  ┌──────────────────────────────────────────────────────────────┐   ║
+║  │                    DAILY (standup)                             │   ║
+║  │                                                              │   ║
+║  │  @speckit /status → gate atual de cada dev                   │   ║
+║  │  @speckit /batch  → quem está bloqueado / quem pode pegar    │   ║
+║  │                                                              │   ║
+║  │  Decisões:                                                   │   ║
+║  │  - Dev bloqueado → pega story independente de outro épico    │   ║
+║  │  - Dev terminou → pega próxima desbloqueada                  │   ║
+║  │  - Dep descoberta tarde → declara depends-on + recalcula     │   ║
+║  └──────────────────────────────────────────────────────────────┘   ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝
+</code></pre>
+<hr>
+<h2>FAQ e Troubleshooting</h2>
+<h3>“E se uma story bloqueante atrasa?”</h3>
+<ol>
+<li>Identifique quais stories estão bloqueadas por ela (<code>/batch</code> mostra)</li>
+<li>Redirecione devs bloqueados para stories independentes de outro épico</li>
+<li>Se não há stories independentes → pair programming na bloqueante para acelerar</li>
+<li>Em último caso → dividir a bloqueante em partes menores (re-split mid-sprint)</li>
+</ol>
+<h3>“Como o frontend começa se o backend ainda não entregou a API?”</h3>
+<p><strong>Contract-first approach:</strong></p>
+<ol>
+<li>Na spec do backend, os critérios de aceite definem o contrato (endpoint, request/response schema)</li>
+<li>O frontend usa esse contrato para mock local desde o dia 1</li>
+<li>A dependência (<code>depends-on</code>) existe para o merge final, não para o início do trabalho</li>
+<li>Frontend desenvolve contra mock → integra quando backend merga</li>
+</ol>
+<h3>“Dev terminou sua story e não tem mais nada. O que faz?”</h3>
+<p>Ordem de prioridade:</p>
+<ol>
+<li>Pegar próxima story independente (verificar <code>/batch</code>)</li>
+<li>Fazer code review de PRs de colegas</li>
+<li>Pair programming em story bloqueante (para desbloqueá-la mais rápido)</li>
+<li>Tech debt / refactoring (criar spec via <code>/draft --refactoring</code>)</li>
+</ol>
+<h3>“Descobrimos uma dep no meio da sprint que não foi mapeada”</h3>
+<ol>
+<li>Adicione <code>depends-on: &lt;ID&gt;</code> no metadata da spec afetada</li>
+<li>Rode <code>@speckit /batch --unified</code> novamente para recalcular</li>
+<li>Na daily, comunique o bloqueio e redistribua</li>
+</ol>
+<h3>“O time é pequeno (3-4 devs). Vale a pena todo esse processo?”</h3>
+<p>Sim, com adaptações:</p>
+<ul>
+<li>Refinamento mais curto (30min)</li>
+<li>Menos splits (aceitar stories de 5 dias se há poucos devs)</li>
+<li>O valor principal é a <strong>clareza de contexto</strong> que o agente dá — mesmo 1 dev sozinho se beneficia do SDD</li>
+</ul>
+<h3>“Posso usar worktree com SpecKit?”</h3>
+<p>Sim. Cada worktree é um diretório independente com sua branch. Abra cada worktree numa janela VS Code separada → o agente Copilot será o da story daquela branch. Não há conflito com o SpecKit.</p>
+<pre><code class="language-bash"># Criar worktree para segunda story:
+git worktree add ../meu-projeto-story-002 -b feature/STORY-002
+
+# Abrir no VS Code:
+code ../meu-projeto-story-002
+
+# Nessa janela, selecionar agente speckit-story-002 no dropdown
+</code></pre>
+<h3>“Como funciona quando backend e frontend estão em repos diferentes?”</h3>
+<p>Cada repo tem seu próprio <code>.speckit/</code> e seus próprios agentes. A dependência cross-repo é gerenciada por <strong>contrato</strong>:</p>
+<ol>
+<li>Spec do backend define o contrato no critério de aceite</li>
+<li>Spec do frontend referencia o contrato (pode copiar o schema)</li>
+<li><code>depends-on</code> cross-repo não é suportado automaticamente — use comunicação explícita na daily</li>
+</ol>
+<hr>
+<h2>Resumo: Checklist do Tech Lead</h2>
+<h3>Antes da Sprint</h3>
+<ul>
+<li>[ ] Rodar <code>/draft</code> para cada estória do Kanban (coletivamente)</li>
+<li>[ ] Aplicar teste dos 3 dias em cada spec</li>
+<li>[ ] Splits feitos onde necessário</li>
+<li>[ ] <code>depends-on</code> declarado para todas as deps conhecidas</li>
+<li>[ ] <code>/validate</code> passou em todas as specs</li>
+<li>[ ] <code>/batch --unified</code> mostra índice de paralelismo ≥ 0.5</li>
+<li>[ ] Stories distribuídas (1 spec independente por dev no dia 1)</li>
+</ul>
+<h3>Durante a Sprint</h3>
+<ul>
+<li>[ ] Daily usa <code>/status</code> para visibilidade</li>
+<li>[ ] Devs que terminam pegam próxima story independente</li>
+<li>[ ] Deps descobertas tardiamente são adicionadas ao metadata</li>
+<li>[ ] <code>/batch</code> re-executado quando spec muda de status</li>
+</ul>
+<h3>Final da Sprint</h3>
+<ul>
+<li>[ ] Todas as specs em <code>status: done</code> ou documentado por quê não</li>
+<li>[ ] PRs mergeados</li>
+<li>[ ] Retrospectiva inclui: “a decomposição foi boa? Índice de paralelismo real vs planejado?”</li>
+</ul>
+
+</body>
+</html>

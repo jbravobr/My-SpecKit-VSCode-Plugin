@@ -110,6 +110,18 @@ describe('handleSpeckitRequest — dispatcher', () => {
     expect(stream.getAllMarkdown()).not.toContain('Comandos disponíveis');
   });
 
+  it('routes /retrospective to handleRetrospectiveCommand', async () => {
+    const stream = createMockStream();
+    await handleSpeckitRequest(
+      createMockRequest('', 'retrospective'),
+      createMockContext(),
+      stream,
+      createMockToken(),
+    );
+    expect(stream.getAllMarkdown()).toContain('workspace');
+    expect(stream.getAllMarkdown()).not.toContain('Comandos disponíveis');
+  });
+
   it('routes /batch-generate alias to /batch --generate', async () => {
     const stream = createMockStream();
     await handleSpeckitRequest(
@@ -190,6 +202,7 @@ describe('handleSpeckitRequest — dispatcher', () => {
     expect(stream.getAllMarkdown()).toContain('/draft');
     expect(stream.getAllMarkdown()).toContain('/agent');
     expect(stream.getAllMarkdown()).toContain('/history');
+    expect(stream.getAllMarkdown()).toContain('/retrospective');
     expect(stream.getAllMarkdown()).toContain('/review-auto');
   });
 

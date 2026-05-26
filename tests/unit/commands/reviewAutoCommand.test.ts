@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { describe, expect, it, vi } from 'vitest';
 import { handleReviewAutoCommand } from '../../../src/participant/commands/reviewAutoCommand';
+import * as PreGateDryRunner from '../../../src/validator/auto/PreGateDryRunner';
 import { IGitOps } from '../../../src/workflow/GitOperations';
 import {
   createMockRequest,
@@ -101,6 +102,67 @@ describe('handleReviewAutoCommand', () => {
     await handleReviewAutoCommand(createMockRequest(''), stream, token, ws, fs, fakeGit());
 
     expect(stream.getAllMarkdown()).toContain('disponível apenas para Story');
+  });
+
+  it('blocks review-auto when pre-gate dry-run fails', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub();
+    const dryRunSpy = vi
+      .spyOn(PreGateDryRunner, 'runPreGateDryCheck')
+      .mockResolvedValue({
+        passed: false,
+        blockerCount: 1,
+        evidencePath: 'C:/workspace/.speckit/evidence/pre-gate-dry-run.md',
+        findings: [
+          {
+            validator: 'secret-leak',
+            severity: 'blocker',
+            message: 'Segredo hardcoded detectado.',
+            path: 'src/app.ts',
+            line: 12,
+          },
+        ],
+      });
+
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyWithMeta(2, 'in-progress'));
+
+    await handleReviewAutoCommand(createMockRequest(''), stream, token, ws, fs, fakeGit());
+
+    expect(dryRunSpy).toHaveBeenCalledOnce();
+    expect(stream.getAllMarkdown()).toContain('Pre-gate dry-run bloqueou');
+    expect(stream.getAllMarkdown()).toContain('Segredo hardcoded detectado.');
+    expect(stream.button).toHaveBeenCalledWith({
+      title: '🧪 Rodar Verify (Gate 3)',
+      command: 'speckit.runChatQuickAction',
+      arguments: ['@speckit /verify --gate 3'],
+    });
+    const storyContent = await fs.readFile('C:/workspace/.speckit/STORY-001.md');
+    expect(storyContent).toContain('gate: 2');
+    dryRunSpy.mockRestore();
+  });
+
+  it('skips pre-gate dry-run when --skip-dry-run is provided', async () => {
+    const stream = createMockStream();
+    const fs = new InMemoryFileSystem();
+    const ws = new WorkspaceStub();
+    const dryRunSpy = vi.spyOn(PreGateDryRunner, 'runPreGateDryCheck');
+
+    await fs.writeFile('C:/workspace/.speckit/STORY-001.md', storyWithMeta(2, 'in-progress'));
+    await fs.writeFile('C:/workspace/coverage/lcov.info', 'LF:100\nLH:90\n');
+
+    await handleReviewAutoCommand(
+      createMockRequest('--skip-dry-run'),
+      stream,
+      token,
+      ws,
+      fs,
+      fakeGit({ changedFiles: async () => ['src/app/service.ts'] }),
+    );
+
+    expect(dryRunSpy).not.toHaveBeenCalled();
+    expect(stream.getAllMarkdown()).toContain('Confirmação obrigatória de transição');
+    dryRunSpy.mockRestore();
   });
 
   it('proposes and confirms transition gate 2 to gate 3 before persisting metadata', async () => {

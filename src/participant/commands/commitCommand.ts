@@ -4,8 +4,10 @@ import { IFileSystem } from '../../generator/utils/IFileSystem';
 import { IWorkspace } from '../../generator/utils/IWorkspace';
 import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
-import { extractSpecType } from '../../parser/BaseParser';
+import { extractSpecType, parseMetaFields, RE_META_BLOCK } from '../../parser/BaseParser';
 import { parseStory } from '../../story/StoryParser';
+import { detectBreakingChange } from '../../workflow/DecisionDetector';
+import { recordDecision } from '../../workflow/DecisionRecorder';
 import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { gitOps, IGitOps } from '../../workflow/GitOperations';
@@ -20,6 +22,7 @@ interface ActiveSpecCommitContext {
   specId?: string;
   status?: string;
   gate?: number;
+  breakingChangeMetadata?: string;
 }
 
 async function resolveActiveSpecCommitContext(
@@ -32,6 +35,7 @@ async function resolveActiveSpecCommitContext(
   try {
     const content = await fs.readFile(activeSpecPath);
     const specType = extractSpecType(content);
+    const breakingChangeMetadata = readBreakingChangeMetadata(content);
 
     if (specType === 'fix') {
       const fix = parseFix(content);
@@ -41,6 +45,7 @@ async function resolveActiveSpecCommitContext(
         specId: fix.metadata.id,
         status: fix.metadata.status,
         gate: fix.metadata.gate,
+        breakingChangeMetadata,
       };
     }
 
@@ -51,6 +56,7 @@ async function resolveActiveSpecCommitContext(
       specId: story.metadata.id,
       status: story.metadata.status,
       gate: story.metadata.gate,
+      breakingChangeMetadata,
     };
   } catch {
     return {};
@@ -68,6 +74,42 @@ function deriveAutoCommitMessage(ctx: ActiveSpecCommitContext): string | undefin
   if (ctx.specType === 'story') return `feat(${ctx.specId}): implementação guiada`;
 
   return `chore(${ctx.specId}): commit automático speckit`;
+}
+
+function readBreakingChangeMetadata(content: string): string | undefined {
+  const metadataBlock = content.match(RE_META_BLOCK)?.[1];
+  if (!metadataBlock) return undefined;
+
+  const metadata = parseMetaFields(metadataBlock);
+  const rawValue =
+    metadata['breaking-change'] ??
+    metadata['breaking_change'] ??
+    metadata['breaking'] ??
+    metadata['major-change'];
+  const normalized = rawValue?.trim();
+  if (!normalized) return undefined;
+  if (['false', 'no', 'none', '0'].includes(normalized.toLowerCase())) return undefined;
+  return normalized;
+}
+
+function scheduleDecisionRecording(
+  workspaceRoot: string,
+  fs: IFileSystem,
+  specId: string | undefined,
+  commitMessage: string,
+  breakingChangeMetadata?: string,
+): void {
+  if (!specId || !breakingChangeMetadata) return;
+
+  const decision = detectBreakingChange(
+    `${commitMessage}\nBREAKING CHANGE: ${breakingChangeMetadata}`,
+    specId,
+  );
+  if (!decision) return;
+
+  void recordDecision({ workspaceRoot, fs, decision }).catch(() => {
+    // Decision capture is informational and must never block the commit flow.
+  });
 }
 
 export async function handleCommitCommand(
@@ -175,6 +217,13 @@ export async function handleCommitCommand(
 
     const fullMessage = message.startsWith('speckit: ') ? message : `speckit: ${message}`;
     const output = await git.commit(workspaceRoot, fullMessage);
+    scheduleDecisionRecording(
+      workspaceRoot,
+      fs,
+      activeContext.specId,
+      fullMessage,
+      activeContext.breakingChangeMetadata,
+    );
 
     await emitCommandTelemetry({
       ...telemetryBase,

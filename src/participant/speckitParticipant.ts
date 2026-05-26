@@ -14,9 +14,11 @@ import { handleFixCommand } from './commands/fixCommand';
 import { handleGateCommand } from './commands/gateCommand';
 import { handleHelpCommand } from './commands/helpCommand';
 import { handleHistoryCommand } from './commands/historyCommand';
+import { handleImpactCommand } from './commands/impactCommand';
 import { handleInitCommand } from './commands/initCommand';
 import { handleMetricsCommand } from './commands/metricsCommand';
 import { handleNewCommand } from './commands/newCommand';
+import { handleRetrospectiveCommand } from './commands/retrospectiveCommand';
 import { handleReviewAutoCommand } from './commands/reviewAutoCommand';
 import { handleScoreCommand } from './commands/scoreCommand';
 import { handleStatusCommand } from './commands/statusCommand';
@@ -190,6 +192,12 @@ export async function handleSpeckitRequest(
       case 'score':
         await handleScoreCommand(request, stream, token);
         break;
+      case 'impact':
+        await handleImpactCommand(request, stream, token);
+        break;
+      case 'retrospective':
+        await handleRetrospectiveCommand(request, stream, token);
+        break;
       default:
         stream.markdown(
           '**SpecKit** — Spec Driven Development\n\n' +
@@ -206,6 +214,7 @@ export async function handleSpeckitRequest(
             '- `/audit` — Visualizar log de auditoria\n' +
             '- `/trace` — Visualizar rastreabilidade de specs\n' +
             '- `/history` — Visualizar histórico agregado (audit, trace e log)\n' +
+            '- `/retrospective` — Analisar padrões recorrentes do histórico local\n' +
             '- `/diff` — Mostrar git diff no chat\n' +
             '- `/commit` — Auto-stage e commit com prefixo speckit:\n' +
             '- `/context` — Gerenciar arquivos de contexto\n' +

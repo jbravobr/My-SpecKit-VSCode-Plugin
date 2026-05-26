@@ -6,6 +6,8 @@ import { vscodeFileSystem } from '../../generator/utils/VscodeFileSystem';
 import { vscodeWorkspace } from '../../generator/utils/VscodeWorkspace';
 import { extractSpecType } from '../../parser/BaseParser';
 import { parseStory } from '../../story/StoryParser';
+import { detectModeSwitch } from '../../workflow/DecisionDetector';
+import { recordDecision } from '../../workflow/DecisionRecorder';
 import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
 import { createCorrelationId } from '../../workflow/ObservabilityContext';
@@ -45,6 +47,23 @@ function readFlagValue(tokens: string[], flag: string): string | undefined {
     }
   }
   return undefined;
+}
+
+function scheduleDecisionRecording(
+  workspaceRoot: string,
+  fs: IFileSystem,
+  specId: string | undefined,
+  fromMode: string | undefined,
+  toMode: string,
+): void {
+  if (!specId) return;
+
+  const decision = detectModeSwitch(fromMode ?? 'default', toMode, specId);
+  if (!decision) return;
+
+  void recordDecision({ workspaceRoot, fs, decision }).catch(() => {
+    // Decision capture is informational and must never block the mode switch.
+  });
 }
 
 export async function handleAgentCommand(
@@ -175,6 +194,7 @@ export async function handleAgentCommand(
       agentMode: mode,
       llmResponseReceived: true,
     });
+    scheduleDecisionRecording(workspaceRoot, fs, active.specId, intent.payload.fromMode, mode);
 
     stream.markdown(
       `## ✅ Troca de modo confirmada\n\n` +

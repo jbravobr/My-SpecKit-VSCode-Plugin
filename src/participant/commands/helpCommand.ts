@@ -92,6 +92,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       '@speckit /review-auto --batch-consent',
       '@speckit /review-auto --batch-consent --confirm <codigo>',
       '@speckit /review-auto --auto',
+      '@speckit /review-auto --skip-dry-run',
     ],
     options: [
       '--confirm <codigo> para confirmar a proposta mostrada no chat (mantenha a mesma intenção do comando proposto, como --approved ou --changes-requested; nada muda sem confirmação)',
@@ -100,6 +101,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       '--mutation (alias: --mut) para detalhar trilha opcional de mutation quando CRAP > 30',
       '--batch-consent para propor consentimento único da sessão batch unificada',
       '--auto para handoff automático somente quando consentimento batch estiver ativo',
+      '--skip-dry-run para ignorar o hook de pre-gate dry-run somente na execução atual',
     ],
   },
   gate: {
@@ -212,6 +214,10 @@ const TOPIC_CONTEXTUAL_ACTIONS: Record<string, ContextualHelpAction[]> = {
       command: '@speckit /review-auto --mutation',
       description: 'detalhar trilha opcional de mutation quando CRAP > 30',
     },
+    {
+      command: '@speckit /review-auto --skip-dry-run',
+      description: 'executar o fluxo ignorando o hook dry-run desta vez',
+    },
   ],
   gate: [
     {
@@ -247,6 +253,7 @@ function renderGeneralHelp(): string {
     '- `/verify [--gate <0..4>]` → validação determinística (alimenta o Revisor)\n' +
     '- `/metrics` → resumo das métricas locais (`.speckit/metrics/events.jsonl`)\n' +
     '- `/score` → score de completude da spec ativa (0..100)\n' +
+    '- `/retrospective` → padrões recorrentes + recomendações de melhoria contínua\n' +
     '- `/draft [--fix|--refactoring|--spike]`\n\n' +
     '**Atalhos (aliases):**\n' +
     '- `/status-all` → `/status --all`\n' +

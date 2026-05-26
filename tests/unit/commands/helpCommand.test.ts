@@ -32,6 +32,7 @@ describe('handleHelpCommand', () => {
     expect(output).toContain('--changes-requested');
     expect(output).toContain('--approved');
     expect(output).toContain('--mutation');
+    expect(output).toContain('--skip-dry-run');
     expect(output).toContain('@speckit /review-auto --confirm <codigo>');
     expect(output).toContain('@speckit /review-auto --approved --confirm <codigo>');
     expect(output).toContain('@speckit /review-auto --changes-requested --confirm <codigo>');

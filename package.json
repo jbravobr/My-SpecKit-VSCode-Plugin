@@ -129,6 +129,14 @@
           {
             "name": "score",
             "description": "Avaliar completude da spec ativa e gerar um score 0-100"
+          },
+          {
+            "name": "impact",
+            "description": "Analisa blast radius e risco de impacto via graph de dependências"
+          },
+          {
+            "name": "retrospective",
+            "description": "Analisa padrões recorrentes no histórico de specs para melhoria contínua"
           }
         ]
       }

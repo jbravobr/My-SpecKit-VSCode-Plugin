@@ -21,6 +21,8 @@ import { parseStory } from '../../story/StoryParser';
 import { validateStory } from '../../story/StoryValidator';
 import { AuditLogger } from '../../workflow/AuditLogger';
 import { emitCommandTelemetry } from '../../workflow/CommandTelemetry';
+import { detectGateRegression } from '../../workflow/DecisionDetector';
+import { recordDecision } from '../../workflow/DecisionRecorder';
 import { getValidNextGates } from '../../workflow/GateEnforcer';
 import { TraceabilityManager } from '../../workflow/TraceabilityManager';
 
@@ -234,7 +236,7 @@ async function validateStory_(
   stream.markdown(`✅ **${files.length} arquivo(s) gerado(s):**\n\n${fileList}\n\n---\n\n`);
 
   emitGateInfo(story.metadata.gate, stream);
-  await recordTrace(
+  const previousStoryGate = await recordTrace(
     workspaceRoot,
     story.metadata.id,
     'story',
@@ -242,6 +244,14 @@ async function validateStory_(
     result.valid,
     0,
     fs,
+  );
+  scheduleGateRegressionDecision(
+    workspaceRoot,
+    fs,
+    previousStoryGate,
+    story.metadata.gate,
+    story.metadata.id,
+    'Story validation completed after a higher gate had already been recorded.',
   );
 
   const lang = story.technicalSpec.language || 'typescript';
@@ -340,7 +350,7 @@ async function validateFix_(
         '- `@speckit /status` (consultar gate/status do fix)\n\n' +
         '> Esta etapa depende das informações que você precisa digitar no chat para completar o fix.\n',
     );
-    await recordTrace(
+    const previousFixGate = await recordTrace(
       workspaceRoot,
       fix.metadata.id,
       'fix',
@@ -348,6 +358,14 @@ async function validateFix_(
       false,
       result.gaps.length,
       fs,
+    );
+    scheduleGateRegressionDecision(
+      workspaceRoot,
+      fs,
+      previousFixGate,
+      fix.metadata.gate,
+      fix.metadata.id,
+      `Fix validation found ${result.gaps.length} gap(s) after a higher gate had already been recorded.`,
     );
     return;
   }
@@ -384,7 +402,23 @@ async function validateFix_(
     stream.markdown(`✅ **${files.length} arquivo(s) gerado(s):**\n\n${fileList}\n\n---\n\n`);
 
     emitGateInfo(fix.metadata.gate, stream);
-    await recordTrace(workspaceRoot, fix.metadata.id, 'fix', fix.metadata.gate, true, 0, fs);
+    const previousFixGate = await recordTrace(
+      workspaceRoot,
+      fix.metadata.id,
+      'fix',
+      fix.metadata.gate,
+      true,
+      0,
+      fs,
+    );
+    scheduleGateRegressionDecision(
+      workspaceRoot,
+      fs,
+      previousFixGate,
+      fix.metadata.gate,
+      fix.metadata.id,
+      'Fix validation completed after a higher gate had already been recorded.',
+    );
 
     await offerDevTools(
       workspaceRoot,
@@ -579,15 +613,56 @@ async function recordTrace(
   valid: boolean,
   gapCount: number,
   fs: IFileSystem,
-): Promise<void> {
+): Promise<Gate | undefined> {
   try {
     const tracer = new TraceabilityManager(workspaceRoot, fs);
+    const previousGate = await readLatestRecordedGate(tracer, specId);
     await tracer.record(specId, specType, {
       type: 'gate',
       description: `validated at gate ${gate}`,
       data: { gate: String(gate), valid: String(valid), gaps: String(gapCount) },
     });
+    return previousGate;
   } catch {
     // Traceability should never break the main flow
+    return undefined;
   }
+}
+
+async function readLatestRecordedGate(
+  tracer: TraceabilityManager,
+  specId: string,
+): Promise<Gate | undefined> {
+  const trace = await tracer.load(specId);
+  if (!trace) return undefined;
+
+  for (let idx = trace.entries.length - 1; idx >= 0; idx -= 1) {
+    const entry = trace.entries[idx];
+    if (entry.type !== 'gate') continue;
+
+    const parsed = Number.parseInt(entry.data.gate ?? '', 10);
+    if (parsed >= 0 && parsed <= 4) {
+      return parsed as Gate;
+    }
+  }
+
+  return undefined;
+}
+
+function scheduleGateRegressionDecision(
+  workspaceRoot: string,
+  fs: IFileSystem,
+  fromGate: Gate | undefined,
+  toGate: Gate,
+  specId: string,
+  reason: string,
+): void {
+  if (fromGate === undefined) return;
+
+  const decision = detectGateRegression(fromGate, toGate, specId, reason);
+  if (!decision) return;
+
+  void recordDecision({ workspaceRoot, fs, decision }).catch(() => {
+    // Decision capture is informational and must never block validation.
+  });
 }

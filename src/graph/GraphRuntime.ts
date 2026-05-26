@@ -1,4 +1,7 @@
 import * as vscode from 'vscode';
+import { vscodeFileSystem } from '../generator/utils/VscodeFileSystem';
+import { ensureGraphExists } from './GraphAutoBuilder';
+import type { EnsureGraphResult } from './GraphAutoBuilder';
 import { FileSystemWatcherBridge } from './FileSystemWatcherBridge';
 import {
   CSharpImportExtractor,
@@ -16,6 +19,8 @@ export interface GraphRuntime extends vscode.Disposable {
   updater: IncrementalUpdater;
   gate: GraphFreshnessGate;
   watcher: FileSystemWatcherBridge;
+  /** Ensures the persisted graph exists and is fresh enough for silent runtime use. */
+  ensureGraph(): Promise<EnsureGraphResult>;
 }
 
 export function createGraphRuntime(workspaceRoot: string | undefined): GraphRuntime {
@@ -48,6 +53,17 @@ export function createGraphRuntime(workspaceRoot: string | undefined): GraphRunt
     updater,
     gate,
     watcher,
+    ensureGraph: async () => {
+      if (workspaceRoot === undefined) {
+        return {
+          built: false,
+          fresh: false,
+          error: 'Workspace root is undefined.',
+        };
+      }
+
+      return ensureGraphExists(workspaceRoot, vscodeFileSystem);
+    },
     dispose: () => {
       watcher.dispose();
       updater.cancel();

@@ -10,6 +10,8 @@ export {
   PythonImportExtractor,
   TypeScriptImportExtractor,
 } from './extractors';
+export { GraphAutoBuilder, ensureGraphExists } from './GraphAutoBuilder';
+export type { EnsureGraphResult } from './GraphAutoBuilder';
 export { GraphBuilder } from './GraphBuilder';
 export { GraphFreshnessGate } from './GraphFreshnessGate';
 export {

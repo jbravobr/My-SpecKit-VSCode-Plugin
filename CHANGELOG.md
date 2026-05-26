@@ -4,6 +4,21 @@ Todas as mudanças notáveis deste projeto serão documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere a [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
+## [Unreleased]
+
+### Adicionado
+
+- `DecisionRecorder` para gerar ADRs automáticos em `.speckit/decisions/` com numeração incremental, slug previsível e serialização segura de gravações concorrentes.
+- `DecisionDetector` para identificar decisões conservadoras de descarte de alternativa, regressão de gate, troca de modo e breaking change.
+- `GraphAutoBuilder` para garantir, em silêncio, que `.speckit/graph.json` exista e seja reconstruído quando estiver ausente ou stale, retornando degradação graciosa em falhas de build.
+- `RetrospectiveAnalyzer` + comando `/retrospective` para consolidar histórico local (`audit`, `trace`, `metrics`, evidências e contadores de iteração) em padrões recorrentes, regressões por gate e recomendações acionáveis.
+
+### Mudado
+
+- `/review-auto`, `/validate`, `/agent` e `/commit` agora disparam hooks best-effort de captura de decisão sem bloquear o fluxo principal.
+- `GraphRuntime` expõe `ensureGraph()` como entry point para comandos que precisam autoaquecer o grafo sem propagar exceções.
+- `GraphStore` agora aceita `IFileSystem` opcional para reutilizar persistência/versionamento com file system injetável em runtime e testes.
+
 ## [0.7.0] — Graph Navigation Mandate
 
 ### Adicionado
