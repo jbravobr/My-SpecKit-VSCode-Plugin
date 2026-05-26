@@ -21,6 +21,8 @@ const result = spawnSync(
     '--no-dependencies',
     '--allow-missing-repository',
     '--skip-license',
+    '--baseContentUrl',
+    'https://github.com/jbravobr/My-SpecKit-VSCode-Plugin/blob/main/',
     '--out',
     vsixPath,
   ],

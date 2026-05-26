@@ -1,0 +1,80 @@
+SpecKit — Changelog 0.8.0
+=========================
+Data: 26/05/2026
+Branch base: feat/speckit-high-value-gaps (merge para main)
+
+MINOR — Impact Analysis, Retrospective, ADR Auto-Record & Pre-Gate Dry-Run
+---------------------------------------------------------------------------
+Esta release adiciona 5 features de alto valor focadas em qualidade de experiência
+do desenvolvedor: análise de impacto via grafo, feedback loop de retrospectiva,
+captura automática de decisões (ADR), dry-run de validators pré-gate e construção
+automática (silenciosa) do grafo de dependências.
+
+Resumo da release
+-----------------
+O plugin agora oferece comando `/impact` para visualizar blast radius antes de
+qualquer alteração, `/retrospective` para identificar padrões recorrentes no
+histórico de specs, ADR automático sem intervenção do usuário, e um hook
+pré-gate que roda todos os validators em modo dry-run antes de avançar gates.
+
+Mudanças técnicas
+-----------------
+- `package.json`: bump de versão para `0.8.0`, registro dos comandos `impact` e
+  `retrospective` no chatParticipants.
+- `src/participant/commands/impactCommand.ts` (novo): comando `/impact` com
+  `GraphQuery.neighbors()` (2 hops, topN 15), `riskScore()` normalizado [0..100],
+  tabela de nós afetados e sugestão de testes para risco ≥60.
+- `src/participant/commands/retrospectiveCommand.ts` (novo): comando `/retrospective`
+  que delega para `RetrospectiveAnalyzer` e emite relatório markdown com quick actions.
+- `src/workflow/RetrospectiveAnalyzer.ts` (novo): motor de análise que lê audit log,
+  trace, metrics e iteration counters. Computa avg iterations/gate, top findings
+  recorrentes, gates com regressão e gera recomendações.
+- `src/workflow/DecisionRecorder.ts` (novo): persiste ADR em `.speckit/decisions/`
+  com numeração auto-incremental e slug kebab-case.
+- `src/workflow/DecisionDetector.ts` (novo): detecta padrões de decisão (alternativa
+  descartada, gate regression, mode switch, breaking change).
+- `src/validator/auto/PreGateDryRunner.ts` (novo): orquestra validators sem
+  side-effects, gera evidence em `.speckit/evidence/pre-gate-dry-run.md`.
+- `src/graph/GraphAutoBuilder.ts` (novo): silent build de graph.json quando
+  inexistente ou stale, com PerfBudget e degradação graciosa.
+- `src/graph/GraphRuntime.ts`: expõe `ensureGraph()` público.
+- `src/graph/GraphStore.ts`: aceita `IFileSystem` opcional.
+- `src/participant/speckitParticipant.ts`: registra cases `impact` e `retrospective`.
+- `src/participant/commands/reviewAutoCommand.ts`: integra hook `PreGateDryRunner`
+  no início do fluxo, com opt-out `--skip-dry-run`.
+- `src/participant/commands/agentCommand.ts`: hook fire-and-forget de decisão.
+- `src/participant/commands/commitCommand.ts`: hook fire-and-forget de decisão.
+- `src/participant/commands/validateCommand.ts`: hook fire-and-forget de decisão.
+
+Documentação
+------------
+- `CHANGELOG.md`: seção 0.8.0 com todas as features e mudanças documentadas.
+- `publish/0.8.0/CHANGELOG-0.8.0.txt` (este documento).
+- `publish/0.8.0/CHANGELOG-USER-0.8.0.txt` (visão para usuários).
+
+Testes adicionados
+------------------
+- `tests/unit/commands/impactCommand.test.ts` (6 testes): no workspace, no entity,
+  entity not found, valid entity com risk table, active file fallback, graph build fail.
+- `tests/unit/commands/retrospectiveCommand.test.ts` (2 testes): render report, empty state.
+- `tests/unit/workflow/RetrospectiveAnalyzer.test.ts` (4 testes): empty workspace,
+  audit data aggregation, finding grouping, recommendations.
+- `tests/unit/graph/GraphAutoBuilder.test.ts` (4 testes): fresh graph skip, missing
+  graph build, stale rebuild, build failure graceful.
+- `tests/unit/validator/PreGateDryRunner.test.ts` (4 testes): all pass, blocker found,
+  validator throws, evidence written.
+- `tests/unit/workflow/DecisionRecorder.test.ts` (5 testes): ADR format, auto-increment,
+  directory creation, concurrent safety, error handling.
+- `tests/unit/workflow/DecisionDetector.test.ts` (5 testes): alternative discarded,
+  gate regression, mode switch, breaking change, no-match returns undefined.
+
+Validação executada antes do release
+------------------------------------
+- npx tsc --noEmit → 0 erros
+- npm run test:unit → 1495 testes passando (124 arquivos)
+- npm run build:prod → sucesso
+- npm run package:vsix → (após este CHANGELOG)
+
+Artefato gerado
+---------------
+- publish/0.8.0/vscode-plugin-speckit-0.8.0.vsix

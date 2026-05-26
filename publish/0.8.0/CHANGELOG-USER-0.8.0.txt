@@ -1,0 +1,67 @@
+SpecKit — Novidades para usuários — 0.8.0
+=========================================
+Data: 26/05/2026
+
+Resumo
+------
+Esta versão traz 3 novos comandos e 2 automações que melhoram significativamente
+a experiência de desenvolvimento orientado por specs. Agora você pode saber o
+impacto antes de alterar, aprender com o histórico de specs anteriores, e ter
+decisões capturadas automaticamente sem nenhum esforço extra.
+
+Novas features
+--------------
+- `/impact` — Mostra quais arquivos e módulos serão afetados se você alterar
+  um determinado arquivo. Útil antes de refatorações ou implementações que
+  tocam código compartilhado. Exibe uma tabela com nível de risco (0-100) e
+  sugere quais testes verificar.
+  Exemplo: `@speckit /impact src/workflow/GateEnforcer.ts`
+
+- `/retrospective` — Analisa seu histórico de trabalho com specs e mostra
+  padrões recorrentes: onde você costuma travar mais (qual gate), quais
+  problemas se repetem, e recomendações para melhorar. Funciona como uma
+  retrospectiva automatizada baseada em dados reais.
+  Exemplo: `@speckit /retrospective`
+
+- **Decisões capturadas automaticamente** — Quando o plugin detecta que você
+  descartou uma alternativa, regrediu um gate, mudou de modo ou fez breaking
+  change, gera um ADR (Architecture Decision Record) em `.speckit/decisions/`.
+  Nenhuma ação manual necessária.
+
+- **Dry-run antes de review** — O `/review-auto` agora verifica previamente
+  se há problemas (type errors, testes falhando, cobertura baixa, secrets
+  vazados) ANTES de iniciar a revisão. Se detectar blockers, mostra o que
+  corrigir. Skip: `@speckit /review-auto --skip-dry-run`.
+
+- **Graph construído automaticamente** — Se o grafo de dependências não
+  existir, qualquer comando que precise dele (como `/impact`) constrói o
+  grafo silenciosamente sem necessidade de `/init`.
+
+Correções e segurança de release
+--------------------------------
+- Nenhuma correção de segurança nesta release.
+- Todos os hooks de decisão são fire-and-forget: nunca bloqueiam fluxo principal.
+- `PreGateDryRunner` nunca propaga exceções de validators.
+- `GraphAutoBuilder` retorna degradação graciosa em caso de falha de build.
+
+Como usar rapidamente
+---------------------
+1. Antes de alterar código compartilhado:
+   `@speckit /impact src/meu-arquivo.ts`
+2. Para ver padrões do seu histórico:
+   `@speckit /retrospective`
+3. Para revisão com dry-run (automático):
+   `@speckit /review-auto`
+4. ADRs aparecem automaticamente em `.speckit/decisions/` conforme você trabalha.
+
+Melhorias de experiência
+------------------------
+- O `/impact` mostra ícones coloridos de risco (🟢🟡🟠🔴) para leitura rápida.
+- O `/retrospective` sugere skills e guardrails específicos baseados nos padrões de erro.
+- Quick actions disponíveis em todos os novos comandos para navegação entre fluxos.
+- Graph é construído silenciosamente — nenhuma ação manual necessária.
+- Dry-run previne waste em reviews que falhariam por problemas já detectáveis.
+
+Artefato
+--------
+- publish/0.8.0/vscode-plugin-speckit-0.8.0.vsix

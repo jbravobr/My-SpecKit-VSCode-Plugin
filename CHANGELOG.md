@@ -6,15 +6,21 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 ## [Unreleased]
 
+## [0.8.0] — Impact Analysis, Retrospective, ADR Auto-Record & Pre-Gate Dry-Run
+
 ### Adicionado
 
-- `DecisionRecorder` para gerar ADRs automáticos em `.speckit/decisions/` com numeração incremental, slug previsível e serialização segura de gravações concorrentes.
-- `DecisionDetector` para identificar decisões conservadoras de descarte de alternativa, regressão de gate, troca de modo e breaking change.
-- `GraphAutoBuilder` para garantir, em silêncio, que `.speckit/graph.json` exista e seja reconstruído quando estiver ausente ou stale, retornando degradação graciosa em falhas de build.
-- `RetrospectiveAnalyzer` + comando `/retrospective` para consolidar histórico local (`audit`, `trace`, `metrics`, evidências e contadores de iteração) em padrões recorrentes, regressões por gate e recomendações acionáveis.
+- **Comando `/impact`** — Análise de blast radius via `GraphQuery.neighbors()` + `riskScore()`. Mostra nós afetados, risk score normalizado [0..100] e sugestão de testes para nós de alto risco.
+- **Comando `/retrospective`** — Feedback loop fechado que analisa histórico local (`audit`, `trace`, `metrics`, evidências e contadores de iteração) e expõe padrões recorrentes, gates com maior regressão e recomendações acionáveis.
+- **`DecisionRecorder`** — Gera ADRs automáticos em `.speckit/decisions/` com numeração incremental, slug previsível e serialização segura de gravações concorrentes.
+- **`DecisionDetector`** — Identifica decisões conservadoras de descarte de alternativa, regressão de gate, troca de modo e breaking change nos fluxos existentes.
+- **`GraphAutoBuilder`** — Garante, em silêncio, que `.speckit/graph.json` exista e seja reconstruído quando estiver ausente ou stale. Degradação graciosa em falhas de build.
+- **`PreGateDryRunner`** — Hook pré-gate que roda todos os validators antes do `/review-auto` sem efeitos colaterais. Bloqueia avanço se houver findings `blocker` ou `error`. Opt-out via `--skip-dry-run`.
+- **`RetrospectiveAnalyzer`** — Motor de análise que computa média de iterações por gate, findings recorrentes, gates que mais regridem e gera recomendações.
 
 ### Mudado
 
+- `/review-auto` agora executa dry-run de validators antes de prosseguir (skip com `--skip-dry-run`).
 - `/review-auto`, `/validate`, `/agent` e `/commit` agora disparam hooks best-effort de captura de decisão sem bloquear o fluxo principal.
 - `GraphRuntime` expõe `ensureGraph()` como entry point para comandos que precisam autoaquecer o grafo sem propagar exceções.
 - `GraphStore` agora aceita `IFileSystem` opcional para reutilizar persistência/versionamento com file system injetável em runtime e testes.
